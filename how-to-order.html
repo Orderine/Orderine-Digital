@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>How to Order, Reserve & Delivery — Menuva</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --blue-900:#05204A;
+      --blue-700:#0A63B7;
+      --blue-500:#1976D2;
+      --muted:#6b7a99;
+      --card:#ffffff;
+      --bg:#f6f9ff;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#ffffff);color:#122036}
+
+    /* Header */
+    header{background:linear-gradient(90deg,var(--blue-900),var(--blue-700));color:#fff;padding:28px 18px;box-shadow:0 6px 20px rgba(9,30,66,0.12)}
+    .container{max-width:900px;margin:0 auto}
+    .header-inner{display:flex;flex-direction:column;align-items:center;gap:8px}
+    .logo {
+  display: block;
+  max-width: 400px;
+  width: 100%;
+  height: auto;
+}
+
+@media (max-width: 768px) {
+  .logo {
+    max-width: 100px; /* lebih kecil di HP */
+  }
+}
+
+    .tagline{font-size:14px;color:rgba(47, 62, 129, 0.95)}
+
+    /* Navigation anchors */
+    .anchor-nav{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;justify-content:center}
+    .anchor-nav a{color:rgba(255,255,255,0.95);text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:600;background:rgba(255,255,255,0.03)}
+    .anchor-nav a:hover{background:rgba(255,255,255,0.06)}
+
+    /* Main */
+    main{padding:32px 18px}
+    .card{background:var(--card);border-radius:12px;padding:22px;box-shadow:0 10px 30px rgba(13,38,73,0.06);margin-bottom:18px}
+    h1,h2,h3{color:var(--blue-700);margin:0 0 10px}
+    p.lead{color:var(--muted);margin-top:0}
+
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+
+    /* Steps */
+    .steps{display:grid;gap:12px}
+    .step{display:flex;gap:14px;align-items:flex-start}
+    .step .num{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--blue-500),var(--blue-700));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+    .step .body{flex:1}
+    .muted{color:var(--muted);font-size:14px}
+
+    /* quick boxes */
+    .quick{display:flex;flex-direction:column;gap:12px}
+    .info-box{background:#fbfeff;padding:12px;border-radius:10px;border:1px solid #eef6ff}
+    .cta{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+    .btn{background:var(--blue-700);color:#fff;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:700;display:inline-block}
+    .btn.ghost{background:transparent;color:var(--blue-700);border:1px solid #d9e9ff}
+
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:8px;text-align:left;border-bottom:1px solid #f1f6ff}
+    th{color:var(--muted);font-weight:600}
+
+    /* Gallery */
+    .gallery{margin-top:40px}
+    .gallery h2{text-align:center;margin-bottom:18px}
+    .gallery-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+    .gallery-grid img{width:100%;height:220px;object-fit:cover;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.1);transition:transform .3s}
+    .gallery-grid img:hover{transform:scale(1.03)}
+
+    footer{background:linear-gradient(90deg,var(--blue-700),var(--blue-900));color:#fff;padding:22px 18px;margin-top:22px}
+    .footer-inner{max-width:1100px;margin:0 auto;display:flex;justify-content:center;align-items:center}
+
+    /* Responsive */
+    @media (max-width:980px){
+      .grid{grid-template-columns:1fr}
+      .container{padding:0 12px}
+    }
+    @media (max-width:480px){
+      header{padding:20px 12px}
+      .num{width:40px;height:40px}
+      .logo{max-width:420px}
+      .gallery-grid img{height:180px}
+    }
+    h4{ text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container header-inner">
+      <img class="logo" src="menuva-logo.png" alt="Menuva Logo" onerror="this.style.display='none'">
+      <div style="font-size:20px; color:rgba(255,255,255,0.9);">Digital Solution For Restaurant, Hotel, &amp; Cafe's</div>
+      <nav class="anchor-nav">
+        <a href="#order">How to Order</a>
+        <a href="#reserve">How to Reserve</a>
+        <a href="#delivery">Delivery & Pickup</a>
+      </nav>
+    </div>
+  </header>
+  <h4 class="tagline">Customers can order directly via smartphone.</h4>
+  <main class="container">
+    <div class="grid">
+      <section>
+        <!-- ORDER -->
+        <div id="order" class="card">
+          <h2>How to Order — Online Ordering (Smartphone)</h2>
+          <p class="lead">Fast and friendly: customers browse the digital menu, add items to cart, pay, and receive confirmation — all from their smartphone.</p>
+          <!-- Steps order -->
+          <div class="steps">
+            <div class="step"><div class="num">1</div><div class="body"><h3>Open the Menu</h3><p class="muted">Scan the QR code or open the menu link.</p></div></div>
+            <div class="step"><div class="num">2</div><div class="body"><h3>Browse & Select</h3><p class="muted">View categories, photos, and select items.</p></div></div>
+            <div class="step"><div class="num">3</div><div class="body"><h3>Review Cart</h3><p class="muted">Add notes, change quantities, apply promo codes.</p></div></div>
+            <div class="step"><div class="num">4</div><div class="body"><h3>Checkout & Pay</h3><p class="muted">Choose payment method and confirm order.</p></div></div>
+            <div class="step"><div class="num">5</div><div class="body"><h3>Order Confirmed</h3><p class="muted">Receive order number & preparation time.</p></div></div>
+          </div>
+        </div>
+
+        <!-- RESERVE -->
+        <div id="reserve" class="card">
+          <h2>How to Reserve — Table & Room Reservations</h2>
+          <p class="lead">Reservations help manage capacity and provide a better guest experience.</p>
+          <div class="steps">
+            <div class="step"><div class="num">1</div><div class="body"><h3>Select Type & Date</h3><p class="muted">Choose service, date and time slot.</p></div></div>
+            <div class="step"><div class="num">2</div><div class="body"><h3>Choose Party Size</h3><p class="muted">Enter number of guests and preferences.</p></div></div>
+            <div class="step"><div class="num">3</div><div class="body"><h3>Provide Contact</h3><p class="muted">Fill in name, phone, email.</p></div></div>
+            <div class="step"><div class="num">4</div><div class="body"><h3>Confirmation</h3><p class="muted">Receive confirmation & reminder.</p></div></div>
+            <div class="step"><div class="num">5</div><div class="body"><h3>Arrival</h3><p class="muted">Check-in with code or name.</p></div></div>
+          </div>
+        </div>
+
+        <!-- DELIVERY -->
+        <div id="delivery" class="card">
+          <h2>Delivery & Pickup — Delivery Order Flow</h2>
+          <p class="lead">Flexible delivery supports zones, scheduling, and real-time tracking.</p>
+          <div class="steps">
+            <div class="step"><div class="num">1</div><div class="body"><h3>Select Delivery or Pickup</h3><p class="muted">Choose delivery address or pickup.</p></div></div>
+            <div class="step"><div class="num">2</div><div class="body"><h3>Enter Address</h3><p class="muted">Add notes and contactless option.</p></div></div>
+            <div class="step"><div class="num">3</div><div class="body"><h3>Fees & ETA</h3><p class="muted">Show transparent delivery fees & time.</p></div></div>
+            <div class="step"><div class="num">4</div><div class="body"><h3>Courier Option</h3><p class="muted">Choose partner courier or in-house.</p></div></div>
+            <div class="step"><div class="num">5</div><div class="body"><h3>Tracking</h3><p class="muted">Live tracking and confirmation.</p></div></div>
+          </div>
+        </div>
+
+        <!-- GALLERY -->
+        <div class="gallery-grid">
+            <img src="https://images.unsplash.com/photo-1461023058943-07fcbe16d735?q=80&w=869&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Restaurant Interior">
+            <img src="https://images.unsplash.com/photo-1563245739-fa3a4a274aad?q=80&w=871&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Dining Room">
+            <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Restaurant Table">
+            <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Lounge Area">
+          </div>
+          
+      </section>
+
+      <aside>
+        <div class="card quick">
+          <div>
+            <h3>Quick Summary</h3>
+            <p class="muted">Three flows — Ordering, Reservations, Delivery — optimized for mobile-first experience.</p>
+          </div>
+          <div class="info-box">
+            <strong>Core features</strong>
+            <ul style="margin:8px 0 0 18px;color:var(--muted)">
+              <li>QR-driven menus</li>
+              <li>Real-time stock updates</li>
+              <li>Multiple payment gateways</li>
+              <li>Automated confirmation</li>
+            </ul>
+          </div>
+          <div class="info-box">
+            <strong>Payment methods</strong>
+            <table>
+              <thead><tr><th>Method</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr><td>Credit/Debit Card</td><td>Instant verification</td></tr>
+                <tr><td>e-Wallets</td><td>Fast & popular</td></tr>
+                <tr><td>Cash on Delivery</td><td>Selected zones</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="info-box" style="text-align:center">
+            <strong>Ready to try?</strong>
+            <div class="cta" style="justify-content:center;margin-top:10px">
+              <a class="btn" href="index.html">Get started</a>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <div>@2025 Menuva - All right reserved</div>
+    </div>
+  </footer>
+</body>
+</html>
+

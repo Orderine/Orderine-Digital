@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Register</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #003366, #003366);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .menuva-logo { text-align: center; margin-bottom: 50px; }
+    .menuva-logo img { height: auto; }
+    .login-box {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 88%;
+      max-width: 400px;
+    }
+    input {
+      width: 95%;
+      padding: 10px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      width: 103%;
+      padding: 12px;
+      background-color: #2e8b57;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .error { color: red; margin-top: 5px; margin-bottom: 10px; font-size: 14px; text-align: center; }
+    .link { text-align: center; margin-top: 15px; }
+    .link a { text-decoration: none; color: #3498db; }
+    h2 { text-align: center; margin-bottom: 20px; }
+    .password-wrapper { position: relative; width: 100%; }
+    .toggle-eye {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      font-size: 18px;
+      user-select: none;
+    }
+.menuva-logo {
+  text-align: center;
+  margin-bottom: 50px;
+  padding: 0 10px; /* beri sedikit jarak kiri-kanan di HP */
+}
+
+.menuva-logo img {
+  max-width: 70%;   /* logo menyesuaikan lebar layar HP */
+  height: auto;     /* menjaga proporsi asli */
+  max-height: 80px; /* batasi tinggi supaya tidak terlalu besar */
+  display: block;
+  margin: 0 auto;   /* center logo */
+}
+
+.menuva-logo p {
+  color: white;
+  font-size: 13px;  /* ukuran font nyaman di HP */
+  margin: 4px 0 0 0;
+  line-height: 1.3;
+}
+
+/* =====================
+   TABLET (min-width: 481px)
+   ===================== */
+@media (min-width: 481px) {
+  .menuva-logo img {
+    max-width: 50%;
+    max-height: 90px;
+  }
+  .menuva-logo p {
+    font-size: 14px;
+  }
+}
+
+/* =====================
+   DESKTOP (min-width: 769px)
+   ===================== */
+@media (min-width: 769px) {
+  .menuva-logo img {
+    max-width: 35%;
+    max-height: 100px;
+  }
+  .menuva-logo p {
+    font-size: 16px;
+  }
+}
+  </style>
+</head>
+<body>
+
+  <div class="menuva-logo">
+    <img src="menuva-logo.png" alt="Logo Menuva">
+    <br>
+    <p style="color: white;">Digital Solution For Restaurant, Hotel, & Cafe's</p>
+  </div>
+
+  <div class="login-box"> 
+    <h2>Register Admin</h2> 
+    <form id="registerForm"> 
+    <label for="email">Email:</label> 
+    <input type="email" id="email" placeholder="Email Admin" required /> 
+    <label for="password">Password:</label> 
+    <div class="password-wrapper"> 
+    <input type="password" id="password" placeholder="Password" required /> 
+    <span id="togglePassword" class="toggle-eye">👁️</span> 
+    </div> <div id="errorMsg" class="error"></div> 
+    <button type="submit">Register</button> </form>
+    <div class="link">
+      Already have an account? <a href="login.html">Login Here.!</a>
+    </div>
+  </div>
+<script>
+  const registerForm = document.getElementById('registerForm');
+  const errorMsg = document.getElementById('errorMsg');
+  
+  // ================== Utility ==================
+  function isValidEmail(email) {
+    const regex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    return regex.test(email.trim());
+  }
+
+  function generateUserID() {
+    return 'KM-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+  }
+
+  function generateTrialCode(length = 8) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < length; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
+  // ================== Plan ==================
+  const selectedPlan = localStorage.getItem("selectedPlan") || "trial";
+
+  registerForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+    
+    // ========== Validasi dasar ==========
+    if (!isValidEmail(email)) {
+      errorMsg.textContent = "❌ Invalid email format!";
+      return;
+    }
+    if (password.length < 6) {
+      errorMsg.textContent = "❌ Password must be at least 6 characters!";
+      return;
+    }
+
+    // ========== Ambil data user ==========
+    let users = JSON.parse(localStorage.getItem('menuvaUsers')) || [];
+    let existingUser = users.find(u => u.email === email);
+
+    // ========== Cek status akun lama ==========
+    if (existingUser) {
+      const now = new Date();
+      const expire = new Date(existingUser.premiumExpire);
+      const trialExpired = existingUser.premiumPlan === "trial" && now > expire;
+
+      // Jika akun premium aktif atau trial belum habis → blok
+      if (!trialExpired && existingUser.premiumPlan !== "trial") {
+        errorMsg.textContent = "❌ Your email is already registered and active!";
+        return;
+      }
+
+      // Jika trial sudah expired → hapus agar bisa daftar ulang ke premium
+      if (trialExpired) {
+        users = users.filter(u => u.email !== email);
+        localStorage.setItem('menuvaUsers', JSON.stringify(users));
+      }
+    }
+
+    // ========== Cegah trial ulang untuk email yang sama ==========
+    if (selectedPlan === "trial") {
+      if (existingUser && existingUser.trialUsed) {
+        errorMsg.textContent = "❌ This email has already used a free trial!";
+        return;
+      }
+    }
+
+    // ========== Tentukan durasi premium ==========
+    let durationDays;
+    switch (selectedPlan) {
+      case "trial": durationDays = 7; break;
+      case "monthly": durationDays = 30; break;
+      case "6month": durationDays = 180; break;
+      case "yearly": durationDays = 365; break;
+      default: durationDays = 7; break;
+    }
+
+    const startDate = new Date().toISOString();
+    const expireDate = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+
+    // ========== Buat user baru ==========
+    const newUser = {
+      email,
+      password,
+      userID: generateUserID(),
+      premiumPlan: selectedPlan,
+      premiumStart: startDate,
+      premiumExpire: expireDate,
+      trialUsed: selectedPlan === "trial",
+      isExpired: false,
+      isPaid: selectedPlan === "trial", // ✅ Trial langsung aktif
+      trialCode: selectedPlan === "trial" ? generateTrialCode() : null
+    };
+
+    // ========== Simpan data ==========
+    users.push(newUser);
+    localStorage.setItem('menuvaUsers', JSON.stringify(users));
+    localStorage.setItem("activeUser", JSON.stringify(newUser));
+    localStorage.removeItem("selectedPlan");
+
+    // ========== Redirect ==========
+    if (selectedPlan === "trial") {
+      alert(`✅ Registration successful! Your 7-day FREE TRIAL has started.\nTrial Code: ${newUser.trialCode}`);
+      window.location.href = 'login.html';
+    } else {
+      alert(`✅ Registration successful! Please complete payment for the "${selectedPlan}" plan.`);
+      window.location.href = 'payment.html';
+    }
+  });
+
+  // ================== 👁️ Toggle Password ==================
+  const passwordInput = document.getElementById('password');
+  const togglePassword = document.getElementById('togglePassword');
+  togglePassword.addEventListener('click', () => {
+    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordInput.setAttribute('type', type);
+    togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+  });
+</script>
+
+</body>
+</html>
+
+
+

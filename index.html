@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Menuva</title>
+  <style>
+    body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #f5f7fa; color: #333; }
+    header { background: linear-gradient(135deg, #0077cc, #003366); color: white; padding: 60px 20px; text-align: center; }
+    header h1 { margin: 0; font-size: 2.5rem; }
+    header p { font-size: 1.2rem; opacity: 0.9; }
+    .container { max-width: 1100px; margin: auto; padding: 40px 20px; }
+    h2 { color: #003366; margin-bottom: 20px; text-align: center; }
+    .features, .testimonials, .pricing { display: grid; gap: 20px; }
+    .features { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+    .feature-card, .testimonial, .plan { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); text-align: center; }
+    .feature-card h3, .plan h3 { font-size: 1.2rem; }
+    .feature-card p, .plan p { font-size: 0.95rem; }
+    .plan { display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s ease; }
+    .plan:hover { transform: translateY(-5px); }
+    .plan .price { font-size: 1.1rem; font-weight: bold; margin: 10px 0; color: #2a5298; }
+    .plan button { margin-top: 12px; padding: 10px 16px; border: none; border-radius: 8px; background: #2a5298; color: #fff; cursor: pointer; font-size: 14px; transition: background 0.2s ease; }
+    .plan button:hover { background: #1e3c72; }
+    .plan.recommended { border: 2px solid #0077cc; }
+    .testimonials { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .testimonial { font-style: italic; box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
+    footer { background: #003366; color: #fff; text-align: center; padding: 30px 20px; margin-top: 40px; }
+    footer a { color: #00ccff; text-decoration: none; }
+    .btn-login { background: linear-gradient(135deg, #b8860b, #daa520); color: #fff; font-weight: bold; padding: 14px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; transition: all 0.2s ease-in-out; width: 520px; max-width: 90%; }
+    .btn-login:hover { background: linear-gradient(135deg, #8b6914, #b8860b); transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .login-container { text-align: center; margin-top: 30px; }
+    .login-container h3 { margin-bottom: 15px; color: #333; }
+    #countdown { font-weight: bold; color: #b8860b; margin-top: 15px; text-align: center; }
+    .btn-logout {
+    background: linear-gradient(135deg, #cc0000, #990000);
+    color: #fff;
+    font-weight: bold;
+    padding: 14px 30px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s ease-in-out;
+    width: 520px;
+    max-width: 90%;
+  }
+  .btn-logout:hover {
+    background: linear-gradient(135deg, #ff0000, #cc0000);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+    /* =====================
+   MOBILE-FIRST LOGO & HEADER
+   ===================== */
+.menuva-logo {
+  text-align: center;
+  margin-bottom: 10px;
+  padding: 0 10px; /* beri sedikit jarak kiri-kanan di HP */
+}
+
+.menuva-logo img {
+  max-width: 70%;   /* logo menyesuaikan lebar layar HP */
+  height: auto;     /* menjaga proporsi asli */
+  max-height: 80px; /* batasi tinggi supaya tidak terlalu besar */
+  display: block;
+  margin: 0 auto;   /* center logo */
+}
+
+.menuva-logo p {
+  color: white;
+  font-size: 13px;  /* ukuran font nyaman di HP */
+  margin: 4px 0 0 0;
+  line-height: 1.3;
+}
+
+/* =====================
+   TABLET (min-width: 481px)
+   ===================== */
+@media (min-width: 481px) {
+  .menuva-logo img {
+    max-width: 50%;
+    max-height: 90px;
+  }
+  .menuva-logo p {
+    font-size: 14px;
+  }
+}
+
+/* =====================
+   DESKTOP (min-width: 769px)
+   ===================== */
+@media (min-width: 769px) {
+  .menuva-logo img {
+    max-width: 260px;  
+    height: auto;
+  }
+}
+
+.old-price {
+  font-size: 1rem;
+  color: #d9534f; /* merah elegan */
+  text-decoration: line-through;
+  margin: 0;
+}
+.features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+  }
+  .feature-card {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-align: center;
+  }
+  .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  }
+  </style>
+</head>
+<body>
+
+<header>
+   <div class="menuva-logo">
+    <img src="menuva-logo.png" alt="Logo Menuva">
+    <p style="color: white;">Digital Solution For Restaurant, Hotel, & Cafe's</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <h2>About Menuva</h2>
+  <p>Menuva is a digital platform that helps restaurants, hotels, and cafés manage menus, orders, and reservations more easily, modernly, and professionally.</p>
+
+  <h2>Main Features</h2>
+  <div class="features">
+    <div class="feature-card" onclick="goToPage('digital.html')">
+      📱 <h3>Digital Menu</h3>
+      <p>Manage menus with photos & prices online.</p>
+    </div>
+    <div class="feature-card" onclick="goToPage('how-to-order.html')">
+      🛒 <h3>Online Ordering</h3>
+      <p>Customers can order directly via smartphone.</p>
+    </div>
+    <div class="feature-card" onclick="goToPage('reserve.html')">
+      🏨 <h3>Room Reservations</h3>
+      <p>Booking rooms & meeting spaces made simple.</p>
+    </div>
+    <div class="feature-card" onclick="goToPage('info-admin.html')">
+      👨‍💼 <h3>Multi Admin</h3>
+      <p>Access support for multiple staff members.</p>
+    </div>
+  </div>
+
+  <h2>Subscription Plans</h2>
+  <div class="pricing">
+    <div class="plan">
+      <h3>Free Trial</h3>
+      <p class="price">7 Days</p>
+      <p>All Features</p>
+      <button id="trialBtn">Start Free Trial</button>
+    </div>
+
+    <div class="plan">
+      <h3>Monthly</h3>
+       <p class="old-price">IDR 99.000</p>
+      <p class="price">IDR 69.000 / month</p>
+      <p>All Features</p>
+      <button data-plan="monthly">Subscribe Monthly</button>
+    </div>
+
+    <div class="plan">
+      <h3>Six Month</h3>
+      <p class="old-price">IDR 594.000</p>
+      <p class="price">IDR 402.000 / 6 months</p>
+      <p>All Features</p>
+      <button data-plan="6month">Subscribe 6 Months</button>
+    </div>
+
+    <div class="plan">
+      <h3>Yearly</h3>
+      <p class="old-price">IDR 1.188.000</p>
+      <p class="price">IDR 780.000 / year</p>
+      <p>All Features</p>
+      <button data-plan="yearly">Subscribe Yearly</button>
+    </div>
+  </div>
+
+  <div class="login-container">
+    <h3 id="countdown"></h3>
+    <button onclick="location.href='login.html'" class="btn-login">🔑 Login</button>
+    <br><br>
+    <button onclick="logout()" class="btn-logout">🚪 Logout</button>
+  </div>
+
+  <h2>Client Testimonials</h2>
+  <div class="testimonials">
+    <div class="testimonial">“Menuva makes orders more organized and saves time. It really helps our café business.”</div>
+    <div class="testimonial">“Room reservations can now be done directly via mobile. Super convenient!”</div>
+  </div>
+</div>
+
+<script>
+  // ====================== PLAN SELECTION ======================
+  const planButtons = document.querySelectorAll('.plan button');
+  planButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      let plan = this.id === "trialBtn" ? "trial" : this.dataset.plan || "";
+      if (plan) {
+        localStorage.setItem("selectedPlan", plan);
+        console.log("✅ Plan selected:", plan);
+        location.href = "register.html"; // arahkan ke register
+      }
+    });
+  });
+
+  // ====================== COUNTDOWN HANDLING ======================
+  const countdownEl = document.getElementById("countdown");
+  const trialBtn = document.getElementById("trialBtn");
+  let activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
+
+  function updateCountdown() {
+    if (!activeUser) {
+      if (countdownEl) countdownEl.textContent = "";
+      return;
+    }
+
+    // Hilangkan tombol trial jika sudah dipakai
+    if (activeUser.trialUsed && trialBtn) {
+      trialBtn.style.display = "none";
+    }
+
+    // Cek expiry date
+    if (!activeUser.premiumExpire) {
+      if (countdownEl) countdownEl.textContent = "";
+      return;
+    }
+
+    const now = new Date();
+    const endTime = new Date(activeUser.premiumExpire);
+    const diff = endTime - now;
+
+    if (diff <= 0) {
+      if (countdownEl) countdownEl.textContent = "⏰ Your plan has expired";
+
+      // Reset premium info
+      activeUser.premiumExpire = null;
+      localStorage.setItem("activeUser", JSON.stringify(activeUser));
+
+      // Redirect ke login
+      setTimeout(() => {
+        alert("❌ Your subscription has expired. Please renew to continue.");
+        location.href = "login.html";
+      }, 3000);
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((diff / (1000 * 60)) % 60);
+    const seconds = Math.floor((diff / 1000) % 60);
+
+    if (countdownEl) {
+      countdownEl.textContent = `⏳ Time left: ${days}d ${hours}h ${minutes}m ${seconds}s`;
+    }
+  }
+
+  setInterval(updateCountdown, 1000);
+  updateCountdown();
+
+  function logout() {
+    localStorage.removeItem("activeUser");
+    localStorage.setItem("isLoggedIn", "false");
+    alert("✅ You have logged out.");
+    location.href = "login.html";
+  }
+  function goToPage(page) {
+    window.location.href = page;
+  }
+</script>
+
+
+<footer>
+  <p>
+    📍 Jl.Yos Sudarso 34, Semarang, Jawa Tengah || 
+    📞 <a href="https://wa.me/6281234567890" target="_blank">+62 812-3456-7890</a> || 
+    ✉️ <a href="mailto:menuva.digital@gmail.com">menuva.digital@gmail.com</a>
+  </p>
+  
+  <p>&copy; 2025 Menuva | <a href="privacy-policy.html">Privacy Policy</a> | <a href="terms-of-service.html">FAQ</a></p>
+</footer>
+
+</body>
+</html>
+
+

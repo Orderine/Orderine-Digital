@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Reserve Room</title>
+<style>
+/* ===================== RESET & THEME ===================== */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#1e3c72;
+  --surface:#ffffff;
+  --text: #bfa14a; 
+  --muted:#5c6f91;
+  --border:#c3d4f7;
+  --primary:#1f70ff;
+  --success:#25d366;
+  --card-light:#ffffff;
+  --card-dark:#1c2333;
+  --chip:#dce7ff;
+  --shadow:0 6px 24px rgba(0,0,0,.08);
+}
+body.dark{
+  --bg:#0e1116;
+  --surface:#141922;
+  --text:#e6ebff;
+  --muted:#aab6db;
+  --border:#263148;
+  --primary:#4da3ff;
+  --chip:#0f1a2a;
+  --shadow:0 8px 28px rgba(0,0,0,.5);
+}
+body{
+  font-family:system-ui, sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  transition:background .25s,color .25s;
+  padding-bottom:70px; /* space for fixed bar */
+}
+  
+#darkToggle {
+  font-size: 1.3rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--text, #fff);
+}
+
+/* Dropdown pojok kanan bawah */
+.header-bottom-right {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+}
+.locale-select {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+body.dark .locale-select {
+  background: var(--card-dark);
+  color: var(--text);
+  border-color: #444;
+}
+
+header {
+  position: relative;
+  background: #003366; /* biru elegan paten */
+  padding: 16px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  color: #fff; /* teks di header selalu putih */
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+header img#restoLogo {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff; /* biar logo keliatan jelas */
+}
+
+header h1 {
+  font-size: 1.2rem;
+  margin: 0;
+  color: #fff;
+}
+
+header .contact-info {
+  font-size: 0.8rem;
+  color: #e0e0e0;
+  line-height: 1.3;
+}
+
+/* --- Header Right (button + dropdown) --- */
+.header-right {
+  position: absolute;
+  right: 16px;
+  top: 8px;
+  display: flex;
+  flex-direction: column; /* biar toggle di atas, dropdown di bawah */
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.dark-toggle {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #fff;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.locale-select {
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: none;
+}
+
+
+/* main container */
+.main-container {
+  width: 98%;              /* hampir penuh layar */
+  max-width: 1400px;       /* gedein batas maksimal */
+  margin: 20px auto;
+  background: var(--card-light);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  transition: background .25s;
+}
+
+body.dark .main-container {
+  background: var(--card-dark);
+}
+/* tabs */
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.tabs button{width:100%;padding:10px 16px;border-radius:999px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer;font-weight:500}
+.tabs button.active{background:#007bff;color:#fff;border-color:#007bff}
+
+/* grid & cards */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.hidden { display: none; }
+
+.room-card {
+  background: var(--card-light);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  border: 1px solid #ddd;
+  transition: background .3s, color .3s;
+}
+body.dark .room-card {
+  background: var(--card-dark);
+  border-color: #444;
+}
+.room-card img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+.room-card h3 {
+  font-size: 0.95rem;
+  margin: 4px 0;
+}
+.room-card p {
+  margin: 2px 0;
+  font-size: 0.8rem;
+}
+.room-card button {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: var(--success);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* --- FIX untuk HP mode portrait --- */
+@media (max-width: 600px) and (orientation: portrait) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr); /* selalu 2 kolom */
+  }
+  .room-card img {
+    height: 140px; /* lebih tinggi biar keliatan square */
+  }
+}
+
+/* cart & form */
+.reservasi-container{margin-top:20px}
+#cartPreview{background:var(--chip);padding:10px;border-radius:8px;margin-bottom:8px;font-size:0.85rem}
+.cart-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 12px;margin:6px 0;flex-wrap:wrap}
+.qty-controls{display:flex;align-items:center;gap:6px;margin-left:auto}
+.qty-controls button{padding:6px 10px;border-radius:20px;border:none;cursor:pointer}
+.remove-btn{background:linear-gradient(145deg,#e74c3c,#c0392b);border-radius:50%;width:28px;height:28px;border:none;color:#fff;display:flex;align-items:center;justify-content:center}
+
+/* form inputs */
+.form-input{display:flex;flex-direction:column;margin-bottom:10px}
+.form-input label{font-size:0.85rem;margin-bottom:4px}
+.form-input input,.form-input textarea{padding:6px 8px;border-radius:6px;border:1px solid #ccc;font-size:0.85rem;width:100%}
+.form-input textarea{min-height:60px;resize:vertical}
+
+/* fixed bar */
+.fixed-bar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;gap:10px;padding:10px;background:linear-gradient(135deg,#1e3c72,#2a5298);z-index:2000}
+.fixed-bar button{flex:1;padding:12px 0;font-size:0.95rem;border-radius:8px;border:none;cursor:pointer;color:#fff}
+.btn-wa{background:var(--success)}
+.btn-back{background:#d8cd33;color:#000}
+
+/* small screens */
+@media (max-width:500px){
+  header .header-inner{flex-direction:column;align-items:flex-start;gap:6px}
+  header h1{font-size:1rem}
+  .room-card img{height:80px}
+}
+.voucher-box {
+  display: flex;
+  gap: 8px;
+  justify-content: left;
+}
+
+/* Efek input */
+#voucherInput.voucher-ok {
+  border-color: #31c55f;
+  background: #e6ffed;
+  color: #0f6b2e;
+}
+
+#voucherInput.voucher-error {
+  border-color: #ff6b6b;
+  background: #ffecec;
+  color: #8b0000;
+}
+  /* Perbesar ukuran input voucher */
+#voucherInput {
+  width: 260px;        /* diperbesar dari default */
+  max-width: 90%;      /* biar responsif di HP */
+  padding: 10px 14px;  /* lebih empuk & elegan */
+  font-size: 1rem;     /* teks lebih besar */
+  border: 1px solid #ccc;
+  border-radius: 10px; /* lebih modern */
+  transition: 0.2s ease; /* biar smooth saat berubah state */
+}
+
+
+#totalPrice {
+  color: var(--text) !important;
+  font-weight: 600;
+}
+
+.form-input label {
+  color: var(--text) !important;
+}
+.form-input input,
+.form-input textarea,
+.form-input select {
+  color: var(--text) !important;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+/* ================= LOADING OVERLAY ================= */
+#loadingOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+#loadingOverlay.show {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.loading-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.loading-spinner {
+  width: 90px;
+  height: 90px;
+  border: 8px solid rgba(255, 255, 255, 0.2);
+  border-top: 8px solid #00c8ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  box-shadow: 0 0 25px rgba(0, 200, 255, 0.5);
+}
+
+.loading-text {
+  font-size: 1.1rem;
+  color: #fff;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 10px rgba(0, 200, 255, 0.6);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="center-info">
+      <img id="restoLogo" alt="Logo" />
+      <h1 id="restoName">Resto Name</h1>
+      <div class="contact-info">
+        <div id="alamatRestoranDisplay"></div>
+        <div id="teleponRestoranDisplay"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- kanan atas -->
+  <div class="header-right">
+    <button id="darkToggle" class="dark-toggle" title="Toggle theme">🌙</button>
+  </div>
+
+  <!-- kanan bawah -->
+  <div class="header-bottom-right">
+    <select id="localeSelect" class="locale-select" title="Change locale / currency">
+      <option value="auto">Auto (browser)</option>
+      <option value="id-ID|IDR">INA — IDR</option>
+      <option value="en-US|USD">US — USD</option>
+      <option value="en-GB|GBP">UK — GBP</option>
+      <option value="ja-JP|JPY">JP — JPY</option>
+      <option value="fr-FR|EUR">FR — EUR</option>
+    </select>
+  </div>
+</header>
+  
+<!-- 🔹 Loading Overlay -->
+<div id="loadingOverlay">
+  <div class="loading-box">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading Data...</div>
+  </div>
+</div>
+
+<div class="main-container" id="app">
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="active" data-target="rooms">Rooms</button>
+    <button data-target="meetings">Meeting Rooms</button>
+    <button data-target="packages">Packages</button>
+  </div>
+
+  <!-- Grid -->
+  <section id="rooms" class="grid"></section>
+  <section id="meetings" class="grid hidden"></section>
+  <section id="packages" class="grid hidden"></section>
+  <p id="empty" class="hidden" style="text-align:center;color:#666;margin-top:8px">Data Empty.</p>
+  
+<div class="reservasi-container">
+  <div id="voucherSection" style="display:none; margin:15px 0;">
+    <div class="voucher-box">
+      <input 
+        type="text" 
+        id="voucherInput" 
+        placeholder="Use Voucher Code"
+      >
+    </div>
+    <p id="voucherMessage"></p>
+  </div>
+</div>
+
+<div id="cartPreview"><p><i>No choice</i></p></div>
+
+<div id="priceSummary" style="margin-top:10px; font-size:0.9em;">
+  <p id="totalPrice" data-raw="0">Total Price = 0</p>
+  <br>
+  <p id="voucherDiscount" style="display:none; color:green;">Discount = 0</p>
+    <br>
+  <p id="grandTotal" style="font-weight:bold;">Grand Total = 0</p>
+</div>
+
+    
+    <br>
+    <div class="form-input"><label>Orderer Name</label><input type="text" id="custName"></div>
+    <div class="form-input"><label>Address</label><input type="text" id="custAddress"></div>
+    <div class="form-input"><label>Telephone Number</label><input type="text" id="custPhone"></div>
+    <div class="form-input"><label>Date Used</label><input type="date" id="custDate"></div>
+    <div class="form-input"><label>Notes</label><textarea id="custNote"></textarea></div>
+  </div>
+</div>
+
+<!-- Bottom fixed bar -->
+<div class="fixed-bar" role="navigation" aria-label="bottom actions">
+  <button class="btn-wa" id="btnSend">📤 Send Request</button>
+  <button class="btn-back" id="btnBack">🔙 Back To Menu</button>
+</div>
+
+<script>
+/* ========= CONFIG ========= */
+const DB_NAME = "MenuvaDB";        // match admin.html
+const STORE_NAME = "menuvaData";
+const DB_VERSION = 10;
+
+/* ========= STATE ========= */
+let db = null;
+let restoData = {}; // object loaded from DB
+let cart = [];
+let currentLocale = navigator.language || "id-ID";
+let currentCurrency = "IDR";
+
+/* ========= HELPERS ========= */
+function getEl(id){ return document.getElementById(id); }
+function escapeHtml(str){
+  if (str === null || str === undefined) return "";
+  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,"&#39;").replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function formatCurrency(num){
+  const n = Number(num) || 0;
+  try {
+    return new Intl.NumberFormat(currentLocale, { style: "currency", currency: currentCurrency, maximumFractionDigits: 0 }).format(n);
+  } catch (e) {
+    return n.toLocaleString();
+  }
+}
+
+/* ========= INDEXEDDB ========= */
+function initDB(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onerror = () => reject(req.error);
+    req.onsuccess = e => { db = e.target.result; resolve(db); };
+    req.onupgradeneeded = e => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "restoId" });
+      }
+    };
+  });
+}
+
+/**
+ * Load data from store:
+ * - if URL has ?resto=ID -> try store.get(ID)
+ * - else -> getAll() and return first record (admin saved single record)
+ */
+function loadDataFromDB(){
+  return new Promise((resolve)=>{
+    if(!db){ return resolve({}); }
+    try {
+      const urlParams = new URLSearchParams(location.search);
+      const wanted = urlParams.get('resto') || null;
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+
+      if (wanted) {
+        const r = store.get(wanted);
+        r.onsuccess = () => resolve(r.result || {});
+        r.onerror = () => resolve({});
+        return;
+      }
+
+      const allReq = store.getAll();
+      allReq.onsuccess = () => {
+        const all = allReq.result || [];
+        if (all.length === 0) return resolve({});
+        // prefer record with restoId, else first
+        const found = all.find(x => x && (x.restoId || x.restoPhone)) || all[0];
+        resolve(found || {});
+      };
+      allReq.onerror = () => resolve({});
+    } catch (err) {
+      console.error("loadDataFromDB error", err);
+      resolve({});
+    }
+  });
+}
+
+/* ========= THEME ========= */
+function applyTheme(){
+  const saved = localStorage.getItem('menuva_theme');
+  if (saved === 'dark') document.body.classList.add('dark');
+  else document.body.classList.remove('dark');
+  const btn = getEl('darkToggle');
+  if (btn) btn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+}
+function toggleDark(){
+  document.body.classList.toggle('dark');
+  localStorage.setItem('menuva_theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+  const btn = getEl('darkToggle');
+  if (btn) btn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+}
+
+/* ========= UI: ROOM CARD CREATION (safer) ========= */
+function createRoomCard(room){
+  const card = document.createElement('div');
+  card.className = 'room-card';
+
+  const frag = document.createDocumentFragment();
+
+  const img = document.createElement('img');
+  img.alt = room.nama || room.name || '';
+  img.loading = "lazy"; // PATCH: lazy load biar ga berat
+  img.src = (room.image && room.image.length) ? room.image : 'https://via.placeholder.com/400x200?text=No+Image';
+  frag.appendChild(img);
+
+  const h3 = document.createElement('h3');
+  h3.textContent = room.nama || room.name || 'Unnamed';
+  frag.appendChild(h3);
+
+  const pPrice = document.createElement('p');
+  pPrice.innerHTML = `<b>Price:</b> ${formatCurrency(room.harga || room.price || 0)}`;
+  frag.appendChild(pPrice);
+
+  const pCap = document.createElement('p');
+  pCap.innerHTML = `<b>Capacity:</b> ${room.kapasitas || room.capacity || 0} person`;
+  frag.appendChild(pCap);
+
+  const pLuas = document.createElement('p');
+  pLuas.innerHTML = `<b>Room size:</b> ${room.luas || room.size || 0} m²`;
+  frag.appendChild(pLuas);
+
+  const pDesc = document.createElement('p');
+  pDesc.textContent = room.deskripsi || room.description || '';
+  frag.appendChild(pDesc);
+
+  const btn = document.createElement('button');
+  btn.textContent = 'Add To Cart';
+  btn.addEventListener('click', () => tambahKeCart({
+    nama: room.nama || room.name || 'Unnamed',
+    harga: Number(room.harga || room.price || 0),
+    kapasitas: room.kapasitas || room.capacity || 0,
+    luas: room.luas || room.size || 0,
+    deskripsi: room.deskripsi || room.description || '',
+    kategori: room.kategori || room.category || ''
+  }));
+  frag.appendChild(btn);
+
+  card.appendChild(frag);
+  return card;
+}
+
+/* ========= DISPLAY ========= */
+function tampilkanData(){
+  const emptyEl = getEl('empty');
+  if(!restoData || !restoData.namaRestoran){
+    if (emptyEl) emptyEl.classList.remove('hidden');
+    // still fill header with defaults
+    getEl('restoLogo').style.display = 'none';
+    getEl('restoName').innerText = 'Resto Name';
+    getEl('alamatRestoranDisplay').innerText = '';
+    getEl('teleponRestoranDisplay').innerText = '';
+    return;
+  }
+
+  if (emptyEl) emptyEl.classList.add('hidden');
+
+  // header
+  const logoEl = getEl('restoLogo');
+  if (restoData.logo) { logoEl.src = restoData.logo; logoEl.style.display = ''; logoEl.onerror = () => { logoEl.style.display = 'none'; }; }
+  else logoEl.style.display = 'none';
+  getEl('restoName').innerText = restoData.namaRestoran || '';
+  getEl('alamatRestoranDisplay').innerText = restoData.restoAddress || '';
+  getEl('teleponRestoranDisplay').innerText = restoData.restoPhone || '';
+
+  // set default currency if admin provided something (optional)
+  if (restoData.currency) {
+    currentCurrency = restoData.currency;
+  }
+
+  // grids
+  const gridRooms = getEl('rooms');
+  const gridMeet = getEl('meetings');
+  const gridPack = getEl('packages');
+  [gridRooms, gridMeet, gridPack].forEach(g => { if (g) g.innerHTML = ''; });
+
+  let total = 0;
+  const rooms = Array.isArray(restoData.rooms) ? restoData.rooms : (restoData.menu || []);
+  rooms.forEach(r => {
+    total++;
+    const card = createRoomCard(r);
+    if ((r.kategori || r.category) === 'meeting') gridMeet.appendChild(card);
+    else if ((r.kategori || r.category) === 'package') gridPack.appendChild(card);
+    else gridRooms.appendChild(card);
+  });
+  if (getEl('empty')) getEl('empty').classList.toggle('hidden', total > 0);
+}
+  
+function updateCartUI() {
+  const preview = getEl('cartPreview');
+  const totalEl = getEl('totalPrice');
+  const discountEl = getEl('voucherDiscount');
+  const grandEl = getEl('grandTotal');
+
+  if (!preview || !totalEl || !grandEl) return;
+
+  if (cart.length === 0) {
+    preview.innerHTML = '<p><i>There are no selected items.</i></p>';
+    totalEl.innerText = 'Total Price = 0';
+    totalEl.dataset.raw = 0;
+    totalEl.dataset.rawOriginal = 0;
+    if (discountEl) { discountEl.style.display = "none"; discountEl.innerText = ""; }
+    grandEl.innerText = 'Grand Total = 0';
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  let subtotal = 0;
+
+  cart.forEach((item, idx) => {
+    const subtotalItem = (Number(item.harga) || 0) * (Number(item.qty) || 0);
+    subtotal += subtotalItem;
+
+    const div = document.createElement('div');
+    div.className = 'cart-item';
+
+    const span = document.createElement('span');
+    span.innerHTML = `${escapeHtml(item.nama)} - ${formatCurrency(item.harga)} x ${item.qty} = <b>${formatCurrency(subtotalItem)}</b>`;
+    div.appendChild(span);
+
+    if (item.kategori === 'package') {
+      const ctrl = document.createElement('div');
+      ctrl.className = 'qty-controls';
+
+      const dec = document.createElement('button');
+      dec.textContent = '-';
+      dec.onclick = () => ubahQty(idx, -1);
+
+      const qtySpan = document.createElement('span');
+      qtySpan.textContent = item.qty;
+
+      const inc = document.createElement('button');
+      inc.textContent = '+';
+      inc.onclick = () => ubahQty(idx, 1);
+
+      ctrl.appendChild(dec);
+      ctrl.appendChild(qtySpan);
+      ctrl.appendChild(inc);
+      div.appendChild(ctrl);
+    }
+
+    const rem = document.createElement('button');
+    rem.className = 'remove-btn';
+    rem.textContent = 'X';
+    rem.onclick = () => hapusDariCart(idx);
+    div.appendChild(rem);
+
+    frag.appendChild(div);
+  });
+
+  preview.innerHTML = '';
+  preview.appendChild(frag);
+
+  totalEl.dataset.rawOriginal = subtotal;
+  totalEl.dataset.raw = subtotal;
+  totalEl.innerText = 'Total Price = ' + formatCurrency(subtotal);
+
+  grandEl.innerText = 'Grand Total = ' + formatCurrency(subtotal);
+
+  autoApplyVoucher(); // tetap
+}
+
+// Helper aman parse angka
+function cleanNumber(val) {
+  if (val == null) return 0;
+  return parseFloat(String(val).replace(/[^0-9.-]/g, "")) || 0;
+}
+
+ /* ============================================
+   VOUCHER SYSTEM — SUPER OPTIMIZED VERSION
+   ============================================ */
+
+let CACHE_VOUCHERS = null;
+let VOUCHER_RAF = null;      // untuk requestAnimationFrame throttle
+let VOUCHER_LAST_VALUE = ""; // untuk cegah perhitungan ulang yg tidak perlu
+
+// === Load voucher list hanya 1x ===
+async function loadVoucherList() {
+  try {
+    // Kalau sudah ada di cache → langsung return
+    if (CACHE_VOUCHERS !== null) return CACHE_VOUCHERS;
+
+    // FIX: gunakan restoData yang sudah dimuat, JANGAN load ulang DB!
+    const data = restoData;
+
+    if (!data || !Array.isArray(data.menuVoucher)) {
+      CACHE_VOUCHERS = [];
+      return CACHE_VOUCHERS;
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+
+    // Cache voucher aktif
+    CACHE_VOUCHERS = data.menuVoucher.filter(v => v.expiry >= today);
+    return CACHE_VOUCHERS;
+
+  } catch (err) {
+    console.error("Voucher load error:", err);
+    CACHE_VOUCHERS = [];
+    return CACHE_VOUCHERS;
+  }
+}
+
+// === Apply voucher dengan throttle & DOM optimized ===
+async function autoApplyVoucher() {
+  cancelAnimationFrame(VOUCHER_RAF);
+
+  VOUCHER_RAF = requestAnimationFrame(async () => {
+    const inputEl = document.getElementById("voucherInput");
+    if (!inputEl) return;
+
+    const code = inputEl.value.trim().toUpperCase();
+    if (code === VOUCHER_LAST_VALUE) return; // tidak perlu hitung ulang
+    VOUCHER_LAST_VALUE = code;
+
+    const msg = document.getElementById("voucherMessage");
+    const totalEl = document.getElementById("totalPrice");
+    const discountEl = document.getElementById("voucherDiscount");
+    const grandEl = document.getElementById("grandTotal");
+
+    if (!msg || !totalEl || !grandEl) return;
+
+    // Simpan total asli hanya 1x
+    if (!totalEl.dataset.rawOriginal) {
+      totalEl.dataset.rawOriginal = String(cleanNumber(totalEl.dataset.raw) || 0);
+    }
+
+    const originalTotal = cleanNumber(totalEl.dataset.rawOriginal);
+
+    // ==== Reset jika kosong ====
+    if (!code) {
+      inputEl.classList.remove("voucher-ok", "voucher-error");
+      msg.textContent = "";
+      msg.style.color = "#666";
+
+      totalEl.textContent = `Total Price = ${formatCurrency(originalTotal)}`;
+      totalEl.dataset.raw = String(originalTotal);
+
+      if (discountEl) { discountEl.style.display = "none"; discountEl.textContent = ""; }
+      grandEl.textContent = `Grand Total = ${formatCurrency(originalTotal)}`;
+
+      return;
+    }
+
+    // ==== Ambil voucher 1x ====
+    const vouchers = await loadVoucherList();
+    const found = vouchers.find(v => v.code === code);
+
+    // ==== Voucher INVALID ====
+    if (!found) {
+      inputEl.classList.remove("voucher-ok");
+      inputEl.classList.add("voucher-error");
+
+      msg.textContent = "❌ Voucher Code is invalid or expired";
+      msg.style.color = "red";
+
+      totalEl.textContent = `Total Price = ${formatCurrency(originalTotal)}`;
+      totalEl.dataset.raw = String(originalTotal);
+
+      if (discountEl) { discountEl.style.display = "none"; }
+      grandEl.textContent = `Grand Total = ${formatCurrency(originalTotal)}`;
+
+      return;
+    }
+
+    // ==== Voucher VALID ====
+    const discountPercent = parseFloat(found.discount) || 0;
+    const potongan = originalTotal * (discountPercent / 100);
+    const discounted = originalTotal - potongan;
+
+    inputEl.classList.remove("voucher-error");
+    inputEl.classList.add("voucher-ok");
+
+    msg.textContent = `✅ Voucher valid! Diskon ${discountPercent}% diterapkan`;
+    msg.style.color = "green";
+
+    totalEl.textContent = `Total Price = ${formatCurrency(originalTotal)}`;
+    totalEl.dataset.raw = String(discounted);
+
+    if (discountEl) {
+      discountEl.style.display = "block";
+      discountEl.textContent = `Discount ${discountPercent}% = ${formatCurrency(potongan)}`;
+    }
+
+    grandEl.textContent = `Grand Total = ${formatCurrency(discounted)}`;
+  });
+}
+
+// === Event Listener optimized (tanpa keyup) ===
+document.addEventListener("DOMContentLoaded", () => {
+  const voucherInput = document.getElementById("voucherInput");
+  if (voucherInput) {
+    voucherInput.addEventListener("input", autoApplyVoucher); // PATCH
+  }
+});
+
+// === Ketika nambah room ke cart, voucher tetap diterapkan ===
+function tambahKeCart(room) {
+  if (!room || !room.nama) return;
+
+  const idx = cart.findIndex(r => r.nama === room.nama);
+  if (idx >= 0) {
+    cart[idx].qty = (cart[idx].qty || 0) + 1;
+  } else {
+    cart.push({ ...room, qty: 1 });
+  }
+
+  updateCartUI();
+
+  // re-apply voucher jika ada
+  const voucher = JSON.parse(localStorage.getItem("voucher") || "null");
+  if (voucher) {
+    requestAnimationFrame(autoApplyVoucher);
+  }
+}
+
+
+function hapusDariCart(i){ cart.splice(i,1); updateCartUI(); }
+function ubahQty(i,d){ cart[i].qty += d; if (cart[i].qty < 1) cart[i].qty = 1; updateCartUI(); }
+
+/* ========= LOCALE SELECT ========= */
+function setupLocaleSelect(){
+  const sel = getEl('localeSelect');
+  if (!sel) return;
+  sel.addEventListener('change', () => {
+    const val = sel.value;
+    if (val === 'auto') {
+      currentLocale = navigator.language || 'id-ID';
+      // keep currency default as IDR when auto
+      currentCurrency = 'IDR';
+    } else {
+      const [loc, cur] = val.split('|');
+      currentLocale = loc || currentLocale;
+      currentCurrency = cur || currentCurrency;
+    }
+    // re-render UI that shows currency
+    tampilkanData();
+    updateCartUI();
+  });
+}
+
+/* ========= TABS ========= */
+function setupTabs(){
+  document.querySelectorAll('.tabs button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.grid').forEach(sec=>sec.classList.add('hidden'));
+      const target = btn.dataset.target;
+      const el = getEl(target);
+      if(el) el.classList.remove('hidden');
+    });
+  });
+}
+
+
+/* ========= WA & Buttons ========= */
+function setupWA(){
+  const sendBtn = getEl('btnSend');
+  if(!sendBtn) return;
+  sendBtn.addEventListener('click', ()=>{
+    const adminNos = restoData.nomorWaAdmin || restoData.nomor_admin || restoData.nomor || [];
+    if (!adminNos || (Array.isArray(adminNos) && adminNos.length === 0)) {
+      alert("Admin's WhatsApp number has not been set.");
+      return;
+    }
+    if (cart.length === 0) { alert("Cart is still empty."); return; }
+    const adminNoRaw = Array.isArray(adminNos) ? adminNos[0] : adminNos;
+    const adminNo = String(adminNoRaw).replace(/[^0-9]/g,'');
+
+    // === Buat pesan WA ===
+    let pesan = `Hello ${restoData.namaRestoran || 'Admin'}, I want a reservation:\n\n`;
+    cart.forEach((it,i) => {
+      pesan += `${i+1}. ${it.nama} - ${formatCurrency(it.harga)} x ${it.qty} = ${formatCurrency((it.harga||0)*it.qty)}\n`;
+    });
+
+    // ambil total asli & diskon
+    const totalEl = getEl("totalPrice");
+    const discountEl = getEl("voucherDiscount");
+    const grandEl = getEl("grandTotal");
+
+    const originalTotal = cleanNumber(totalEl?.dataset.rawOriginal || 0);
+    const grandTotal = cleanNumber(totalEl?.dataset.raw || originalTotal);
+    const discountText = discountEl?.innerText || "";
+
+    pesan += `\nTotal Price = ${formatCurrency(originalTotal)}\n`;
+    if (discountText) pesan += discountText + "\n";
+    pesan += `Grand Total = ${formatCurrency(grandTotal)}\n\n`;
+
+    // Tambahan data customer
+    pesan += `Name: ${getEl('custName')?.value || ''}\n`;
+    pesan += `Address: ${getEl('custAddress')?.value || ''}\n`;
+    pesan += `Phone: ${getEl('custPhone')?.value || ''}\n`;
+    pesan += `Date: ${getEl('custDate')?.value || ''}\n`;
+    pesan += `Notes: ${getEl('custNote')?.value || ''}\n`;
+
+    // buka WhatsApp
+    window.open(`https://wa.me/${adminNo}?text=${encodeURIComponent(pesan)}`, '_blank');
+  });
+
+  const back = getEl('btnBack');
+  if (back) back.addEventListener('click', () => history.back());
+}
+
+/* ========= INIT ========= */
+document.addEventListener('DOMContentLoaded', async ()=>{
+  // === tampilkan spinner pusaran air ===
+  showLoading(); // 🔧 ditambahkan
+
+  // === PATCH: Lazy Loading untuk semua IMG ===
+  document.querySelectorAll("img").forEach(img => {
+    img.loading = "lazy";
+  });
+  
+  // apply theme button wiring
+  applyTheme();
+  const darkBtn = getEl('darkToggle');
+  if (darkBtn) darkBtn.addEventListener('click', toggleDark);
+
+  // locale select wiring
+  setupLocaleSelect();
+
+  // tabs
+  setupTabs();
+
+  // (hapus sistem loader lama, karena kita pakai overlay baru)
+  // const ld = getEl('loadingIndicator');
+  // if (ld) ld.classList.add('active');
+
+  try {
+    await initDB();
+    restoData = await loadDataFromDB();
+  } catch (err) {
+    console.error('DB init/load error', err);
+    restoData = {};
+  }
+
+  tampilkanData();
+  updateCartUI();
+  setupWA();
+
+  // === Tambahan logika voucher ===
+  const plan = localStorage.getItem("user_plan"); 
+  const voucherEnabled = localStorage.getItem("page_voucher") === "true";
+
+  if (plan !== "monthly" && voucherEnabled) {
+    document.getElementById("voucherSection").style.display = "block";
+  }
+
+  // === sembunyikan spinner pusaran air ===
+  hideLoading(); // 🔧 ditambahkan
+
+  // (hapus sistem loader lama, karena kita pakai overlay baru)
+  // if (ld) ld.classList.remove('active');
+});
+
+function showLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.classList.add('show');
+}
+
+function hideLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.classList.remove('show');
+}
+
+</script>
+
+<script>
+  const enabled = localStorage.getItem("page_room");
+  if (enabled === "false" || enabled === null) {
+    // redirect kalau halaman dimatikan
+    window.location.href = "menu.html";
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login Admin Menuva</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #003366, #003366);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+    .menuva-logo { text-align: center; margin-bottom: 50px; }
+    .menuva-logo img { height: auto; }
+    .login-box {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 88%;
+      max-width: 400px;
+    }
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      display: block;
+      box-sizing: border-box;
+    }
+    input { border: 1px solid #ccc; }
+    button {
+      background: linear-gradient(135deg, #b8860b, #daa520);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .error { color: red; font-size: 14px; text-align: center; margin: 10px 0; white-space: pre-line; }
+    .link { text-align: center; margin-top: 10px; }
+    .link a { text-decoration: none; color: #3498db; }
+    h2 { text-align: center; margin-bottom: 20px; }
+    .password-wrapper { position: relative; width: 100%; }
+    .toggle-eye {
+      position: absolute;
+      right: 10px;
+      top: 55%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      font-size: 18px;
+      user-select: none;
+    }
+    .back-link { margin-top: 15px; text-align: center; }
+    .back-link a { text-decoration: none; color: #555; font-weight: bold; }
+    .back-link a:hover { color: #2e8b57; }
+
+ 
+.menuva-logo {
+  text-align: center;
+  margin-bottom: 50px;
+  padding: 0 10px; /* beri sedikit jarak kiri-kanan di HP */
+}
+
+.menuva-logo img {
+  max-width: 70%;   /* logo menyesuaikan lebar layar HP */
+  height: auto;     /* menjaga proporsi asli */
+  max-height: 80px; /* batasi tinggi supaya tidak terlalu besar */
+  display: block;
+  margin: 0 auto;   /* center logo */
+}
+
+.menuva-logo p {
+  color: white;
+  font-size: 13px;  /* ukuran font nyaman di HP */
+  margin: 4px 0 0 0;
+  line-height: 1.3;
+}
+
+/* =====================
+   TABLET (min-width: 481px)
+   ===================== */
+@media (min-width: 481px) {
+  .menuva-logo img {
+    max-width: 50%;
+    max-height: 90px;
+  }
+  .menuva-logo p {
+    font-size: 14px;
+  }
+}
+
+/* =====================
+   DESKTOP (min-width: 769px)
+   ===================== */
+@media (min-width: 769px) {
+  .menuva-logo img {
+    max-width: 35%;
+    max-height: 100px;
+  }
+  .menuva-logo p {
+    font-size: 16px;
+  }
+}
+  </style>
+</head>
+<body>
+  <div class="menuva-logo">
+    <img src="menuva-logo.png" alt="Logo Menuva">
+    <br>
+    <p style="color: white;">Digital Solution For Restaurant, Hotel, & Cafe's</p>
+  </div>
+
+  <div class="login-box">
+    <h2>Login Admin Menuva</h2>
+    <form id="loginForm">
+      <label for="email">Email:</label>
+      <input type="email" id="email" placeholder="admin@menuva.id" required />
+      <label for="password">Password:</label>
+      <div class="password-wrapper">
+        <input type="password" id="password" placeholder="Password" required />
+        <span id="togglePassword" class="toggle-eye">👁️</span>
+      </div>
+      <p id="errorMsg" class="error"></p>
+      <button type="submit">Login</button>
+      <div class="link">Don't have an account? <a href="register.html">Register Here.!</a></div>
+      <div class="link back-link"><a href="index.html">⬅️ Back to Home</a></div>
+    </form>
+  </div>
+<script>
+  const loginForm = document.getElementById("loginForm");
+  const errorMsg = document.getElementById("errorMsg");
+
+  // ========== Toggle Password Visibility ==========
+  const passwordInput = document.getElementById("password");
+  const togglePassword = document.getElementById("togglePassword");
+
+  togglePassword?.addEventListener("click", () => {
+    const type =
+      passwordInput.getAttribute("type") === "password" ? "text" : "password";
+    passwordInput.setAttribute("type", type);
+    togglePassword.textContent = type === "password" ? "👁️" : "🙈";
+  });
+
+  // ========== Prefill Email Terakhir ==========
+  window.addEventListener("DOMContentLoaded", () => {
+    try {
+      const storedUsers = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+      if (storedUsers.length > 0) {
+        const lastUser = storedUsers[storedUsers.length - 1];
+        document.getElementById("email").value = lastUser.email || "";
+      }
+    } catch (err) {
+      console.error("Error prefill email:", err);
+    }
+  });
+
+  // ========== Login Process ==========
+  loginForm?.addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const emailValue = document.getElementById("email").value.trim().toLowerCase();
+    const passwordValue = document.getElementById("password").value;
+
+    let storedUsers = [];
+    try {
+      storedUsers = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+    } catch (err) {
+      console.error("Error reading users:", err);
+    }
+
+    const matchedUser = storedUsers.find(
+      (user) => user.email === emailValue && user.password === passwordValue
+    );
+
+    if (!matchedUser) {
+      errorMsg.textContent =
+        "❌ Incorrect email or password. Please register first.";
+      return;
+    }
+
+    const now = new Date();
+
+    // === Cek Expired ===
+    if (matchedUser.premiumExpire) {
+      const expireDate = new Date(matchedUser.premiumExpire);
+      if (now > expireDate) {
+        matchedUser.isExpired = true;
+        localStorage.setItem("menuvaUsers", JSON.stringify(storedUsers));
+
+        if (matchedUser.premiumPlan === "trial") {
+          errorMsg.innerHTML =
+            "❌ Your free trial has expired.<br><a href='plans.html' style='color:#007bff;'>Upgrade to Premium</a> to continue.";
+        } else {
+          errorMsg.innerHTML =
+            "❌ Your subscription has expired.<br><a href='plans.html' style='color:#007bff;'>Renew your plan</a>.";
+        }
+        return;
+      }
+    }
+
+    // === Cegah Login Ulang Trial Expired ===
+    if (
+      matchedUser.premiumPlan === "trial" &&
+      matchedUser.trialUsed &&
+      matchedUser.isExpired
+    ) {
+      errorMsg.textContent =
+        "❌ Free trial is single-use only. Please upgrade to continue.";
+      return;
+    }
+
+    // === Cek Status Pembayaran ===
+    if (!matchedUser.isPaid && matchedUser.premiumPlan !== "trial") {
+      errorMsg.textContent = "❌ Your payment has not been confirmed yet.";
+      return;
+    }
+
+    // === Login Sukses ===
+    localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("activeUser", JSON.stringify(matchedUser));
+
+    window.location.href = "admin.html";
+  });
+</script>
+
+</body>
+</html>
+
+
+

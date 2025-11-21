@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment - Menuva</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #003366, #003366);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: white;
+      text-align: center;
+    }
+    .box {
+      background: white;
+      color: black;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      max-width: 400px;
+    }
+    button {
+      margin-top: 20px;
+      padding: 12px;
+      width: 100%;
+      background: linear-gradient(135deg, #2e8b57, #3cb371);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Payment Simulation</h2>
+    <p id="planInfo">Checking your subscription...</p>
+    <button id="payBtn">✅ Simulate Payment Success</button>
+  </div>
+
+  <script>
+    const planInfo = document.getElementById("planInfo");
+    const payBtn = document.getElementById("payBtn");
+
+    let activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
+    let users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+
+    if (!activeUser) {
+      planInfo.textContent = "⚠️ No active registration found.";
+      payBtn.style.display = "none";
+    } else {
+      let now = new Date();
+      let expireDate = new Date(activeUser.premiumExpire);
+
+      if (expireDate < now) {
+        // Plan sudah expired
+        planInfo.textContent = `📦 Plan Selected: ${activeUser.premiumPlan.toUpperCase()} 
+        \nStatus: Expired ❌`;
+        payBtn.style.display = "none";
+      } else {
+        // Plan masih aktif
+        planInfo.textContent = `📦 Plan Selected: ${activeUser.premiumPlan.toUpperCase()} 
+        \nStatus: ${activeUser.isPaid ? "Paid ✅" : "Pending Payment ❌"}`;
+
+        // Trial tidak ada tombol bayar
+        if (activeUser.premiumPlan === "trial") {
+          payBtn.style.display = "none";
+        }
+      }
+    }
+
+    payBtn.addEventListener("click", () => {
+      if (!activeUser) return;
+
+      // Simulasi pembayaran sukses
+      activeUser.isPaid = true;
+
+      // Update juga ke list user
+      const index = users.findIndex(u => u.email === activeUser.email);
+      if (index !== -1) {
+        users[index].isPaid = true;
+      }
+
+      localStorage.setItem("activeUser", JSON.stringify(activeUser));
+      localStorage.setItem("menuvaUsers", JSON.stringify(users));
+
+      alert("✅ Payment successful! Your subscription is now active.");
+
+      // Update info
+      planInfo.textContent = `📦 Plan Selected: ${activeUser.premiumPlan.toUpperCase()} 
+      \nStatus: Paid ✅`;
+
+      // Sembunyikan tombol setelah bayar
+      payBtn.style.display = "none";
+
+      // Redirect otomatis ke login
+      setTimeout(() => {
+        window.location.href = "login.html";
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

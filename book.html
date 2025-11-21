@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dine-In Book</title>
+  
+ <style>
+/* =====================
+   THEME (Light / Dark) & ROOT VARS
+   ===================== */
+:root{
+  --bg: #f4f8ff;
+  --surface: #ffffff;
+  --text: #1f2a44;
+  --muted: #6b7a99;
+  --border: #d8e1ff;
+  --brand: #1f70ff;
+  --brand-2: #2a5298;
+  --brand-3: #1e3c72;
+  --chip: #eef4ff;
+  --danger: #e54646;
+  --success: #25d366;
+  --shadow: 0 6px 24px rgba(0,0,0,.08);
+  --qty-btn-bg: #eef4ff;
+  --qty-btn-text: #1f2a44;
+  --container-max: 1200px;
+  --fixed-bar-height: 70px;
+  --voucher-valid-border: #28c76f;
+  --voucher-invalid-border: #ff3e3e;
+  --voucher-valid-bg: rgba(40,199,111,0.12);
+  --voucher-invalid-bg: rgba(255,62,62,0.06);
+}
+
+body.dark-mode{
+  --bg: #0e1116;
+  --surface: #141922;
+  --text: #e6ebff;
+  --muted: #aab6db;
+  --border: #263148;
+  --brand: #4da3ff;
+  --chip: #0f1a2a;
+  --shadow: 0 8px 28px rgba(0,0,0,.5);
+  --qty-btn-bg: #263148;
+  --qty-btn-text: #e6ebff;
+  --voucher-valid-bg: rgba(40,199,111,0.12);
+  --voucher-invalid-bg: rgba(255,62,62,0.06);
+}
+
+/* =====================
+   BASE
+   ===================== */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background:var(--bg);
+  color:var(--text);
+  transition: background .20s ease, color .20s ease;
+  padding-bottom: var(--fixed-bar-height);
+}
+img{max-width:100%;display:block}
+.container{max-width:var(--container-max);margin:0 auto;padding:0 16px}
+
+/* =====================
+   HEADER
+   ===================== */
+header{
+  width:100%;
+  background: linear-gradient(90deg,var(--brand-2),var(--brand-3));
+  color:#fff;padding:16px;position:relative;box-shadow:var(--shadow);
+}
+.header-inner{display:flex;justify-content:space-between;align-items:stretch;gap:12px}
+.header-left{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+#restoLogo{height:60px;width:60px;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.08);flex-shrink:0;margin-bottom:4px}
+.resto-info{display:flex;flex-direction:column;text-align:left;gap:2px}
+#restoName{margin:0;font-size:16px;font-weight:800;color:#fff;line-height:1.2;word-break:break-word}
+.contact-info{font-size:12px;opacity:.95;margin:0;line-height:1.2}
+#teleponRestoranDisplay{color:#fff;font-weight:500;margin:0}
+
+.header-right{display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;flex:0 0 auto;gap:8px}
+.dark-toggle{background: rgba(255,255,255,0.12);border:none;font-size:1.2rem;cursor:pointer;color:#fff;padding:4px 6px;border-radius:6px}
+.locale-select{padding:4px 6px;border-radius:6px;border:none;background:rgba(255,255,255,0.12);color:#fff;font-weight:600;font-size:12px;max-width:140px}
+
+/* =====================
+   TABS
+   ===================== */
+.tabs-wrap{background:var(--surface);top:96px;z-index:40;box-shadow:var(--shadow)}
+.tabs{display:flex;gap:8px;padding:10px;justify-content:center;flex-wrap:wrap}
+.tab{padding:8px 14px;border:1px solid var(--border);border-radius:999px;background:var(--chip);color:var(--text);cursor:pointer;font-weight:600}
+.tab.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+.tab-content{display:none;padding:20px 0}
+.tab-content.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px}
+
+/* =====================
+   MENU CARD
+   ===================== */
+.menu-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:8px;
+  box-shadow:var(--shadow);
+  padding:8px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  cursor:pointer;
+  transition: transform .12s, box-shadow .12s;
+  position:relative;
+}
+.menu-card:hover{transform:translateY(-4px)}
+.menu-thumb{aspect-ratio:1/1;height:auto;border-radius:8px;object-fit:cover;background:#e9eefc}
+.menu-title{font-weight:700;font-size:14px;text-align:center;margin:2px 0 0 0}
+.menu-desc{font-size:12px;color:var(--muted);text-align:center}
+.menu-price{font-size:13px;font-weight:800;text-align:center;margin-top:4px}
+.menu-card .badge{
+  position:absolute;top:8px;right:8px;background-color:#007bff;color:#fff;font-size:12px;font-weight:800;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 2px rgba(0,0,0,0.25)
+}
+
+/* =====================
+   PROMO CARD
+   ===================== */
+.promo-card{
+  position:relative;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:12px;
+  text-align:center;
+  box-shadow:0 2px 6px rgba(0,0,0,0.06);
+  overflow:hidden;
+  transition: transform .12s, box-shadow .12s;
+}
+.promo-card:hover{transform:translateY(-4px)}
+.promo-card img, .promo-card .menu-thumb{aspect-ratio:1/1;border-radius:8px;object-fit:cover;background:#e9eefc}
+.promo-name{font-weight:700;font-size:14px;margin:2px 0 0 0}
+.promo-desc{font-size:14px;color:var(--muted);margin:6px 0 8px}
+.promo-price{font-size:13px;font-weight:800;color:var(--text)}
+.promo-badge{position:absolute;top:10px;left:10px;background:#ffcc00;color:#222;font-weight:800;font-size:13px;padding:4px 10px;border-radius:999px;text-transform:uppercase;box-shadow:0 2px 6px rgba(0,0,0,.12);z-index:5}
+body.dark-mode .promo-badge{background:#ffcc00;color:#111}
+
+/* =====================
+   CART / FOOTER
+   ===================== */
+footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);padding-bottom:calc(var(--fixed-bar-height) + 20px)}
+.footer-inner{padding:18px 0 24px}
+.cart{border:1px solid var(--border);border-radius:16px;padding:12px;background:var(--surface)}
+.cart h3{margin:6px 6px 10px;font-size:18px;position:relative;padding-right:56px}
+.cart-empty{color:var(--muted);padding:8px}
+.order-count{position:absolute;top:6px;right:6px;background:var(--brand);color:#fff;font-size:12px;font-weight:800;padding:4px 8px;border-radius:999px;display:none}
+
+/* cart rows */
+.cart-row{display:grid;grid-template-columns:1fr 76px 92px 28px;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px dashed var(--border)}
+.cart-row:last-child{border-bottom:none}
+.qty-wrap{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden}
+.qty-wrap button{width:28px;height:28px;border:0;background:var(--qty-btn-bg);color:var(--qty-btn-text);cursor:pointer;font-weight:800;border-radius:6px}
+.qty-wrap input{width:36px;text-align:center;border:0;background:transparent;color:var(--text);font-weight:700}
+.price-right{text-align:right;font-weight:700}
+.remove-btn{border:0;background:transparent;color:var(--danger);font-size:18px;cursor:pointer}
+
+/* summary */
+.cart-total{margin-top:15px;display:flex;flex-direction:column;gap:6px;padding-top:6px;border-top:1px solid var(--border);font-weight:800}
+.total-row{display:flex;justify-content:space-between;width:100%;align-items:center}
+.grand-total{font-size:1rem}
+
+/* =====================
+   FORM
+   ===================== */
+.form{margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form label{display:block;font-weight:700;font-size:13px;margin-bottom:4px;color:var(--muted)}
+.form input,.form textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.form textarea{grid-column:1/-1;min-height:80px;resize:vertical}
+
+/* =====================
+   FIXED BAR / ACTIONS
+   ===================== */
+.actions{display:flex;gap:10px;margin-top:12px}
+.btn{flex:1;padding:12px;border-radius:12px;border:0;cursor:pointer;font-weight:800}
+.btn-wa{background:var(--success);color:#fff}
+.btn-back{background:#f39c12;color:#fff}
+.fixed-bar{position:fixed;bottom:0;left:0;width:100%;height:var(--fixed-bar-height);background:var(--surface);display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 12px;z-index:100}
+.fixed-bar button{flex:1;height:46px;font-size:15px;font-weight:700;border-radius:8px;border:0;cursor:pointer}
+.btn-wa{background:var(--brand-2);color:#fff}
+.btn-back{background:#ddd;color:#222}
+
+/* =====================
+   TOASTS & TRANSITIONS
+   ===================== */
+.toast{position:fixed;left:50%;transform:translateX(-50%);background:rgba(30,60,114,0.95);color:#fff;padding:14px 22px;border-radius:10px;font-size:15px;font-weight:500;z-index:9999;box-shadow:0 3px 10px rgba(0,0,0,0.3);animation:fadeInOut 3s ease forwards}
+.toast.success{background:#2e7d32}
+.toast.info{background:#1565c0}
+.toast-top{top:20%}
+.toast-bottom{bottom:20%}
+@keyframes fadeInOut{0%{opacity:0;transform:translate(-50%,-10px)}10%{opacity:1;transform:translate(-50%,0)}90%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,10px)}}
+.fade-in{animation:fadeIn .3s ease forwards}
+.fade-out{animation:fadeOut .3s ease forwards}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(6px)}}
+
+/* =====================
+   VOUCHER: input + message + animations
+   ===================== */
+
+/* Ensure voucher input always visible / styled (fix bug) */
+#voucherInput{
+  width:100%;
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--surface);
+  color:var(--text);
+  transition: box-shadow .18s ease, border-color .18s ease, background .18s ease, transform .12s ease;
+  outline: none;
+  font-weight:700;
+  font-size:14px;
+}
+
+/* focus accessibility */
+#voucherInput:focus{
+  box-shadow: 0 4px 18px rgba(31,112,255,0.12);
+  border-color: var(--brand);
+}
+
+/* message below input */
+#voucherMessage{
+  margin:8px 0 0 0;
+  font-weight:700;
+  font-size:13px;
+  min-height:18px;
+  transition: color .18s ease, transform .12s ease, opacity .18s ease;
+  opacity:1;
+}
+
+/* small helper classes for message colors (JS toggles) */
+.voucher-msg-valid{color:var(--voucher-valid-border)}
+.voucher-msg-invalid{color:var(--voucher-invalid-border)}
+
+/* visual classes applied to input when voucher result known */
+.voucher-valid{
+  animation: voucherPulseGreen 0.32s ease;
+  border:2px solid var(--voucher-valid-border) !important;
+  background: var(--voucher-valid-bg) !important;
+}
+.voucher-invalid{
+  animation: voucherShakeRed 0.32s ease;
+  border:2px solid var(--voucher-invalid-border) !important;
+  background: var(--voucher-invalid-bg) !important;
+}
+
+/* animations */
+@keyframes voucherPulseGreen{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes voucherShakeRed{0%{transform:translateX(0)}25%{transform:translateX(-4px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}100%{transform:translateX(0)}}
+
+/* =====================
+   SMALL / RESPONSIVE TWEAKS
+   ===================== */
+@media (max-width:720px){
+  .grid{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+  .form{grid-template-columns:1fr}
+  .cart-row{grid-template-columns:1fr 56px 84px 28px}
+  .header-inner{flex-direction:column;align-items:flex-start}
+  .header-right{align-items:flex-start}
+  .fixed-bar{padding:8px}
+}
+
+/* End of CSS */
+</style>
+
+
+</head>
+<body>
+<header>
+  <div class="header-inner container">
+    <div class="header-left">
+      <img id="restoLogo" alt="Logo" />
+      <div class="resto-info">
+        <h1 id="restoName">Nama Restoran</h1>
+        <div class="contact-info">
+          <div id="alamatRestoranDisplay"></div>
+          <div id="teleponRestoranDisplay"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-right">
+     <button 
+  type="button" 
+  class="dark-toggle" 
+  id="darkToggle" 
+  title="Toggle theme">🌙
+</button>
+
+     <select id="localeSelect" name="localeSelect" class="locale-select" title="Change locale / currency">
+        <option value="auto">Auto (browser)</option>
+        <option value="en-US|USD">US — USD</option>
+        <option value="id-ID|IDR">INA — IDR</option>
+        <option value="en-GB|GBP">UK — GBP</option>
+        <option value="de-DE|EUR">Germany — EUR</option>
+        <option value="ja-JP|JPY">Japan — JPY</option>
+        <option value="zh-CN|CNY">China — CNY</option>
+        <option value="fr-FR|EUR">France — EUR</option>
+      </select>
+    </div>
+  </div>
+</header>
+
+<div class="tabs-wrap">
+  <div class="container">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('food')">Food</div>
+      <div class="tab" onclick="switchTab('snack')">Snack & Dessert</div>
+      <div class="tab" onclick="switchTab('drink')">Drink</div>
+      <div class="tab" onclick="switchTab('special')">Special</div>
+      <div class="tab" onclick="switchTab('promo')">Promo</div>
+    </div>
+  </div>
+</div>
+
+<main class="container" style="padding-top:12px">
+  <section id="food" class="tab-content active"><div class="grid" id="foodGrid"></div></section>
+  <section id="snack" class="tab-content"><div class="grid" id="snackGrid"></div></section>
+  <section id="drink" class="tab-content"><div class="grid" id="drinkGrid"></div></section>
+  <section id="special" class="tab-content"><div class="grid" id="specialGrid"></div></section>
+  <section id="promo" class="tab-content"><div class="grid" id="promoGrid"></div></section>
+</main>
+
+<footer>
+  <div class="container footer-inner">
+    <div class="cart" id="cartBox">
+      <h3>🛒 Your Cart</h3>
+
+      <!-- Voucher selalu tampil -->
+      <div id="voucherSection" style="margin:15px 0;">
+        <div class="voucher-box">
+          <input 
+            type="text" 
+            id="voucherInput" 
+            name="voucherInput"
+            placeholder="Use Voucher Code"
+          >
+        </div>
+        <p id="voucherMessage"></p>
+      </div>
+
+      <div id="cartRows" class="cart-rows"></div>
+      <div id="cartEmpty" class="cart-empty">No items choice</div>
+
+      <div class="cart-total">
+        <div class="total-row">
+          <span>Total Price</span>
+          <span id="cartTotal">0</span>
+        </div>
+        <div class="total-row" id="discountRow" style="display:none; color:green;">
+          <span>Discount</span>
+          <span id="voucherDiscount">0</span>
+        </div>
+        <div class="total-row grand-total">
+          <span>Grand Total</span>
+          <span id="grandTotal">0</span>
+        </div>
+      </div>
+    </div> <!-- tutup cart -->
+
+    <!-- form masih di dalam container yang sama -->
+    <div class="form" style="margin-top:12px">
+      <div>
+        <label for="custName">Customer Name</label>
+        <input type="text" id="custName" name="custName" placeholder="e.g. John Doe">
+      </div>
+      <div>
+        <label for="custTable">Table No</label>
+        <input type="text" id="custTable" name="custTable" placeholder="e.g. A12">
+      </div>
+      <div>
+        <label for="custDate">Date</label>
+        <input type="text" id="custDate" name="custDate" readonly>
+      </div>
+      <div>
+        <label for="custTime">Time</label>
+        <input type="text" id="custTime" name="custTime" readonly>
+      </div>
+      <div style="grid-column:1/-1">
+        <label for="custNote">Special Request / Notes</label>
+        <textarea id="custNote" name="custNote" placeholder="e.g. no spicy, extra sauce"></textarea>
+      </div>
+    </div>
+
+    <!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<!-- Suara -->
+<audio id="sound-success" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" type="audio/ogg">
+</audio>
+<audio id="sound-error" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+</audio>
+
+<button id="clearDataBtn" class="danger-btn" style="background:#c62828;color:#fff;border:none;padding:10px 16px;border-radius:8px;margin-top:8px;">
+  🗑️ Hapus Data
+</button>
+
+    <div class="fixed-bar">
+      <button class="btn btn-wa" id="btnSend" onclick="sendOrder()">📤 Submit Order</button>
+      <button class="btn btn-back" onclick="history.back()">🔙 Back</button>
+    </div>
+  </div> <!-- tutup container -->
+</footer>
+  
+<script>
+(() => {
+  /* ------------------ CONFIG / STATE ------------------- */
+  const DB_NAME = 'MenuvaDB';
+  const STORE_NAME = 'menuvaData';
+  const LOCALE_KEY = 'menuva_localeChoice';
+
+  let db = null;
+  let menuData = [];
+  let menuPromo = [];
+  let restoData = {};
+  let cart = [];
+  let activeVoucherData = null; // object voucher aktif (null jika none)
+  let promoCountdownTimer = null;
+
+ function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("menuvaDB", 1); // FIX DI SINI
+
+    request.onerror = () => {
+      console.error("❌ Gagal membuka IndexedDB");
+      reject();
+    };
+
+    request.onsuccess = () => {
+      console.log("✅ IndexedDB dibuka (book.html)");
+      resolve(request.result);
+    };
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains("menuvaData")) {
+        db.createObjectStore("menuvaData", { keyPath: "id" });
+      }
+    };
+  });
+}
+
+  /* ------------------ LOCALE / CURRENCY ---------------- */
+  const localeToCurrencyFallback = {
+    'id': 'IDR','en-US': 'USD','en': 'USD','en-GB': 'GBP','de': 'EUR','fr': 'EUR','ja': 'JPY','zh': 'CNY'
+  };
+
+  function parseLocaleCurrency(value) {
+    if (!value || value === 'auto') return { mode: 'auto' };
+    const parts = String(value).split('|');
+    return { mode: 'manual', locale: parts[0] || '', currency: parts[1] || '' };
+  }
+
+  function detectBrowserLocaleCurrency() {
+    const locale = navigator.language || 'en-US';
+    let currency = localeToCurrencyFallback[locale.split('-')[0]] || localeToCurrencyFallback[locale] || 'IDR';
+    if (localeToCurrencyFallback[locale]) currency = localeToCurrencyFallback[locale];
+    return { locale, currency };
+  }
+
+  function getActiveLocaleCurrency() {
+    const saved = localStorage.getItem(LOCALE_KEY) || 'auto';
+    const parsed = parseLocaleCurrency(saved);
+    if (parsed.mode === 'auto') return detectBrowserLocaleCurrency();
+    return {
+      locale: parsed.locale || detectBrowserLocaleCurrency().locale,
+      currency: parsed.currency || detectBrowserLocaleCurrency().currency
+    };
+  }
+
+  function saveLocaleChoice(value) { localStorage.setItem(LOCALE_KEY, value); }
+
+  function formatPrice(amount, currency, locale) {
+    if (!isFinite(Number(amount))) amount = 0;
+    amount = Number(amount);
+    const zeroFractionCurrencies = ['IDR', 'JPY', 'KRW'];
+    const opts = {
+      style: 'currency',
+      currency: currency || 'IDR',
+      maximumFractionDigits: zeroFractionCurrencies.includes((currency || '').toUpperCase()) ? 0 : 2,
+      minimumFractionDigits: zeroFractionCurrencies.includes((currency || '').toUpperCase()) ? 0 : 2
+    };
+    try { return new Intl.NumberFormat(locale || undefined, opts).format(amount); }
+    catch (e) { return (currency ? currency + ' ' : '') + amount.toLocaleString(); }
+  }
+
+  function formatWithActive(amount) {
+    const ac = getActiveLocaleCurrency();
+    return formatPrice(amount, ac.currency, ac.locale);
+  }
+
+  /* ------------------ HELPERS ------------------- */
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;');
+  }
+
+  function cleanNumber(val){
+    if (val == null) return 0;
+    return parseFloat(String(val).replace(/[^0-9.-]/g,'')) || 0;
+  }
+
+  function getQueryRestoId() {
+    const p = new URLSearchParams(window.location.search);
+    return p.get('resto') || null;
+  }
+
+/* ------------------ IndexedDB (auto fix store) ------------------- */
+function initDB() {
+  return new Promise((resolve, reject) => {
+    if (db) return resolve(db);
+
+    const req = indexedDB.open(DB_NAME, 10);
+    req.onerror = () => reject(req.error);
+
+    req.onsuccess = (e) => {
+      db = e.target.result;
+
+      // 🧩 Cek apakah store 'ordersData' sudah ada
+      if (!db.objectStoreNames.contains("ordersData")) {
+        console.warn("⚠️ Store 'ordersData' belum ada. Membuat ulang DB internal...");
+
+        // Buat ulang DB tanpa hapus data lain
+        const newVersion = db.version + 1;
+        db.close();
+        const recreateReq = indexedDB.open(DB_NAME, newVersion);
+
+        recreateReq.onupgradeneeded = (ev) => {
+          const upgradedDB = ev.target.result;
+          if (!upgradedDB.objectStoreNames.contains("ordersData")) {
+            const orders = upgradedDB.createObjectStore("ordersData", { keyPath: "id", autoIncrement: true });
+            orders.createIndex("status", "status", { unique: false });
+            orders.createIndex("orderTime", "orderTime", { unique: false });
+          }
+        };
+
+        recreateReq.onsuccess = (ev2) => {
+          db = ev2.target.result;
+          console.log("✅ Store 'ordersData' berhasil dibuat otomatis (runtime fix)");
+          resolve(db);
+        };
+
+        recreateReq.onerror = () => reject(recreateReq.error);
+        return;
+      }
+
+      resolve(db);
+    };
+
+    req.onblocked = () => {
+      console.warn("⚠️ DB upgrade blocked. Tutup tab lain yang masih pakai DB ini.");
+    };
+
+    req.onupgradeneeded = (e) => {
+      db = e.target.result;
+
+      // Store utama tetap
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+      }
+
+      // Store order baru
+      if (!db.objectStoreNames.contains("ordersData")) {
+        const orders = db.createObjectStore("ordersData", { keyPath: "id", autoIncrement: true });
+        orders.createIndex("status", "status", { unique: false });
+        orders.createIndex("orderTime", "orderTime", { unique: false });
+      }
+    };
+  });
+}
+
+  /* ================== REALTIME BROADCAST CHANNEL ================== */
+const bc = new BroadcastChannel("menuvaOrders");
+
+
+ function loadDataFromDB(restoId) {
+  return new Promise((resolve) => {
+    if (!db) return resolve(null);
+    if (!db.objectStoreNames.contains(STORE_NAME)) return resolve(null);
+
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.getAll();
+
+    req.onsuccess = () => {
+      const all = req.result || [];
+      if (!all.length) return resolve(null);
+
+      // ✅ Jika ada restoId di URL, coba cari yang cocok
+      if (restoId) {
+        const found = all.find(r => 
+          r?.restoId === restoId || 
+          r?.restoPhone === restoId ||
+          r?.id === Number(restoId)
+        );
+        if (found) return resolve(found);
+      }
+
+      // ✅ Jika tidak ada, ambil record pertama saja
+      resolve(all[0]);
+    };
+
+    req.onerror = () => resolve(null);
+  });
+}
+
+  /* ------------------ CART ------------------- */
+  function updateCartCount() {
+    const el = document.getElementById('cartCount');
+    if (!el) return;
+    const totalItems = cart.reduce((s,i)=> s + (Number(i.qty)||0), 0);
+    if (totalItems > 0) { el.style.display = 'inline-block'; el.textContent = totalItems; }
+    else el.style.display = 'none';
+  }
+
+function renderCart() {
+  const rows = document.getElementById('cartRows');
+  const empty = document.getElementById('cartEmpty');
+  if (!rows || !empty) return;
+  rows.innerHTML = '';
+
+  if (!cart || cart.length === 0) {
+    empty.style.display = 'block';
+    const cartTotalEl = document.getElementById('cartTotal');
+    const grandTotalEl = document.getElementById('grandTotal');
+    if (cartTotalEl) { cartTotalEl.dataset.raw = 0; cartTotalEl.textContent = formatWithActive(0); }
+    if (grandTotalEl) { grandTotalEl.dataset.raw = 0; grandTotalEl.textContent = formatWithActive(0); }
+    const discountRow = document.getElementById('discountRow');
+    if (discountRow) discountRow.style.display = 'none';
+    updateCartCount();
+
+    // simpan kondisi cart kosong ke storage
+    saveCartToStorage();
+    restoreVoucherFromStorage();
+    return;
+  }
+
+  empty.style.display = 'none';
+  let total = 0;
+  cart.forEach((c,i)=>{
+    const subtotal = (Number(c.harga)||0) * (Number(c.qty)||0);
+    total += subtotal;
+
+    const row = document.createElement('div');
+    row.className = 'cart-row';
+    row.innerHTML = `
+      <div>
+        <strong>${escapeHtml(c.nama)}</strong>
+        <div style="font-size:12px;color:var(--muted)">${formatWithActive(c.harga)} × ${c.qty}</div>
+      </div>
+      <div class="qty-wrap">
+        <button type="button" onclick="window._menuva.updateQty(${i}, -1)">-</button>
+        <input 
+          type="text" 
+          id="cart-qty-${i}" 
+          name="cart-qty-${i}" 
+          value="${c.qty}" 
+          readonly 
+        />
+        <button type="button" onclick="window._menuva.updateQty(${i}, 1)">+</button>
+      </div>
+      <div class="price-right">${formatWithActive(subtotal)}</div>
+      <button class="remove-btn" title="Remove" onclick="window._menuva.removeFromCart(${i})">✕</button>
+    `;
+    rows.appendChild(row);
+  });
+
+  const cartTotalEl = document.getElementById('cartTotal');
+  if (cartTotalEl) cartTotalEl.dataset.raw = String(total);
+
+  refreshAllPriceDisplays();
+  updateCartCount();
+
+  // ✅ simpan cart setiap kali render ulang
+  saveCartToStorage();
+  restoreVoucherFromStorage();
+  applyVoucherAndUpdateSummary(); 
+}
+
+
+  /* ------------------ CART PERSISTENCE ------------------- */
+function saveCartToStorage() {
+  localStorage.setItem("menuva_cart", JSON.stringify(cart));
+}
+
+function loadCartFromStorage() {
+  try {
+    const data = JSON.parse(localStorage.getItem("menuva_cart") || "[]");
+    if (Array.isArray(data)) cart = data;
+  } catch(e) {
+    cart = [];
+  }
+}
+
+function saveCustomerForm() {
+  const formData = {
+    name: document.getElementById('custName')?.value || '',
+    table: document.getElementById('custTable')?.value || '',
+    date: document.getElementById('custDate')?.value || '',
+    time: document.getElementById('custTime')?.value || '',
+    note: document.getElementById('custNote')?.value || ''
+  };
+  localStorage.setItem("menuva_customer", JSON.stringify(formData));
+}
+
+function loadCustomerForm() {
+  try {
+    const data = JSON.parse(localStorage.getItem("menuva_customer") || "{}");
+    if (!data) return;
+    if (data.name) document.getElementById('custName').value = data.name;
+    if (data.table) document.getElementById('custTable').value = data.table;
+    if (data.date) document.getElementById('custDate').value = data.date;
+    if (data.time) document.getElementById('custTime').value = data.time;
+    if (data.note) document.getElementById('custNote').value = data.note;
+  } catch(e) {}
+}
+
+  function addToCartObj(name, price) {
+    const idx = cart.findIndex(i => i.key === name);
+    if (idx >= 0) cart[idx].qty += 1;
+    else cart.push({ key: name, nama: name, harga: Number(price) || 0, qty: 1 });
+    renderCart();
+  }
+
+  function updateQty(index, delta) {
+    if (!cart[index]) return;
+    cart[index].qty += delta;
+    if (cart[index].qty <= 0) cart.splice(index,1);
+    renderCart();
+  }
+
+ function removeFromCart(index) {
+  if (!cart[index]) return;
+  cart.splice(index, 1);
+  renderCart();
+  saveCartToStorage(); // pastikan tersimpan ulang
+
+  // kalau cart kosong, bersihkan voucher juga
+  if (cart.length === 0) {
+    activeVoucherData = null;
+    localStorage.removeItem('menuva_voucher');
+    applyVoucherAndUpdateSummary();
+  }
+}
+
+
+  /* expose these helpers for onclick usage in HTML */
+  window._menuva = window._menuva || {};
+  window._menuva.addToCart = addToCartObj;
+  window._menuva.updateQty = updateQty;
+  window._menuva.removeFromCart = removeFromCart;
+  window._menuva.getActiveLocaleCurrency = getActiveLocaleCurrency;
+  window._menuva.formatWithActive = formatWithActive;
+  window._menuva.refreshAllPriceDisplays = () => refreshAllPriceDisplays();
+
+  /* ------------------ RENDER MENU & PROMO ---------------------- */
+  function renderMenu() {
+    const map = { food:'foodGrid', snack:'snackGrid', drink:'drinkGrid', special:'specialGrid' };
+    Object.keys(map).forEach(k=>{
+      const grid = document.getElementById(map[k]);
+      if (!grid) return;
+      grid.innerHTML = '';
+      const items = (menuData || []).filter(m => m.kategori === k);
+      if (!items || items.length ===0) {
+        grid.innerHTML = '<div class="cart-empty">No item yet</div>';
+        return;
+      }
+      items.forEach(m=>{
+        const card = document.createElement('div');
+        card.className = 'menu-card';
+        card.onclick = () => { addToCartObj(m.nama, Number(m.harga)||0); updateBadge(card, m.nama); };
+        const hargaNum = Number(m.harga) || 0;
+        card.innerHTML = `
+          ${m.image ? `<img class="menu-thumb" src="${m.image}" alt="${escapeHtml(m.nama)}">` : `<div class="menu-thumb"></div>`}
+          <div class="menu-title">${escapeHtml(m.nama)}</div>
+          <div class="menu-desc">${escapeHtml(m.deskripsi || '')}</div>
+          <div class="menu-price" data-price="${hargaNum}">${formatWithActive(hargaNum)}</div>
+          <span class="badge" style="display:none">0</span>
+        `;
+        grid.appendChild(card);
+      });
+    });
+  }
+
+  function renderPromo(list) {
+  const grid = document.getElementById('promoGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const promos = (list && list.length ? list : menuPromo || []).filter(p => {
+    const now = Date.now();
+    if (!p.tanggalAkhir) return true;
+    const end = new Date(p.tanggalAkhir).getTime();
+    return isFinite(end) ? end > now : true;
+  });
+
+  if (!promos.length) {
+    grid.innerHTML = '<div class="cart-empty">No promo choice</div>';
+    stopPromoCountdown?.();
+    return;
+  }
+
+  promos.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'promo-card';
+    card.style.position = 'relative'; // biar badge nempel ke pojok kanan atas
+
+    const endAttr = p.tanggalAkhir ? `data-end="${p.tanggalAkhir}"` : '';
+
+    // isi konten utama promo
+    card.innerHTML = `
+      ${p.image ? `<img src="${p.image}" class="promo-thumb">` : ''}
+      <div class="promo-title">${escapeHtml(p.namaPromo || p.namaMenu)}</div>
+      <div class="promo-desc">${escapeHtml(p.deskripsi || '')}</div>
+      <div class="promo-price">${formatWithActive(p.harga || 0)}</div>
+      <div class="promo-count" ${endAttr}></div>
+    `;
+
+    // 🔹 badge kategori (misal tulisan "PROMO" di pojok kiri)
+    const badgeLabel = document.createElement('div');
+    badgeLabel.className = 'promo-badge';
+    badgeLabel.textContent = (p.kategori || 'PROMO').toUpperCase();
+    card.appendChild(badgeLabel);
+
+    // 🔹 badge angka (pojok kanan atas)
+    const badgeCount = document.createElement('div');
+    badgeCount.className = 'promo-click-badge';
+    badgeCount.textContent = '0';
+    badgeCount.style.position = 'absolute';
+    badgeCount.style.top = '6px';
+    badgeCount.style.right = '6px';
+    badgeCount.style.background = '#ff3b30';
+    badgeCount.style.color = '#fff';
+    badgeCount.style.fontWeight = 'bold';
+    badgeCount.style.borderRadius = '50%';
+    badgeCount.style.width = '22px';
+    badgeCount.style.height = '22px';
+    badgeCount.style.display = 'none';
+    badgeCount.style.justifyContent = 'center';
+    badgeCount.style.alignItems = 'center';
+    badgeCount.style.fontSize = '13px';
+    badgeCount.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+    badgeCount.style.zIndex = '2';
+    card.appendChild(badgeCount);
+
+    // 🔹 klik = tambah ke cart + naikin badge angka
+    let count = 0;
+    card.onclick = () => {
+      addToCartObj(p.namaPromo || p.namaMenu, p.harga);
+
+      count++;
+      badgeCount.textContent = count;
+      badgeCount.style.display = 'flex';
+      badgeCount.animate([{ transform: 'scale(1.3)' }, { transform: 'scale(1)' }], { duration: 200 });
+    };
+
+    grid.appendChild(card);
+  });
+
+  startPromoCountdown?.();
+}
+
+  function updateBadge(cardEl, itemName) {
+    try {
+      const badge = cardEl.querySelector('.badge');
+      if (!badge) return;
+      const cartItem = cart.find(c => c.nama === itemName);
+      if (!cartItem) { badge.style.display = 'none'; return; }
+      badge.textContent = cartItem.qty;
+      badge.style.display = 'flex';
+    } catch(e){}
+  }
+
+  /* ------------------ PROMO COUNTDOWN -------------------- */
+  function startPromoCountdown(){
+    stopPromoCountdown();
+    promoCountdownTimer = setInterval(()=>{
+      document.querySelectorAll('.promo-count[data-end]').forEach(el=>{
+        const end = new Date(el.dataset.end).getTime();
+        if (!isFinite(end)) { el.textContent=''; return; }
+        const diff = end - Date.now();
+        if (diff <= 0) { el.textContent='Expired'; return; }
+        const d = Math.floor(diff/86400000);
+        const h = Math.floor((diff%86400000)/3600000);
+        const m = Math.floor((diff%3600000)/60000);
+        const s = Math.floor((diff%60000)/1000);
+        el.textContent = `Ends in ${d}d ${h}h ${m}m ${s}s`;
+      });
+    }, 1000);
+  }
+  function stopPromoCountdown(){ if (promoCountdownTimer){ clearInterval(promoCountdownTimer); promoCountdownTimer = null; } }
+
+ let cachedVoucherList = null;
+
+/* ============================
+   VOUCHER HELPERS (WAJIB ADA)
+============================ */
+
+function normalizeVoucher(v) {
+  if (!v) return null;
+  return {
+    code: String(v.code || v.kodeVoucher || '').trim().toUpperCase(),
+    discount: Number(v.discount || v.persen || 0),
+    _raw: v
+  };
+}
+
+function findVoucherSync(code) {
+  if (!code || !Array.isArray(cachedVoucherList)) return null;
+  const c = code.trim().toUpperCase();
+  const found = cachedVoucherList.find(v => String(v.code || v.kodeVoucher).trim().toUpperCase() === c);
+  return found ? normalizeVoucher(found) : null;
+}
+
+/* ==========================
+    VOUCHER APPLY SUMMARY
+========================= */
+
+function applyVoucherAndUpdateSummary() {
+  const cartTotalEl = document.getElementById('cartTotal');
+  const grandTotalEl = document.getElementById('grandTotal');
+  const discountRow = document.getElementById('discountRow');
+  const voucherDiscountEl = document.getElementById('voucherDiscount');
+  const inputCode = (document.getElementById('voucherInput')?.value || '').trim();
+
+  const rawTotal = cleanNumber(cartTotalEl?.dataset?.raw) || 0;
+
+  let discount = 0;
+  let voucherValid = false;
+
+  const voucher = findVoucherSync(inputCode);
+
+  if (voucher) {
+    const pct = Number(voucher.discount) || 0;
+    discount = rawTotal * (pct / 100);
+    voucherValid = true;
+    activeVoucherData = voucher;
+
+    try { showToast(`🎉 Voucher ${voucher.code} aktif! Diskon ${pct}%`, "success"); } catch(e){}
+  } else if (inputCode) {
+    activeVoucherData = null;
+    try { showToast("❌ Kode voucher salah atau kadaluarsa.", "error"); } catch(e){}
+  }
+
+  const newTotal = Math.max(0, rawTotal - discount);
+
+  if (cartTotalEl) cartTotalEl.textContent = formatWithActive ? formatWithActive(rawTotal) : rawTotal;
+  if (voucherDiscountEl) voucherDiscountEl.textContent = formatWithActive ? formatWithActive(discount) : discount;
+  if (grandTotalEl) grandTotalEl.textContent = formatWithActive ? formatWithActive(newTotal) : newTotal;
+
+  if (discountRow) {
+    if (voucherValid && discount > 0) {
+      discountRow.style.display = "flex";
+      discountRow.classList.add("fade-in");
+      discountRow.classList.remove("fade-out");
+    } else {
+      discountRow.classList.remove("fade-in");
+      discountRow.classList.add("fade-out");
+      setTimeout(() => (discountRow.style.display = "none"), 300);
+    }
+  }
+}
+
+function saveVoucherToStorage() {
+  if (!activeVoucherData) {
+    localStorage.removeItem("menuva_voucher");
+    return;
+  }
+  const toSave = activeVoucherData._raw || activeVoucherData;
+  localStorage.setItem("menuva_voucher", JSON.stringify(toSave));
+}
+
+function restoreVoucherFromStorage() {
+  const saved = localStorage.getItem("menuva_voucher");
+  if (!saved) return;
+  let parsed;
+  try { parsed = JSON.parse(saved); } catch(e){ return; }
+  const candidate = Array.isArray(parsed) ? parsed[0] : parsed;
+  if (!candidate) return;
+  activeVoucherData = normalizeVoucher(candidate);
+  applyVoucherAndUpdateSummary?.();
+}
+
+/* ==========================
+      LOAD VOUCHER LIST
+========================== */
+
+async function loadVoucherList() {
+  try {
+    const db = await initDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction("menuvaData", "readonly");
+      const store = tx.objectStore("menuvaData");
+      const req = store.get(1);
+
+      req.onsuccess = () => {
+        const data = req.result;
+        if (!data || !Array.isArray(data.menuVoucher)) {
+          resolve(loadVoucherFromLocalStorage());
+          return;
+        }
+        resolve(data.menuVoucher.map(normalizeVoucher).filter(Boolean));
+      };
+
+      req.onerror = () => resolve(loadVoucherFromLocalStorage());
+    });
+  } catch (err) {
+    return loadVoucherFromLocalStorage();
+  }
+}
+
+function loadVoucherFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem("menuva_vouchers");
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.map(normalizeVoucher).filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+async function ensureVoucherLoaded() {
+  if (cachedVoucherList) return cachedVoucherList;
+  cachedVoucherList = await loadVoucherList();
+  return cachedVoucherList;
+}
+
+/* ==========================
+        APPLY VOUCHER
+========================== */
+
+async function applyVoucher() {
+  const input = document.getElementById("voucherInput");
+  const msg = document.getElementById("voucherMessage");
+  const code = input.value.trim();
+
+  input.classList.remove("voucher-valid", "voucher-invalid");
+
+  if (!code) {
+    msg.textContent = "❌ Please enter voucher code";
+    msg.style.color = "var(--danger)";
+    input.classList.add("voucher-invalid");
+    playError();
+    return;
+  }
+
+  await ensureVoucherLoaded();
+
+  const voucher = findVoucherSync(code);
+
+  if (!voucher) {
+    msg.textContent = "❌ Invalid voucher code";
+    msg.style.color = "var(--danger)";
+    input.classList.add("voucher-invalid");
+    playError();
+    activeVoucherData = null;
+    saveVoucherToStorage();
+    applyVoucherAndUpdateSummary();
+    return;
+  }
+
+  activeVoucherData = voucher;
+  saveVoucherToStorage();
+
+  msg.textContent = "✅ Voucher applied: " + voucher.code;
+  msg.style.color = "var(--success)";
+  input.classList.add("voucher-valid");
+  playSuccess();
+
+  applyVoucherAndUpdateSummary();
+}
+
+/* ==========================
+      AUTO-DETECT INPUT 🔥
+========================== */
+
+function initVoucherInput() {
+  const input = document.getElementById("voucherInput");
+  const msg = document.getElementById("voucherMessage");
+  if (!input) return;
+
+  // Enter tetap berfungsi
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") applyVoucher();
+  });
+
+ // 🔥 AUTO DETECT (real-time) + pesan valid/invalid
+input.addEventListener("input", async () => {
+  const code = input.value.trim();
+
+  msg.textContent = "";
+  input.classList.remove("voucher-valid", "voucher-invalid");
+
+  // === input kosong
+  if (!code) {
+    msg.textContent = "";
+    return;
+  }
+
+  // === minimal 3 karakter untuk cek
+  if (code.length < 3) {
+    msg.textContent = "⏳ Enter at least 3 characters…";
+    msg.style.color = "var(--warning)";
+    return;
+  }
+
+  await ensureVoucherLoaded();
+  const voucher = findVoucherSync(code);
+
+  // ❌ INVALID
+  if (!voucher) {
+    input.classList.add("voucher-invalid");
+    msg.textContent = "❌ Invalid voucher code";
+    msg.style.color = "var(--danger)";
+    return;
+  }
+
+  // ✅ VALID
+  input.classList.add("voucher-valid");
+  msg.textContent = "✅ Voucher valid: " + voucher.code;
+  msg.style.color = "var(--success)";
+
+  activeVoucherData = voucher;
+  saveVoucherToStorage();
+  applyVoucherAndUpdateSummary();
+});
+}
+
+/* ==========================
+           INIT
+========================== */
+
+document.addEventListener("DOMContentLoaded", async () => {
+  initVoucherInput();
+  await ensureVoucherLoaded();
+  restoreVoucherFromStorage?.();
+});
+  
+  /* ------------------ LOCALE UI ------------------------- */
+  function initLocaleSelect(){
+    const sel = document.getElementById('localeSelect');
+    if (!sel) return;
+    const saved = localStorage.getItem(LOCALE_KEY) || 'auto';
+    sel.value = saved;
+    sel.addEventListener('change', ()=>{
+      saveLocaleChoice(sel.value);
+      refreshAllPriceDisplays();
+      renderCart();
+    });
+  }
+
+  function refreshAllPriceDisplays(){
+    document.querySelectorAll('.menu-price').forEach(el=>{
+      const p = Number(el.dataset.price) || 0;
+      el.textContent = formatWithActive(p);
+    });
+    // update cart totals formatting too
+    try { applyVoucherAndUpdateSummary(); } catch(e){}
+  }
+
+/* ------------------ SAVE ORDER (NEW STORE + REALTIME BROADCAST) ------------- */
+async function sendOrder() {
+  const name = (document.getElementById('custName')?.value || '').trim();
+  const table = (document.getElementById('custTable')?.value || '').trim();
+  const date = document.getElementById('custDate')?.value || '';
+  const time = document.getElementById('custTime')?.value || '';
+  const note = (document.getElementById('custNote')?.value || '').trim(); // ✅ ambil notes
+
+  if (!name) return showToast('⚠️ Please fill in customer name!', "error"), playSound("error");
+  if (!table) return showToast('⚠️ Please fill in table number!', "error"), playSound("error");
+  if (!cart || !cart.length) return showToast('⚠️ Please add items to cart before submitting!', "error"), playSound("error");
+
+  // ✅ Hitung subtotal, discount, total
+  let subtotal = 0;
+  cart.forEach(c => subtotal += (Number(c.harga) || 0) * (Number(c.qty) || 0));
+
+  let discount = 0, voucherCode = null, discountPercent = 0;
+  if (activeVoucherData) {
+    discountPercent = parseFloat(activeVoucherData.discount) || 0;
+    discount = subtotal * (discountPercent / 100);
+    voucherCode = activeVoucherData.code;
+  }
+  const grandTotal = subtotal - discount;
+  const now = new Date();
+
+  // ✅ Data lengkap termasuk note
+  const orderData = {
+    resto: restoData?.namaRestoran || '',
+    customer: name,
+    table,
+    date,
+    time,
+    note: note || '-', // ✅ simpan note walau kosong
+    items: cart.map(c => ({
+      nama: c.nama,
+      qty: c.qty,
+      harga: c.harga,
+      total: (Number(c.harga) || 0) * (Number(c.qty) || 0)
+    })),
+    subtotal,
+    discount,
+    discountPercent,
+    voucherCode,
+    grandTotal,
+    status: "new",
+    orderTime: now.toLocaleString("id-ID", { dateStyle: "short", timeStyle: "medium" })
+  };
+
+  try {
+    const db = await initDB();
+    const tx = db.transaction("ordersData", "readwrite");
+    const store = tx.objectStore("ordersData");
+    const req = store.add(orderData);
+
+    req.onsuccess = (e) => {
+      const newId = e.target.result;
+      console.log("✅ Order stored:", { ...orderData, id: newId });
+      showToast("✅ Order submitted successfully!", "success", "top");
+      playSound("success");
+
+      // ✅ Kirim sinyal real-time ke receives.html
+      try {
+        const bc = new BroadcastChannel("menuvaOrders");
+        bc.postMessage({
+          type: "newOrder",
+          data: { ...orderData, id: newId }
+        });
+        bc.close();
+      } catch (err) {
+        console.warn("⚠️ Broadcast gagal:", err);
+      }
+
+      // 🚫 Jangan hapus data di sini!
+      // Biarkan customer tetap lihat pesanan & datanya walau sudah dikirim
+      // Semua data akan tetap tersimpan di localStorage
+
+      showToast("🧾 Order is being processed", "info", "bottom");
+    };
+
+    req.onerror = (e) => {
+      console.error("❌ Failed saving order:", e.target.error);
+      showToast("❌ Failed to save order, please try again.", "error");
+      playSound("error");
+    };
+
+  } catch (err) {
+    console.error("❌ DB Error:", err);
+    showToast("❌ Database not initialized", "error");
+  }
+}
+
+/* ---------------- SOUND EFFECT ---------------- */
+function playSound(type) {
+  let file = "";
+  if (type === "success") file = "clik.mp3";
+  else if (type === "error") file = "beep.mp3";
+
+  if (!file) return;
+  const audio = new Audio(`./${file}`);
+  audio.play().catch(err => console.warn("Sound error:", err));
+}
+
+ function showToast(message, type = "info", position = "top") {
+    const toast = document.createElement("div");
+    toast.className = `toast ${type} toast-${position}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  /* ------------------ TABS ------------------ */
+  function switchTab(tabName){
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    const target = document.getElementById(tabName);
+    if (target) target.classList.add('active');
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    const activeTab = Array.from(document.querySelectorAll('.tab')).find(x => x.getAttribute('onclick')?.includes(tabName));
+    if (activeTab) activeTab.classList.add('active');
+  }
+
+  /* expose to window */
+  window.sendOrder = sendOrder;
+  window.switchTab = switchTab;
+
+/* ------------------ INIT (on DOM ready) ---------------- */
+  window.addEventListener('DOMContentLoaded', async () => {
+    // ========== Inisialisasi Locale & Voucher ==========
+    initLocaleSelect();
+    initVoucherInput();
+
+    try {
+      // ========== Buka DB ==========
+      await initDB();
+      const restoId = getQueryRestoId();
+      const data = await loadDataFromDB(restoId);
+      restoData = data || {};
+      menuData = Array.isArray(data?.menu) ? data.menu : [];
+      menuPromo = Array.isArray(data?.menuPromo) ? data.menuPromo : [];
+    } catch (e) {
+      console.warn('⚠️ DB init error:', e);
+    }
+
+    // ========== Header Info ==========
+    const logoEl = document.getElementById('restoLogo');
+    if (logoEl) {
+      logoEl.src = restoData?.logo || '';
+      logoEl.style.display = restoData?.logo ? 'block' : 'none';
+    }
+
+    const nameEl = document.getElementById('restoName');
+    if (nameEl) nameEl.innerText = restoData?.namaRestoran || 'Nama Restoran';
+
+    const alamatEl = document.getElementById('alamatRestoranDisplay');
+    if (alamatEl) alamatEl.innerText = restoData?.restoAddress || '';
+
+    const telEl = document.getElementById('teleponRestoranDisplay');
+    if (telEl) telEl.innerText = restoData?.restoPhone || '';
+
+    // ========== Default Date/Time ==========
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    const dateInput = document.getElementById('custDate');
+    if (dateInput) dateInput.value = dateStr;
+    const timeInput = document.getElementById('custTime');
+    if (timeInput) timeInput.value = timeStr;
+
+    // ========== Render Awal ==========
+    renderMenu();
+    renderPromo(menuPromo);
+
+    // restore data dari localStorage
+    loadCartFromStorage();
+    loadCustomerForm();
+    renderCart();
+    applyVoucherAndUpdateSummary();
+    restoreVoucherFromStorage();
+
+    // ========== Auto Save Customer Form ==========
+    ['custName', 'custTable', 'custDate', 'custTime', 'custNote'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', saveCustomerForm);
+    });
+
+    // ========== Locale Select ==========
+    const sel = document.getElementById('localeSelect');
+    if (sel) sel.value = localStorage.getItem(LOCALE_KEY) || 'auto';
+
+    console.log('✅ Menuva JS initialized');
+
+    // ========== 🔴 Broadcast Channel: Realtime Sync ke receives.html ==========
+    const bc = new BroadcastChannel('orders_channel');
+    window.notifyOrdersUpdated = () => {
+      bc.postMessage('update_orders');
+      console.log('📡 Orders broadcast dikirim ke receives.html');
+    };
+  });
+
+ /* ------------------ CLEAR CUSTOMER DATA (replace old handler) ------------------ */
+async function clearCustomerData(confirmRequired = true) {
+  if (confirmRequired) {
+    if (!confirm('Yakin mau hapus semua data pesanan di halaman ini?')) return;
+  }
+
+  try {
+    // 1) Kosongkan runtime state
+    cart = [];
+    activeVoucherData = null;
+
+    // 2) Hapus semua key localStorage yang berkaitan dengan customer-side
+    localStorage.removeItem('menuva_cart');
+    localStorage.removeItem('menuva_customer');
+    localStorage.removeItem('menuva_voucher');
+    localStorage.removeItem('voucher');
+
+    // 3) Reset form fields di DOM (jangan lupa set default date/time lagi)
+    const idsToClear = ['custName', 'custTable', 'custNote'];
+    idsToClear.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+
+    // reset date/time to "now" in same format used on init
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const dateInput = document.getElementById('custDate');
+    const timeInput = document.getElementById('custTime');
+    if (dateInput) dateInput.value = dateStr;
+    if (timeInput) timeInput.value = timeStr;
+
+    // 4) Persist the cleared state so reload isn't required (important)
+    saveCartToStorage();     // will write empty cart
+    saveCustomerForm();      // will save cleared customer form
+    saveVoucherToStorage();  // will remove menuva_voucher if activeVoucherData is null
+
+    // 5) Update UI immediately
+    renderCart();                    // rebuild cart UI (will show empty)
+    applyVoucherAndUpdateSummary();  // update totals / discount rows
+    renderMenu();                    // (optional) refresh menu price display/badges
+    renderPromo(menuPromo);          // re-render promo area (keeps promo visible)
+    updateCartCount();
+
+    // 6) Notify other tabs (if any) so they can sync/clear UI too
+    try {
+      const notifyBc = new BroadcastChannel('menuvaOrders');
+      notifyBc.postMessage({ type: 'customer_cleared' });
+      notifyBc.close();
+    } catch (e) {
+      // ignore if BC not available
+    }
+
+    // 7) UX feedback
+    showToast('🧹 Semua data pesanan Anda telah dihapus.', 'success', 'top');
+    playSound('delete');
+
+  } catch (err) {
+    console.error('❌ clearCustomerData error:', err);
+    showToast('❌ Gagal menghapus data. Coba lagi.', 'error');
+  }
+}
+
+/* pasang ke tombol (gantikan handler lama) */
+const clearBtn = document.getElementById('clearDataBtn');
+if (clearBtn) {
+  // remove any previous listeners just in case
+  clearBtn.replaceWith(clearBtn.cloneNode(true));
+  const newBtn = document.getElementById('clearDataBtn');
+  newBtn.addEventListener('click', () => clearCustomerData(true));
+}
+  
+})(); 
+</script>
+<script>
+/* ======================
+   DARK MODE HANDLER
+   ====================== */
+function initDarkMode() {
+  const toggleBtn = document.getElementById('darkToggle');
+  if (!toggleBtn) return;
+
+  // 🔹 Baca preferensi user dari localStorage
+  const savedTheme = localStorage.getItem('menuva_theme');
+  if (savedTheme === 'dark') {
+    document.body.classList.add('dark-mode');
+    toggleBtn.textContent = '☀️';
+  } else {
+    document.body.classList.remove('dark-mode');
+    toggleBtn.textContent = '🌙';
+  }
+
+  // 🔹 Event klik toggle
+  toggleBtn.addEventListener('click', () => {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('menuva_theme', isDark ? 'dark' : 'light');
+    toggleBtn.textContent = isDark ? '☀️' : '🌙';
+  });
+}
+
+// Jalankan setelah DOM siap
+window.addEventListener('DOMContentLoaded', initDarkMode);
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

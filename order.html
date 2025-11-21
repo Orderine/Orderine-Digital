@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reserve & Delivery Order</title>
+ <style>
+  :root {
+    --bg: #f4f8ff;
+    --surface: #ffffff;
+    --text: #1f2a44;
+    --muted: #6b7a99;
+    --border: #d8e1ff;
+    --brand: #1f70ff;
+    --brand-2: #2a5298;
+    --brand-3: #1e3c72;
+    --chip: #eef4ff;
+    --danger: #e54646;
+    --success: #25d366;
+    --shadow: 0 6px 24px rgba(0,0,0,.08);
+  }
+  body.dark {
+    --bg: #0e1116;
+    --surface: #141922;
+    --text: #e6ebff;
+    --muted: #aab6db;
+    --border: #263148;
+    --brand: #4da3ff;
+    --chip: #0f1a2a;
+    --shadow: 0 8px 28px rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    font-family: 'Segoe UI', sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    margin:0;padding:0;padding-bottom:60px;
+  }
+.header {
+  width: 100%;
+  background: linear-gradient(90deg, var(--brand-2), var(--brand-3));
+  color: #fff;
+  padding: 16px;
+  position: relative; /* ikut scroll, bukan sticky */
+  box-shadow: var(--shadow);
+
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start; /* kiri & kanan sejajar atas */
+}
+
+/* Kiri: Logo di atas, Info di bawah */
+.header-left {
+  display: flex;
+  flex-direction: column; /* logo atas, info bawah */
+  align-items: flex-start; /* rata kiri */
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Logo */
+.header-left img {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: rgba(255,255,255,.1);
+}
+
+/* Info Resto */
+.resto-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left; /* tetap rata kiri */
+  gap: 2px; /* rapat, tapi masih kebaca */
+}
+
+.resto-info h1 {
+  font-size: 16px;
+  margin: 0;
+  color: #fff;
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+.resto-info p {
+  font-size: 12px;
+  opacity: .9;
+  margin: 0; /* hapus jarak default */
+  line-height: 1.2;
+}
+
+#teleponRestoranDisplay {
+  color: #fff;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* --- Header Right (toggle & dropdown) --- */
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.dark-toggle {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #fff;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.locale-select {
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: none;
+}
+
+@media (max-width: 480px) {
+  #restoLogo {
+    height: 36px;
+    width: 36px;
+  }
+}
+
+/* HEADER RIGHT FIX */
+.header-right {
+  position: absolute; /* biar bisa ditempel ke kanan header */
+  top: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* icon di atas, dropdown di bawah */
+  align-items: flex-end;
+  padding: 8px 30px; /* kasih jarak dari sisi kanan & atas/bawah */
+  box-sizing: border-box;
+}
+
+/* icon dark mode - atas */
+.dark-toggle {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: none;
+}
+.tagline {
+  text-align: center;   /* center horizontal teks */
+  padding: 8px;
+  font-style: italic;
+  color: rgba(14, 248, 14, 0.966);
+  background: transparent;
+  margin-bottom: 4px;
+}
+
+  /* MAIN CONTAINER */
+  .main-container{width:97%;max-width:1200px;margin:8px auto;padding:20px;background:var(--surface);border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,0.05)}
+  .section-title{text-align:center;font-size:22px;margin:16px 0;font-weight:700;color:var(--text)}
+  .filter-container{text-align:center;margin:12px 0}
+   
+ 
+.filter-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+
+.filter-tabs button {
+  background: var(--chip);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 18px;
+  border-radius: 999px;       /* bikin bentuk pil */
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* Hover efek */
+.filter-tabs button:hover {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+}
+
+/* Active tab */
+.filter-tabs button.active {
+  background: linear-gradient(135deg, var(--brand-2), var(--brand-3));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
+
+/* Dark mode tweak */
+body.dark .filter-tabs button {
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+body.dark .filter-tabs button:hover {
+  background: var(--brand);
+  color: #fff;
+}
+
+body.dark .filter-tabs button.active {
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff;
+  border: none;
+}
+  /* MENU GRID */
+  .menu-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* default: portrait HP */
+    gap: 12px;
+  }
+  @media (min-width: 700px) {
+    .menu-grid {
+      grid-template-columns: repeat(3, 1fr); /* tablet / landscape */
+    }
+  }
+  @media (min-width: 1000px) {
+    .menu-grid {
+      grid-template-columns: repeat(4, 1fr); /* desktop */
+    }
+  }
+  .menu-item{
+    border-radius:10px;padding:12px;border:1px solid var(--border);
+    background:var(--surface);box-shadow:0 4px 12px rgba(0,0,0,0.04);
+    display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center
+  }
+ .menu-name{font-weight:700;text-align:center}
+.menu-price{font-weight:800}
+
+/* === STYLE QTY MIRIP PSP === */
+.qty-controls {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.75));
+  box-shadow: 0 4px 10px rgba(16,24,40,0.06);
+}
+
+/* dark mode container */
+body.dark .qty-controls {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.35);
+}
+
+/* tombol - / + (tipis, pill look) */
+.qty-controls button {
+  width: 25px;
+  height: 25px;
+  min-width: 25px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--text);
+  background: transparent;
+  transition: transform .14s ease, box-shadow .14s ease, background .14s ease;
+  box-shadow: inset -1px -1px 0 rgba(255,255,255,0.35), inset 1px 1px 2px rgba(0,0,0,0.06);
+}
+   body.dark .qty-controls button {
+  background: linear-gradient(145deg, #4da3ff, #1f70ff); /* lebih cerah untuk dark mode */
+  color: #fff;
+  box-shadow: inset -2px -2px 6px rgba(255,255,255,0.2),
+              inset 2px 2px 6px rgba(0,0,0,0.5),
+              0 4px 8px rgba(0,0,0,0.35);
+}
+
+body.dark .qty-controls button:hover {
+  background: linear-gradient(145deg, #1f70ff, #2a5298);
+}
+.qty-controls span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 28px;
+  padding: 0 8px;
+  font-weight: 800;
+  font-size: 15px;
+  text-align: center;
+  color: var(--text);
+  border: 1px solid var(--border);   /* garis tepi kotak */
+  border-radius: 6px;
+  background: var(--chip);           /* warna kotak */
+  box-shadow: inset -1px -1px 2px rgba(39, 219, 243, 0.3), inset 1px 1px 2px rgba(245, 121, 121, 0.1);
+  transition: all 0.2s ease;
+}
+
+/* dark mode kotak qty */
+body.dark .qty-controls span {
+  border: 1px solid rgba(243, 54, 186, 0.2);
+  background: rgba(123, 253, 71, 0.05);
+  color: #f7af14;
+  box-shadow: inset -1px -1px 2px rgba(255,255,255,0.1), inset 1px 1px 2px rgba(0,0,0,0.4);
+}
+
+/* tombol warna filled (opsional) */
+.qty-controls button.filled {
+  background: linear-gradient(145deg, var(--brand-2), var(--brand-3));
+  color: #fff;
+  box-shadow: 0 4px 8px rgba(14,30,60,0.18);
+}
+
+/* hover / active */
+.qty-controls button:hover { transform: translateY(-2px); }
+.qty-controls button:active { transform: translateY(0); }
+
+
+/* keyboard focus */
+.qty-controls button:focus,
+.qty-controls span:focus {
+  outline: 2px solid rgba(31,112,255,0.18);
+  outline-offset: 2px;
+}
+
+/* responsive tweak */
+@media (max-width:420px) {
+  .qty-controls { gap: 6px; padding: 3px; }
+  .qty-controls button { width: 26px; height: 26px; font-size: 15px; }
+  .qty-controls span { min-width: 30px; font-size: 14px; }
+}
+ .promo-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  justify-content: center;
+  padding: 10px;
+}
+
+/* Portrait smartphone */
+@media screen and (max-width: 600px) and (orientation: portrait) {
+  .promo-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .promo-card img {
+    height: 160px;
+  }
+}
+
+.promo-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-height: 350px;
+}
+
+.promo-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.15);
+}
+
+.promo-card img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* badge */
+.promo-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #ffcc00;
+  color: #222;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+}
+
+/* text */
+.promo-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--brand);
+}
+
+.promo-menu-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.promo-menu-desc {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.promo-price {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--brand-2);
+}
+
+.promo-count {
+  font-size: 13px;
+  color: #e33;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+/* ORDER SUMMARY */
+.order-summary{margin-top:18px;border:1px solid var(--border);padding:16px;border-radius:10px;background:var(--surface)}
+.order-summary input,.order-summary textarea{width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);margin-top:6px}
+
+/* BOTTOM BUTTONS */
+.bottom-buttons{position:fixed;bottom:0;left:0;width:100%;display:flex;gap:10px;padding:10px;background:linear-gradient(135deg,#1e3c72,#2a5298);box-shadow:0 -2px 8px rgba(0,0,0,0.1);z-index:999}
+.bottom-buttons button{flex:1;padding:12px;border-radius:8px;border:0;color:#fff;font-weight:800;cursor:pointer}
+.btn-wa{background:var(--success)} .btn-back{background:#f39c12}
+
+.small-muted{font-size:13px;color:var(--muted);text-align:center}
+.fallback{padding:18px;text-align:center;color:var(--muted);background:var(--chip);border-radius:8px}
+
+@media (max-width:700px){
+  .header-inner{flex-direction:row;gap:8px}
+  .header-right{align-items:flex-end}
+  .locale-select{min-width:110px}
+}
+.section-title {
+  text-align: center;
+  font-size: 1.5rem;
+  margin: 24px 0 16px;
+  color: var(--text);
+}
+#voucherInput {
+  width: 100%;
+  max-width: 250px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+.cart-items {
+  margin: 10px 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 0.9em;
+  color: var(--text);
+}
+
+.cart-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.cart-row:last-child {
+  border-bottom: none;
+}
+
+.cart-name { flex: 1; }
+.cart-qty { margin: 0 10px; }
+.cart-price { font-weight: bold; }
+
+   .voucher-ok {
+  border: 2px solid #2ecc71 !important;
+  background: #eafff2 !important;
+  transition: 0.25s;
+}
+
+.voucher-error {
+  border: 2px solid #e74c3c !important;
+  background: #ffecec !important;
+  transition: 0.25s;
+}
+
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-left">
+    <img id="restoLogo" alt="Restaurant Logo" style="display:none" />
+    <div class="resto-info">
+      <h1 id="namaRestoranDisplay"></h1>
+      <p id="alamatRestoranDisplay"></p>
+      <p id="teleponRestoranDisplay"></p>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <button class="dark-toggle" id="darkToggle" title="Toggle theme">🌙</button>
+    <select id="localeSelect" class="locale-select" title="Change locale / currency">
+      <option value="auto">Auto (browser)</option>
+      <option value="en-US|USD">US — USD</option>
+      <option value="id-ID|IDR">INA — IDR</option>
+      <option value="en-GB|GBP">UK — GBP</option>
+      <option value="de-DE|EUR">Germany — EUR</option>
+      <option value="ja-JP|JPY">Japan — JPY</option>
+      <option value="zh-CN|CNY">China — CNY</option>
+      <option value="fr-FR|EUR">France — EUR</option>
+    </select>
+  </div>
+</header>
+
+<div class="tagline"><em>"Your Favorite Food, Just One Click Away"</em></div>
+
+<div class="main-container">
+  <h2 class="section-title">🔥 Special Promo</h2>
+  <div id="promoContainer" class="promo-grid"></div>
+</div>
+
+
+<div class="main-container">
+  <h2 class="section-title">🍽️ Regular Menu</h2>
+
+  <div class="filter-container">
+    <div class="filter-tabs" id="kategoriTabs"></div>
+  </div>
+
+  <div id="menu-list" class="menu-grid"></div>
+
+<div class="order-summary">
+  <h2>🧾 Order Summary</h2>
+
+  <!-- Cart Items List -->
+  <div id="cartContainer" style="margin-bottom:15px;">
+    <h3>🛒 Items in Cart</h3>
+    <ul id="cartList" style="list-style:none; padding-left:0; font-size:0.9em; line-height:1.5;">
+      <!-- Item dari JS akan muncul di sini -->
+      <!-- contoh nanti: <li>Nasi Goreng x2 = Rp 50.000</li> -->
+    </ul>
+  </div>
+    
+  <div id="cartItems" class="cart-items"></div>
+
+  <div class="reservasi-container">
+    <div id="voucherSection" style="display:none; margin:15px 0;">
+      <div class="voucher-box">
+        <input 
+          type="text" 
+          id="voucherInput" 
+          placeholder="Use Voucher Code"
+        >
+      </div>
+      <p id="voucherMessage"></p>
+    </div>
+  </div>
+
+  <div id="priceSummary" style="margin-top:10px; font-size:0.9em;">
+    <p id="totalPrice" data-raw="0">Total Price = 0</p>
+    <p id="voucherDiscount" style="display:none; color:green;">Discount = 0</p>
+    <p id="grandTotal" style="font-weight:bold;">Grand Total = 0</p>
+  </div>
+
+  <!-- lanjut data customer -->
+  <label>Orderer Name</label>
+  <input id="nama" type="text" placeholder="Example: John">
+
+  <label>Delivery Address</label>
+  <textarea id="alamat" placeholder="Example: Road. Memories No. 123"></textarea>
+
+  <label>Delivery Time</label>
+  <input type="datetime-local" id="waktuAntar">
+
+  <label>Additional Notes</label>
+  <textarea id="catatan" placeholder="Example: No chili, please hurry up!"></textarea>
+
+  <label>Rooms (opsional)</label>
+  <input type="text" id="ruangan" placeholder="Example:Smooking Room,Privat Room .Etc">
+</div>
+
+
+<div class="bottom-buttons">
+  <button onclick="kirimPesanan()" class="btn-wa">📤 Send Order List</button>
+  <button onclick="window.location.href='menu.html'" class="btn-back">⬅️ Back To Menu</button>
+</div>
+  
+<script>
+  const enabled = localStorage.getItem("page_order");
+  if (enabled === "false" || enabled === null) {
+    window.location.href = "menu.html"; 
+    // atau tampilkan pesan kalau mau:
+    // document.body.innerHTML = "<h2>⚠️ Reservation & Delivery tidak aktif</h2>";
+  }
+</script>
+
+<script>
+/* ================= THEME (restore + toggle) ================= */
+const THEME_KEY = 'menuva_theme';
+function applyTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  const btn = document.getElementById('darkToggle');
+  if (saved === 'dark') {
+    document.body.classList.add('dark');
+    if (btn) btn.textContent = '☀️';
+  } else {
+    document.body.classList.remove('dark');
+    if (btn) btn.textContent = '🌙';
+  }
+}
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  const isDark = document.body.classList.contains('dark');
+  localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+  const btn = document.getElementById('darkToggle');
+  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+}
+document.getElementById('darkToggle')?.addEventListener('click', toggleDark);
+
+/* ================ LOCALE / CURRENCY LOGIC ================ */
+const LOCALE_KEY = 'menuva_localeChoice';
+function parseLocaleCurrency(value) {
+  if (!value || value === 'auto') return { mode: 'auto' };
+  const parts = String(value).split('|');
+  return { mode: 'manual', locale: parts[0] || '', currency: parts[1] || '' };
+}
+function detectBrowserLocaleCurrency() {
+  const locale = navigator.language || 'en-US';
+  const fallback = {
+    'id': 'IDR', 'en': 'USD', 'en-GB': 'GBP', 'de': 'EUR',
+    'fr': 'EUR', 'ja': 'JPY', 'zh': 'CNY'
+  };
+  let currency = fallback[locale.split('-')[0]] || 'USD';
+  if (fallback[locale]) currency = fallback[locale];
+  return { locale, currency };
+}
+function getActiveLocaleCurrency() {
+  const sel = document.getElementById('localeSelect');
+  const saved = localStorage.getItem(LOCALE_KEY) || (sel ? sel.value : 'auto');
+  const parsed = parseLocaleCurrency(saved);
+  if (parsed.mode === 'auto') {
+    return detectBrowserLocaleCurrency();
+  } else {
+    const browser = detectBrowserLocaleCurrency();
+    return { locale: parsed.locale || browser.locale, currency: parsed.currency || browser.currency };
+  }
+}
+function saveLocaleChoice(value) {
+  localStorage.setItem(LOCALE_KEY, value);
+}
+function formatHarga(amount) {
+  const ac = getActiveLocaleCurrency();
+  const locale = ac.locale || undefined;
+  const currency = ac.currency || 'IDR';
+  const opts = {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0, // selalu tanpa desimal
+    maximumFractionDigits: 0
+  };
+  try {
+    return new Intl.NumberFormat(locale, opts).format(Number(amount || 0));
+  } catch (e) {
+    return (currency ? currency + ' ' : '') + (Number(amount) || 0).toLocaleString();
+  }
+}
+
+function initLocaleSelect() {
+  const sel = document.getElementById('localeSelect');
+  if (!sel) return;
+  const saved = localStorage.getItem(LOCALE_KEY) || 'auto';
+  sel.value = saved;
+  sel.addEventListener('change', () => {
+    saveLocaleChoice(sel.value);
+    updateSemuaHarga();
+  });
+}
+function updateSemuaHarga() {
+  tampilkanPromo();
+  tampilkanMenu();
+  updateRingkasan();
+}
+
+/* ================== IndexedDB & data load ================== */
+let db;
+const DB_NAME = "MenuvaDB";
+const STORE_NAME = "menuvaData";
+const DB_VERSION = 10; // harus sama persis dengan admin.html
+let data = {};
+const pesanan = {};
+
+// Helper: read ?resto= param
+function getRestoParam() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    return p.get('resto') || null;
+  } catch (e) { return null; }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  applyTheme();
+  initLocaleSelect();
+  try {
+    await initDB();
+    await loadDataFromDB();
+  } catch (err) {
+    console.warn("DB init/load warning:", err);
+  }
+  // Render (safe: functions will guard DOM)
+  tampilkanHeader();
+  tampilkanFilterKategori();
+  tampilkanPromo();
+  tampilkanMenu();
+  updateRingkasan();
+});
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onerror = () => reject(req.error);
+    req.onsuccess = (e) => {
+      db = e.target.result;
+      resolve(db);
+    };
+    // important: do NOT create objectStore here — admin.html should manage schema
+    req.onupgradeneeded = (e) => {
+      // If DB doesn't exist, create a store so getAll won't throw in older browsers.
+      // BUT keep minimal: create only if absent to avoid overriding admin logic.
+      db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "restoId" });
+        console.log("initDB: created object store (order page fallback)");
+      }
+    };
+  });
+}
+
+function loadDataFromDB() {
+  return new Promise((resolve, reject) => {
+    if (!db) return resolve({});
+    // if store doesn't exist, return empty
+    if (!db.objectStoreNames.contains(STORE_NAME)) {
+      console.warn("store not found:", STORE_NAME);
+      return resolve({});
+    }
+
+    const restoParam = getRestoParam();
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+
+    if (restoParam) {
+      try {
+        const req = store.get(restoParam);
+        req.onsuccess = () => {
+          data = req.result || {};
+          console.log("Loaded data by resto param:", restoParam, data);
+          resolve(data);
+        };
+        req.onerror = () => {
+          console.warn("get by key error:", req.error);
+          resolve({});
+        };
+      } catch (err) {
+        console.warn("get by key exception:", err);
+        resolve({});
+      }
+      return;
+    }
+
+    // fallback: getAll and pick first record with restoId
+    try {
+      const allReq = store.getAll();
+      allReq.onsuccess = () => {
+        const all = allReq.result || [];
+        if (all.length === 0) {
+          data = {};
+          return resolve({});
+        }
+        const firstWithKey = all.find(r => r && (r.restoId || r.restoPhone));
+        data = firstWithKey || all[0];
+        console.log("Loaded first available data:", data);
+        resolve(data);
+      };
+      allReq.onerror = () => {
+        console.warn("getAll error:", allReq.error);
+        resolve({});
+      };
+    } catch (err) {
+      console.error("loadDataFromDB exception:", err);
+      resolve({});
+    }
+  });
+}
+
+/* =================== SAFETY: escape HTML =================== */
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+
+/* =================== HEADER / FILTER =================== */
+function tampilkanHeader() {
+  const logo = (data && data.logo) ? String(data.logo).trim() : '';
+  const nama = data?.namaRestoran || '';
+  const alamat = data?.restoAddress || '';
+  const telp = data?.restoPhone || '';
+
+  const logoEl = document.getElementById('restoLogo');
+  if (logoEl) {
+    if (logo) {
+      logoEl.src = logo;
+      logoEl.style.display = 'block';
+      // in case image fails to load, hide it to avoid broken icon
+      logoEl.onerror = () => { logoEl.style.display = 'none'; };
+    } else {
+      // hide if no logo provided by admin
+      logoEl.style.display = 'none';
+    }
+  }
+
+  const namaEl = document.getElementById('namaRestoranDisplay');
+  if (namaEl) namaEl.textContent = nama;
+
+  const alamatEl = document.getElementById('alamatRestoranDisplay');
+  if (alamatEl) alamatEl.textContent = alamat;
+
+  const telpEl = document.getElementById('teleponRestoranDisplay');
+  if (telpEl) telpEl.textContent = telp;
+}
+
+function tampilkanFilterKategori() {
+  const tabContainer = document.getElementById('kategoriTabs');
+  if (!tabContainer) return;
+  tabContainer.innerHTML = '';
+  if (!Array.isArray(data.menu) || data.menu.length === 0) return;
+
+  const allBtn = document.createElement('button');
+  allBtn.textContent = 'All';
+  allBtn.classList.add('active');
+  allBtn.onclick = () => tampilkanMenu('Semua', allBtn);
+  tabContainer.appendChild(allBtn);
+
+  const kategoriUnik = [...new Set(data.menu.map(m => m.kategori).filter(Boolean))];
+  kategoriUnik.forEach(k => {
+    const btn = document.createElement('button');
+    btn.textContent = k.charAt(0).toUpperCase() + k.slice(1);
+    btn.onclick = () => tampilkanMenu(k, btn);
+    tabContainer.appendChild(btn);
+  });
+}
+
+function tampilkanMenu(kategori = null, btn = null) {
+  const kategoriDipilih = kategori || 'Semua';
+  if (btn) {
+    document.querySelectorAll('#kategoriTabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  const menuList = document.getElementById('menu-list');
+  if (!menuList) return;
+  menuList.innerHTML = '';
+
+  if (!Array.isArray(data.menu) || data.menu.length === 0) {
+    menuList.innerHTML = `<div class="fallback">No menu available</div>`;
+    return;
+  }
+
+  data.menu.forEach((item, index) => {
+    if (kategoriDipilih !== 'Semua' && item.kategori !== kategoriDipilih) return;
+    if (pesanan[index] === undefined) pesanan[index] = 0;
+    const hargaNum = Number(item.harga) || 0;
+    const hargaFormatted = formatHarga(hargaNum);
+
+    const itemEl = document.createElement('div');
+    itemEl.className = 'menu-item';
+    itemEl.innerHTML = `
+      <div class="menu-name">${escapeHtml(item.nama || '')}</div>
+      <div class="menu-price" data-price="${hargaNum}" id="price-${index}">${hargaFormatted}</div>
+      <div class="qty-controls">
+        <button data-idx="${index}" data-delta="-1">-</button>
+        <span id="qty-${index}">${pesanan[index]}</span>
+        <button data-idx="${index}" data-delta="1">+</button>
+      </div>
+    `;
+    menuList.appendChild(itemEl);
+  });
+
+  menuList.querySelectorAll('button[data-idx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = btn.dataset.idx;
+      const delta = Number(btn.dataset.delta || 0);
+      ubahJumlah(idx, delta);
+    });
+  });
+
+  updateRingkasan();
+}
+
+/* =================== PROMO =================== */
+function tampilkanPromo() {
+  const promoContainer = document.getElementById('promoContainer');
+  if (!promoContainer) return;
+
+  if (!Array.isArray(data.menuPromo) || data.menuPromo.length === 0) {
+    promoContainer.innerHTML = '';
+    return;
+  }
+  promoContainer.innerHTML = '';
+
+  data.menuPromo.forEach((promo, index) => {
+    const promoKey = `promo-${index}`;
+    if (pesanan[promoKey] === undefined) pesanan[promoKey] = 0;
+    const hargaNum = Number(promo.harga) || 0;
+    const hargaFormatted = formatHarga(hargaNum);
+
+    const div = document.createElement('div');
+    div.className = 'promo-card';
+    div.innerHTML = `
+      <div class="promo-badge">Promo</div>
+      ${promo.image ? `<img src="${escapeHtml(promo.image)}" alt="Promo image">` : ''}
+      <div class="promo-name">${escapeHtml(promo.namaPromo || '')}</div>
+      <div class="promo-menu-title">${escapeHtml(promo.namaMenu || '')}</div>
+      <div class="promo-menu-desc">${escapeHtml(promo.deskripsi || '')}</div>
+      <div class="promo-price">${hargaFormatted} ${promo.tanggalAkhir ? `| Until ${escapeHtml(promo.tanggalAkhir)}` : ''}</div>
+      <div class="qty-controls">
+        <button data-key="${promoKey}" data-delta="-1">-</button>
+        <span id="qty-${promoKey}">${pesanan[promoKey]}</span>
+        <button data-key="${promoKey}" data-delta="1">+</button>
+      </div>
+    `;
+    promoContainer.appendChild(div);
+  });
+
+  promoContainer.querySelectorAll('button[data-key]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      const delta = Number(btn.dataset.delta || 0);
+      ubahJumlahPromo(key, delta);
+    });
+  });
+}
+
+function ubahJumlahPromo(index, delta) {
+  pesanan[index] = Math.max(0, (pesanan[index] || 0) + delta);
+  const el = document.getElementById(`qty-${index}`);
+  if (el) el.innerText = pesanan[index];
+  updateRingkasan();
+}
+
+
+function ubahJumlah(index, delta) {
+  pesanan[index] = Math.max(0, (pesanan[index] || 0) + delta);
+  const el = document.getElementById(`qty-${index}`);
+  if (el) el.innerText = pesanan[index];
+  updateRingkasan();
+}
+
+/* =================== RINGKASAN =================== */
+function updateRingkasan() {
+  let totalQty = 0;
+  let totalHargaValue = 0;
+  const cartEl = document.getElementById("cartItems");
+  if (cartEl) cartEl.innerHTML = ""; // reset isi cart
+
+  Object.entries(pesanan).forEach(([key, jumlah]) => {
+    if (!jumlah || jumlah <= 0) return;
+
+    let item, harga, nama;
+    if (String(key).startsWith("promo-")) {
+      const idx = parseInt(String(key).split("-")[1], 10);
+      item = (data.menuPromo || [])[idx];
+      harga = Number(item && item.harga) || 0;
+      nama = item?.namaPromo || item?.namaMenu || "Promo";
+    } else {
+      const idx = Number(key);
+      item = (data.menu || [])[idx];
+      harga = Number(item && item.harga) || 0;
+      nama = item?.nama || "Item";
+    }
+
+    totalQty += jumlah;
+    totalHargaValue += jumlah * harga;
+
+    // bikin row cart
+    if (cartEl) {
+      const row = document.createElement("div");
+      row.className = "cart-row";
+      row.innerHTML = `
+        <span class="cart-name">${escapeHtml(nama)}</span>
+        <span class="cart-qty">x${jumlah}</span>
+        <span class="cart-price">${formatHarga(harga * jumlah)}</span>
+      `;
+      cartEl.appendChild(row);
+    }
+  });
+
+  // update summary total
+  const totalEl = document.getElementById("totalPrice");
+  const grandEl = document.getElementById("grandTotal");
+  if (totalEl) {
+    totalEl.innerText = `Total Price = ${formatHarga(totalHargaValue)}`;
+    totalEl.dataset.raw = String(totalHargaValue);
+    totalEl.dataset.rawOriginal = String(totalHargaValue);
+  }
+  if (grandEl) {
+    grandEl.innerText = `Grand Total = ${formatHarga(totalHargaValue)}`;
+  }
+
+  // re-apply voucher otomatis
+  autoApplyVoucher();
+}
+
+
+/* =================== KIRIM PESAN (WhatsApp) =================== */
+function kirimPesanan() {
+  const namaCust = document.getElementById('nama')?.value.trim() || '';
+  const alamatCust = document.getElementById('alamat')?.value.trim() || '';
+  const waktuAntar = document.getElementById('waktuAntar')?.value;
+  const catatan = document.getElementById('catatan')?.value.trim() || '';
+  const ruangan = document.getElementById('ruangan')?.value.trim() || '';
+
+  if (!data || (!Array.isArray(data.menu) && !Array.isArray(data.menuPromo))) {
+    alert('❌ Restaurant data not found.');
+    return;
+  }
+
+  const lines = [];
+  let totalHargaAll = 0;
+  Object.entries(pesanan).forEach(([key, jumlah]) => {
+    if (!jumlah || jumlah <= 0) return;
+    if (String(key).startsWith('promo-')) {
+      const idx = parseInt(String(key).split('-')[1], 10);
+      const item = (data.menuPromo || [])[idx];
+      const harga = Number(item && item.harga) || 0;
+      totalHargaAll += harga * jumlah;
+      lines.push(`${item.namaPromo || item.namaMenu || 'Promo'} x${jumlah} (${formatHarga(harga * jumlah)})`);
+    } else {
+      const idx = Number(key);
+      const item = (data.menu || [])[idx];
+      const harga = Number(item && item.harga) || 0;
+      totalHargaAll += harga * jumlah;
+      lines.push(`${item.nama || ''} x${jumlah} (${formatHarga(harga * jumlah)})`);
+    }
+  });
+
+  if (lines.length === 0) { alert('No items selected.'); return; }
+
+  const now = new Date();
+  const waktuOrder = now.toLocaleString(getActiveLocaleCurrency().locale);
+
+  let pesan = `🧾 New Order from ${namaCust || 'Customer'}\n\n`;
+  pesan += `📅 Order Date: ${waktuOrder}\n`;
+  if (waktuAntar) pesan += `🕒 Delivery Time: ${new Date(waktuAntar).toLocaleString(getActiveLocaleCurrency().locale)}\n`;
+  if (ruangan) pesan += `🏨 Room: ${ruangan}\n`;
+  pesan += `\n📍 Address:\n${alamatCust}\n\n`;
+  pesan += `🛒 List order:\n${lines.join('\n')}\n\n`;
+
+  // subtotal (sebelum diskon)
+  pesan += `💰 Total: ${formatHarga(totalHargaAll)}\n`;
+
+  // ambil diskon & grand total dari DOM
+  const discountText = document.getElementById("voucherDiscount")?.innerText || "";
+  const grandText = document.getElementById("grandTotal")?.innerText || "";
+
+  if (discountText) pesan += `${discountText}\n`;
+  if (grandText) pesan += `${grandText}\n`;
+
+  if (catatan) pesan += `\n📌 Notes:\n${catatan}`;
+
+  const nomorAdminList = data.nomorWaAdmin || [];
+  if (!Array.isArray(nomorAdminList) || nomorAdminList.length === 0) {
+    alert('⚠️ Tidak ada nomor admin yang tersedia.');
+    return;
+  }
+
+  nomorAdminList.forEach(nomor => {
+    const cleaned = String(nomor).replace(/[^0-9]/g,'');
+    const waLink = `https://wa.me/${cleaned}?text=${encodeURIComponent(pesan)}`;
+    window.open(waLink, '_blank');
+  });
+}
+
+/* ============== Helper ============== */
+function refreshAllPriceDisplays() {
+  document.querySelectorAll('.menu-price').forEach(el => {
+    const p = Number(el.dataset.price) || 0;
+    el.textContent = formatHarga(p);
+  });
+  updateRingkasan();
+}
+</script>
+
+<script>
+  window.addEventListener("load", () => {
+    const plan = localStorage.getItem("user_plan"); 
+    const voucherEnabled = localStorage.getItem("page_voucher") === "true";
+    
+    if (plan !== "monthly" && voucherEnabled) {
+      document.getElementById("voucherSection").style.display = "block";
+    }
+  });
+
+  // Helper parse angka
+function cleanNumber(val) {
+  if (val == null) return 0;
+  return parseFloat(String(val).replace(/[^0-9.-]/g, "")) || 0;
+}
+
+// === Apply Voucher otomatis ===
+async function autoApplyVoucher() {
+  const inputEl = document.getElementById("voucherInput");
+  const input = inputEl?.value.trim();
+  const msg = document.getElementById("voucherMessage");
+
+  const totalEl = document.getElementById("totalPrice");
+  const discountEl = document.getElementById("voucherDiscount");
+  const grandEl = document.getElementById("grandTotal");
+
+  if (!totalEl || !msg || !grandEl) return;
+
+  // Simpan total asli hanya sekali
+  if (!totalEl.dataset.rawOriginal) {
+    totalEl.dataset.rawOriginal = String(cleanNumber(totalEl.dataset.raw) || 0);
+  }
+
+  const originalTotal = cleanNumber(totalEl.dataset.rawOriginal);
+
+  // Reset saat input kosong
+  if (!input) {
+    inputEl.classList.remove("voucher-ok", "voucher-error");
+
+    totalEl.innerText = `Total Price = ${formatHarga(originalTotal)}`;
+    totalEl.dataset.raw = String(originalTotal);
+
+    msg.innerText = "";
+    if (discountEl) discountEl.style.display = "none";
+
+    grandEl.innerText = `Grand Total = ${formatHarga(originalTotal)}`;
+    return;
+  }
+
+  // Ambil voucher aktif
+  const vouchers = await loadVoucherList();
+  const codeUpper = input.toUpperCase();
+  const found = vouchers.find(v => v.code === codeUpper);
+
+  if (!found) {
+    // === Voucher INVALID ===
+    inputEl.classList.remove("voucher-ok");
+    inputEl.classList.add("voucher-error");
+
+    msg.innerText = "❌ Voucher Code is invalid or expired";
+    msg.style.color = "red";
+
+    totalEl.innerText = `Total Price = ${formatHarga(originalTotal)}`;
+    totalEl.dataset.raw = String(originalTotal);
+
+    if (discountEl) discountEl.style.display = "none";
+
+    grandEl.innerText = `Grand Total = ${formatHarga(originalTotal)}`;
+    return;
+  }
+
+  // === Voucher VALID ===
+  inputEl.classList.remove("voucher-error");
+  inputEl.classList.add("voucher-ok");
+
+  const discountPercent = parseFloat(found.discount) || 0;
+  const potongan = originalTotal * (discountPercent / 100);
+  const discounted = originalTotal - potongan;
+
+  msg.innerText = `✅ Voucher valid! Diskon ${discountPercent}% diterapkan`;
+  msg.style.color = "green";
+
+  totalEl.innerText = `Total Price = ${formatHarga(originalTotal)}`;
+  totalEl.dataset.raw = String(discounted);
+
+  if (discountEl) {
+    discountEl.style.display = "block";
+    discountEl.innerText = `Discount ${discountPercent}% = ${formatHarga(potongan)}`;
+  }
+
+  grandEl.innerText = `Grand Total = ${formatHarga(discounted)}`;
+}
+
+  // === LOAD VOUCHER DARI DATABASE ===
+async function loadVoucherList() {
+  const data = await loadDataFromDB(1);
+
+  if (!Array.isArray(data.menuVoucher)) return [];
+
+  const today = new Date();
+
+  // filter voucher aktif
+  return data.menuVoucher.filter(v => new Date(v.expiry) >= today);
+}
+
+
+// Event attach
+document.addEventListener("DOMContentLoaded", () => {
+  const voucherInput = document.getElementById("voucherInput");
+  if (voucherInput) {
+    ["input", "keyup", "change", "blur"].forEach(evt => {
+      voucherInput.addEventListener(evt, autoApplyVoucher);
+    });
+  }
+});
+
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+

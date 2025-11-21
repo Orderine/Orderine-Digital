@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Menuva Digital — Photos & Prices Online</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --blue-900:#05204A;
+      --blue-600:#0A63B7;
+      --blue-500:#1976D2;
+      --muted:#6b7a99;
+      --card:#ffffff;
+      --bg:#f5f8ff;
+      --glass: rgba(255,255,255,0.7);
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#ffffff);color:#122036;line-height:1.5}
+    header{background:linear-gradient(90deg,var(--blue-900),var(--blue-600));color:white;padding:28px 20px;box-shadow:0 6px 18px rgba(9,30,66,0.12)}
+    .container{max-width:1100px;margin:0 auto}
+    .nav{display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand img{width:48px;height:auto;display:block}
+    .brand h1{font-size:18px;margin:0}
+    nav a{color:rgba(255,255,255,0.95);text-decoration:none;margin-left:18px;font-weight:600}
+
+    .hero{display:grid;grid-template-columns:1fr 420px;gap:28px;align-items:center;padding:48px 0}
+    .hero h2{font-size:28px;margin:0 0 12px}
+    .subtitle{color:var(--glass);font-size:15px;margin-bottom:18px}
+    .cta{display:flex;gap:12px}
+    .btn{background:white;color:var(--blue-900);padding:12px 18px;border-radius:10px;font-weight:700;text-decoration:none;box-shadow:0 6px 18px rgba(9,30,66,0.08)}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.18);color:#fff}
+    .preview{width:100%;height:260px;border-radius:10px;overflow:hidden;border:1px solid #e6eefc}
+    .preview img{width:100%;height:100%;object-fit:cover;display:block}
+
+    main{padding:28px 0}
+    .content-grid{display:grid;grid-template-columns:1fr 360px;gap:24px}
+    article{background:linear-gradient(180deg,#fff, #fbfdff);padding:26px;border-radius:12px;border:1px solid #eef5ff}
+
+    h3{margin-top:0}
+    .features{display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px}
+    .feature{display:flex;gap:12px;align-items:flex-start;background:#f8fbff;padding:12px;border-radius:10px;border:1px solid #eef6ff}
+    .feature .icon{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--blue-500),var(--blue-600));display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
+
+    .benefits{margin-top:16px}
+    .benefits li{margin-bottom:10px}
+
+    .sidebar .meta{margin-bottom:14px}
+    .meta strong{display:block}
+
+    footer{background:linear-gradient(90deg,var(--blue-600),var(--blue-900));color:#fff;padding:26px 20px;margin-top:28px}
+    .footer-grid{max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .small{font-size:18px;color:rgba(255,255,255,0.9)}
+
+    @media (max-width:920px){.hero{grid-template-columns:1fr} .content-grid{grid-template-columns:1fr} .preview{height:200px}}
+    /* ==== Base Style ==== */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f9fbff;
+  color: #333;
+  line-height: 1.6;
+}
+
+/* Header */
+header {
+  background: linear-gradient(135deg, #003366, #003366);
+  color: #fff;
+  padding: 20px 10px;
+  text-align: center;
+}
+
+header .brand img {
+  max-width: 160px;
+  height: auto;
+}
+
+header .brand div {
+  font-size: 14px;
+  margin-top: 8px;
+  color: rgba(255,255,255,0.9);
+}
+
+/* Navigation Links */
+.nav-links {
+  margin-top: 15px;
+}
+
+.nav-links a {
+  color: #fff;
+  margin: 0 10px;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav-links a:hover {
+  text-decoration: underline;
+}
+
+/* Main Container */
+.container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 20px;
+}
+
+/* Buttons */
+button, .btn {
+  background: #007bff;
+  border: none;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.3s;
+}
+
+button:hover, .btn:hover {
+  background: #0056b3;
+}
+
+/* Footer */
+footer {
+  background: linear-gradient(135deg, #003366, #003366);
+  color: #fff;
+  text-align: center;
+  padding: 15px 10px;
+  font-size: 14px;
+}
+
+/* ==== Responsive ==== */
+
+/* Tablet */
+@media (max-width: 992px) {
+  header .brand img {
+    max-width: 130px;
+  }
+  header .brand div {
+    font-size: 13px;
+  }
+  .container {
+    padding: 15px;
+  }
+}
+
+/* Mobile Landscape */
+@media (max-width: 768px) {
+  header .brand img {
+    max-width: 110px;
+  }
+  header .brand div {
+    font-size: 12px;
+  }
+  .nav-links a {
+    display: inline-block;
+    margin: 8px 5px;
+  }
+}
+
+/* Mobile Portrait */
+@media (max-width: 480px) {
+  header {
+    padding: 15px 5px;
+  }
+  header .brand img {
+    max-width: 90px;
+  }
+  header .brand div {
+    font-size: 11px;
+  }
+  .nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  button, .btn {
+    width: 100%;
+    font-size: 15px;
+    padding: 10px;
+  }
+}
+.card {
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  max-width: 400px;
+}
+
+/* container preview */
+.preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+/* biar gambar rapi */
+.preview img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+  </style>
+</head>
+<body>
+    <header>
+        <div class="container nav" style="display:flex; justify-content:center; align-items:center;">
+          <div class="brand" style="display:flex; flex-direction:column; align-items:center;">
+            <img src="menuva-logo.png" 
+     alt="Menuva Logo" 
+     style="width:100%; max-width:400px; height:auto; display:block; margin:0 auto;">
+
+            <div style="font-size:20px; color:rgba(255,255,255,0.9);">
+              Digital Solution For Restaurant, Hotel, &amp; Cafe's
+            </div>
+          </div>
+        </div>
+      </header>
+      
+  <div class="container hero">
+    <section>
+      <h2>Manage Menus with Photos & Prices — Clear, Fast, Centralized</h2>
+      <p class="subtitle">A practical web interface for restaurants, cafés and hospitality businesses to publish and maintain current menu items — complete with appetizing photos, accurate pricing and rich descriptions.</p>
+      <div class="cta">
+        <a class="btn" href="index.html">Get Started</a>
+      </div>
+
+      <div style="margin-top:20px">
+        <div class="card" style="margin-top:18px">
+          <h3>Quick Overview</h3>
+          <p style="margin:6px 0 0;color:var(--muted)">Update menu items, upload multiple photos, set prices and availability — all from a single control panel. Changes are reflected instantly on QR menus, websites and POS integrations.</p>
+        </div>
+      </div>
+    </section>
+
+    <aside>
+      <div class="card">
+        <div class="preview">
+          <img src="https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.0.3" alt="food preview">
+          <img src="https://images.unsplash.com/photo-1551024709-8f23befc6f87?q=80&w=957&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="asian food">
+          <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.0.3" alt="coffee cup">
+          <img src="https://images.unsplash.com/photo-1571091718767-18b5b1457add?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.0.3" alt="cocktail drink">
+        </div>
+    
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+          <div style="font-weight:700">Menu Preview</div>
+          <div style="font-size:13px;color:var(--muted)">Live sample</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <main class="container">
+    <div class="content-grid">
+      <article>
+        <h3 id="features">Detailed Description</h3>
+        <p><strong>"Manage menus with photos & prices online"</strong> describes a web-based system that empowers business owners and staff to keep their menu content up-to-date across all customer touchpoints. This includes adding new dishes, enriching listings with high-quality photos, adjusting prices, scheduling availability, and marking items as seasonal or sold out.</p>
+
+        <h4 style="margin-top:18px">How it works (step-by-step)</h4>
+        <ol>
+          <li>Login to a secure admin dashboard.</li>
+          <li>Create a new menu item: name, category, description, price, SKU (optional).</li>
+          <li>Upload one or more photos and choose the primary display image.</li>
+          <li>Set availability, portion size, and optional modifiers (e.g., extra toppings, spice level).</li>
+          <li>Publish — updates are pushed instantly to your public menu (QR menu, website, app).</li>
+        </ol>
+
+        <h4 style="margin-top:18px">Core Features</h4>
+        <div class="features">
+          <div class="feature"><div class="icon">P</div><div><strong>Photo-first listings</strong><div style="font-size:13px;color:var(--muted)">Display vibrant photos to increase conversions.</div></div></div>
+          <div class="feature"><div class="icon">$</div><div><strong>Flexible pricing</strong><div style="font-size:13px;color:var(--muted)">Change prices per branch, time, or promotion.</div></div></div>
+          <div class="feature"><div class="icon">⏱</div><div><strong>Real-time updates</strong><div style="font-size:13px;color:var(--muted)">Instantly reflect menu changes across channels.</div></div></div>
+          <div class="feature"><div class="icon">🔗</div><div><strong>Channel sync</strong><div style="font-size:13px;color:var(--muted)">Sync with QR menus, website embeds and POS.</div></div></div>
+        </div>
+
+        <h4 style="margin-top:18px">Use cases</h4>
+        <ul>
+          <li>Daily special updates for cafés and bakeries.</li>
+          <li>Seasonal menu rollouts for hotels and resorts.</li>
+          <li>Price adjustments for inflation or supplier cost changes.</li>
+          <li>Centralized management for multi-branch restaurants.</li>
+        </ul>
+
+        <h4 style="margin-top:18px" id="benefits>Benefits</h4>
+        <p>The system provides clear business advantages:</p>
+        <ul class="benefits">
+          <li><strong>Cost savings:</strong> eliminate reprinting and reduce manual errors.</li>
+          <li><strong>Speed & agility:</strong> deploy promotions and price changes quickly.</li>
+          <li><strong>Better customer experience:</strong> visual menus boost ordering confidence and reduce decision time.</li>
+          <li><strong>Consistency:</strong> maintain uniform offerings across outlets and digital channels.</li>
+          <li><strong>Data-driven decisions:</strong> track popular items via impressions and orders (if integrated with analytics).</li>
+        </ul>
+
+        <h4 style="margin-top:18px">Design & UX recommendations</h4>
+        <p>Prioritize high-quality photography, short and appetizing descriptions (1–2 lines), and clear price formatting. Use badges for "Chef's choice" or "Popular" to guide customers visually.</p>
+
+        <h4 style="margin-top:18px" id="faq">FAQ</h4>
+        <dl>
+          <dt><strong>Q: Can I schedule price changes?</strong></dt>
+          <dd>A: Yes — schedule future activations for limited-time offers or happy hour pricing.</dd>
+          <dt><strong>Q: Can photos be optimized automatically?</strong></dt>
+          <dd>A: The system can optionally compress and crop images on upload for faster loading.</dd>
+        </dl>
+      </article>
+
+      <aside class="sidebar">
+        <div class="card meta">
+          <strong>Benefits at a glance</strong>
+          <div style="font-size:13px;color:var(--muted);margin-top:8px">Save time, avoid costly reprints, increase order value, and deliver consistent information to customers.</div>
+        </div>
+
+        <div class="card meta">
+          <strong>Who should use this?</strong>
+          <div style="font-size:13px;color:var(--muted);margin-top:8px">Independent restaurants, cloud kitchens, hotel F&B outlets, cafés, and multi-site operators.</div>
+        </div>
+
+        <div class="card meta">
+          <strong>Quick tips</strong>
+          <ul style="margin:8px 0 0 18px;color:var(--muted)">
+            <li>Use 2–3 photos per item (main + detail + serving).</li>
+            <li>Keep descriptions short and sensory (e.g., "crispy", "smoky").</li>
+            <li>Standardize price format: currency symbol + no trailing zeros.</li>
+          </ul>
+        </div>
+
+        <div class="card meta" style="text-align:center;margin-top:10px">
+          <strong>Ready to publish?</strong>
+          <div style="margin-top:10px"><a class="btn" href="register.html">Start Free Trial</a></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-grid">
+      <div>
+      <div class="small">© 2025 Menuva · All rights reserved</div>
+    </div>
+  </footer>
+</body>
+</html>
+

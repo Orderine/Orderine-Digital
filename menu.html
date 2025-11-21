@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>All Menu</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: rgba(30, 60, 114, 0.05); /* biru lembut, transparan */
+    padding-bottom: 80px; /* space untuk fixed bar */
+  }
+
+  /* ================== Header Restoran ================== */
+  .header-resto {
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    color: #fff;
+    text-align: center;
+    padding: 16px 8px;
+  }
+  .header-resto img {
+    max-height: 60px;
+    display: block;
+    margin: 0 auto 10px;
+  }
+  .header-resto h1 {
+    margin: 0 0 5px 0;
+    font-size: 16px;
+  }
+  #infoResto {
+    font-size: 12px;
+    background: rgba(255,255,255,0.1);
+    padding: 10px;
+    border-radius: 8px;
+    display: inline-block;
+  }
+  #infoResto p {
+    margin: 4px 0;
+  }
+
+  /* ================== Container Section ================== */
+ .container-section {
+  max-width: 900px;
+  margin: 30px auto;
+  padding: 20px 25px;
+  background-color: rgba(27, 101, 197, 0.2); /* biru lembut, transparan */
+  border-radius: 12px;  /* sudut agak bulat */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.26); /* shadow tipis biar floating */
+  color: #333; /* teks tetap terbaca */
+}
+  /* ================== Section Titles ================== */
+.section-title {
+  text-align: center;
+  font-weight: bold;
+  font-size: 20px;
+  margin: 30px 0 20px;
+  border-bottom: 2px solid #ccc;
+  padding-bottom: 5px;
+  display: block;          /* bikin full width */
+  width: fit-content;      /* garis bawah hanya selebar teks */
+  margin-left: auto;
+  margin-right: auto;      /* center horizontal */
+}
+
+  /* ================== Promo Grid ================== */
+  .promo-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 40px;
+  }
+  .promo-item {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    width: 275px;
+    padding: 10px;
+    text-align: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .promo-item img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+  .promo-item h3 { margin: 0 0 6px 0; font-size: 16px; }
+  .promo-item p { margin: 0 0 10px 0; font-size: 14px; color: #555; }
+  .promo-price { font-weight: bold; color: #28a745; margin-bottom: 8px; }
+  .promo-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #ffcc00;
+    color: #222;
+    font-weight: 800;
+    font-size: 13px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  }
+  .warning { text-align: center; color: #e74c3c; margin: 10px 0; }
+
+  /* ================== Flipbook Gallery ================== */
+  .flipbook-gallery {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 10px;
+    padding: 10px 0;
+  }
+  .flipbook-gallery img {
+    flex-shrink: 0;
+    width: 100%;  /* 1 gambar full container */
+    max-width: 600px;
+    height: auto;
+    scroll-snap-align: center;
+    border-radius: 10px;
+    object-fit: cover;
+    cursor: pointer;
+    border: 2px solid #ccc;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+  }
+  .flipbook-gallery img:hover {
+    border-color: #28a745;
+    box-shadow: 0 0 6px rgba(40,167,69,0.5);
+    transform: scale(1.02);
+  }
+
+  /* ================== Fullscreen Overlay ================== */
+  .fullscreen-overlay {
+    display: none;
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.85);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
+  .fullscreen-overlay img {
+    max-width: 95vw;
+    max-height: 90vh;
+    border-radius: 10px;
+  }
+  .fullscreen-overlay .close-btn {
+    position: absolute; top: 20px; right: 30px;
+    font-size: 30px; color:#fff; cursor:pointer;
+  }
+  .fullscreen-overlay .nav-btn {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    font-size: 40px; color: #fff; cursor:pointer;
+    padding: 10px; background: rgba(0,0,0,0.4); border-radius: 50%;
+  }
+  .fullscreen-overlay .prev-btn { left: 20px; }
+  .fullscreen-overlay .next-btn { right: 20px; }
+
+  /* ================== Buttons ================== */
+  .btn-book { display:block; margin:20px auto; width:80%; padding:16px; font-size:1.2rem; background:#ffc107; color:#fff; border:none; border-radius:12px; cursor:pointer; transition:0.3s; }
+  .btn-book:hover { background:#e0a800; }
+
+  .fixed-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  border-top: 1px solid #ddd;
+  padding: 6px 0;
+  z-index: 1000;
+}
+
+.nav-btn {
+  display: flex;
+  flex-direction: column; /* icon di atas, teks di bawah */
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  outline: none;
+  flex: 1;
+  cursor: pointer;
+  padding: 4px 0;
+  font-family: inherit;
+  color: #fff; /* 👈 warna teks & icon jadi putih */
+  transition: color 0.2s ease;
+}
+
+.nav-btn:hover {
+   color: #facc15;
+}
+
+.nav-btn .icon {
+  font-size: 22px; /* ukuran icon */
+  line-height: 1.2;
+}
+
+.nav-btn .label {
+  font-size: 12px; /* ukuran teks kecil */
+  margin-top: 2px;
+}
+
+</style>
+</head>
+<body>
+
+<!-- Header Restoran -->
+<div class="header-resto">
+  <img id="logoResto" src="" alt="Logo Restoran" />
+  <h1 id="namaRestoDisplay"></h1>
+  <div id="infoResto">
+    <p id="alamatResto">📍 Address: </p>
+    <p id="teleponResto">📞 Telephone: </p>
+  </div>
+</div>
+
+<!-- Container Utama -->
+<div class="container-section">
+  <!-- Promo Section -->
+  <section class="flipbook-section">
+    <h1 class="section-title">🎉 Promo Special</h1>
+    <div id="promoContainer" class="promo-grid"></div>
+    <div id="promoWarning" class="warning"></div>
+  </section>
+
+  <!-- Flipbook Ruangan -->
+  <section class="flipbook-section">
+    <h1 class="section-title">📸 Room Gallery</h1>
+    <div style="max-width:600px; margin:0 auto;">
+      <div id="flipbookRuanganGallery" class="flipbook-gallery"></div>
+    </div>
+    <div id="ruanganWarning" class="warning"></div>
+  </section>
+
+  <!-- Flipbook Menu -->
+  <section class="flipbook-section">
+    <h1 class="section-title">📖 Menu Gallery</h1>
+    <div style="max-width:600px; margin:0 auto;">
+      <div id="flipbookMenuGallery" class="flipbook-gallery"></div>
+    </div>
+    <div id="menuWarning" class="warning"></div>
+  </section>
+</div>
+
+<!-- Fullscreen overlay -->
+<div class="fullscreen-overlay" id="fullscreenOverlay">
+  <span class="close-btn" onclick="closeFullscreen()">✖</span>
+  <span class="nav-btn prev-btn" onclick="showPrev()">⟨</span>
+  <img id="fullscreenImage" alt="Fullscreen Image" />
+  <span class="nav-btn next-btn" onclick="showNext()">⟩</span>
+</div>
+
+<!-- Fixed Button Bar -->
+<div class="fixed-bar">
+  <!-- Tombol Dine-in -->
+  <button class="nav-btn" onclick="window.location.href='book.html'">
+    <span class="icon">📖</span>
+    <span class="label">Dine-in Book</span>
+  </button>
+
+  <button class="nav-btn" onclick="window.location.href='order.html'">
+    <span class="icon">🛒</span>
+    <span class="label">Reserve & Delivery</span>
+  </button>
+
+  <button class="nav-btn" onclick="window.location.href='room.html'">
+    <span class="icon">🏢</span>
+    <span class="label">Room & Package</span>
+  </button>
+</div>
+
+  
+<script>
+const DB_NAME     = "MenuvaDB";
+const STORE_NAME  = "menuvaData";
+const DB_VERSION  = 10; // harus sama dengan admin.html
+
+  let db;
+function initDB() {
+  return new Promise((resolve, reject) => {
+    if (db) return resolve(db);
+
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onerror = () => reject(request.error);
+
+    request.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains(STORE_NAME)) {
+        database.createObjectStore(STORE_NAME, { keyPath: "restoId" });
+      }
+    };
+
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      resolve(db);
+    };
+  });
+}
+
+
+/* =======================
+   RESTO ID HANDLER
+======================= */
+function getRestoId() {
+  const params = new URLSearchParams(window.location.search);
+  let restoId = params.get("resto");
+
+  if (restoId) {
+    // simpan ke localStorage
+    localStorage.setItem("restoId", restoId);
+    console.log("🔑 Resto ID from URL:", restoId);
+  } else {
+    restoId = localStorage.getItem("restoId");
+    if (restoId) {
+      console.log("📦 Resto ID from localStorage:", restoId);
+    }
+  }
+
+  if (!restoId) {
+    alert("❌ Resto ID tidak ditemukan. Gunakan link dari admin (contoh: menu.html?resto=0877xxxx)");
+    return null;
+  }
+  return restoId;
+}
+  
+function loadDataFromDB(restoId) {
+  return new Promise((resolve, reject) => {
+    if (!db) return reject(new Error("DB belum siap"));
+    const tx = db.transaction("menuvaData", "readonly");
+    const store = tx.objectStore("menuvaData");
+    const req = store.getAll();
+
+    req.onsuccess = () => {
+      const all = req.result;
+      const found = all.find(item => item.restoId === restoId);
+      resolve(found || null);
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/* =======================
+   FLIPBOOK GALLERY
+======================= */
+let currentFullscreenIndex = 0;
+let currentImages = [];
+function renderFlipbookGallery(containerId, images, warningId) {
+  const container = document.getElementById(containerId);
+  const warning = document.getElementById(warningId);
+  container.innerHTML = "";
+  warning.textContent = "";
+
+  if (!images || images.length === 0) {
+    warning.textContent = "No pictures.";
+    return;
+  }
+
+  images.forEach((src,i) => {
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "Flipbook Image";
+    img.onclick = () => openFullscreen(src,i,images);
+    container.appendChild(img);
+  });
+}
+
+function openFullscreen(src,index,images){
+  currentFullscreenIndex = index;
+  currentImages = images;
+  document.getElementById("fullscreenOverlay").style.display = "flex";
+  document.getElementById("fullscreenImage").src = src;
+}
+function closeFullscreen(){ 
+  document.getElementById("fullscreenOverlay").style.display = "none";
+  document.getElementById("fullscreenImage").src = "";
+}
+function showPrev(){ 
+  if(currentImages.length===0) return;
+  currentFullscreenIndex = (currentFullscreenIndex-1+currentImages.length)%currentImages.length;
+  document.getElementById("fullscreenImage").src = currentImages[currentFullscreenIndex];
+}
+function showNext(){ 
+  if(currentImages.length===0) return;
+  currentFullscreenIndex = (currentFullscreenIndex+1)%currentImages.length;
+  document.getElementById("fullscreenImage").src = currentImages[currentFullscreenIndex];
+}
+
+/* =======================
+   PROMO RENDER
+======================= */
+function renderPromo(promoList) {
+  const promoContainer = document.getElementById("promoContainer");
+  promoContainer.innerHTML = "";
+
+  const promoWarning = document.getElementById("promoWarning");
+  promoWarning.textContent = "";
+
+  if (!promoList || promoList.length === 0) {
+    promoWarning.textContent = "❌ No promo data available.";
+    return;
+  }
+
+  promoList.forEach((promo, index) => {
+    const promoCard = document.createElement("div");
+    promoCard.className = "promo-item";
+
+    if (promo.kategori) {
+      const badge = document.createElement("div");
+      badge.className = "promo-badge";
+      badge.textContent = promo.kategori.toUpperCase();
+      promoCard.appendChild(badge);
+    }
+
+    const img = document.createElement("img");
+    img.src = promo.image || "";
+    img.alt = promo.namaPromo || "Promo Image";
+    promoCard.appendChild(img);
+
+    const title = document.createElement("h3");
+    title.textContent = promo.namaPromo || "No Name";
+    promoCard.appendChild(title);
+
+    const desc = document.createElement("p");
+    desc.textContent = promo.deskripsi || "-";
+    promoCard.appendChild(desc);
+
+    const price = document.createElement("div");
+    price.className = "promo-price";
+    price.textContent = promo.harga
+      ? `Rp ${parseInt(promo.harga).toLocaleString("id-ID")}`
+      : "-";
+    promoCard.appendChild(price);
+
+    const countdown = document.createElement("div");
+    countdown.className = "countdown";
+    countdown.id = `countdown-${index}`;
+    promoCard.appendChild(countdown);
+
+    if (promo.tanggalAkhir) {
+      startCountdown(promo.tanggalAkhir, countdown.id);
+    } else {
+      countdown.textContent = "Tanpa batas waktu";
+    }
+
+    promoContainer.appendChild(promoCard);
+  });
+}
+
+function startCountdown(tanggalAkhir,elementId){
+  function update(){
+    const deadline = new Date(tanggalAkhir).getTime();
+    const now = new Date().getTime();
+    const distance = deadline - now;
+    const el = document.getElementById(elementId);
+    if(!el) return;
+    if(distance<0){ el.textContent="Promotion has ended"; return; }
+    const d=Math.floor(distance/(1000*60*60*24));
+    const h=Math.floor((distance%(1000*60*60*24))/(1000*60*60));
+    const m=Math.floor((distance%(1000*60*60))/(1000*60));
+    const s=Math.floor((distance%(1000*60))/1000);
+    el.textContent=`Ends in : ${d}d ${h}h ${m}m ${s}s`;
+  }
+  update();
+  setInterval(update,1000);
+}
+
+/* =======================
+   WATCH DB CHANGES
+======================= */
+async function watchDBChanges(restoId){
+  let lastDataStr="";
+  async function checkUpdates(){
+    const data = await loadDataFromDB(restoId);
+    if(!data) return;
+    const current = JSON.stringify(data);
+    if(current!==lastDataStr){
+      lastDataStr = current;
+      console.log("🔄 Data updated, refreshing view...");
+      renderPromo(data.menuPromo);
+      renderFlipbookGallery("flipbookRuanganGallery",data.flipbookRuanganImages,"ruanganWarning");
+      renderFlipbookGallery("flipbookMenuGallery",data.flipbookMenuImages,"menuWarning");
+    }
+  }
+  await checkUpdates();
+  setInterval(checkUpdates,5000);
+}
+/* =======================
+   ONLOAD
+======================= */
+window.onload = async () => {
+  const restoId = getRestoId();
+  if (!restoId) {
+    alert("❌ Resto ID tidak ditemukan. Gunakan ?resto=0877xxxx");
+    return;
+  }
+
+  try {
+    // pastikan DB ready
+    await initDB();
+
+    // load data
+    const data = await loadDataFromDB(restoId);
+    if (!data) {
+      console.warn("⚠️ Tidak ada data ditemukan untuk:", restoId);
+      return;
+    }
+
+    console.log("✅ Data berhasil di-load:", data);
+
+    // render logo
+    const logoElem = document.getElementById("logoResto");
+    if (data.logo) {
+      logoElem.src = data.logo;
+      logoElem.style.display = "block";
+    } else {
+      logoElem.style.display = "none";
+    }
+
+    // render detail resto
+    document.getElementById("namaRestoDisplay").textContent = data.namaRestoran || "Menu Restoran";
+    document.getElementById("alamatResto").innerText = `📍 Address: ${data.restoAddress || '-'}`;
+    document.getElementById("teleponResto").innerText = `📞 Telephone: ${data.restoPhone || '-'}`;
+
+    // render konten
+    renderPromo(data.menuPromo);
+    renderFlipbookGallery("flipbookRuanganGallery", data.flipbookRuanganImages, "ruanganWarning");
+    renderFlipbookGallery("flipbookMenuGallery", data.flipbookMenuImages, "menuWarning");
+
+    // monitor perubahan DB
+    watchDBChanges(restoId);
+
+  } catch (err) {
+    console.error("❌ Gagal load data menu:", err);
+  }
+};
+
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+

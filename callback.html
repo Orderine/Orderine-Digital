@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Callback</title>
+  <script>
+    // Ambil hash dari URL (token dari Google)
+    window.onload = function () {
+      const params = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = params.get("access_token");
+
+      if (accessToken) {
+        // Simpan token biar bisa dipakai di admin.html
+        localStorage.setItem("google_access_token", accessToken);
+
+        // Redirect ke halaman admin
+        window.location.href = "admin.html";
+      } else {
+        alert("Login gagal atau token tidak ditemukan.");
+        window.location.href = "index.html"; // balik ke login
+      }
+    };
+  </script>
+</head>
+<body>
+  <p>Sedang memproses login, harap tunggu...</p>
+</body>
+</html>

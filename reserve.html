@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reservation - Menuva</title>
+  <style>
+    :root {
+      --brand: #1e3a8a;
+      --surface: #ffffff;
+      --bg: #f4f8ff;
+      --text: #1f2a44;
+      --muted: #6b7a99;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* Header */
+    header {
+      background: var(--brand);
+      padding: 30px 20px;
+      color: #fff;
+      text-align: center;
+    }
+
+    .logo {
+      display: block;
+      max-width: 400px;
+      width: 100%;
+      height: auto;
+      margin: 0 auto 10px;
+    }
+
+    .tagline {
+      font-size: 20px;
+      color: #433997;
+      margin-bottom: 15px;
+    }
+
+    .anchor-nav {
+      display: flex;
+      justify-content: right;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .anchor-nav a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+
+    .anchor-nav a:hover {
+      opacity: 0.7;
+    }
+
+    /* Main container */
+    .container {
+      max-width: 1100px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    .section {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .section h2 {
+      margin-top: 0;
+      font-size: 22px;
+      color: var(--brand);
+    }
+
+    .section img {
+      width: 100%;
+      height: 240px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin: 15px 0;
+    }
+
+    footer {
+      background: var(--brand);
+      color: #fff;
+      text-align: center;
+      padding: 14px;
+      margin-top: 40px;
+      font-size: 14px;
+    }
+
+    @media (min-width: 768px) {
+      .section {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .section img {
+        flex: 1;
+        height: 280px;
+      }
+
+      .section .text {
+        flex: 1;
+      }
+
+      .tagline {
+        font-size: 16px;
+      }
+    }
+    h1 {
+        text-align: center;
+        
+    }
+    .btn.ghost{background:transparent;color:var(--blue-700);border:1px solid #d9e9ff}
+    .btn{background:var(--blue-700);color:#1909fd;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:700;display:inline-block}
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <img class="logo" src="menuva-logo.png" alt="Menuva Logo" onerror="this.style.display='none'">
+    <div style="color: white;">Digital Solution For Restaurant, Hotel, & Cafe's</div>
+    <nav class="anchor-nav">
+      <a href="#room">Hotel Room</a>
+      <a href="#meeting">Meeting Room</a>
+      <a href="#package">Package Menu</a>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <h1 class="tagline">Booking rooms & meeting spaces made simple.</h1>
+  <main class="container">
+    <!-- Hotel Room -->
+    <div class="section" id="room">
+      <div class="text">
+        <h2>Hotel Room Booking</h2>
+        <p>
+          To reserve a hotel room, browse our available room types and select your preferred option.  
+          Enter your stay dates, number of guests, and any special requests.  
+          Confirm your booking with secure online payment and receive instant confirmation by email.
+        </p>
+      </div>
+      <img src="https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Hotel Room">
+    </div>
+
+    <!-- Meeting Room -->
+    <div class="section" id="meeting">
+      <div class="text">
+        <h2>Meeting Room Booking</h2>
+        <p>
+          For corporate needs, our meeting rooms are equipped with modern facilities.  
+          Select your desired meeting space, specify the date and time, and include additional services such as audio-visual equipment or catering.  
+          Our team will ensure everything is prepared for a productive session.
+        </p>
+      </div>
+      <img src="https://plus.unsplash.com/premium_photo-1670315267653-2adecd823d9e?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Meeting Room">
+    </div>
+
+    <!-- Package Menu -->
+    <div class="section" id="package">
+      <div class="text">
+        <h2>Package Menu Reservation</h2>
+        <p>
+          Reserve our buffet or set menu packages for events and gatherings.  
+          Choose from a wide range of culinary selections, confirm the number of guests, and let our chefs prepare a delightful dining experience.  
+          Flexible arrangements are available for private functions or large-scale events.
+        </p>
+      </div>
+      <img src="https://images.unsplash.com/photo-1722477936580-84aa10762b0b?q=80&w=1031&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Buffet Setup">
+    </div>
+    <a class="btn" href="index.html">Get started</a>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    © 2025 Menuva - All rights reserved
+  </footer>
+</body>
+</html>
+
