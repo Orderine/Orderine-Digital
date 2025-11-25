@@ -18,17 +18,17 @@
 </head>
 <body>
   <div class="card">
-    <h2>Orderine — Admin Migration Script</h2>
+    <h2>Menuva — Admin Migration Script</h2>
     <p class="muted">Isi <code>SUPABASE_URL</code> dan <code>SUPABASE_KEY</code> (service role atau anon). <strong>PERINGATAN:</strong> Jangan letakkan service role key di client yang publik — idealnya jalankan ini di server atau gunakan environment secrets.</p>
 
     <div class="row">
       <div>
         <label>SUPABASE_URL</label>
-        <input id="supabaseUrl" placeholder="https://orderine.github.io/Orderine-Digital/Admin-migration.html" />
+        <input id="supabaseUrl" placeholder="https://xyzcompany.supabase.co" />
       </div>
       <div>
         <label>SUPABASE_KEY (service role / anon)</label>
-        <input id="supabaseKey" placeholder="sb_publishable_L69H0-PapAm3jMWrTyYayQ_4kOd2MMD" />
+        <input id="supabaseKey" placeholder="pk.* or anon.*" />
       </div>
     </div>
 
@@ -36,7 +36,7 @@
     <input id="bucketName" placeholder="public or your-bucket" />
 
     <label>Table name</label>
-    <input id="tableName" placeholder="Orderine" />
+    <input id="tableName" placeholder="menuvaData" />
 
     <label>Column that holds Base64 data (comma-separated if multiple)</label>
     <input id="base64Columns" placeholder="logo,background,menu_image" />
@@ -248,5 +248,3 @@
 </script>
 </body>
 </html>
-
-
