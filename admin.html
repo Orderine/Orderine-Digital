@@ -1478,23 +1478,127 @@ function slugify(text) {
     .replace(/\-\-+/g, '-');
 }
 
-// ====================== SIMPAN (form -> DB) ======================
+// ====================== Supabase helpers & upload ======================
+// expects `sb` (supabase client) available in global scope
+const BUCKET = 'restoasset';
+
+function nowTs() { return new Date().toISOString(); }
+
+// ensure sb exists
+const supa = (typeof sb !== 'undefined') ? sb : (window.sb || null);
+if (!supa) {
+  console.error('Supabase client not found. Make sure patch1 created `sb` client before this script.');
+}
+
+// safe slug helper
+function slugifyFileName(text) {
+  return String(text || '').toLowerCase().replace(/\s+/g,'-').replace(/[^\w\-\.]/g,'');
+}
+
+// detect mime and convert base64 -> Blob
+function detectMime(b64) {
+  const m = (b64||'').match(/^data:([^;]+);base64,/);
+  return m ? m[1] : null;
+}
+function base64ToBlob(b64) {
+  const raw = b64.replace(/^data:[^;]+;base64,/, '');
+  const binary = atob(raw);
+  const len = binary.length;
+  const u8 = new Uint8Array(len);
+  for (let i = 0; i < len; i++) u8[i] = binary.charCodeAt(i);
+  const mime = detectMime(b64) || 'application/octet-stream';
+  return new Blob([u8], { type: mime });
+}
+
+// upload helper: accepts either an existing http(s) URL (returns as-is) or a data:... base64 string
+async function uploadBase64ToBucket(b64OrUrl, restoId, type = 'misc', filenameHint = 'file') {
+  if (!supa) throw new Error('Supabase client (sb) not initialized');
+  if (!b64OrUrl) return null;
+  if (typeof b64OrUrl === 'string' && (b64OrUrl.startsWith('http://') || b64OrUrl.startsWith('https://'))) {
+    return b64OrUrl;
+  }
+  if (typeof b64OrUrl !== 'string' || !b64OrUrl.startsWith('data:')) {
+    // not a valid base64 -> skip
+    return null;
+  }
+
+  const mime = detectMime(b64OrUrl) || 'image/jpeg';
+  const ext = mime.split('/')[1] || 'jpg';
+  const safeName = slugifyFileName(filenameHint).slice(0,40) || 'img';
+  const timestamp = Date.now();
+  const path = `${encodeURIComponent(String(restoId))}/${type}/${safeName}_${timestamp}.${ext}`;
+
+  // convert blob
+  const blob = base64ToBlob(b64OrUrl);
+
+  // upload
+  const { error } = await supa.storage.from(BUCKET).upload(path, blob, { upsert: true });
+  if (error) {
+    console.error('Upload error', error);
+    throw error;
+  }
+  // public URL
+  const base = SUPABASE_URL ? SUPABASE_URL.replace(/\/$/,'') : (window.SUPABASE_URL || '');
+  return `${base}/storage/v1/object/public/${BUCKET}/${encodeURIComponent(path)}`;
+}
+
+// ====================== Data mapping helpers ======================
+
+// map UI menu entry -> DB payload
+function mapMenuItemForInsert(item, restoId) {
+  // expected item keys from UI: { nama, harga, kategori, image, ... }
+  return {
+    resto_id: String(restoId),
+    name: item.nama || item.name || '',
+    price: Number(item.harga || item.price || 0) || 0,
+    category: item.kategori || item.cat || item.category || 'food',
+    description: item.deskripsi || item.description || item.desc || '',
+    image_url: item.image || item.image_url || null,
+    created_at: nowTs(),
+    is_available: true
+  };
+}
+
+function mapPromoForInsert(p, restoId) {
+  return {
+    resto_id: String(restoId),
+    title: p.namaPromo || p.title || '',
+    description: p.deskripsi || p.description || '',
+    discount: p.harga ? Number(p.harga) : null,
+    is_active: true,
+    expires_at: p.tanggalAkhir || null,
+    banner_url: p.image || p.banner_url || null,
+    created_at: nowTs()
+  };
+}
+
+// ====================== SIMPAN (form -> Supabase) ======================
 async function simpanData() {
+  if (!supa) {
+    alert('Supabase client belum di-inisialisasi. Cek konfigurasi.');
+    return;
+  }
+
   try {
     showLoader();
 
+    // read UI fields
     const namaRestoran = document.getElementById("namaRestoran")?.value.trim() || "";
     const restoAddress = document.getElementById("restoAddress")?.value.trim() || "";
     const restoPhone = document.getElementById("restoPhone")?.value.trim() || "";
-    const logo = document.getElementById("previewLogo")?.src || "";
-    const nomorWaAdmin = Array.from(document.querySelectorAll(".nomor-wa")).map(i => i.value);
-
     if (!restoPhone) {
       alert("❌ Please input the restaurant phone number before saving!");
       hideLoader();
       return;
     }
-    const restoId = document.getElementById("restoId")?.value || "resto-main";
+    const restoId = String(restoPhone); // multi-resto key: use phone number
+    const logoSrc = document.getElementById("previewLogo")?.src || "";
+    const backgroundSrc = document.getElementById("previewBackground")?.src || ""; // if exists
+
+    // nomor wa
+    const nomorWaAdmin = Array.from(document.querySelectorAll(".nomor-wa")).map(i => i.value).filter(Boolean);
+
+    // menu arrays from UI
     const menuData = [
       ...ambilMenu("menuFoodContainer"),
       ...ambilMenu("menuSnackContainer"),
@@ -1502,28 +1606,126 @@ async function simpanData() {
       ...ambilMenu("menuSpecialContainer")
     ];
 
-    const promo = Array.isArray(menuPromo) ? menuPromo : [];
-    const flipRuangan = Array.isArray(flipbookRuanganImages) ? flipbookRuanganImages : [];
-    const flipMenu = Array.isArray(flipbookMenuImages) ? flipbookMenuImages : [];
+    const promo = Array.isArray(menuPromo) ? menuPromo.slice() : [];
+    const flipRuangan = Array.isArray(flipbookRuanganImages) ? flipbookRuanganImages.slice() : [];
+    const flipMenu = Array.isArray(flipbookMenuImages) ? flipbookMenuImages.slice() : [];
+    const rooms = typeof ambilSemuaRoom === 'function' ? ambilSemuaRoom() : [];
 
-    const data = {
-  restoId,
-  namaRestoran,
-  restoAddress,
-  restoPhone,
-  logo,
-  nomorWaAdmin,
-  menuPromo: promo,
-  menuVoucher: Array.isArray(window.menuVoucher) ? window.menuVoucher : [],
-  flipbookRuanganImages: flipRuangan,
-  flipbookMenuImages: flipMenu,
-  menu: menuData,
-  rooms: ambilSemuaRoom()
-};
+    // =========== Upload logo & background (if base64) ===========
+    let logo_url = logoSrc;
+    let background_url = backgroundSrc;
+    try {
+      if (logoSrc && logoSrc.startsWith && logoSrc.startsWith("data:")) {
+        logo_url = await uploadBase64ToBucket(logoSrc, restoId, 'logo', 'logo');
+      }
+    } catch (err) {
+      console.warn('Logo upload failed:', err);
+      // continue without blocking
+    }
+    try {
+      if (backgroundSrc && backgroundSrc.startsWith && backgroundSrc.startsWith("data:")) {
+        background_url = await uploadBase64ToBucket(backgroundSrc, restoId, 'background', 'background');
+      }
+    } catch (err) {
+      console.warn('Background upload failed:', err);
+    }
 
-    await saveDataToDB(1, data);
+    // =========== Upsert restosettings ===========
+    const settingsPayload = {
+      resto_id: String(restoId),
+      nama_restoran: namaRestoran || null,
+      resto_address: restoAddress || null,
+      resto_phone: restoPhone || null,
+      nomor_wa_admin: nomorWaAdmin.length ? nomorWaAdmin : [],
+      rooms: rooms.length ? rooms : [],
+      flipbook_ruangan_images: flipRuangan.length ? flipRuangan : [],
+      flipbook_menu_images: flipMenu.length ? flipMenu : [],
+      logo_url: logo_url || null,
+      background_url: background_url || null,
+      created_at: nowTs()
+    };
 
-    // sinkron hidden restoId (dipakai UI)
+    // upsert: use insert with onConflict via upsert (requires unique constraint on resto_id OR use RPC)
+    const { error: upsertErr } = await supa
+      .from('restosettings')
+      .upsert(settingsPayload, { onConflict: ['resto_id'] });
+
+    if (upsertErr) {
+      console.error('Failed upsert restosettings:', upsertErr);
+      alert('❌ Gagal menyimpan resto settings: ' + upsertErr.message);
+      hideLoader();
+      return;
+    }
+
+    // =========== Replace menuitems for this resto ===========
+    // Delete existing menuitems for resto
+    const { error: delMenuErr } = await supa.from('menuitems').delete().eq('resto_id', String(restoId));
+    if (delMenuErr) {
+      console.warn('Warning: failed to delete old menuitems (non-fatal):', delMenuErr);
+    }
+
+    // Prepare and insert new menuitems (upload images sequentially)
+    const insertMenuBatch = [];
+    for (const m of menuData) {
+      const mapped = mapMenuItemForInsert(m, restoId);
+      try {
+        if (mapped.image_url && mapped.image_url.startsWith && mapped.image_url.startsWith('data:')) {
+          const uploaded = await uploadBase64ToBucket(mapped.image_url, restoId, 'menu', mapped.name || 'menu');
+          mapped.image_url = uploaded || null;
+        }
+      } catch (err) {
+        console.warn('Menu image upload failed for', mapped.name, err);
+        mapped.image_url = null;
+      }
+      insertMenuBatch.push(mapped);
+    }
+
+    if (insertMenuBatch.length > 0) {
+      const { error: insErr } = await supa.from('menuitems').insert(insertMenuBatch);
+      if (insErr) {
+        console.error('Failed insert menuitems:', insErr);
+        alert('❌ Gagal menyimpan menu items: ' + insErr.message);
+        hideLoader();
+        return;
+      }
+    }
+
+    // =========== Replace promos for this resto ===========
+    const { error: delPromoErr } = await supa.from('promos').delete().eq('resto_id', String(restoId));
+    if (delPromoErr) {
+      console.warn('Warning: failed to delete old promos (non-fatal):', delPromoErr);
+    }
+
+    const insertPromos = [];
+    for (const p of promo) {
+      const mapped = mapPromoForInsert(p, restoId);
+      try {
+        if (p.image && p.image.startsWith && p.image.startsWith('data:')) {
+          const up = await uploadBase64ToBucket(p.image, restoId, 'promo', mapped.title || 'promo');
+          mapped.banner_url = up || null;
+        } else if (p.image && (p.image.startsWith('http') || p.image.startsWith('/'))) {
+          mapped.banner_url = p.image;
+        }
+      } catch (err) {
+        console.warn('Promo banner upload failed:', err);
+        mapped.banner_url = null;
+      }
+      insertPromos.push(mapped);
+    }
+
+    if (insertPromos.length > 0) {
+      const { error: insPromoErr } = await supa.from('promos').insert(insertPromos);
+      if (insPromoErr) {
+        console.error('Failed insert promos:', insPromoErr);
+        alert('❌ Gagal menyimpan promos: ' + insPromoErr.message);
+        hideLoader();
+        return;
+      }
+    }
+
+    // =========== Success ===========
+    hideLoader();
+    // set hidden restoId input for UI
     let restoIdEl = document.getElementById("restoId");
     if (!restoIdEl) {
       restoIdEl = document.createElement("input");
@@ -1533,33 +1735,150 @@ async function simpanData() {
     }
     restoIdEl.value = restoId;
 
-    updateShareUI();
-    alert(`✅ All data saved successfully!: ${restoId}`);
+    updateShareUI?.();
+    alert(`✅ All data saved successfully for resto_id: ${restoId}`);
+    return true;
   } catch (err) {
-    console.error(err);
-    alert("❌ Failed to save data.");
-  } finally {
+    console.error('simpanData failed:', err);
     hideLoader();
+    alert('❌ Failed to save data: ' + (err.message || err));
+    return false;
   }
 }
 
-// Flag global buat cegah render dobel
-let sudahLoadData = false;
+// ====================== LOAD (DB -> form) ======================
+async function loadData(restoPhoneOrObj) {
+  // If argument is object (existing combined data), use old behavior.
+  if (restoPhoneOrObj && typeof restoPhoneOrObj === 'object') {
+    // original UI-populating logic preserved:
+    try {
+      // reuse original loadData implementation (the UI setter block)
+      // We assume the existing loadData implementation (from your patch) follows below.
+      // To avoid duplicating, call a helper that sets UI from combinedData
+      await setUIFromCombinedData(restoPhoneOrObj);
+      return;
+    } catch (err) {
+      console.error('loadData (from object) failed:', err);
+      return;
+    }
+  }
 
-async function loadData(data) {
-  if (sudahLoadData) {
-    console.warn("⚠️ loadData sudah pernah jalan.");
+  // Otherwise treat the argument as restoPhone (string) or read from input
+  const restoPhone = (typeof restoPhoneOrObj === 'string' && restoPhoneOrObj.trim()) ? restoPhoneOrObj.trim()
+    : (document.getElementById('restoPhone')?.value || '').trim();
+
+  if (!restoPhone) {
+    console.warn('No restoPhone provided to loadData(); skipping.');
     return;
   }
-  sudahLoadData = true;
+
+  if (!supa) {
+    console.error('Supabase client not initialized; cannot load data.');
+    return;
+  }
 
   try {
     showLoader();
 
-    if (!data || typeof data !== "object") data = buatDataDefault(1);
+    const restoId = String(restoPhone);
 
-    console.log("📦 FINAL loadData():", data);
+    // fetch restosettings
+    const { data: rsData, error: rsErr } = await supa
+      .from('restosettings')
+      .select('*')
+      .eq('resto_id', restoId)
+      .maybeSingle();
 
+    if (rsErr) {
+      console.error('Failed fetch restosettings:', rsErr);
+    }
+
+    // fetch menuitems
+    const { data: menusData, error: menusErr } = await supa
+      .from('menuitems')
+      .select('*')
+      .eq('resto_id', restoId)
+      .order('id', { ascending: true });
+
+    if (menusErr) {
+      console.error('Failed fetch menuitems:', menusErr);
+    }
+
+    // fetch promos
+    const { data: promosData, error: promosErr } = await supa
+      .from('promos')
+      .select('*')
+      .eq('resto_id', restoId)
+      .order('id', { ascending: true });
+
+    if (promosErr) {
+      console.error('Failed fetch promos:', promosErr);
+    }
+
+    // Build combined object similar to old IndexedDB structure so existing UI code works
+    const combined = {
+      restoId: restoId,
+      namaRestoran: rsData?.nama_restoran || '',
+      restoAddress: rsData?.resto_address || '',
+      restoPhone: rsData?.resto_phone || restoId,
+      logo: rsData?.logo_url || rsData?.logo_base64 || '',
+      background: rsData?.background_url || rsData?.background_base64 || '',
+      nomorWaAdmin: Array.isArray(rsData?.nomor_wa_admin) ? rsData.nomor_wa_admin : [],
+      menuPromo: Array.isArray(promosData) ? promosData.map(p => ({
+        namaPromo: p.title || '',
+        image: p.banner_url || p.banner_base64 || '',
+        deskripsi: p.description || '',
+        harga: p.discount || null,
+        kategori: null,
+        tanggalAkhir: p.expires_at || null
+      })) : [],
+      menuVoucher: [], // keep empty unless you sync vouchers table
+      flipbookRuanganImages: Array.isArray(rsData?.flipbook_ruangan_images) ? rsData.flipbook_ruangan_images : [],
+      flipbookMenuImages: Array.isArray(rsData?.flipbook_menu_images) ? rsData.flipbook_menu_images : [],
+      menu: Array.isArray(menusData) ? menusData.map(m => ({
+        nama: m.name || '',
+        harga: m.price || 0,
+        kategori: m.category || '',
+        image: m.image_url || m.image_base64 || '',
+        description: m.description || ''
+      })) : [],
+      rooms: Array.isArray(rsData?.rooms) ? rsData.rooms : []
+    };
+
+    // call UI setter (the original function body that populates DOM)
+    await setUIFromCombinedData(combined);
+
+    hideLoader();
+    console.log('✅ loadData from Supabase complete for resto_id', restoId);
+    return combined;
+  } catch (err) {
+    console.error('loadData failed:', err);
+    hideLoader();
+    return null;
+  }
+}
+
+// ====================== UI setter helper (extract from original loadData) ======================
+// This reuses your original DOM-filling logic (keeps UI behavior unchanged).
+// It expects the combined object shape used previously.
+// If you already have the original loadData implementation, paste it here as function body.
+// We'll implement it by reusing the code you provided earlier (kept concise).
+
+async function setUIFromCombinedData(data) {
+  // Use the original loadData() DOM mapping block from your patch 3 and adapt it slightly.
+  // This function replaces the original loadData content that populates form fields and UI.
+  try {
+    // copy-paste the body of your original loadData (UI mapping)
+    // For safety, we call the same code you provided earlier:
+
+    // If your original loadData implementation exists in file, call it:
+    if (typeof window.__original_loadData_impl === 'function') {
+      // If you saved original implementation to a function, call it.
+      return window.__original_loadData_impl(data);
+    }
+
+    // Otherwise, fallback: manual mapping similar to previous logic:
+    // (re-implement minimal UI mapping based on fields present)
     const safeSet = (id, value) => {
       const el = document.getElementById(id);
       if (el) el.value = value || "";
@@ -1572,25 +1891,22 @@ async function loadData(data) {
     if (data.logo && document.getElementById("previewLogo")) {
       document.getElementById("previewLogo").src = data.logo;
     }
-
-    // ========== NOMOR WA ==========
+    // nomor WA
     const waContainer = document.getElementById("nomorWaContainer");
     if (waContainer) {
       waContainer.innerHTML = "";
-      data.nomorWaAdmin.forEach(num => {
-        tambahNomorWa(num);
-      });
+      (data.nomorWaAdmin || []).forEach(num => tambahNomorWa(num));
     }
 
-    // ========== PROMO ==========
-    menuPromo = data.menuPromo.slice();
+    // promo
+    menuPromo = Array.isArray(data.menuPromo) ? data.menuPromo.slice() : [];
     if (typeof renderPromoUI === "function") renderPromoUI();
 
-    // ========== VOUCHER ==========
-    window.menuVoucher = data.menuVoucher.slice();
+    // voucher
+    window.menuVoucher = Array.isArray(data.menuVoucher) ? data.menuVoucher.slice() : [];
     if (typeof renderVoucher === "function") renderVoucher(window.menuVoucher);
 
-    // ========== MENU KATEGORI ==========
+    // menu containers
     ["food", "snack", "drink", "special"].forEach(kat => {
       const old = document.getElementById(
         {
@@ -1603,10 +1919,7 @@ async function loadData(data) {
       if (old) old.innerHTML = "";
     });
 
-    const menuList = Array.isArray(data.menu)
-      ? data.menu
-      : (Array.isArray(data.menuData) ? data.menuData : []);
-
+    const menuList = Array.isArray(data.menu) ? data.menu : [];
     menuList.forEach(m => {
       const kategori = m.kategori || m.cat || m.category || "food";
       const nama = m.nama || m.name || "";
@@ -1615,14 +1928,9 @@ async function loadData(data) {
       tambahMenu(kategori, nama, harga, image);
     });
 
-    // ========== FLIPBOOK ==========
-    flipbookRuanganImages = Array.isArray(data.flipbookRuanganImages)
-      ? data.flipbookRuanganImages.slice()
-      : [];
-
-    flipbookMenuImages = Array.isArray(data.flipbookMenuImages)
-      ? data.flipbookMenuImages.slice()
-      : [];
+    // flipbooks
+    flipbookRuanganImages = Array.isArray(data.flipbookRuanganImages) ? data.flipbookRuanganImages.slice() : [];
+    flipbookMenuImages = Array.isArray(data.flipbookMenuImages) ? data.flipbookMenuImages.slice() : [];
 
     const ruanganPreview = document.getElementById("flipbookRuanganPreview");
     const menuPreview = document.getElementById("flipbookMenuPreview");
@@ -1640,19 +1948,12 @@ async function loadData(data) {
       }
     }, 200);
 
-    // ========== ROOM / PACKAGES (FIXED) ==========
+    // rooms
     if (Array.isArray(data.rooms)) {
-      if (typeof restoreRoomFromData === "function") {
-        console.log("📦 Restore ROOM:", data.rooms);
-        restoreRoomFromData(data.rooms);
-      } else {
-        console.warn("⚠️ restoreRoomFromData() tidak ditemukan.");
-      }
-    } else {
-      console.warn("⚠️ data.rooms kosong atau bukan array");
+      restoreRoomFromData(data.rooms);
     }
 
-    // ========== RESTO ID ==========
+    // hidden restoId
     let restoIdEl = document.getElementById("restoId");
     if (!restoIdEl) {
       restoIdEl = document.createElement("input");
@@ -1662,119 +1963,215 @@ async function loadData(data) {
     }
     restoIdEl.value = data.restoId || data.restoPhone || "";
 
-    console.log("✅ FINAL loadData COMPLETE tanpa kehilangan data.");
+    // done
+    console.log("✅ setUIFromCombinedData complete.");
+    return;
   } catch (err) {
-    console.error("❌ loadData gagal:", err);
-  } finally {
-    hideLoader();
+    console.error('setUIFromCombinedData error:', err);
+    throw err;
   }
 }
 
-// ====================== RESET & BACKUP ======================
-async function resetData() {
-  if (!confirm("Are you sure you want to delete all data?")) return;
-  try {
-    await clearDataDB();
-    location.reload();
-  } catch(err) {
-    alert("❌ Failed to delete data: "+err.message);
-  }
+// ====================== RESET & BACKUP (Supabase) ======================
+// expects `supa` (supabase client) available in global scope
+if (typeof supa === 'undefined' && typeof sb !== 'undefined') supa = sb;
+const BACKUP_FILENAME_PREFIX = 'menuva-backup';
+
+function getActiveRestoId() {
+  // prefer explicit hidden restoId, else take from restoPhone input
+  return (document.getElementById("restoId")?.value
+       || document.getElementById("restoPhone")?.value
+       || "").toString().trim();
 }
 
-async function backupData() {
-  try {
-    // pastikan db sudah siap
-    if (!window.db) {
-      window.db = await initDB();
-    }
+async function clearSupabaseDataForResto(restoId) {
+  if (!supa) throw new Error('Supabase client not initialized');
+  if (!restoId) throw new Error('restoId required to clear data');
 
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
-    const req = store.getAll();
+  // Do deletes in safe order (children first)
+  const tables = [
+    'order_items',
+    'orders',
+    'menuitems',
+    'promos',
+    'vouchers',
+    'activity_log',
+    // optionally other tables referencing resto
+  ];
 
-    req.onsuccess = () => {
-      const allData = req.result || [];
-      if (allData.length === 0) {
-        alert("⚠️ Tidak ada data di database untuk di-backup!");
-        return;
-      }
-
-      const filename = `menuva-backup-${Date.now()}.json`;
-      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      URL.revokeObjectURL(url);
-      alert(`✅ Backup berhasil! File ${filename} siap diunduh.`);
-    };
-
-    req.onerror = (e) => {
-      console.error("❌ Gagal membaca data dari IndexedDB:", e);
-      alert("❌ Backup gagal: tidak bisa membaca data.");
-    };
-  } catch (err) {
-    console.error("❌ Backup fatal error:", err);
-    alert("❌ Terjadi kesalahan: " + err.message);
-  }
-}
-
-// ====================== Restore from file ======================
-function restoreDataFromFile(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-
-  reader.onload = async (e) => {
+  for (const t of tables) {
     try {
-      let json = JSON.parse(e.target.result);
-
-      // unwrap common wrappers
-      if (json.profile && typeof json.profile === "object") json = json.profile;
-      else if (json.data && typeof json.data === "object") json = json.data;
-
-      // if array -> pick first
-      if (Array.isArray(json)) {
-        if (json.length === 0) throw new Error("File kosong");
-        json = json[0];
-      }
-
-      // ensure restoId: prefer restoPhone, else nama slug, else timestamp
-      if (!json.restoId) {
-        json.restoId =
-          json.restoPhone ||
-          (json.namaRestoran ? slugify(json.namaRestoran) : ("resto" + Date.now()));
-      }
-
-      if (!json.restoPhone) json.restoPhone = json.restoId;
-
-      // ============== FIX UTAMA ==============
-      let idResto = 1;
-      if (typeof json.id === "number") idResto = json.id;
-      else if (typeof json.restoId === "number") idResto = json.restoId;
-      idResto = Number(idResto) || 1;
-      // ========================================
-
-      await saveDataToDB(idResto, json);
-
-      alert("✅ Data restored successfully! Reloading...");
-      location.reload();
-
+      const { error } = await supa.from(t).delete().eq('resto_id', String(restoId));
+      if (error) console.warn(`Warning: failed to delete from ${t}:`, error);
     } catch (err) {
-      console.error("❌ Restore failed:", err);
-      alert("❌ Failed to restore JSON file. Lihat console untuk detail.");
+      console.warn(`Exception deleting ${t}:`, err);
     }
-  };
+  }
 
-  reader.readAsText(file);
+  // Finally delete restosettings row
+  try {
+    const { error } = await supa.from('restosettings').delete().eq('resto_id', String(restoId));
+    if (error) console.warn('Warning: failed to delete restosettings:', error);
+  } catch (err) {
+    console.warn('Exception deleting restosettings:', err);
+  }
 }
 
-// ====================== Links / QR helpers ======================
+// Reset triggered by admin
+async function resetData() {
+  if (!confirm("Are you sure you want to DELETE ALL data for this resto? This cannot be undone.")) return;
+  const restoId = getActiveRestoId();
+  if (!restoId) return alert('❌ Cannot reset: resto id (phone) not set.');
+
+  showLoader();
+  try {
+    await clearSupabaseDataForResto(restoId);
+    hideLoader();
+    alert(`✅ All data for resto_id="${restoId}" deleted from Supabase.`);
+    location.reload();
+  } catch (err) {
+    hideLoader();
+    console.error('Reset failed:', err);
+    alert('❌ Failed to delete data: ' + (err.message || err));
+  }
+}
+
+// Backup: query Supabase for current resto and download combined JSON
+async function backupData() {
+  const restoId = getActiveRestoId();
+  if (!restoId) return alert('❌ Please set resto phone/id before backup.');
+
+  if (!supa) return alert('Supabase client not initialized.');
+
+  try {
+    showLoader();
+
+    // fetch restosettings
+    const { data: rsData, error: rsErr } = await supa.from('restosettings').select('*').eq('resto_id', restoId).maybeSingle();
+    if (rsErr) console.error('restosettings fetch error:', rsErr);
+
+    // fetch menuitems
+    const { data: menuData, error: menuErr } = await supa.from('menuitems').select('*').eq('resto_id', restoId).order('id', { ascending: true });
+    if (menuErr) console.error('menuitems fetch error:', menuErr);
+
+    // fetch promos
+    const { data: promosData, error: promosErr } = await supa.from('promos').select('*').eq('resto_id', restoId).order('id', { ascending: true });
+    if (promosErr) console.error('promos fetch error:', promosErr);
+
+    // fetch vouchers (optional)
+    const { data: vouchersData } = await supa.from('vouchers').select('*').eq('resto_id', restoId).order('id', { ascending: true });
+
+    // fetch orders & order_items (optional)
+    const { data: ordersData } = await supa.from('orders').select('*').eq('resto_id', restoId).order('id', { ascending: true });
+    const { data: orderItemsData } = await supa.from('order_items').select('*').in('order_id', (ordersData||[]).map(o=>o.id)).order('id');
+
+    // fetch activity_log
+    const { data: activityData } = await supa.from('activity_log').select('*').eq('resto_id', restoId).order('id', { ascending: true });
+
+    // build combined object similar to old IndexedDB structure
+    const combined = {
+      restoId,
+      namaRestoran: rsData?.nama_restoran || '',
+      restoAddress: rsData?.resto_address || '',
+      restoPhone: rsData?.resto_phone || restoId,
+      logo: rsData?.logo_url || rsData?.logo_base64 || '',
+      background: rsData?.background_url || rsData?.background_base64 || '',
+      nomorWaAdmin: Array.isArray(rsData?.nomor_wa_admin) ? rsData.nomor_wa_admin : [],
+      menuPromo: Array.isArray(promosData) ? promosData.map(p => ({
+        namaPromo: p.title || '',
+        image: p.banner_url || p.banner_base64 || '',
+        deskripsi: p.description || '',
+        harga: p.discount || null,
+        kategori: null,
+        tanggalAkhir: p.expires_at || null
+      })) : [],
+      menuVoucher: Array.isArray(vouchersData) ? vouchersData : [],
+      flipbookRuanganImages: Array.isArray(rsData?.flipbook_ruangan_images) ? rsData.flipbook_ruangan_images : [],
+      flipbookMenuImages: Array.isArray(rsData?.flipbook_menu_images) ? rsData.flipbook_menu_images : [],
+      menu: Array.isArray(menuData) ? menuData.map(m => ({
+        nama: m.name || '',
+        harga: m.price || 0,
+        kategori: m.category || '',
+        image: m.image_url || m.image_base64 || '',
+        description: m.description || ''
+      })) : [],
+      rooms: Array.isArray(rsData?.rooms) ? rsData.rooms : [],
+      orders: Array.isArray(ordersData) ? ordersData : [],
+      order_items: Array.isArray(orderItemsData) ? orderItemsData : [],
+      activity_log: Array.isArray(activityData) ? activityData : []
+    };
+
+    const filename = `${BACKUP_FILENAME_PREFIX}-${restoId}-${Date.now()}.json`;
+    const blob = new Blob([JSON.stringify(combined, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    hideLoader();
+    alert(`✅ Backup siap diunduh: ${filename}`);
+  } catch (err) {
+    hideLoader();
+    console.error('Backup failed:', err);
+    alert('❌ Backup gagal: ' + (err.message || err));
+  }
+}
+
+// ====================== Restore from file (Supabase) ======================
+// This will: parse file, map to combined structure, call setUIFromCombinedData to populate UI,
+// then call simpanData() which already handles uploads + upsert to Supabase.
+async function restoreDataFromFile(event) {
+  const file = event.target?.files?.[0];
+  if (!file) return;
+  try {
+    showLoader();
+    const text = await file.text();
+    let json = JSON.parse(text);
+
+    // unwrap wrappers common in exports
+    if (json.profile && typeof json.profile === 'object') json = json.profile;
+    else if (json.data && typeof json.data === 'object') json = json.data;
+
+    // if array -> pick first
+    if (Array.isArray(json)) {
+      if (json.length === 0) throw new Error('File kosong');
+      json = json[0];
+    }
+
+    // ensure restoId exists (prefer restoPhone)
+    if (!json.restoId) {
+      json.restoId = json.restoPhone || (json.namaRestoran ? slugify(json.namaRestoran) : ("resto" + Date.now()));
+    }
+    if (!json.restoPhone) json.restoPhone = json.restoId;
+
+    // Populate UI with data
+    await setUIFromCombinedData(json);
+
+    // Auto-save to Supabase (this will upload images where base64 present)
+    const ok = await simpanData();
+    hideLoader();
+    if (ok) {
+      alert('✅ Restore & sync to Supabase successful.');
+      location.reload();
+    } else {
+      alert('⚠️ Restore completed but some operations failed. Check console.');
+    }
+  } catch (err) {
+    hideLoader();
+    console.error('Restore failed:', err);
+    alert('❌ Failed to restore JSON file. Lihat console untuk detail.');
+  } finally {
+    // clear file input value if any
+    if (event && event.target) event.target.value = '';
+  }
+}
+
+// ====================== Links / QR helpers (update) ======================
 function generateDynamicLink(baseUrl, data) {
   try {
     const jsonData = JSON.stringify(data);
@@ -1788,9 +2185,12 @@ function generateDynamicLink(baseUrl, data) {
 
 async function createMenuvaLink() {
   try {
-    const restoId = document.getElementById("restoId")?.value || document.getElementById("restoPhone")?.value || null;
-    const data = await loadDataFromDB(restoId);
-    const link = generateDynamicLink("https://menuva.github.io/view.html", data);
+    const restoId = getActiveRestoId();
+    if (!restoId) return alert('Set resto ID first.');
+
+    // load combined data from Supabase via loadData()
+    const combined = await loadData(restoId);
+    const link = generateDynamicLink("https://orderine.github.io/menu.html", combined || {});
     console.log("Dynamic Link:", link);
     return link;
   } catch (err) {
@@ -1799,8 +2199,9 @@ async function createMenuvaLink() {
 }
 
 function getCustomerLink() {
-  const restoId = document.getElementById("restoId")?.value;
+  const restoId = getActiveRestoId();
   if (!restoId) return null;
+  // assume menu.html is at same root path
   const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
   return `${window.location.origin}${basePath}/menu.html?resto=${encodeURIComponent(restoId)}`;
 }
@@ -1836,42 +2237,51 @@ function updateShareUI() {
   if (!qrContainer) return;
   qrContainer.innerHTML = "";
   if (typeof QRCode !== "undefined") {
-    QRCode.toCanvas(link, { width: 128 }, function (error, canvas) {
-      if (error) {
-        console.error(error);
-        qrContainer.textContent = "❌ Failed to generate QR";
-        return;
+    // QRCode.toCanvas may exist in different libs; support both lib interfaces
+    try {
+      if (QRCode.toCanvas) {
+        QRCode.toCanvas(link, { width: 128 }, function (error, canvas) {
+          if (error) { console.error(error); qrContainer.textContent = "❌ Failed to generate QR"; return; }
+          qrContainer.appendChild(canvas);
+        });
+      } else {
+        // fallback assume QRCode is constructor that builds DOM element
+        const q = new QRCode(qrContainer, { text: link, width: 128, height: 128 });
       }
-      qrContainer.appendChild(canvas);
+    } catch (err) {
+      console.error('QR generation error:', err);
+      qrContainer.textContent = link;
+    }
 
-      const btnDownload = document.getElementById("btnDownloadQR");
-      if (btnDownload) {
-        btnDownload.style.display = "inline-block";
-        btnDownload.onclick = () => {
-          const a = document.createElement("a");
-          a.href = canvas.toDataURL("image/png");
-          a.download = `Resto-${Date.now()}-QRCode.png`;
-          a.click();
-        };
-      }
-
-      const btnPrint = document.getElementById("btnPrintQR");
-      if (btnPrint) {
-        btnPrint.style.display = "inline-block";
-        btnPrint.onclick = () => {
-          const dataUrl = canvas.toDataURL("image/png");
-          const w = window.open("");
-          w.document.write(`<img src="${dataUrl}" style="width:250px;height:250px;">`);
-          w.document.close();
-          w.print();
-        };
-      }
-    });
+    // download & print buttons handlers
+    const canvas = qrContainer.querySelector('canvas');
+    const btnDownload = document.getElementById("btnDownloadQR");
+    if (btnDownload && canvas) {
+      btnDownload.style.display = "inline-block";
+      btnDownload.onclick = () => {
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = `Resto-${getActiveRestoId() || Date.now()}-QRCode.png`;
+        a.click();
+      };
+    }
+    const btnPrint = document.getElementById("btnPrintQR");
+    if (btnPrint && canvas) {
+      btnPrint.style.display = "inline-block";
+      btnPrint.onclick = () => {
+        const dataUrl = canvas.toDataURL("image/png");
+        const w = window.open("");
+        w.document.write(`<img src="${dataUrl}" style="width:250px;height:250px;">`);
+        w.document.close();
+        w.print();
+      };
+    }
   } else {
     // fallback: show link text
     qrContainer.textContent = link;
   }
 }
+
 // ====================== LOADER HANDLER (Modern & Center) ======================
 function showLoader() {
   let loader = document.getElementById("loader");
@@ -1889,56 +2299,31 @@ function showLoader() {
     document.body.appendChild(loader);
 
     // Tambahkan gaya modern (langsung di JS biar portable)
-    const style = document.createElement("style");
-    style.id = "loader-style";
-    style.textContent = `
-      #loader {
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(0,0,0,0.45);
-        z-index: 9999;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      }
-
-      #loader.show {
-        opacity: 1;
-      }
-
-      .loader-content {
-        text-align: center;
-        color: #fff;
-        font-family: 'Segoe UI', sans-serif;
-        font-size: 1.1rem;
-        animation: fadeUp 0.6s ease;
-      }
-
-      .spinner {
-        width: 64px;
-        height: 64px;
-        border: 6px solid rgba(255,255,255,0.3);
-        border-top-color: #00d4ff;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 16px auto;
-      }
-
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-
-      @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-    `;
-    document.head.appendChild(style);
+    if (!document.getElementById('loader-style')) {
+      const style = document.createElement("style");
+      style.id = "loader-style";
+      style.textContent = `
+        #loader {
+          position: fixed;
+          top: 0; left: 0;
+          width: 100%; height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0,0,0,0.45);
+          z-index: 9999;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+        #loader.show { opacity: 1; }
+        .loader-content { text-align: center; color: #fff; font-family: 'Segoe UI', sans-serif; font-size: 1.1rem; animation: fadeUp 0.6s ease; }
+        .spinner { width: 64px; height: 64px; border: 6px solid rgba(255,255,255,0.3); border-top-color: #00d4ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      `;
+      document.head.appendChild(style);
+    }
   }
-
   loader.style.display = "flex";
   requestAnimationFrame(() => loader.classList.add("show"));
 }
@@ -1947,29 +2332,15 @@ function hideLoader() {
   const loader = document.getElementById("loader");
   if (loader) {
     loader.classList.remove("show");
-    setTimeout(() => {
-      loader.style.display = "none";
-    }, 300);
+    setTimeout(() => { loader.style.display = "none"; }, 300);
   }
 }
 
-  // ====================== CLEAR DB (fix) ======================
+// ====================== CLEAR DB (Supabase) ======================
 async function clearDataDB() {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    try {
-      const tx = db.transaction(STORE_NAME, "readwrite");
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.clear();
-      req.onsuccess = () => {
-        console.log("🧹 Semua data dihapus dari IndexedDB");
-        resolve();
-      };
-      req.onerror = () => reject(req.error);
-    } catch (err) {
-      reject(err);
-    }
-  });
+  const restoId = getActiveRestoId();
+  if (!restoId) throw new Error('resto id not set');
+  return clearSupabaseDataForResto(restoId);
 }
 </script>
 <script>
@@ -2422,6 +2793,7 @@ function markViewedAndGo() {
 
 </body>
 </html>
+
 
 
 
