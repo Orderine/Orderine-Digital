@@ -2164,324 +2164,278 @@ async function clearDataDB() {
 }
 </script>
 <script>
-let isLoadingFromDB = false;
-let voucherLoaded = false;
+// ========== Voucher System (FULL Supabase) ==========
+// Replace any old voucher IndexedDB code with this block.
 
-document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 Init mulai...");
-  showLoader();
+// Ensure client reference
+const client = (typeof sb !== 'undefined') ? sb : ((typeof supa !== 'undefined') ? supa : null);
+if(!client) console.warn('Supabase client not found (sb/supa). Make sure patch1 applied.');
 
-  const timeout = setTimeout(() => {
-    console.warn("⚠️ Init terlalu lama, sembunyikan loader paksa.");
-    hideLoader();
-  }, 8000);
+// Helper: get active resto id (phone) from hidden or input
+function getActiveRestoId() {
+  return (document.getElementById("restoId")?.value
+        || document.getElementById("restoPhone")?.value
+        || "").toString().trim();
+}
 
+// Load vouchers for current resto_id
+async function loadVouchers() {
+  console.groupCollapsed("📥 loadVouchers (Supabase)");
   try {
-    // ===================== INIT DB =====================
-    const db = await initDB();
-    console.log("✅ IndexedDB siap");
-
-    // ===================== LOAD DATA UTAMA =====================
-    const data = await safeLoadDataFromDB();
-    if (data) {
-      await safeLoadData(data);
-      console.log("📦 Data diambil:", data);
-    } else {
-      console.warn("⚠️ Tidak ada data ditemukan di DB");
-    }
-
-    // ===================== TOGGLE SECTION =====================
-    await initAllToggles();
-
-    // ===================== FIXED BAR =====================
-    const fixbar = document.querySelector(".fixed-bar");
-    if (fixbar) {
-      const fixbarHeight = fixbar.offsetHeight;
-      document.body.style.paddingBottom = fixbarHeight + "px";
-    }
-
-    console.log("✅ Admin siap digunakan");
-  } catch (err) {
-    console.error("❌ Error saat init:", err);
-    alert("Terjadi kesalahan saat memuat data. Coba refresh halaman.");
-  } finally {
-    clearTimeout(timeout);
-    hideLoader();
-  }
-});
-
-
-// ===================== SAFE LOAD WRAPPER =====================
-async function safeLoadDataFromDB(id = 1) {
-  if (isLoadingFromDB) {
-    console.warn("⚠️ loadDataFromDB() di-skip, masih jalan");
-    return null;
-  }
-  isLoadingFromDB = true;
-  const data = await loadDataFromDB(id);
-  isLoadingFromDB = false;
-  return data;
-}
-
-async function safeLoadData(data) {
-  if (window.sudahLoadData) {
-    console.warn("⚠️ loadData() sudah pernah jalan, skip render ulang");
-    return;
-  }
-  window.sudahLoadData = true;
-  await loadData(data);
-}
-
-
-// ===================== TOGGLES MASTER =====================
-async function initAllToggles() {
-  await new Promise((resolve) => {
-    if (document.readyState === "complete") return resolve();
-    document.addEventListener("readystatechange", () => {
-      if (document.readyState === "complete") resolve();
-    });
-  });
-
-  initOrderToggle();
-  initRoomToggle();
-  await initVoucherToggle();
-}
-
-
-// ===================== ORDER TOGGLE =====================
-function initOrderToggle() {
-  const toggleOrderPage = document.getElementById("toggleOrderPage");
-  // FIXED: disinkronkan dengan HTML (id="orderToggleBox")
-  const orderContainerBox =
-    document.getElementById("orderContainerBox") ||
-    document.getElementById("orderToggleBox");
-
-  if (!toggleOrderPage) {
-    console.warn("⚠️ Elemen toggleOrderPage tidak ditemukan.");
-    return;
-  }
-  if (!orderContainerBox) {
-    console.warn("⚠️ Elemen orderContainerBox/orderToggleBox belum ada, coba lagi 300ms...");
-    return setTimeout(initOrderToggle, 300);
-  }
-
-  const saved = localStorage.getItem("page_order");
-  toggleOrderPage.checked = saved === "true";
-  orderContainerBox.style.display = toggleOrderPage.checked ? "block" : "none";
-
-  toggleOrderPage.addEventListener("change", (e) => {
-    const enabled = e.target.checked;
-    localStorage.setItem("page_order", enabled);
-    orderContainerBox.style.display = enabled ? "block" : "none";
-  });
-}
-
-
-// ===================== ROOM TOGGLE =====================
-function initRoomToggle() {
-  const toggleRoomPage = document.getElementById("toggleRoomPage");
-  const roomContainerBox = document.getElementById("roomContainerBox");
-
-  if (!toggleRoomPage || !roomContainerBox) {
-    console.warn("⚠️ Elemen toggleRoomPage atau roomContainerBox tidak ditemukan.");
-    return;
-  }
-
-  const saved = localStorage.getItem("page_room");
-  toggleRoomPage.checked = saved === "true";
-  roomContainerBox.style.display = toggleRoomPage.checked ? "block" : "none";
-
-  toggleRoomPage.addEventListener("change", (e) => {
-    const enabled = e.target.checked;
-    localStorage.setItem("page_room", enabled);
-    roomContainerBox.style.display = enabled ? "block" : "none";
-  });
-}
-
-
-// ===================== VOUCHER TOGGLE =====================
-async function initVoucherToggle() {
-  const toggleVoucherPage = document.getElementById("toggleVoucherPage");
-  const voucherForm = document.getElementById("voucherForm");
-  const voucherContainerBox = document.getElementById("voucherContainerBox");
-
-  if (!toggleVoucherPage || !voucherForm || !voucherContainerBox) {
-    console.warn("⚠️ Elemen voucher toggle/form/container tidak lengkap, skip initVoucherToggle()");
-    return;
-  }
-
-  const plan = localStorage.getItem("user_plan");
-  if (plan === "monthly") {
-    voucherContainerBox.style.display = "none";
-    return;
-  }
-
-  const enabled = localStorage.getItem("page_voucher") === "true";
-  toggleVoucherPage.checked = enabled;
-  voucherForm.style.display = enabled ? "block" : "none";
-
-  toggleVoucherPage.addEventListener("change", async (e) => {
-    const enabled = e.target.checked;
-    localStorage.setItem("page_voucher", enabled);
-    voucherForm.style.display = enabled ? "block" : "none";
-
-    if (!enabled) {
+    if (!client) throw new Error('Supabase client not initialized');
+    const restoId = getActiveRestoId();
+    if (!restoId) {
+      console.warn('loadVouchers: restoId missing');
       renderVoucher([]);
-    } else {
-      await loadVouchers(); // <<===== fungsi baru
+      console.groupEnd();
+      return [];
     }
-  });
 
-  // <<<==== PENTING! panggil fungsi baru
-  await loadVouchers();
+    // fetch all vouchers for resto
+    const { data, error } = await client
+      .from('vouchers')
+      .select('*')
+      .eq('resto_id', restoId)
+      .order('id', { ascending: true });
+
+    if (error) throw error;
+    const rows = Array.isArray(data) ? data : [];
+
+    // auto-disable expired vouchers (soft-disable)
+    const now = new Date();
+    const toDisable = rows.filter(r => r.expires_at && new Date(r.expires_at) < now && r.is_active);
+    if (toDisable.length) {
+      const ids = toDisable.map(r => r.id);
+      try {
+        await client.from('vouchers').update({ is_active: false }).in('id', ids);
+        console.log(`Auto-disabled ${ids.length} expired voucher(s).`);
+        // refresh rows
+        const { data: refreshed } = await client.from('vouchers').select('*').eq('resto_id', restoId).order('id');
+        if (Array.isArray(refreshed)) rows.splice(0, rows.length, ...refreshed);
+      } catch (e) {
+        console.warn('Auto-disable failed:', e);
+      }
+    }
+
+    // filter active + not expired for UI
+    const active = rows.filter(r => r.is_active !== false && (!r.expires_at || new Date(r.expires_at) >= now));
+    renderVoucher(active);
+    console.log('📦 Vouchers loaded:', active.length);
+    console.groupEnd();
+    return active;
+  } catch (err) {
+    console.error("loadVouchers error:", err);
+    renderVoucher([]);
+    console.groupEnd();
+    return [];
+  }
 }
 
+// Save (create or update) voucher
+// If editing, set hidden input #editVoucherId (value = id), otherwise create new
+async function saveVoucherNew() {
+  try {
+    if (!client) throw new Error('Supabase client not initialized');
+    const restoId = getActiveRestoId();
+    if (!restoId) return alert('❌ Please set restaurant phone (restoId) first.');
 
- async function loadVouchers() {
-  console.groupCollapsed("📥 Load Vouchers");
+    const codeEl = document.getElementById('voucherCode');
+    const discountEl = document.getElementById('voucherDiscount');
+    const expiryEl = document.getElementById('voucherExpiry');
+    const typeEl = document.getElementById('voucherType'); // optional
+    const minOrderEl = document.getElementById('voucherMinOrder');
+    const descEl = document.getElementById('voucherDescription');
+    const editIdEl = document.getElementById('editVoucherId');
 
-  const data = await loadDataFromDB(1);
+    if (!codeEl || !discountEl || !expiryEl) {
+      return alert('⚠️ Voucher form incomplete (code/discount/expiry required).');
+    }
 
-  if (!Array.isArray(data.menuVoucher)) {
-    console.warn("⚠️ menuVoucher hilang → reset array");
-    data.menuVoucher = [];
+    const code = String(codeEl.value || '').trim().toUpperCase();
+    const value = Number(discountEl.value || 0);
+    const expires_at = expiryEl.value ? new Date(expiryEl.value).toISOString() : null;
+    const type = (typeEl?.value || 'percent').toString();
+    const min_order = Number(minOrderEl?.value || 0);
+    const description = descEl?.value || '';
+
+    if (!code) return alert('⚠️ Voucher code required.');
+    if (isNaN(value)) return alert('⚠️ Discount must be a number.');
+
+    // If edit id set -> update
+    const editId = editIdEl?.value ? Number(editIdEl.value) : null;
+
+    if (editId) {
+      const { error } = await client.from('vouchers').update({
+        code, type, value, min_order, description, expires_at, is_active: true
+      }).eq('id', editId);
+      if (error) throw error;
+      alert('✅ Voucher updated.');
+    } else {
+      // ensure uniqueness per resto by code
+      const { data: existing } = await client.from('vouchers').select('id').eq('resto_id', restoId).eq('code', code).limit(1).maybeSingle();
+      if (existing && existing.id) {
+        // update existing instead of duplicate insert
+        const { error: upErr } = await client.from('vouchers').update({
+          type, value, min_order, description, expires_at, is_active: true
+        }).eq('id', existing.id);
+        if (upErr) throw upErr;
+        alert('✅ Existing voucher updated (by code).');
+      } else {
+        const payload = {
+          resto_id: restoId,
+          code,
+          type,
+          value,
+          min_order: min_order || 0,
+          is_active: true,
+          description: description || null,
+          expires_at: expires_at || null,
+          created_at: new Date().toISOString()
+        };
+        const { error } = await client.from('vouchers').insert([payload]);
+        if (error) throw error;
+        alert('✅ Voucher created.');
+      }
+    }
+
+    // cleanup edit form if any
+    if (editIdEl) { editIdEl.value = ''; }
+    // reset form fields optionally
+    if (codeEl) codeEl.value = '';
+    if (discountEl) discountEl.value = '';
+    if (expiryEl) expiryEl.value = '';
+    if (typeEl) typeEl.value = 'percent';
+    if (minOrderEl) minOrderEl.value = '';
+    if (descEl) descEl.value = '';
+
+    await loadVouchers();
+    return true;
+  } catch (err) {
+    console.error('saveVoucherNew error:', err);
+    alert('❌ Failed to save voucher: ' + (err.message || err));
+    return false;
   }
-
-  // Auto remove expired
-  const today = new Date();
-  const cleaned = data.menuVoucher.filter(v => {
-    const exp = new Date(v.expiry);
-    return isFinite(exp) && exp >= today;
-  });
-
-  if (cleaned.length !== data.menuVoucher.length) {
-    console.warn("🧹 Membersihkan voucher expired...");
-    data.menuVoucher = cleaned;
-    await saveDataToDB(1, data);
-  }
-
-  console.log("📦 Voucher aktif:", cleaned);
-  console.groupEnd();
-
-  renderVoucher(cleaned);  
-  return cleaned;
 }
 
-  // Compatibility wrapper — biar onclick lama tetap work
-function saveVoucher() {
-  // return promise in case caller expects it
-  return saveVoucherNew && typeof saveVoucherNew === 'function'
-    ? saveVoucherNew()
-    : (alert("Function saveVoucherNew() tidak ditemukan."), Promise.reject(new Error("saveVoucherNew not defined")));
+// Delete voucher (hard delete). If prefer soft-delete, set is_active=false instead.
+async function deleteVoucher(id) {
+  try {
+    if (!client) throw new Error('Supabase client not initialized');
+    if (!id) return alert('Voucher id required to delete.');
+    if (!confirm('Are you sure want to delete this voucher?')) return;
+
+    const { error } = await client.from('vouchers').delete().eq('id', id);
+    if (error) throw error;
+    alert('✅ Voucher deleted.');
+    await loadVouchers();
+  } catch (err) {
+    console.error('deleteVoucher error:', err);
+    alert('❌ Delete failed: ' + (err.message || err));
+  }
 }
 
+// Edit / prefill voucher fields (for admin convenience)
+async function editVoucher(id) {
+  try {
+    if (!client) throw new Error('Supabase client not initialized');
+    if (!id) return;
+    const { data, error } = await client.from('vouchers').select('*').eq('id', id).limit(1).maybeSingle();
+    if (error) throw error;
+    if (!data) return alert('Voucher not found.');
 
-  async function saveVoucherNew() {
-  const code = document.getElementById("voucherCode").value.trim();
-  const discount = parseFloat(document.getElementById("voucherDiscount").value);
-  const expiry = document.getElementById("voucherExpiry").value;
+    // Prefill fields
+    document.getElementById('voucherCode').value = data.code || '';
+    document.getElementById('voucherDiscount').value = data.value ?? '';
+    if (document.getElementById('voucherExpiry')) {
+      if (data.expires_at) {
+        const dt = new Date(data.expires_at);
+        // set input date or datetime-local depending
+        const isoDate = dt.toISOString().slice(0,16); // yyyy-mm-ddThh:mm
+        // if input type=date only, slice to yyyy-mm-dd
+        const expiryInput = document.getElementById('voucherExpiry');
+        if (expiryInput.type === 'date') expiryInput.value = dt.toISOString().slice(0,10);
+        else expiryInput.value = isoDate;
+      } else {
+        document.getElementById('voucherExpiry').value = '';
+      }
+    }
+    if (document.getElementById('voucherType')) document.getElementById('voucherType').value = data.type || 'percent';
+    if (document.getElementById('voucherMinOrder')) document.getElementById('voucherMinOrder').value = data.min_order ?? '';
+    if (document.getElementById('voucherDescription')) document.getElementById('voucherDescription').value = data.description || '';
 
-  if (!code || isNaN(discount) || !expiry) {
-    alert("⚠️ Harap isi semua form!");
-    return;
+    // set edit id
+    let editIdEl = document.getElementById('editVoucherId');
+    if (!editIdEl) {
+      editIdEl = document.createElement('input');
+      editIdEl.type = 'hidden';
+      editIdEl.id = 'editVoucherId';
+      document.body.appendChild(editIdEl);
+    }
+    editIdEl.value = data.id;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) {
+    console.error('editVoucher error:', err);
+    alert('❌ Failed to load voucher for edit: ' + (err.message || err));
   }
-
-  const data = await loadDataFromDB(1);
-
-  if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
-
-  const codeUpper = code.toUpperCase();
-
-  // Cek apakah voucher dengan code yang sama sudah ada
-  const existing = data.menuVoucher.find(v => v.code === codeUpper);
-
-  if (existing) {
-    // Update
-    existing.discount = discount;
-    existing.expiry = expiry;
-    existing.updatedAt = new Date().toISOString();
-
-    console.log("✏️ Voucher updated:", existing);
-  } else {
-    // Tambah baru
-    const newVoucher = {
-      id: crypto.randomUUID(),
-      code: codeUpper,
-      discount,
-      expiry,
-      createdAt: new Date().toISOString()
-    };
-
-    data.menuVoucher.push(newVoucher);
-    console.log("➕ Voucher ditambahkan:", newVoucher);
-  }
-
-  await saveDataToDB(1, data);
-
-  renderVoucher(data.menuVoucher);
-
-  alert("✅ Voucher berhasil disimpan!");
 }
 
-  function renderVoucher(vouchers = []) {
+// Render voucher list in admin UI
+function renderVoucher(vouchers = []) {
   const box = document.getElementById("voucherPreview");
   if (!box) return;
-
   if (!Array.isArray(vouchers)) vouchers = [];
 
-  const today = new Date();
-  vouchers = vouchers.filter(v => new Date(v.expiry) >= today);
-
-  if (vouchers.length === 0) {
+  const now = new Date();
+  const visible = vouchers.filter(v => v && v.is_active !== false && (!v.expires_at || new Date(v.expires_at) >= now));
+  if (visible.length === 0) {
     box.innerHTML = "<em>Belum ada voucher aktif</em>";
     return;
   }
 
   box.innerHTML = `
     <h3>Voucher Aktif</h3>
-    ${vouchers.map(v => `
+    ${visible.map(v => `
       <div class="voucher-item" style="border:1px solid #ccc; padding:8px; margin:8px 0; border-radius:8px;">
         <p><strong>Kode Voucher:</strong>
           <span class="voucher-code">${v.code}</span>
           <button onclick="copyVoucherCode('${v.code}')">📋 Copy</button>
+          <button onclick="editVoucher(${v.id})" style="margin-left:6px;">✏️ Edit</button>
+          <button onclick="deleteVoucher(${v.id})" style="margin-left:6px;">🗑️</button>
         </p>
-        <p><strong>Diskon:</strong> ${v.discount}%</p>
-        <p><strong>Berlaku sampai:</strong> ${v.expiry}</p>
+        <p><strong>Jenis:</strong> ${v.type || 'percent'}</p>
+        <p><strong>Nilai:</strong> ${v.value}${(v.type === 'percent' ? '%' : '')}</p>
+        <p><strong>Minimal Order:</strong> Rp${v.min_order || 0}</p>
+        <p><strong>Berlaku sampai:</strong> ${v.expires_at ? new Date(v.expires_at).toLocaleString() : 'Tanpa batas'}</p>
+        <p style="color:#666"><small>${v.description || ''}</small></p>
       </div>
     `).join("")}
   `;
 }
 
-  function copyVoucherCode(code) {
+// Copy helper
+function copyVoucherCode(code) {
   if (!code) return;
-
-  // Method modern
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(code)
-      .then(() => {
-        alert(`Kode voucher "${code}" berhasil disalin!`);
-      })
-      .catch(err => {
-        console.error("Clipboard error:", err);
-        fallbackCopy(code);
-      });
+      .then(()=> alert(`Kode voucher "${code}" berhasil disalin!`))
+      .catch(err => { console.error('Clipboard error', err); fallbackCopy(code); });
   } else {
-    // Fallback lama
     fallbackCopy(code);
   }
 }
-
 function fallbackCopy(text) {
-  const tempInput = document.createElement("input");
-  tempInput.value = text;
-  document.body.appendChild(tempInput);
-  tempInput.select();
-  document.execCommand("copy");
-  tempInput.remove();
+  const temp = document.createElement('input');
+  temp.value = text;
+  document.body.appendChild(temp);
+  temp.select();
+  document.execCommand('copy');
+  temp.remove();
   alert(`Kode voucher "${text}" berhasil disalin!`);
 }
 
+// Auto-load vouchers when initVoucherToggle calls it (initVoucherToggle kept unchanged)
 </script>
+
 <script>
 /* ============================================================
    1. PRELOAD + UNLOCK AUDIO
@@ -2613,4 +2567,5 @@ function markViewedAndGo() {
 
 </body>
 </html>
+
 
