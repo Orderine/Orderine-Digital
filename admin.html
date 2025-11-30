@@ -6,14 +6,6 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
   <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
-  <script src="https://unpkg.com/@supabase/supabase-js"></script>
-<script>
-  const SUPABASE_URL = "https://yscjjisqvlbedtuomrmf.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_L69H0-PapAm3jMWrTyYayQ_4kOd2MMD";
-
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-</script>
-
   <title>Admin Orderine</title>
   <style>
     * { box-sizing: border-box; }
@@ -735,205 +727,23 @@ button {
     <div class="label">Logout</div>
   </div>
 </div>
-  
+
+  <!-- SUPABASE CLIENT -->
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+  // ======== CONFIG SUPABASE ========
+  const SUPABASE_URL = "https://yscjjisqvlbedtuomrmf.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_L69H0-PapAm3jMWrTyYayQ_4kOd2MMD";
+
+  export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: false }
+  });
+
+  console.log("⭐ Supabase siap dipakai (client created)");
+</script>
+
  <script>
-console.log("Admin Script Version: 2025-11-07-STABLE");
-
-// ====================== GLOBAL DB HANDLER ======================
-let dbReady = null;
-const DB_NAME = "MenuvaDB";
-const STORE_NAME = "menuvaData";
-const DB_VERSION = 10;
-
-let dbInstance = null;
-
-  // Tes sederhana: apakah IndexedDB berfungsi di HP?
-if (!window.indexedDB) {
-  alert("⚠️ Browser ini tidak mendukung IndexedDB!");
-} else {
-  const test = indexedDB.open("TestDB_Check");
-  test.onerror = (e) => {
-    console.error("❌ IndexedDB gagal dibuka:", e.target.error);
-    alert("IndexedDB gagal dibuka di HP! Kemungkinan masalah izin browser.");
-  };
-  test.onsuccess = () => {
-    console.log("✅ IndexedDB bisa dibuka di perangkat ini");
-    test.result.close();
-    indexedDB.deleteDatabase("TestDB_Check");
-  };
-}
-
-let dbPromise = null;
-
-async function initDB() {
-  if (dbInstance) return dbInstance;
-  if (dbPromise) return dbPromise;
-
-  dbPromise = new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id" });
-      }
-
-      if (!db.objectStoreNames.contains("ordersData")) {
-        db.createObjectStore("ordersData", {
-          keyPath: "id",
-          autoIncrement: true
-        });
-      }
-    };
-
-    request.onsuccess = (e) => {
-      dbInstance = e.target.result;
-      dbPromise = null;
-      resolve(dbInstance);
-    };
-
-    request.onerror = (e) => {
-      dbPromise = null;
-      reject(e.target.error);
-    };
-  });
-
-  return dbPromise;
-}
-
-async function getDB() {
-  if (dbInstance) return dbInstance;
-  return await initDB();
-}
-
-   async function saveDataToDB(id, newData) {
-  console.groupCollapsed("💾 [TRACE] saveDataToDB()");
-
-  id = Number(id) || 1;
-
-  const db = await getDB();
-  const tx = db.transaction(STORE_NAME, "readwrite");
-  const store = tx.objectStore(STORE_NAME);
-
-  return new Promise((resolve, reject) => {
-    const req = store.get(id);
-
-    req.onsuccess = () => {
-      let oldData = req.result || buatDataDefault(id);
-
-    
-     // MERGE TANPA HILANG FIELD (VERSI FIX)
-const finalData = {
-  ...oldData,
-  ...newData,
-};
-
-// Pastikan menuVoucher tidak corrupt
-if (!Array.isArray(finalData.menuVoucher)) {
-  finalData.menuVoucher = Array.isArray(oldData.menuVoucher)
-    ? oldData.menuVoucher
-    : [];
-}
-
-      const saveReq = store.put(finalData);
-
-      saveReq.onsuccess = () => {
-        console.log("✅ Data tersimpan:", finalData);
-        console.groupEnd();
-        resolve(finalData);
-      };
-
-      saveReq.onerror = (e) => {
-        console.error("❌ Gagal simpan DB:", e.target.error);
-        console.groupEnd();
-        reject(e.target.error);
-      };
-    };
-
-    req.onerror = (e) => {
-      console.error("❌ Gagal membaca DB:", e.target.error);
-      console.groupEnd();
-      reject(e.target.error);
-    };
-  });
-}
-
- async function loadDataFromDB(id = 1) {
-  console.groupCollapsed("📥 [TRACE] loadDataFromDB()");
-  const db = await getDB();
-  const tx = db.transaction(STORE_NAME, "readonly");
-  const store = tx.objectStore(STORE_NAME);
-
-  return new Promise((resolve, reject) => {
-    const req = store.get(id);
-
-    req.onsuccess = () => {
-      let r = req.result;
-
-      console.log("📦 Data dari DB (raw):", r);
-
-      // ======== DATA DEFAULT JIKA KOSONG ========
-      // Jika data ada tapi field rooms hilang → tambahkan
-if (r && !Array.isArray(r.rooms)) {
-  console.warn("⚠️ Field ROOMS hilang → tambahkan default");
-  r.rooms = [];
-}
-
-// Jika data sama sekali tidak ada → buat default penuh
-if (!r) {
-  console.warn("⚠️ DB kosong → create default");
-  r = buatDataDefault(id);
-}
-
-      // ======== FORCE STRUCTURE (ANTI HILANG) ========
-      const safe = {
-        id,
-        restoId: r.restoId || "",
-        namaRestoran: r.namaRestoran || "",
-        restoAddress: r.restoAddress || "",
-        restoPhone: r.restoPhone || "",
-        logo: r.logo || "",
-        menu: Array.isArray(r.menu) ? r.menu : [],
-        menuPromo: Array.isArray(r.menuPromo) ? r.menuPromo : [],
-        menuVoucher: Array.isArray(r.menuVoucher) ? r.menuVoucher : [],
-        rooms: Array.isArray(r.rooms) ? r.rooms : [],
-        nomorWaAdmin: Array.isArray(r.nomorWaAdmin) ? r.nomorWaAdmin : [],
-        flipbookRuanganImages: Array.isArray(r.flipbookRuanganImages) ? r.flipbookRuanganImages : [],
-        flipbookMenuImages: Array.isArray(r.flipbookMenuImages) ? r.flipbookMenuImages : []
-      };
-
-      console.log("📦 Data setelah SAFE-FIX:", safe);
-      console.groupEnd();
-      resolve(safe);
-    };
-
-    req.onerror = (e) => {
-      console.error("❌ Gagal load DB:", e.target.error);
-      console.groupEnd();
-      reject(e.target.error);
-    };
-  });
-}
-
-// ===== Helper internal: bikin struktur default =====
-function buatDataDefault(id = 1) {
-  return {
-    id,
-    restoId: "",
-    namaRestoran: "",
-    restoAddress: "",
-    restoPhone: "",
-    menuData: [],
-    menuVoucher: [],   // 🔥 WAJIB ADA
-    menuPromo: [],
-    menu: [],
-    rooms: [],
-    nomorWaAdmin: [],
-    flipbookRuanganImages: [],
-    flipbookMenuImages: [],
-  };
-}
 
 // ====================== Variabel Global ======================
 let menuPromo = [];
@@ -1006,7 +816,9 @@ function hapusPromo(index) {
   menuPromo.splice(index, 1);
   renderPromoUI();
   if (window._saveTimeout) clearTimeout(window._saveTimeout);
-  window._saveTimeout = setTimeout(() => { simpanData().catch(e=>console.error(e)); }, 300);
+  // Supabase nanti simpan oleh saveResto() atau savePromo()
+// (sementara tidak auto-save)
+
 }
 
 function uploadPromoImage(event, index) {
@@ -1292,7 +1104,7 @@ function hapusFormRoom(button) {
   if (form) {
     form.remove();
     if (window._saveTimeout) clearTimeout(window._saveTimeout);
-    window._saveTimeout = setTimeout(() => { simpanData().catch(e=>console.error(e)); }, 300);
+    // Save akan dipanggil manual di saveResto()
   }
 }
 
@@ -1300,7 +1112,15 @@ function hapusFormRoom(button) {
 async function tampilkanListRoom() {
   try {
     const restoId = document.getElementById("restoId")?.value || document.getElementById("restoPhone")?.value || null;
-    const data = await loadDataFromDB(restoId);
+    const { data, error } = await sb
+  .from("rooms")
+  .select("*")
+  .eq("resto_id", restoId);
+
+if (error) {
+  console.error(error);
+  return;
+}
     const listContainer = document.getElementById("listRuangan");
     if (!listContainer) return;
 
@@ -2793,19 +2613,4 @@ function markViewedAndGo() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
