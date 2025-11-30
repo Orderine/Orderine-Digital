@@ -1130,10 +1130,10 @@ async function migrateConfigToSupabase(force = false) {
    Use `migrateConfigToSupabase()` manually from console or UI control to avoid accidental overwrites.
 */
 
-  // ====================== Supabase Init ======================
-const SUPABASE_URL = "YOUR_SUPABASE_URL";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+ // ====================== Supabase Init ======================
+const SUPABASE_URL = "https://orderine.github.io/Orderine-Digital/Admin-migration.html"; 
+const SUPABASE_ANON_KEY = "sb_publishable_L69H0-PapAm3jMWrTyYayQ_4kOd2MMD";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ====================== Variabel Global ======================
 let menuPromo = [];
@@ -1774,3 +1774,4 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
