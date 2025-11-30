@@ -761,14 +761,6 @@ let dbPromise = null;
    Supabase init + migration helpers
    ========================= */
 
-/**
- * IMPORTANT: set SUPABASE_URL to your Supabase project URL (https://xxxx.supabase.co)
- * The publishable key below was provided in your message; if you want to use service_role
- * or different key for admin tasks, replace accordingly (be careful with security).
- */
-const SUPABASE_URL = ""; // <-- <-- <--  PUT YOUR SUPABASE PROJECT URL HERE
-const SUPABASE_ANON_KEY = "sb_publishable_L69H0-PapAm3jMWrTyYayQ_4kOd2MMD"; // from your message
-
 // lazy supabase client (only created if SUPABASE_URL is set)
 let supabase = null;
 function getSupabaseClient() {
@@ -781,7 +773,7 @@ function getSupabaseClient() {
     supabase = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   } else if (window.supabase) {
     // e.g. supabase global
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabase = window.supabase.createClient(, SUPABASE_ANON_KEY);
   } else {
     // If user included CDN <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"> then:
     if (window.supabaseJs && supabaseJs.createClient) {
@@ -1130,8 +1122,7 @@ async function migrateConfigToSupabase(force = false) {
    Use `migrateConfigToSupabase()` manually from console or UI control to avoid accidental overwrites.
 */
 
- // ====================== Supabase Init ======================
-const SUPABASE_URL = "https://orderine.github.io/Orderine-Digital/Admin-migration.html"; 
+ const SUPABASE_URL = "https://yscjjisqvlbedtuomrmf.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_L69H0-PapAm3jMWrTyYayQ_4kOd2MMD";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -1774,4 +1765,5 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
