@@ -914,9 +914,7 @@ async function loadDataFromDB(id = 1) {
         .eq("id", id)
         .maybeSingle();
 
-      if (error) {
-        console.warn("⚠ Supabase error:", error.message);
-      }
+      if (error) console.warn("⚠ Supabase error:", error.message);
 
       if (data && data.data) {
         const r = data.data;
@@ -947,47 +945,35 @@ async function loadDataFromDB(id = 1) {
   }
 
   // ============================================================
-  // 2️⃣ FALLBACK INDEXEDDB
+  // 2️⃣ Fallback ke IndexedDB
   // ============================================================
-  console.log("💾 Load dari IndexedDB...");
+  try {
+    const db = await getDB();
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
 
-  const db = await getDB();
-  const tx = db.transaction(STORE_NAME, "readonly");
-  const store = tx.objectStore(STORE_NAME);
+    const data = await new Promise((resolve, reject) => {
+      const req = store.get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
 
-  return new Promise((resolve, reject) => {
-    const req = store.get(id);
-
-    req.onsuccess = () => {
-      let r = req.result || buatDataDefault(id);
-
-      const safe = {
-        id,
-        restoId: r.restoId || "",
-        namaRestoran: r.namaRestoran || "",
-        restoAddress: r.restoAddress || "",
-        restoPhone: r.restoPhone || "",
-        logo: r.logo || "",
-        menu: Array.isArray(r.menu) ? r.menu : [],
-        menuPromo: Array.isArray(r.menuPromo) ? r.menuPromo : [],
-        menuVoucher: Array.isArray(r.menuVoucher) ? r.menuVoucher : [],
-        rooms: Array.isArray(r.rooms) ? r.rooms : [],
-        nomorWaAdmin: Array.isArray(r.nomorWaAdmin) ? r.nomorWaAdmin : [],
-        flipbookRuanganImages: Array.isArray(r.flipbookRuanganImages) ? r.flipbookRuanganImages : [],
-        flipbookMenuImages: Array.isArray(r.flipbookMenuImages) ? r.flipbookMenuImages : []
-      };
-
-      console.log("💾 IndexedDB SAFE-FIX:", safe);
+    if (data) {
+      console.log("📦 IndexedDB → data ditemukan");
       console.groupEnd();
-      resolve(safe);
-    };
+      return data;
+    }
+  } catch (err) {
+    console.warn("⚠ IndexedDB load error:", err);
+  }
 
-    req.onerror = (e) => {
-      console.error("❌ Gagal load IndexedDB:", e.target.error);
-      console.groupEnd();
-      reject(e.target.error);
-    };
-  });
+  // ============================================================
+  // 3️⃣ Default data jika semua gagal
+  // ============================================================
+  console.warn("⚠ Tidak ada data di Supabase / IndexedDB → pakai default");
+  const def = buatDataDefault(id);
+  console.groupEnd();
+  return def;
 }
 
 function buatDataDefault(id = 1) {
@@ -3002,6 +2988,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
