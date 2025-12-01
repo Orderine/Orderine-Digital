@@ -1810,34 +1810,82 @@ function slugify(text) {
     .replace(/\-\-+/g, '-');
 }
 
-   async function simpanData() {
-  console.groupCollapsed("💾 simpanData() DIPANGGIL");
-
+// ====================== SIMPAN (form -> DB) ======================
+async function simpanData() {
   try {
-    // Ambil semua data dari form admin
+    showLoader();
+
+    // ================= VALIDASI INPUT ==================
+    const namaRestoran = document.getElementById("namaRestoran")?.value.trim() || "";
+    const restoAddress = document.getElementById("restoAddress")?.value.trim() || "";
+    const restoPhone = document.getElementById("restoPhone")?.value.trim() || "";
+    const logo = document.getElementById("previewLogo")?.src || "";
+    const nomorWaAdmin = Array
+      .from(document.querySelectorAll(".nomor-wa"))
+      .map(i => i.value.trim())
+      .filter(v => v !== "");
+
+    if (!restoPhone) {
+      alert("❌ Please input the restaurant phone number before saving!");
+      hideLoader();
+      return;
+    }
+
+    const restoId = document.getElementById("restoId")?.value || "resto-main";
+
+    // ================= AMBIL MENU ==================
+    const menuData = [
+      ...ambilMenu("menuFoodContainer"),
+      ...ambilMenu("menuSnackContainer"),
+      ...ambilMenu("menuDrinkContainer"),
+      ...ambilMenu("menuSpecialContainer")
+    ];
+
+    // ================= DATA LAIN ==================
+    const promo = Array.isArray(menuPromo) ? menuPromo : [];
+    const flipRuangan = Array.isArray(flipbookRuanganImages) ? flipbookRuanganImages : [];
+    const flipMenu = Array.isArray(flipbookMenuImages) ? flipbookMenuImages : [];
+    const voucherList = Array.isArray(window.menuVoucher) ? window.menuVoucher : [];
+
+    // ================= FINAL DATA ==================
     const data = {
-      resto: restoData,
+      restoId,
+      namaRestoran,
+      restoAddress,
+      restoPhone,
+      logo,
+      nomorWaAdmin,
+      menuPromo: promo,
+      menuVoucher: voucherList,
+      flipbookRuanganImages: flipRuangan,
+      flipbookMenuImages: flipMenu,
       menu: menuData,
-      promo: menuPromo,
-      voucher: voucherList || [],
-      waNumber: waNumber || "",
-      flipbook: flipbookData || []
+      rooms: ambilSemuaRoom()
     };
 
-    console.log("📦 Data yang akan disimpan:", data);
-
-    // Simpan ke DB hybrid
+    // ================= SIMPAN DB ==================
     await saveDataToDB(1, data);
 
-    console.log("✔️ simpanData() selesai");
-    alert("Data berhasil disimpan!");
+    // ================= SYNC restoId hidden ==================
+    let restoIdEl = document.getElementById("restoId");
+    if (!restoIdEl) {
+      restoIdEl = document.createElement("input");
+      restoIdEl.type = "hidden";
+      restoIdEl.id = "restoId";
+      document.body.appendChild(restoIdEl);
+    }
+    restoIdEl.value = restoId;
+
+    updateShareUI();
+
+    alert(`✅ All data saved successfully!: ${restoId}`);
 
   } catch (err) {
-    console.error("❌ ERROR di simpanData():", err);
-    alert("Terjadi kesalahan saat menyimpan. Cek console.");
+    console.error(err);
+    alert("❌ Failed to save data.");
+  } finally {
+    hideLoader();
   }
-
-  console.groupEnd();
 }
 
 let sudahLoadData = false;
@@ -2954,6 +3002,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
