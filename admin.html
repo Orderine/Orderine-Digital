@@ -2441,7 +2441,7 @@ async function safeLoadDataFromDB() {
       document.getElementById("restoPhone")?.value ||
       "resto-main";
 
-    // 1. COBA LOAD DARI SUPABASE
+    // 1. LOAD DARI SUPABASE
     if (window.supabase) {
       try {
         const { data, error } = await supabase
@@ -2454,10 +2454,10 @@ async function safeLoadDataFromDB() {
           console.log("🌐 Data dari Supabase:", data);
           return data;
         } else {
-          console.warn("⚠️ Supabase kosong / error. Fallback ke IndexedDB.");
+          console.warn("⚠️ Supabase kosong atau error → fallback ke IndexedDB");
         }
-      } catch (e) {
-        console.warn("⚠️ Supabase load gagal:", e);
+      } catch (err) {
+        console.warn("⚠️ Supabase load error:", err);
       }
     }
 
@@ -2468,12 +2468,12 @@ async function safeLoadDataFromDB() {
         console.log("📦 Data dari IndexedDB:", localData);
         return localData;
       }
-    } catch (e) {
-      console.warn("⚠️ IndexedDB load gagal:", e);
+    } catch (err) {
+      console.warn("⚠️ IndexedDB load error:", err);
     }
 
-    // 3. DEFAULT
-    console.warn("⚠️ Tidak ada data di Supabase atau IndexedDB → pakai default");
+    // 3. DEFAULT DATA
+    console.warn("⚠️ Tidak ada data → pakai default");
     return buatDataDefault(1);
 
   } catch (err) {
@@ -2483,99 +2483,64 @@ async function safeLoadDataFromDB() {
 }
 
 
-// Wrapper aman
+// ======================================================
+// RENDER WRAPPER AMAN
+// ======================================================
 async function safeLoadData(data) {
   try {
     if (!data) data = buatDataDefault(1);
     await loadData(data);
-  } catch (e) {
-    console.error("❌ safeLoadData() error:", e);
+  } catch (err) {
+    console.error("❌ safeLoadData() error:", err);
   }
 }
 
 
-
 // ======================================================
-// INIT UTAMA — HYBRID
+// INIT UTAMA — HYBRID SYSTEM
 // ======================================================
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Init mulai...");
   showLoader();
 
   const timeout = setTimeout(() => {
-    console.warn("⚠️ Init terlalu lama, sembunyikan loader paksa.");
+    console.warn("⚠️ Init terlalu lama → hide loader paksa");
     hideLoader();
   }, 8000);
 
   try {
-    // =========== INIT INDEXEDDB ===========
-    const db = await initDB();
+    // INIT INDEXEDDB
+    await initDB();
     console.log("✅ IndexedDB siap");
 
-    // =========== LOAD DATA HYBRID ===========
+    // HYBRID LOAD
     const data = await safeLoadDataFromDB();
     if (data) {
       await safeLoadData(data);
       console.log("📦 Data di-load (hybrid):", data);
     } else {
-      console.warn("⚠️ Tidak ada data ditemukan sama sekali");
+      console.warn("⚠️ Tidak ada data ditemukan");
     }
 
-    // =========== INIT UI (toggle) ===========
+    // INIT TOGGLES
     await initAllToggles();
 
-    // =========== FIXED BAR ===========  
+    // FIXED BAR PADDING
     const fixbar = document.querySelector(".fixed-bar");
     if (fixbar) {
-      const fixbarHeight = fixbar.offsetHeight;
-      document.body.style.paddingBottom = fixbarHeight + "px";
+      document.body.style.paddingBottom = fixbar.offsetHeight + "px";
     }
 
     console.log("✅ Admin siap digunakan (Hybrid Ready)");
 
   } catch (err) {
     console.error("❌ Error saat init:", err);
-    alert("Terjadi kesalahan saat memuat data. Coba refresh halaman.");
+    alert("Terjadi kesalahan saat memuat data. Silakan refresh.");
   } finally {
     clearTimeout(timeout);
     hideLoader();
   }
 });
-
-  // ===================== SAFE LOAD WRAPPER =====================
-async function safeLoadDataFromDB(id = 1) {
-  if (isLoadingFromDB) {
-    console.warn("⚠️ loadDataFromDB() di-skip, masih jalan");
-    return null;
-  }
-
-  isLoadingFromDB = true;
-  try {
-    const data = await loadDataFromDB(id);
-    return data;
-  } catch (err) {
-    console.error("❌ Gagal loadDataFromDB:", err);
-    return null;
-  } finally {
-    isLoadingFromDB = false;
-  }
-}
-
-async function safeLoadData(data) {
-  if (window.sudahLoadData) {
-    console.warn("⚠️ loadData() sudah pernah jalan, skip render ulang");
-    return;
-  }
-
-  window.sudahLoadData = true;
-
-  try {
-    await loadData(data);
-  } catch (err) {
-    console.error("❌ Gagal loadData:", err);
-  }
-}
-
 
 // ===================== TOGGLES MASTER =====================
 async function initAllToggles() {
@@ -2988,6 +2953,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
