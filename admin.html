@@ -1810,12 +1810,10 @@ function slugify(text) {
     .replace(/\-\-+/g, '-');
 }
 
-// ====================== SIMPAN (form -> DB) ======================
 async function simpanData() {
   try {
     showLoader();
 
-    // ================= VALIDASI INPUT ==================
     const namaRestoran = document.getElementById("namaRestoran")?.value.trim() || "";
     const restoAddress = document.getElementById("restoAddress")?.value.trim() || "";
     const restoPhone = document.getElementById("restoPhone")?.value.trim() || "";
@@ -1833,7 +1831,6 @@ async function simpanData() {
 
     const restoId = document.getElementById("restoId")?.value || "resto-main";
 
-    // ================= AMBIL MENU ==================
     const menuData = [
       ...ambilMenu("menuFoodContainer"),
       ...ambilMenu("menuSnackContainer"),
@@ -1841,13 +1838,11 @@ async function simpanData() {
       ...ambilMenu("menuSpecialContainer")
     ];
 
-    // ================= DATA LAIN ==================
     const promo = Array.isArray(menuPromo) ? menuPromo : [];
     const flipRuangan = Array.isArray(flipbookRuanganImages) ? flipbookRuanganImages : [];
     const flipMenu = Array.isArray(flipbookMenuImages) ? flipbookMenuImages : [];
     const voucherList = Array.isArray(window.menuVoucher) ? window.menuVoucher : [];
 
-    // ================= FINAL DATA ==================
     const data = {
       restoId,
       namaRestoran,
@@ -1863,10 +1858,13 @@ async function simpanData() {
       rooms: ambilSemuaRoom()
     };
 
-    // ================= SIMPAN DB ==================
-    await saveDataToDB(1, data);
+    // ❌ Jangan panggil saveDataToDB() lagi
+    // await saveDataToDB(1, data);
 
-    // ================= SYNC restoId hidden ==================
+    // ✔ Cukup update objek global untuk hybrid
+    window.currentData = data;
+
+    // Hidden input sync
     let restoIdEl = document.getElementById("restoId");
     if (!restoIdEl) {
       restoIdEl = document.createElement("input");
@@ -1887,6 +1885,7 @@ async function simpanData() {
     hideLoader();
   }
 }
+
 
 // Flag global buat cegah render dobel
 let sudahLoadData = false;
@@ -3003,4 +3002,5 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
