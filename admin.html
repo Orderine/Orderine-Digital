@@ -6,6 +6,7 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
   <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <title>Admin Orderine</title>
   <style>
     * { box-sizing: border-box; }
@@ -728,10 +729,19 @@ button {
   </div>
 </div>
 
-<script>
-console.log("Admin Script Version: 2025-11-07-STABLE");
+ <script>
+console.log("Admin Script Version: 2025-11-07-HYBRID-1");
 
-// ====================== GLOBAL DB HANDLER ======================
+// ====================== SUPABASE CLIENT ======================
+const supabaseUrl = "https://yscjjisqvlbedtuomrmf.supabase.co"; 
+const supabaseAnonKey = "sb_publishable_L69H0-PapAm3jMWrTyYayQ_4kOd2MMD";   
+const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+let ONLINE_MODE = true; // akan otomatis jadi false jika supabase gagal
+// ============================================================
+
+
+// ====================== GLOBAL DB HANDLER =====================
 let dbReady = null;
 const DB_NAME = "MenuvaDB";
 const STORE_NAME = "menuvaData";
@@ -739,7 +749,8 @@ const DB_VERSION = 10;
 
 let dbInstance = null;
 
-  // Tes sederhana: apakah IndexedDB berfungsi di HP?
+
+// ====================== CHECK INDEXEDDB AVAILABLE =============
 if (!window.indexedDB) {
   alert("⚠️ Browser ini tidak mendukung IndexedDB!");
 } else {
@@ -757,52 +768,8 @@ if (!window.indexedDB) {
 
 let dbPromise = null;
 
-/* =========================
-   Supabase init + migration helpers
-   ========================= */
 
-// lazy supabase client (only created if SUPABASE_URL is set)
-let supabase = null;
-function getSupabaseClient() {
-  if (!SUPABASE_URL) return null;
-  if (supabase) return supabase;
-  if (!window.supabaseLib && window.createClient) {
-    // If using newer bundle exposing createClient (some CDNs)
-    supabase = window.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  } else if (window.supabaseLib && supabaseLib.createClient) {
-    supabase = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  } else if (window.supabase) {
-    // e.g. supabase global
-    supabase = window.supabase.createClient(, SUPABASE_ANON_KEY);
-  } else {
-    // If user included CDN <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"> then:
-    if (window.supabaseJs && supabaseJs.createClient) {
-      supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    } else if (window.createClient) {
-      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    }
-  }
-  return supabase;
-}
-
-const MIGRATION_FLAG = "migrated_to_supabase_v1";
-
-/** small logger helpers */
-function logInfo(...args){ console.log('[DB]', ...args); }
-function logWarn(...args){ console.warn('[DB]', ...args); }
-function logError(...args){ console.error('[DB]', ...args); }
-
-/** wrapper to check if we should use online DB */
-function shouldUseOnlineDB() {
-  // Prefer online only when:
-  // - migration flag is set, AND
-  // - supabase client is available (SUPABASE_URL provided)
-  return !!(localStorage.getItem(MIGRATION_FLAG) && SUPABASE_URL && getSupabaseClient());
-}
-
-/* =========================
-   IndexedDB core (unchanged, minimal adjustments)
-   ========================= */
+// ====================== INIT DB (IndexedDB) ====================
 async function initDB() {
   if (dbInstance) return dbInstance;
   if (dbPromise) return dbPromise;
@@ -840,187 +807,134 @@ async function initDB() {
   return dbPromise;
 }
 
+
+// ====================== GET DB INSTANCE ========================
 async function getDB() {
   if (dbInstance) return dbInstance;
   return await initDB();
 }
 
-/* =========================
-   Supabase helpers for app-level config (optional single-row storage)
-   NOTE: admin.html originally stores everything as one object in IDB.
-   To be minimally invasive we will store that object in a table named "app_config"
-   with columns: id (int PK), resto_id (text), payload (jsonb), created_at
-   If your Supabase does not have this table, you can create it, or keep using IDB.
-   ========================= */
 
-async function supaSaveConfig(id = 1, payload = {}) {
-  const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase client not configured (SUPABASE_URL empty).");
-
-  // upsert into app_config (assumes table exists)
-  const row = {
-    id,
-    resto_id: payload.restoId || null,
-    payload, // jsonb column
-    created_at: payload.created_at || new Date().toISOString()
-  };
-
-  // using upsert so it will insert or update
-  const { error } = await client.from("app_config").upsert(row);
-  if (error) throw error;
-  return row;
-}
-
-async function supaLoadConfig(id = 1) {
-  const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase client not configured (SUPABASE_URL empty).");
-
-  const { data, error } = await client.from("app_config").select("payload").eq("id", id).limit(1);
-  if (error) throw error;
-  if (!data || data.length === 0) return null;
-  return data[0].payload;
-}
-
-/* =========================
-   Save / Load functions (hybrid)
-   - If migrated & supabase configured -> use Supabase app_config table
-   - Fallback -> old IndexedDB store
-   ========================= */
-
-async function saveDataToDB(id, newData) {
-  console.groupCollapsed("💾 [TRACE] saveDataToDB()");
+// ====================== TEST SUPABASE CONNECTION ===============
+(async () => {
   try {
-    id = Number(id) || 1;
+    const { data, error } = await supabase.from("admin_healthcheck").select("id").limit(1);
 
-    // If online mode (migration done + supabase configured) -> try supabase
-    if (shouldUseOnlineDB()) {
-      try {
-        logInfo("Using Supabase to save config (app_config).");
-        const saved = await supaSaveConfig(id, newData);
-        console.log("✅ Saved to Supabase:", saved);
-        console.groupEnd();
-        return saved;
-      } catch (supaErr) {
-        logError("Supabase save failed, falling back to IndexedDB:", supaErr);
-        // continue to write into IDB as fallback
-      }
-    }
+    if (error) throw error;
 
-    // ==== IndexedDB write (original behavior) ====
-    const db = await getDB();
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
+    console.log("🌐 Supabase Online Mode → ACTIVE");
+    ONLINE_MODE = true;
 
-    return new Promise((resolve, reject) => {
-      const req = store.get(id);
+  } catch (err) {
+    console.warn("⚠ Supabase tidak dapat diakses, fallback ke Offline Mode");
+    ONLINE_MODE = false;
+  }
+})();
 
-      req.onsuccess = () => {
-        let oldData = req.result || buatDataDefault(id);
+  async function saveDataToDB(id, newData) {
+  console.groupCollapsed("💾 [HYBRID SAVE] saveDataToDB()");
 
-        // MERGE TANPA HILANG FIELD (VERSI FIX)
-        const finalData = {
-          ...oldData,
-          ...newData,
-        };
+  id = Number(id) || 1;
 
-        // Pastikan menuVoucher tidak corrupt
-        if (!Array.isArray(finalData.menuVoucher)) {
-          finalData.menuVoucher = Array.isArray(oldData.menuVoucher)
-            ? oldData.menuVoucher
-            : [];
-        }
+  const db = await getDB();
+  const tx = db.transaction(STORE_NAME, "readwrite");
+  const store = tx.objectStore(STORE_NAME);
 
-        const saveReq = store.put(finalData);
+  return new Promise((resolve, reject) => {
+    const req = store.get(id);
 
-        saveReq.onsuccess = () => {
-          console.log("✅ Data tersimpan (IndexedDB):", finalData);
-          console.groupEnd();
-          resolve(finalData);
-        };
+    req.onsuccess = async () => {
+      let oldData = req.result || buatDataDefault(id);
 
-        saveReq.onerror = (e) => {
-          console.error("❌ Gagal simpan DB:", e.target.error);
-          console.groupEnd();
-          reject(e.target.error);
-        };
+      // =============== MERGE DATA (TIDAK HILANG FIELD) ==================
+      const finalData = {
+        ...oldData,
+        ...newData,
       };
 
-      req.onerror = (e) => {
-        console.error("❌ Gagal membaca DB:", e.target.error);
+      // Anti corrupt data voucher
+      if (!Array.isArray(finalData.menuVoucher)) {
+        finalData.menuVoucher = Array.isArray(oldData.menuVoucher)
+          ? oldData.menuVoucher
+          : [];
+      }
+
+      // =============== SIMPAN KE INDEXEDDB (OFFLINE) =================
+      const saveReq = store.put(finalData);
+
+      saveReq.onsuccess = async () => {
+        console.log("💾 IndexedDB → OK");
+
+        // ===============================================================
+        // 🔥 SUPABASE SYNC (ONLINE MODE)
+        // ===============================================================
+        if (ONLINE_MODE) {
+          try {
+            console.log("🌐 Sync ke Supabase...");
+
+            const { error: upsertError } = await supabase
+              .from("admin_data")
+              .upsert({
+                id: id,
+                data: finalData,
+                updated_at: new Date().toISOString(),
+              });
+
+            if (upsertError) throw upsertError;
+
+            console.log("🌐 Supabase sync → OK");
+          } catch (err) {
+            console.warn("⚠ Supabase sync gagal:", err.message);
+          }
+        } else {
+          console.warn("⚠ Supabase OFFLINE → skip sync");
+        }
+
+        console.groupEnd();
+        resolve(finalData);
+      };
+
+      saveReq.onerror = (e) => {
+        console.error("❌ IndexedDB save error:", e.target.error);
         console.groupEnd();
         reject(e.target.error);
       };
-    });
-  } catch (err) {
-    console.groupEnd();
-    throw err;
-  }
+    };
+
+    req.onerror = (e) => {
+      console.error("❌ IndexedDB read error:", e.target.error);
+      console.groupEnd();
+      reject(e.target.error);
+    };
+  });
 }
 
-async function loadDataFromDB(id = 1) {
-  console.groupCollapsed("📥 [TRACE] loadDataFromDB()");
-  try {
-    // If online mode (migration done + supabase configured) -> try supabase first
-    if (shouldUseOnlineDB()) {
-      try {
-        logInfo("Attempting to load config from Supabase (app_config).");
-        const payload = await supaLoadConfig(id);
-        if (payload) {
-          // apply safe-fixes like prior logic
-          const r = payload;
-          const safe = {
-            id,
-            restoId: r.restoId || "",
-            namaRestoran: r.namaRestoran || "",
-            restoAddress: r.restoAddress || "",
-            restoPhone: r.restoPhone || "",
-            logo: r.logo || "",
-            menu: Array.isArray(r.menu) ? r.menu : [],
-            menuPromo: Array.isArray(r.menuPromo) ? r.menuPromo : [],
-            menuVoucher: Array.isArray(r.menuVoucher) ? r.menuVoucher : [],
-            rooms: Array.isArray(r.rooms) ? r.rooms : [],
-            nomorWaAdmin: Array.isArray(r.nomorWaAdmin) ? r.nomorWaAdmin : [],
-            flipbookRuanganImages: Array.isArray(r.flipbookRuanganImages) ? r.flipbookRuanganImages : [],
-            flipbookMenuImages: Array.isArray(r.flipbookMenuImages) ? r.flipbookMenuImages : []
-          };
-          console.log("📦 Data dari Supabase (safe):", safe);
-          console.groupEnd();
-          return safe;
-        } else {
-          logWarn("No config row found in Supabase for id:", id, " -> falling back to IndexedDB");
-        }
-      } catch (supaErr) {
-        logError("Supabase load failed (falling back to IndexedDB):", supaErr);
+ async function loadDataFromDB(id = 1) {
+  console.groupCollapsed("📥 [HYBRID LOAD] loadDataFromDB()");
+
+  // ============================================================
+  // 1️⃣ COBA LOAD DARI SUPABASE (JIKA ONLINE MODE)
+  // ============================================================
+  if (ONLINE_MODE) {
+    try {
+      console.log("🌐 Mencoba load dari Supabase...");
+
+      const { data, error } = await supabase
+        .from("admin_data")
+        .select("data")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (error) {
+        console.warn("⚠ Supabase error:", error.message);
       }
-    }
 
-    // ==== IndexedDB read (original behavior) ====
-    const db = await getDB();
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
+      if (data && data.data) {
+        console.log("🌐 Supabase → DATA DITEMUKAN:", data.data);
 
-    return new Promise((resolve, reject) => {
-      const req = store.get(id);
+        const r = data.data;
 
-      req.onsuccess = () => {
-        let r = req.result;
-
-        console.log("📦 Data dari DB (raw):", r);
-
-        // ======== DATA DEFAULT JIKA KOSONG ========
-        // Jika data ada tapi field rooms hilang → tambahkan
-        if (r && !Array.isArray(r.rooms)) {
-          console.warn("⚠️ Field ROOMS hilang → tambahkan default");
-          r.rooms = [];
-        }
-
-        // Jika data sama sekali tidak ada → buat default penuh
-        if (!r) {
-          console.warn("⚠️ DB kosong → create default");
-          r = buatDataDefault(id);
-        }
-
-        // ======== FORCE STRUCTURE (ANTI HILANG) ========
+        // ========== SAFE STRUCTURE CHECKING (ANTI HILANG) ==========
         const safe = {
           id,
           restoId: r.restoId || "",
@@ -1037,176 +951,161 @@ async function loadDataFromDB(id = 1) {
           flipbookMenuImages: Array.isArray(r.flipbookMenuImages) ? r.flipbookMenuImages : []
         };
 
-        console.log("📦 Data setelah SAFE-FIX:", safe);
+        console.log("🌐 Supabase SAFE-FIX:", safe);
         console.groupEnd();
-        resolve(safe);
+        return safe;
+      }
+    } catch (err) {
+      console.warn("⚠ Supabase load error:", err);
+    }
+  } else {
+    console.warn("⚠ ONLINE_MODE = false → skip load Supabase");
+  }
+
+  // ============================================================
+  // 2️⃣ FALLBACK: INDEXEDDB
+  // ============================================================
+  console.log("💾 Load dari IndexedDB...");
+
+  const db = await getDB();
+  const tx = db.transaction(STORE_NAME, "readonly");
+  const store = tx.objectStore(STORE_NAME);
+
+  return new Promise((resolve, reject) => {
+    const req = store.get(id);
+
+    req.onsuccess = () => {
+      let r = req.result;
+
+      console.log("💾 IndexedDB (raw):", r);
+
+      // Jika field rooms hilang → tambahkan
+      if (r && !Array.isArray(r.rooms)) {
+        console.warn("⚠ Field ROOMS hilang → tambahkan default");
+        r.rooms = [];
+      }
+
+      // Jika kosong total → buat default
+      if (!r) {
+        console.warn("⚠ IndexedDB kosong → create default");
+        r = buatDataDefault(id);
+      }
+
+      // ========== SAFE STRUCTURE CHECKING ==========
+      const safe = {
+        id,
+        restoId: r.restoId || "",
+        namaRestoran: r.namaRestoran || "",
+        restoAddress: r.restoAddress || "",
+        restoPhone: r.restoPhone || "",
+        logo: r.logo || "",
+        menu: Array.isArray(r.menu) ? r.menu : [],
+        menuPromo: Array.isArray(r.menuPromo) ? r.menuPromo : [],
+        menuVoucher: Array.isArray(r.menuVoucher) ? r.menuVoucher : [],
+        rooms: Array.isArray(r.rooms) ? r.rooms : [],
+        nomorWaAdmin: Array.isArray(r.nomorWaAdmin) ? r.nomorWaAdmin : [],
+        flipbookRuanganImages: Array.isArray(r.flipbookRuanganImages) ? r.flipbookRuanganImages : [],
+        flipbookMenuImages: Array.isArray(r.flipbookMenuImages) ? r.flipbookMenuImages : []
       };
 
-      req.onerror = (e) => {
-        console.error("❌ Gagal load DB:", e.target.error);
-        console.groupEnd();
-        reject(e.target.error);
-      };
-    });
-  } catch (e) {
-    console.groupEnd();
-    throw e;
-  }
+      console.log("💾 IndexedDB SAFE-FIX:", safe);
+      console.groupEnd();
+      resolve(safe);
+    };
+
+    req.onerror = (e) => {
+      console.error("❌ Gagal load IndexedDB:", e.target.error);
+      console.groupEnd();
+      reject(e.target.error);
+    };
+  });
 }
 
-// ===== Helper internal: bikin struktur default =====
+// =========================
+// HYBRID DEFAULT STRUCTURE
+// =========================
+// digunakan oleh kedua sistem:
+// - IndexedDB (offline)
+// - Supabase (online DB)
+// agar struktur SELALU UTUH
+
 function buatDataDefault(id = 1) {
   return {
-    id,
+    id: Number(id) || 1,
+
+    // ======================
+    // DATA RESTORAN
+    // ======================
     restoId: "",
     namaRestoran: "",
     restoAddress: "",
     restoPhone: "",
-    menuData: [],
-    menuVoucher: [],   // 🔥 WAJIB ADA
-    menuPromo: [],
-    menu: [],
+    logo: "",
+    background: "",
+
+    // ======================
+    // DATA MENU
+    // ======================
+    menu: [],             // menu utama
+    menuData: [],         // beberapa script lama pakai ini → tetap dipertahankan
+    menuPromo: [],        // promosi
+    menuVoucher: [],      // voucher wajib ada
+
+    // ======================
+    // ROOM / FLIPBOOK
+    // ======================
     rooms: [],
-    nomorWaAdmin: [],
     flipbookRuanganImages: [],
     flipbookMenuImages: [],
+
+    // ======================
+    // NOMOR WA ADMIN
+    // ======================
+    nomorWaAdmin: []
   };
 }
 
-/* =========================
-   Migration starter: non-destructive helper that can be triggered
-   - copies the single IDB config object into Supabase app_config (id=1)
-   - sets MIGRATION_FLAG on success
-   ========================= */
-
-async function migrateConfigToSupabase(force = false) {
-  if (!SUPABASE_URL) {
-    logWarn("SUPABASE_URL not configured — cannot migrate to Supabase. Set SUPABASE_URL and try again.");
-    return { ok: false, reason: "no_supabase_url" };
-  }
-
-  // if already migrated and not forced, skip
-  if (localStorage.getItem(MIGRATION_FLAG) && !force) {
-    logInfo("Already migrated (flag present). Use force=true to re-run.");
-    return { ok: false, reason: "already_migrated" };
-  }
-
-  try {
-    const local = await loadDataFromDB(1);
-    // try saving to supabase
-    const client = getSupabaseClient();
-    if (!client) throw new Error("Supabase client unavailable");
-
-    // upsert to app_config
-    const row = {
-      id: 1,
-      resto_id: local.restoId || null,
-      payload: local,
-      created_at: new Date().toISOString()
-    };
-
-    const { error } = await client.from("app_config").upsert(row);
-    if (error) throw error;
-
-    localStorage.setItem(MIGRATION_FLAG, new Date().toISOString());
-    logInfo("Config migrated to Supabase and flag set.");
-    return { ok: true };
-  } catch (e) {
-    logError("Migration to Supabase failed:", e);
-    return { ok: false, error: e };
-  }
-}
-
-/* Auto-run note:
-   We intentionally DO NOT auto-run migrate here.
-   Use `migrateConfigToSupabase()` manually from console or UI control to avoid accidental overwrites.
-*/
-
- const SUPABASE_URL = "https://yscjjisqvlbedtuomrmf.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_L69H0-PapAm3jMWrTyYayQ_4kOd2MMD";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// ====================== Variabel Global ======================
+   // ====================== GLOBAL ======================
 let menuPromo = [];
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
-let sudahLoadData = false;
 
-// ====================== SAVE ke SUPABASE ======================
-async function saveDataToDB(userId, data) {
-  const { error } = await supabase
-    .from("resto_data")
-    .upsert(
-      { restoId: data.restoId, data },
-      { onConflict: "restoId" }
-    );
-
-  if (error) throw error;
-}
-
-// ====================== LOAD dari SUPABASE ======================
-async function loadDataFromDB(restoId) {
-  if (!restoId) return null;
-
-  const { data, error } = await supabase
-    .from("resto_data")
-    .select("data")
-    .eq("restoId", restoId)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data?.data || null;
-}
-
-// ====================== CLEAR DB ======================
-async function clearDataDB() {
-  const restoId = document.getElementById("restoId")?.value || null;
-  if (!restoId) throw new Error("restoId missing");
-
-  const { error } = await supabase
-    .from("resto_data")
-    .delete()
-    .eq("restoId", restoId);
-
-  if (error) throw error;
-}
-
-// ====================== PROMO ======================
+// ====================== PROMO UI RENDERER ======================
 function renderPromoUI() {
   const container = document.getElementById("promoContainer");
   if (!container) return;
-  container.innerHTML = "";
 
+  container.innerHTML = "";
   const promoCategories = ["PROMO", "DISKON", "SPECIAL", "EVENT"];
 
   menuPromo.forEach((promo, index) => {
     const div = document.createElement("div");
     div.className = "menu-item";
 
-    const optionsHTML = promoCategories.map(
-      cat => `<option value="${cat}" ${promo.kategori === cat ? "selected" : ""}>${cat}</option>`
-    ).join("");
+    const optionsHTML = promoCategories
+      .map(cat => `<option value="${cat}" ${promo.kategori === cat ? "selected" : ""}>${cat}</option>`)
+      .join("");
 
     div.innerHTML = `
       <input type="text" id="promoName_${index}" value="${promo.namaPromo || ""}"
-        placeholder="Promo Name" onchange="updatePromo(${index}, 'namaPromo', this.value)">
-
-      <input type="file" id="promoImage_${index}" accept="image/*" onchange="uploadPromoImage(event, ${index})">
+        onchange="updatePromo(${index}, 'namaPromo', this.value)">
+      
+      <input type="file" accept="image/*" onchange="uploadPromoImage(event, ${index})">
       <img id="promoImgPreview${index}" src="${promo.image || ""}" style="max-height:80px;margin:5px 0">
-
-      <input type="text" id="promoDesc_${index}" placeholder="Description"
+      
+      <input type="text" placeholder="Description Promo"
         value="${promo.deskripsi || ""}" onchange="updatePromo(${index}, 'deskripsi', this.value)">
-
-      <input type="number" id="promoPrice_${index}" placeholder="Price"
+      
+      <input type="number" placeholder="Promo Price"
         value="${promo.harga || ""}" onchange="updatePromo(${index}, 'harga', this.value)">
-
-      <select id="promoCat_${index}" onchange="updatePromo(${index}, 'kategori', this.value)">
+      
+      <select onchange="updatePromo(${index}, 'kategori', this.value)">
         ${optionsHTML}
       </select>
-
-      <input type="date" id="promoDate_${index}" value="${promo.tanggalAkhir || ""}"
+      
+      <input type="date" value="${promo.tanggalAkhir || ""}"
         onchange="updatePromo(${index}, 'tanggalAkhir', this.value)">
-
+      
       <button class="btn-danger" onclick="hapusPromo(${index})">Delete Promo List</button>
     `;
 
@@ -1214,6 +1113,7 @@ function renderPromoUI() {
   });
 }
 
+// ====================== ADD PROMO ======================
 function tambahPromo(promo = {}) {
   menuPromo.push({
     namaPromo: promo.namaPromo || "",
@@ -1223,148 +1123,1439 @@ function tambahPromo(promo = {}) {
     kategori: promo.kategori || "PROMO",
     tanggalAkhir: promo.tanggalAkhir || ""
   });
+
   renderPromoUI();
+  scheduleHybridSave();
 }
 
+// ====================== UPDATE PROMO ======================
 function updatePromo(index, key, value) {
   if (!menuPromo[index]) return;
   menuPromo[index][key] = value;
+  scheduleHybridSave();
 }
 
+// ====================== DELETE PROMO ======================
 function hapusPromo(index) {
   menuPromo.splice(index, 1);
   renderPromoUI();
-  autosave();
+  scheduleHybridSave();
 }
 
+// ====================== IMAGE UPLOAD ======================
 function uploadPromoImage(event, index) {
   const file = event.target.files[0];
   if (!file) return;
+
   resizeIfNeeded(file)
-    .then(resized => {
-      document.getElementById(`promoImgPreview${index}`).src = resized;
+    .then((resized) => {
+      const el = document.getElementById(`promoImgPreview${index}`);
+      if (el) el.src = resized;
+
       updatePromo(index, "image", resized);
     })
-    .catch(err => console.error(err));
+    .catch(err => console.error("Failed upload promo:", err));
 }
 
-// =========================== MENU ===========================
+// ====================== HYBRID SAVE SCHEDULER ======================
+function scheduleHybridSave() {
+  if (window._saveTimeout) clearTimeout(window._saveTimeout);
+  window._saveTimeout = setTimeout(() => simpanDataHybrid(), 300);
+}
+
+// ====================== HYBRID SAVE CORE ======================
+async function simpanDataHybrid() {
+  const finalData = {
+    menuPromo,
+    flipbookRuanganImages,
+    flipbookMenuImages,
+    // data lain tambahkan di sini (menu, resto, rooms, voucher, waAdmin, dll)
+  };
+
+  try {
+    await saveDataToDB(1, finalData);        // IndexedDB
+    await saveDataToSupabase(1, finalData);  // Supabase
+    console.log("✅ Hybrid save OK");
+  } catch (err) {
+    console.error("❌ Hybrid save failed:", err);
+  }
+}
+
+// ====================== SUPABASE SAVE ======================
+async function saveDataToSupabase(id, data) {
+  try {
+    const { data: existing } = await supabase
+      .from("menuva_data")
+      .select("id")
+      .eq("id", id)
+      .single();
+
+    if (!existing) {
+      await supabase.from("menuva_data").insert([{ id, ...data }]);
+    } else {
+      await supabase.from("menuva_data").update(data).eq("id", id);
+    }
+
+    console.log("☁️ Supabase sync OK");
+  } catch (err) {
+    console.error("❌ Supabase error:", err.message);
+  }
+}
+
+// ====================== MENU ======================
+
+// Tambah menu ke kategori (UI)
 function tambahMenu(kategori = "food", nama = "", harga = "", image = "") {
-  const map = {
+  const containerId = {
     food: "menuFoodContainer",
     snack: "menuSnackContainer",
     drink: "menuDrinkContainer",
     special: "menuSpecialContainer"
-  };
-  const container = document.getElementById(map[kategori]);
+  }[kategori] || "menuFoodContainer";
+
+  const container = document.getElementById(containerId);
   if (!container) return;
 
-  const id = Date.now();
+  const uid = Date.now(); // ID unik untuk tiap field
+
   const div = document.createElement("div");
   div.className = "menu-item";
-
   div.innerHTML = `
-    <input type="text" placeholder="Menu Name" value="${nama}">
-    <input type="number" placeholder="Price" value="${harga}">
-    <select>
+    <input type="text" id="menuName_${uid}" placeholder="Menu Name" value="${nama}"
+      onchange="scheduleMenuSave()">
+    
+    <input type="number" id="menuPrice_${uid}" placeholder="Price" value="${harga}"
+      onchange="scheduleMenuSave()">
+    
+    <select id="menuCat_${uid}" onchange="scheduleMenuSave()">
       <option value="food" ${kategori === "food" ? "selected" : ""}>Food</option>
       <option value="snack" ${kategori === "snack" ? "selected" : ""}>Snack</option>
       <option value="drink" ${kategori === "drink" ? "selected" : ""}>Drink</option>
       <option value="special" ${kategori === "special" ? "selected" : ""}>Special</option>
     </select>
-    <input type="file" accept="image/*" onchange="uploadMenuImage(event, this)" data-image="${image}">
-    <img class="menuPreview" src="${image}" style="max-height:80px;margin:5px 0;${image ? "" : "display:none"}">
-    <button class="btn-danger" onclick="this.parentElement.remove();autosave()">Delete</button>
+
+    <input type="file" id="menuImage_${uid}" accept="image/*"
+      onchange="uploadMenuImage(event, this)">
+    
+    <img class="menuPreview" src="${image}" style="max-height:80px;margin:5px 0; ${image ? "" : "display:none"}">
+
+    <button class="btn-danger" onclick="hapusMenuItem(this)">Delete</button>
   `;
+  
   container.appendChild(div);
+  scheduleMenuSave();
+}
+
+// ====================== UPLOAD GAMBAR ======================
+function uploadMenuImage(event, inputEl) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  resizeIfNeeded(file)
+    .then((resized) => {
+      const preview = inputEl.parentElement.querySelector(".menuPreview");
+      preview.src = resized;
+      preview.style.display = "block";
+      inputEl.setAttribute("data-image", resized);
+
+      scheduleMenuSave();
+    })
+    .catch(err => console.error("Upload menu image failed:", err));
+}
+
+// ====================== HAPUS MENU ITEM ======================
+function hapusMenuItem(btn) {
+  btn.parentElement.remove();
+  scheduleMenuSave();
+}
+
+// ====================== BACA MENU DARI UI ======================
+function ambilMenu(containerId) {
+  const container = document.getElementById(containerId);
+  const items = container ? container.querySelectorAll(".menu-item") : [];
+  const result = [];
+
+  items.forEach(item => {
+    const nama = item.querySelector("input[type='text']")?.value || "";
+    const harga = parseInt(item.querySelector("input[type='number']")?.value || "0");
+    const kategori = item.querySelector("select")?.value || "food";
+    const image = item.querySelector("input[type='file']")?.getAttribute("data-image") || "";
+
+    if (nama && harga) {
+      result.push({ nama, harga, kategori, image });
+    }
+  });
+
+  return result;
+}
+
+// ====================== AUTO HYBRID SAVE ======================
+function scheduleMenuSave() {
+  if (window._menuSaveTimeout) clearTimeout(window._menuSaveTimeout);
+  window._menuSaveTimeout = setTimeout(() => simpanMenuHybrid(), 300);
+}
+
+// ====================== HYBRID SAVE CORE ======================
+async function simpanMenuHybrid() {
+  const finalMenu = [
+    ...ambilMenu("menuFoodContainer"),
+    ...ambilMenu("menuSnackContainer"),
+    ...ambilMenu("menuDrinkContainer"),
+    ...ambilMenu("menuSpecialContainer")
+  ];
+
+  const finalData = { menu: finalMenu };
+
+  try {
+    await saveDataToDB(1, finalData);        // IndexedDB
+    await saveDataToSupabase(1, finalData);  // Supabase
+    console.log("🍽️ Menu hybrid save OK");
+  } catch (err) {
+    console.error("❌ Gagal hybrid save menu:", err);
+  }
+}
+
+// ====================== ROOM ======================
+function tambahRoom(kategori) {
+  const containerId = {
+    hotel: "roomHotelContainer",
+    meeting: "meetingRoomContainer",
+    package: "packageContainer"
+  }[kategori];
+
+  if (!containerId) return;
+
+  const container = document.getElementById(containerId);
+  const wrapper = document.createElement("div");
+  wrapper.className = "room-form";
+
+  const uid = `${kategori}_${Date.now()}`;
+
+  wrapper.innerHTML = `
+    <input type="text" id="${uid}_nama" class="room-nama" placeholder="Name" autocomplete="off"/>
+    <input type="number" id="${uid}_harga" class="room-harga" placeholder="Price" min="0" step="1000"/>
+    <input type="number" id="${uid}_kapasitas" class="room-kapasitas" placeholder="Capacity (Person)" min="1"/>
+    <input type="number" id="${uid}_luas" class="room-luas" placeholder="Room size (m²)" min="1"/>
+    <textarea id="${uid}_deskripsi" class="room-deskripsi" placeholder="Notes" rows="2"></textarea>
+
+    <div class="gambar-preview-wrapper">
+      <img id="${uid}_preview" class="gambar-preview" style="display:none; max-width:120px; margin-top:6px; border-radius:6px;" />
+      <button type="button" class="hapus-gambar" onclick="hapusGambarRoom(this)" style="display:none;">×</button>
+    </div>
+
+    <button type="button" id="${uid}_uploadBtn" class="btn-upload-gambar room-image-upload" onclick="uploadGambarRoom(this)">🖼️ Upload Image</button>
+    <button type="button" id="${uid}_hapusBtn" class="btn-hapus-room" onclick="hapusFormRoom(this)">🗑️ Delete</button>
+    <hr>
+  `;
+
+  container.appendChild(wrapper);
+}
+
+function ambilSemuaRoom() {
+  const kategoriIds = [
+    { id: "roomHotelContainer", kategori: "hotel" },
+    { id: "meetingRoomContainer", kategori: "meeting" },
+    { id: "packageContainer", kategori: "package" }
+  ];
+
+  const hasil = [];
+
+  kategoriIds.forEach(({ id, kategori }) => {
+    const container = document.getElementById(id);
+    if (!container) return;
+
+    const forms = container.querySelectorAll(".room-form");
+    forms.forEach(form => {
+      const nama = form.querySelector(".room-nama")?.value || "";
+      const harga = parseInt(form.querySelector(".room-harga")?.value || "0");
+      const kapasitas = parseInt(form.querySelector(".room-kapasitas")?.value || "0");
+      const luas = parseInt(form.querySelector(".room-luas")?.value || "0");
+      const deskripsi = form.querySelector(".room-deskripsi")?.value || "";
+      const image = form.querySelector(".room-image-upload")?.getAttribute("data-image") || "";
+
+      if (nama && harga) {
+        hasil.push({
+          id: "R" + Date.now() + Math.floor(Math.random() * 1000),
+          nama,
+          harga,
+          kapasitas,
+          luas,
+          deskripsi,
+          image,
+          kategori
+        });
+      }
+    });
+  });
+
+  return hasil;
+}
+
+function restoreRoomFromData(rooms = []) {
+  rooms.forEach(room => {
+    tambahRoom(room.kategori);
+
+    const containerId = {
+      hotel: "roomHotelContainer",
+      meeting: "meetingRoomContainer",
+      package: "packageContainer"
+    }[room.kategori];
+
+    const container = document.getElementById(containerId);
+    const forms = container.querySelectorAll(".room-form");
+    const lastForm = forms[forms.length - 1];
+
+    lastForm.querySelector(".room-nama").value = room.nama || "";
+    lastForm.querySelector(".room-harga").value = room.harga || "";
+    lastForm.querySelector(".room-kapasitas").value = room.kapasitas || "";
+    lastForm.querySelector(".room-luas").value = room.luas || "";
+    lastForm.querySelector(".room-deskripsi").value = room.deskripsi || "";
+
+    const preview = lastForm.querySelector(".gambar-preview");
+    const hapusBtn = lastForm.querySelector(".hapus-gambar");
+    const uploadBtn = lastForm.querySelector(".room-image-upload");
+
+    if (room.image) {
+      preview.src = room.image;
+      preview.style.display = "block";
+      hapusBtn.style.display = "flex";
+      uploadBtn.setAttribute("data-image", room.image);
+    }
+  });
+}
+
+function uploadGambarRoom(button) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = event => {
+      const wrapper = button.closest(".room-form");
+      const preview = wrapper.querySelector(".gambar-preview");
+      const hapusBtn = wrapper.querySelector(".hapus-gambar");
+      const imageUrl = event.target.result;
+
+      preview.src = imageUrl;
+      preview.style.display = "block";
+      hapusBtn.style.display = "flex";
+      button.setAttribute("data-image", imageUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+function hapusGambarRoom(button) {
+  const wrapper = button.closest(".room-form");
+  wrapper.querySelector(".gambar-preview").style.display = "none";
+  wrapper.querySelector(".gambar-preview").src = "";
+  wrapper.querySelector(".room-image-upload").removeAttribute("data-image");
+  button.style.display = "none";
+}
+
+function hapusFormRoom(button) {
+  const form = button.closest(".room-form");
+  if (form) {
+    form.remove();
+    if (window._saveTimeout) clearTimeout(window._saveTimeout);
+    window._saveTimeout = setTimeout(() => { simpanData().catch(console.error); }, 300);
+  }
+}
+
+// ====================== UI: Tampilkan List Room ======================
+async function tampilkanListRoom() {
+  try {
+    const restoId =
+      document.getElementById("restoId")?.value ||
+      document.getElementById("restoPhone")?.value ||
+      null;
+
+    const rooms = await loadRoomsHybrid(restoId);
+    const listContainer = document.getElementById("listRuangan");
+    if (!listContainer) return;
+
+    listContainer.innerHTML = "";
+
+    if (!rooms || rooms.length === 0) {
+      listContainer.innerHTML = "<p>Tidak ada ruangan yang tersedia.</p>";
+      return;
+    }
+
+    rooms.forEach((room, index) => {
+      const item = document.createElement("div");
+      item.classList.add("room-card");
+      item.innerHTML = `
+        <strong>Ruangan ${index + 1}</strong><br>
+        🏷️ Nama: ${room.nama}<br>
+        💼 Kategori: ${room.kategori}<br>
+        💰 Harga: Rp${room.harga}<br>
+        👥 Kapasitas: ${room.kapasitas}<br>
+        📐 Luas: ${room.luas} m²<br>
+        📝 Catatan: ${room.deskripsi}
+        <hr>
+      `;
+      listContainer.appendChild(item);
+    });
+  } catch (err) {
+    console.error("Failed to display room list:", err);
+  }
+}
+
+// ====================== HYBRID SAVE: Rooms ======================
+async function simpanRoomsHybrid(restoId) {
+  try {
+    console.groupCollapsed("💾 [HYBRID] Simpan Rooms");
+
+    const rooms = ambilSemuaRoom();
+
+    // --- IndexedDB ---
+    const db = await getDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+
+    const existing = (await store.get(Number(restoId))) || buatDataDefault(restoId);
+    existing.rooms = rooms;
+    await store.put(existing);
+
+    console.log("IndexedDB rooms OK");
+
+    // --- Supabase ---
+    const { error } = await supabase
+      .from("menuva_master")
+      .update({ rooms })
+      .eq("id", restoId);
+
+    if (error) {
+      console.warn("⚠️ Supabase gagal update rooms:", error.message);
+    } else {
+      console.log("Supabase rooms OK");
+    }
+
+    console.groupEnd();
+    return true;
+  } catch (err) {
+    console.error("❌ Error Hybrid Save Rooms:", err);
+    return false;
+  }
+}
+
+// ====================== HYBRID LOAD: Rooms ======================
+async function loadRoomsHybrid(restoId) {
+  console.groupCollapsed("📥 [HYBRID] Load Rooms");
+
+  let rooms = [];
+
+  // --- Supabase ---
+  try {
+    const { data, error } = await supabase
+      .from("menuva_master")
+      .select("rooms")
+      .eq("id", restoId)
+      .maybeSingle();
+
+    if (!error && data?.rooms) rooms = data.rooms;
+  } catch (err) {
+    console.warn("Supabase load failed:", err);
+  }
+
+  // --- Fallback to IndexedDB ---
+  if (!rooms.length) {
+    const db = await getDB();
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const local = await store.get(Number(restoId));
+    rooms = local?.rooms || [];
+  }
+
+  console.groupEnd();
+  return rooms;
+}
+
+// ====================== NOMOR WHATSAPP ======================
+function tambahNomorWa(value = "") {
+  const container = document.getElementById("nomorWaContainer");
+  if (!container) return;
+
+  const count = container.querySelectorAll(".nomor-wa").length;
+  const uniqueId = `nomorWa${count + 1}`;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.id = uniqueId;
+  input.name = uniqueId;
+  input.className = "nomor-wa";
+  input.placeholder = "Example: 6281234567890";
+  input.inputMode = "numeric";
+  input.autocomplete = "off";
+  input.pattern = "62[0-9]{8,}";
+  input.title = "Gunakan format: 6281234567890";
+
+  input.value = value || "";
+
+  input.addEventListener("input", () => {
+    input.value = input.value.replace(/[^0-9]/g, "");
+  });
+
+  container.appendChild(input);
+}
+
+// Ambil seluruh nomor WA dari form
+function ambilNomorWa() {
+  const container = document.getElementById("nomorWaContainer");
+  if (!container) return [];
+  const inputs = container.querySelectorAll(".nomor-wa");
+  const list = [];
+
+  inputs.forEach(i => {
+    const val = i.value.trim();
+    if (val.startsWith("62") && val.length >= 10) list.push(val);
+  });
+
+  return list;
+}
+
+// Restore dari database → render ulang input
+function restoreNomorWa(list = []) {
+  const container = document.getElementById("nomorWaContainer");
+  if (!container) return;
+
+  container.innerHTML = ""; // bersihkan
+
+  if (!Array.isArray(list) || list.length === 0) {
+    tambahNomorWa(""); // tambahkan 1 kosong
+    return;
+  }
+
+  list.forEach(no => tambahNomorWa(no));
 }
 
 
-// ====================== AUTOSAVE ======================
-function autosave() {
-  if (window._saveTimeout) clearTimeout(window._saveTimeout);
-  window._saveTimeout = setTimeout(() => simpanData().catch(e => console.error(e)), 600);
+// ====================== HYBRID SAVE: NOMOR WA ======================
+async function simpanNomorWaHybrid(restoId) {
+  try {
+    console.groupCollapsed("💾 [HYBRID] Simpan Nomor WA");
+
+    const nomorWa = ambilNomorWa();
+
+    // === IndexedDB ===
+    const db = await getDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+
+    const existing = (await store.get(Number(restoId))) || buatDataDefault(restoId);
+    existing.nomorWa = nomorWa;
+    await store.put(existing);
+
+    console.log("IndexedDB nomorWa OK");
+
+    // === Supabase ===
+    const { error } = await supabase
+      .from("menuva_master")
+      .update({ nomor_wa: nomorWa })
+      .eq("id", restoId);
+
+    if (error) {
+      console.warn("⚠️ Supabase gagal update WA:", error.message);
+    } else {
+      console.log("Supabase nomorWa OK");
+    }
+
+    console.groupEnd();
+    return true;
+  } catch (err) {
+    console.error("❌ Error Hybrid Save WA:", err);
+    return false;
+  }
 }
 
-// ====================== SIMPAN KE DB ======================
+
+// ====================== HYBRID LOAD: NOMOR WA ======================
+async function loadNomorWaHybrid(restoId) {
+  console.groupCollapsed("📥 [HYBRID] Load Nomor WA");
+
+  let nomor = [];
+
+  // === Supabase ===
+  try {
+    const { data, error } = await supabase
+      .from("menuva_master")
+      .select("nomor_wa")
+      .eq("id", restoId)
+      .maybeSingle();
+
+    if (!error && data?.nomor_wa) {
+      nomor = data.nomor_wa;
+      console.log("Supabase nomor WA loaded");
+    }
+  } catch (e) {
+    console.warn("Supabase WA gagal:", e);
+  }
+
+  // === IndexedDB fallback ===
+  if (!nomor.length) {
+    const db = await getDB();
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+
+    const local = await store.get(Number(restoId));
+    nomor = local?.nomorWa || [];
+    console.log("IndexedDB nomor WA fallback");
+  }
+
+  console.groupEnd();
+  return nomor;
+}
+
+
+// ====================== IMAGE helper (resize) ======================
+async function resizeIfNeeded(file, targetSizeKB = 100, maxWidth = 1280) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          const scale = Math.min(maxWidth / img.width, 1);
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          let quality = 0.9;
+          let dataUrl = canvas.toDataURL("image/jpeg", quality);
+          let sizeKB = Math.round((dataUrl.length * 3 / 4) / 1024);
+
+          while (sizeKB > targetSizeKB && quality > 0.1) {
+            quality -= 0.05;
+            dataUrl = canvas.toDataURL("image/jpeg", quality);
+            sizeKB = Math.round((dataUrl.length * 3 / 4) / 1024);
+          }
+
+          resolve(dataUrl);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      img.onerror = () => reject(new Error("Image load error"));
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+
+// ====================== LOGO LISTENER ======================
+document.getElementById("logoInput")?.addEventListener("change", async function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  try {
+    const logoUrl = await resizeIfNeeded(file, 100);
+    const preview = document.getElementById("previewLogo");
+    if (preview) preview.src = logoUrl;
+  } catch (err) {
+    console.error("Logo error:", err);
+    alert("❌ Failed to process logo image.");
+  }
+});
+
+// ====================== flipbook / preview helpers ======================
+function renderImagePreview(tipe, url) {
+  const img = document.createElement("img");
+  img.src = url;
+  img.style.maxWidth = "100px";
+  img.style.margin = "5px";
+  img.style.borderRadius = "5px";
+  img.style.boxShadow = "0 1px 4px rgba(0,0,0,0.1)";
+
+  const wrapper = document.createElement("div");
+  wrapper.style.display = "inline-block";
+  wrapper.style.position = "relative";
+  wrapper.style.margin = "5px";
+
+  const btnHapus = document.createElement("button");
+  btnHapus.className = "btn-hapus-gambar";
+  btnHapus.setAttribute("aria-label", "Hapus Gambar");
+  btnHapus.innerHTML = "×";
+  btnHapus.style.position = "absolute";
+  btnHapus.style.top = "2px";
+  btnHapus.style.right = "2px";
+  btnHapus.onclick = () => {
+    wrapper.remove();
+
+    // 🔥 Sync array global agar tidak corrupt
+    if (tipe === "ruangan") {
+      flipbookRuanganImages = flipbookRuanganImages.filter(s => s !== url);
+    } else {
+      flipbookMenuImages = flipbookMenuImages.filter(s => s !== url);
+    }
+  };
+
+  wrapper.appendChild(img);
+  wrapper.appendChild(btnHapus);
+
+  const container = document.getElementById(
+    tipe === "ruangan"
+      ? "flipbookRuanganPreview"
+      : "flipbookMenuPreview"
+  );
+
+  if (container) container.appendChild(wrapper);
+}
+
+function tambahGambar(tipe) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.style.display = "none";
+
+  input.onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      // 🔥 resize helper versi terbaru
+      const url = await resizeIfNeeded(file);
+
+      renderImagePreview(tipe, url);
+
+      // 🔥 Pastikan array global tetap valid
+      if (tipe === "ruangan") {
+        flipbookRuanganImages.push(url);
+      } else {
+        flipbookMenuImages.push(url);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("❌ Gagal memproses gambar.");
+    }
+  };
+
+  document.body.appendChild(input);
+  input.click();
+  document.body.removeChild(input);
+}
+
+// ====================== slugify ======================
+function slugify(text) {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-');
+}
+
+// ====================== SIMPAN (form -> DB) ======================
 async function simpanData() {
   try {
     showLoader();
-    const restoId = document.getElementById("restoId")?.value || document.getElementById("restoPhone")?.value;
 
+    // ================= VALIDASI INPUT ==================
+    const namaRestoran = document.getElementById("namaRestoran")?.value.trim() || "";
+    const restoAddress = document.getElementById("restoAddress")?.value.trim() || "";
+    const restoPhone = document.getElementById("restoPhone")?.value.trim() || "";
+    const logo = document.getElementById("previewLogo")?.src || "";
+    const nomorWaAdmin = Array
+      .from(document.querySelectorAll(".nomor-wa"))
+      .map(i => i.value.trim())
+      .filter(v => v !== "");
+
+    if (!restoPhone) {
+      alert("❌ Please input the restaurant phone number before saving!");
+      hideLoader();
+      return;
+    }
+
+    const restoId = document.getElementById("restoId")?.value || "resto-main";
+
+    // ================= AMBIL MENU ==================
+    const menuData = [
+      ...ambilMenu("menuFoodContainer"),
+      ...ambilMenu("menuSnackContainer"),
+      ...ambilMenu("menuDrinkContainer"),
+      ...ambilMenu("menuSpecialContainer")
+    ];
+
+    // ================= DATA LAIN ==================
+    const promo = Array.isArray(menuPromo) ? menuPromo : [];
+    const flipRuangan = Array.isArray(flipbookRuanganImages) ? flipbookRuanganImages : [];
+    const flipMenu = Array.isArray(flipbookMenuImages) ? flipbookMenuImages : [];
+    const voucherList = Array.isArray(window.menuVoucher) ? window.menuVoucher : [];
+
+    // ================= FINAL DATA ==================
     const data = {
       restoId,
-      namaRestoran: document.getElementById("namaRestoran")?.value.trim(),
-      restoAddress: document.getElementById("restoAddress")?.value.trim(),
-      restoPhone: restoId,
-      logo: document.getElementById("previewLogo")?.src || "",
-      nomorWaAdmin: Array.from(document.querySelectorAll(".nomor-wa")).map(i => i.value),
-      menuPromo,
-      menuVoucher: Array.isArray(window.menuVoucher) ? window.menuVoucher : [],
-      flipbookRuanganImages,
-      flipbookMenuImages,
-      menu: [
-        ...ambilMenu("menuFoodContainer"),
-        ...ambilMenu("menuSnackContainer"),
-        ...ambilMenu("menuDrinkContainer"),
-        ...ambilMenu("menuSpecialContainer")
-      ],
+      namaRestoran,
+      restoAddress,
+      restoPhone,
+      logo,
+      nomorWaAdmin,
+      menuPromo: promo,
+      menuVoucher: voucherList,
+      flipbookRuanganImages: flipRuangan,
+      flipbookMenuImages: flipMenu,
+      menu: menuData,
       rooms: ambilSemuaRoom()
     };
 
+    // ================= SIMPAN DB ==================
     await saveDataToDB(1, data);
-    alert("✅ Saved!");
+
+    // ================= SYNC restoId hidden ==================
+    let restoIdEl = document.getElementById("restoId");
+    if (!restoIdEl) {
+      restoIdEl = document.createElement("input");
+      restoIdEl.type = "hidden";
+      restoIdEl.id = "restoId";
+      document.body.appendChild(restoIdEl);
+    }
+    restoIdEl.value = restoId;
+
+    updateShareUI();
+
+    alert(`✅ All data saved successfully!: ${restoId}`);
+
   } catch (err) {
-    alert("❌ Save failed");
     console.error(err);
+    alert("❌ Failed to save data.");
   } finally {
     hideLoader();
   }
 }
 
-// ====================== LOAD DATA ======================
-async function loadData() {
-  if (sudahLoadData) return;
+// Flag global buat cegah render dobel
+let sudahLoadData = false;
+
+async function loadData(data) {
+  if (sudahLoadData) {
+    console.warn("⚠️ loadData sudah pernah jalan.");
+    return;
+  }
   sudahLoadData = true;
 
   try {
     showLoader();
-    const restoId = document.getElementById("restoPhone")?.value;
-    const data = await loadDataFromDB(restoId);
 
-    if (!data) {
-      console.warn("No data in DB");
-      return;
+    // Pastikan data valid
+    if (!data || typeof data !== "object") {
+      console.warn("⚠️ data invalid -> pakai default");
+      data = buatDataDefault(1);
     }
 
-    // restore UI
-    document.getElementById("previewLogo").src = data.logo;
-    document.getElementById("namaRestoran").value = data.namaRestoran;
-    document.getElementById("restoAddress").value = data.restoAddress;
-    document.getElementById("restoPhone").value = data.restoPhone;
+    // Hardening: pastikan semua field wajib aman
+    data.menuPromo = Array.isArray(data.menuPromo) ? data.menuPromo : [];
+    data.menuVoucher = Array.isArray(data.menuVoucher) ? data.menuVoucher : [];
+    data.flipbookRuanganImages = Array.isArray(data.flipbookRuanganImages) ? data.flipbookRuanganImages : [];
+    data.flipbookMenuImages = Array.isArray(data.flipbookMenuImages) ? data.flipbookMenuImages : [];
+    data.rooms = Array.isArray(data.rooms) ? data.rooms : [];
+    data.nomorWaAdmin = Array.isArray(data.nomorWaAdmin) ? data.nomorWaAdmin : [];
 
-    menuPromo = data.menuPromo || [];
-    renderPromoUI();
+    console.log("📦 FINAL loadData():", data);
 
-    flipbookRuanganImages = data.flipbookRuanganImages || [];
-    flipbookMenuImages = data.flipbookMenuImages || [];
+    const safeSet = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.value = value || "";
+    };
 
-    restoreRoomFromData(data.rooms);
+    // ================= FILL FORM =================
+    safeSet("namaRestoran", data.namaRestoran);
+    safeSet("restoAddress", data.restoAddress);
+    safeSet("restoPhone", data.restoPhone);
+
+    if (data.logo && document.getElementById("previewLogo")) {
+      document.getElementById("previewLogo").src = data.logo;
+    }
+
+    // ================= NOMOR WA =================
+    const waContainer = document.getElementById("nomorWaContainer");
+    if (waContainer) {
+      waContainer.innerHTML = "";
+      data.nomorWaAdmin.forEach(num => tambahNomorWa(num));
+    }
+
+    // ================= PROMO =================
+    menuPromo = data.menuPromo.slice();
+    if (typeof renderPromoUI === "function") {
+      renderPromoUI();
+    }
+
+    // ================= VOUCHER =================
+    window.menuVoucher = data.menuVoucher.slice();
+    if (typeof renderVoucher === "function") {
+      renderVoucher(window.menuVoucher);
+    }
+
+    // ================= MENU KATEGORI =================
+    ["food", "snack", "drink", "special"].forEach(kat => {
+      const cid = {
+        food: "menuFoodContainer",
+        snack: "menuSnackContainer",
+        drink: "menuDrinkContainer",
+        special: "menuSpecialContainer"
+      }[kat];
+
+      const old = document.getElementById(cid);
+      if (old) old.innerHTML = "";
+    });
+
+    const menuList = Array.isArray(data.menu)
+      ? data.menu
+      : (Array.isArray(data.menuData) ? data.menuData : []);
+
+    menuList.forEach(m => {
+      const kategori = m.kategori || m.cat || m.category || "food";
+      const nama = m.nama || m.name || "";
+      const harga = m.harga || m.price || "";
+      const image = m.image || m.gambar || "";
+      tambahMenu(kategori, nama, harga, image);
+    });
+
+    // ================ FLIPBOOK =================
+    flipbookRuanganImages = data.flipbookRuanganImages.slice();
+    flipbookMenuImages = data.flipbookMenuImages.slice();
+
+    const ruanganPreview = document.getElementById("flipbookRuanganPreview");
+    const menuPreview = document.getElementById("flipbookMenuPreview");
+
+    if (ruanganPreview) ruanganPreview.innerHTML = "";
+    if (menuPreview) menuPreview.innerHTML = "";
+
+    // Delay sedikit untuk memberi waktu DOM render
+    setTimeout(() => {
+      if (typeof renderImagePreview === "function") {
+        flipbookRuanganImages.forEach(src => src && renderImagePreview("ruangan", src));
+        flipbookMenuImages.forEach(src => src && renderImagePreview("menu", src));
+      }
+    }, 150);
+
+    // ================= ROOMS =================
+    if (Array.isArray(data.rooms)) {
+      if (typeof restoreRoomFromData === "function") {
+        console.log("📦 Restore ROOM:", data.rooms);
+        restoreRoomFromData(data.rooms);
+      } else {
+        console.warn("⚠️ restoreRoomFromData() tidak ditemukan.");
+      }
+    } else {
+      console.warn("⚠️ data.rooms kosong atau bukan array");
+    }
+
+    // ================= RESTO ID SYNC =================
+    let restoIdEl = document.getElementById("restoId");
+    if (!restoIdEl) {
+      restoIdEl = document.createElement("input");
+      restoIdEl.type = "hidden";
+      restoIdEl.id = "restoId";
+      document.body.appendChild(restoIdEl);
+    }
+    restoIdEl.value = data.restoId || data.restoPhone || "resto-main";
+
+    console.log("✅ FINAL loadData COMPLETE tanpa kehilangan data.");
+
+  } catch (err) {
+    console.error("❌ loadData gagal:", err);
   } finally {
     hideLoader();
   }
 }
 
-// ====================== RESET DB ======================
+// ====================== RESET & BACKUP ======================
+
+// 🔥 RESET HYBRID: IndexedDB + Supabase
 async function resetData() {
-  if (!confirm("Delete ALL data?")) return;
-  await clearDataDB();
-  location.reload();
+  if (!confirm("Are you sure you want to delete all data?")) return;
+
+  try {
+    showLoader();
+
+    // --- 1) CLEAR INDEXEDDB ---
+    await clearDataDB();
+
+    // --- 2) CLEAR SUPABASE ---
+    try {
+      const restoIdEl = document.getElementById("restoId");
+      const restoId = restoIdEl?.value || "resto-main";
+
+      const { error } = await supabase
+        .from("profile")
+        .delete()
+        .eq("restoId", restoId);
+
+      if (error) console.warn("⚠ Supabase delete error (diabaikan):", error);
+
+    } catch (err) {
+      console.warn("⚠ Tidak bisa delete Supabase:", err.message);
+    }
+
+    alert("✅ All data cleared successfully!");
+    location.reload();
+
+  } catch (err) {
+    console.error("❌ Reset error:", err);
+    alert("❌ Failed to delete data: " + err.message);
+  } finally {
+    hideLoader();
+  }
 }
 
-  let isLoadingFromDB = false;
+
+// 🔥 BACKUP HYBRID (IndexedDB → File JSON)
+async function backupData() {
+  try {
+    showLoader();
+
+    if (!window.db) {
+      window.db = await initDB();
+    }
+
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.getAll();
+
+    req.onsuccess = () => {
+      let allData = req.result || [];
+
+      if (allData.length === 0) {
+        alert("⚠️ Tidak ada data di database untuk di-backup!");
+        hideLoader();
+        return;
+      }
+
+      // Pastikan struktur valid
+      allData = allData.map(d => ({
+        ...buatDataDefault(d.id),
+        ...d
+      }));
+
+      const filename = `menuva-backup-${Date.now()}.json`;
+      const blob = new Blob([JSON.stringify(allData, null, 2)], {
+        type: "application/json"
+      });
+
+      // Download
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      alert(`✅ Backup berhasil!\nFile: ${filename}`);
+      hideLoader();
+    };
+
+    req.onerror = (e) => {
+      hideLoader();
+      console.error("❌ Gagal membaca IndexedDB:", e);
+      alert("❌ Backup gagal: tidak bisa membaca data.");
+    };
+
+  } catch (err) {
+    hideLoader();
+    console.error("❌ Backup fatal error:", err);
+    alert("❌ Terjadi kesalahan: " + err.message);
+  }
+}
+
+
+
+// ====================== RESTORE FROM FILE (HYBRID) ======================
+function restoreDataFromFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = async (e) => {
+    try {
+      showLoader();
+
+      let json = JSON.parse(e.target.result);
+
+      // Unwrap (kadang paket lama dipaksa {data:{...}})
+      if (json.profile && typeof json.profile === "object") json = json.profile;
+      else if (json.data && typeof json.data === "object") json = json.data;
+
+      // Jika array → ambil index 0
+      if (Array.isArray(json)) {
+        if (json.length === 0) throw new Error("File kosong");
+        json = json[0];
+      }
+
+      // ========== PERBAIKAN STRUKTUR WAJIB ==========
+      json.menuPromo = Array.isArray(json.menuPromo) ? json.menuPromo : [];
+      json.menuVoucher = Array.isArray(json.menuVoucher) ? json.menuVoucher : [];
+      json.flipbookRuanganImages = Array.isArray(json.flipbookRuanganImages) ? json.flipbookRuanganImages : [];
+      json.flipbookMenuImages = Array.isArray(json.flipbookMenuImages) ? json.flipbookMenuImages : [];
+      json.rooms = Array.isArray(json.rooms) ? json.rooms : [];
+      json.nomorWaAdmin = Array.isArray(json.nomorWaAdmin) ? json.nomorWaAdmin : [];
+
+      // ========== RESTO ID FIX ==========
+      if (!json.restoId) {
+        json.restoId =
+          json.restoPhone ||
+          (json.namaRestoran ? slugify(json.namaRestoran) : ("resto" + Date.now()));
+      }
+      if (!json.restoPhone) json.restoPhone = json.restoId;
+
+      // ========== ID ==========
+      let idResto = 1;
+      if (typeof json.id === "number") idResto = json.id;
+      else if (typeof json.restoId === "number") idResto = json.restoId;
+      idResto = Number(idResto) || 1;
+
+      // ========== Simpan HYBRID ==========
+      await saveDataToDB(idResto, json);       // IndexedDB
+      await saveDataToSupabase(json.restoId, json); // Supabase
+
+      alert("✅ Data restored successfully! Page will reload.");
+      location.reload();
+
+    } catch (err) {
+      hideLoader();
+      console.error("❌ Restore failed:", err);
+      alert("❌ Failed to restore JSON file.\nLihat console untuk detail.");
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+// ====================== Links / QR helpers ======================
+function generateDynamicLink(baseUrl, data) {
+  try {
+    const jsonData = JSON.stringify(data);
+    const encoded = encodeURIComponent(jsonData);
+    return `${baseUrl}?data=${encoded}`;
+  } catch (err) {
+    console.error("Gagal generate link:", err);
+    return null;
+  }
+}
+
+async function createMenuvaLink() {
+  try {
+    // ambil restoId dari hidden input
+    const restoId =
+      document.getElementById("restoId")?.value ||
+      document.getElementById("restoPhone")?.value ||
+      null;
+
+    if (!restoId) {
+      console.warn("⚠️ Tidak ada restoId, link tidak bisa dibuat.");
+      return null;
+    }
+
+    // 🔥 HYBRID: ambil data dari IndexedDB → fallback Supabase
+    const data = await loadDataFromDB(restoId);
+
+    if (!data) {
+      console.error("❌ Tidak bisa load data untuk generate link");
+      return null;
+    }
+
+    const link = generateDynamicLink("https://menuva.github.io/view.html", data);
+    console.log("Dynamic Link:", link);
+    return link;
+  } catch (err) {
+    console.error("Error createMenuvaLink:", err);
+  }
+}
+
+// Link customer final
+function getCustomerLink() {
+  const restoId = document.getElementById("restoId")?.value;
+  if (!restoId) return null;
+
+  const basePath = window.location.pathname.substring(
+    0,
+    window.location.pathname.lastIndexOf("/")
+  );
+
+  return `${window.location.origin}${basePath}/menu.html?resto=${encodeURIComponent(restoId)}`;
+}
+
+function openCustomerPage() {
+  const link = getCustomerLink();
+  if (!link) return alert("❌ Please click Save All first");
+  window.open(link, "_blank");
+}
+
+// update UI & QR
+function updateShareUI() {
+  const link = getCustomerLink();
+  if (!link) return;
+
+  const btnCopy = document.getElementById("btnSalinLink");
+  if (btnCopy) {
+    btnCopy.style.display = "inline-block";
+    btnCopy.onclick = () => {
+      navigator.clipboard
+        .writeText(link)
+        .then(() => alert("✅ Link copied to clipboard"))
+        .catch(err => alert("❌ Failed to copy link: " + err));
+    };
+  }
+
+  const btnSee = document.getElementById("btnOpenCustomer");
+  if (btnSee) {
+    btnSee.style.display = "inline-block";
+    btnSee.onclick = () => window.open(link, "_blank");
+  }
+
+  const qrContainer = document.getElementById("qrcodePreview");
+  if (!qrContainer) return;
+  qrContainer.innerHTML = "";
+
+  // Jika library QRCode tersedia
+  if (typeof QRCode !== "undefined") {
+    QRCode.toCanvas(link, { width: 128 }, function (error, canvas) {
+      if (error) {
+        console.error(error);
+        qrContainer.textContent = "❌ Failed to generate QR";
+        return;
+      }
+      qrContainer.appendChild(canvas);
+
+      const btnDownload = document.getElementById("btnDownloadQR");
+      if (btnDownload) {
+        btnDownload.style.display = "inline-block";
+        btnDownload.onclick = () => {
+          const a = document.createElement("a");
+          a.href = canvas.toDataURL("image/png");
+          a.download = `Resto-${Date.now()}-QRCode.png`;
+          a.click();
+        };
+      }
+
+      const btnPrint = document.getElementById("btnPrintQR");
+      if (btnPrint) {
+        btnPrint.style.display = "inline-block";
+        btnPrint.onclick = () => {
+          const dataUrl = canvas.toDataURL("image/png");
+          const w = window.open("");
+          w.document.write(
+            `<img src="${dataUrl}" style="width:250px;height:250px;">`
+          );
+          w.document.close();
+          w.print();
+        };
+      }
+    });
+  } else {
+    // fallback
+    qrContainer.textContent = link;
+  }
+}
+
+// ====================== LOADER HANDLER (Modern & Center) ======================
+function showLoader() {
+  let loader = document.getElementById("loader");
+  if (!loader) {
+    loader = document.createElement("div");
+    loader.id = "loader";
+    loader.innerHTML = `
+      <div class="loader-overlay">
+        <div class="loader-content">
+          <div class="spinner"></div>
+          <p>Loading data...</p>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(loader);
+
+    // Inline style - portable
+    const style = document.createElement("style");
+    style.id = "loader-style";
+    style.textContent = `
+      #loader {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.45);
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      #loader.show {
+        opacity: 1;
+      }
+
+      .loader-content {
+        text-align: center;
+        color: #fff;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 1.1rem;
+        animation: fadeUp 0.6s ease;
+      }
+
+      .spinner {
+        width: 64px;
+        height: 64px;
+        border: 6px solid rgba(255,255,255,0.3);
+        border-top-color: #00d4ff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 16px auto;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  loader.style.display = "flex";
+  requestAnimationFrame(() => loader.classList.add("show"));
+}
+
+function hideLoader() {
+  const loader = document.getElementById("loader");
+  if (loader) {
+    loader.classList.remove("show");
+    setTimeout(() => {
+      loader.style.display = "none";
+    }, 300);
+  }
+}
+
+
+// ====================== CLEAR DB (HYBRID) ======================
+async function clearDataDB() {
+  try {
+    const db = await initDB();
+
+    // 1. CLEAR INDEXEDDB
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.clear();
+      req.onsuccess = () => {
+        console.log("🧹 IndexedDB cleared");
+        resolve();
+      };
+      req.onerror = () => reject(req.error);
+    });
+
+    // 2. CLEAR SUPABASE (jika restoId ada)
+    const restoId =
+      document.getElementById("restoId")?.value ||
+      document.getElementById("restoPhone")?.value;
+
+    if (restoId && window.supabase) {
+      const { error } = await supabase
+        .from("menuva")
+        .delete()
+        .eq("restoId", restoId);
+
+      if (error) {
+        console.warn("⚠️ Supabase clear gagal (offline atau error):", error);
+      } else {
+        console.log("🧹 Supabase data cleared for restoId:", restoId);
+      }
+    } else {
+      console.warn("⚠️ Supabase tidak dihapus (restoId tidak ada / supabase null)");
+    }
+
+    return true;
+  } catch (err) {
+    console.error("❌ clearDataDB HYBRID error:", err);
+    throw err;
+  }
+}
+</script>
+<script>
+let isLoadingFromDB = false;
 let voucherLoaded = false;
 
+
+// ======================================================
+// HYBRID LOADER (Supabase → IndexedDB → Default fallback)
+// ======================================================
+async function safeLoadDataFromDB() {
+  try {
+    const restoId =
+      document.getElementById("restoId")?.value ||
+      document.getElementById("restoPhone")?.value ||
+      "resto-main";
+
+    // 1. COBA LOAD DARI SUPABASE
+    if (window.supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("menuva")
+          .select("*")
+          .eq("restoId", restoId)
+          .maybeSingle();
+
+        if (!error && data) {
+          console.log("🌐 Data dari Supabase:", data);
+          return data;
+        } else {
+          console.warn("⚠️ Supabase kosong / error. Fallback ke IndexedDB.");
+        }
+      } catch (e) {
+        console.warn("⚠️ Supabase load gagal:", e);
+      }
+    }
+
+    // 2. LOAD DARI INDEXEDDB
+    try {
+      const localData = await loadDataFromDB(1);
+      if (localData) {
+        console.log("📦 Data dari IndexedDB:", localData);
+        return localData;
+      }
+    } catch (e) {
+      console.warn("⚠️ IndexedDB load gagal:", e);
+    }
+
+    // 3. DEFAULT
+    console.warn("⚠️ Tidak ada data di Supabase atau IndexedDB → pakai default");
+    return buatDataDefault(1);
+
+  } catch (err) {
+    console.error("❌ safeLoadDataFromDB() FAILED:", err);
+    return buatDataDefault(1);
+  }
+}
+
+
+// Wrapper aman
+async function safeLoadData(data) {
+  try {
+    if (!data) data = buatDataDefault(1);
+    await loadData(data);
+  } catch (e) {
+    console.error("❌ safeLoadData() error:", e);
+  }
+}
+
+
+
+// ======================================================
+// INIT UTAMA — HYBRID
+// ======================================================
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Init mulai...");
   showLoader();
@@ -1375,26 +2566,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   }, 8000);
 
   try {
-    // ===================== LOAD DATA UTAMA =====================
-    const data = await safeLoadFromSupabase();
+    // =========== INIT INDEXEDDB ===========
+    const db = await initDB();
+    console.log("✅ IndexedDB siap");
+
+    // =========== LOAD DATA HYBRID ===========
+    const data = await safeLoadDataFromDB();
     if (data) {
       await safeLoadData(data);
-      console.log("📦 Data berhasil diambil dari Supabase:", data);
+      console.log("📦 Data di-load (hybrid):", data);
     } else {
-      console.warn("⚠️ Tidak ada data ditemukan di Supabase");
+      console.warn("⚠️ Tidak ada data ditemukan sama sekali");
     }
 
-    // ===================== TOGGLE SECTION =====================
+    // =========== INIT UI (toggle) ===========
     await initAllToggles();
 
-    // ===================== FIXED BAR EXTRA BOTTOM PADDING =====================
+    // =========== FIXED BAR ===========  
     const fixbar = document.querySelector(".fixed-bar");
     if (fixbar) {
       const fixbarHeight = fixbar.offsetHeight;
       document.body.style.paddingBottom = fixbarHeight + "px";
     }
 
-    console.log("✅ Admin siap digunakan");
+    console.log("✅ Admin siap digunakan (Hybrid Ready)");
+
   } catch (err) {
     console.error("❌ Error saat init:", err);
     alert("Terjadi kesalahan saat memuat data. Coba refresh halaman.");
@@ -1404,36 +2600,44 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-// ===================== SAFE LOAD WRAPPER =====================
-async function safeLoadFromSupabase() {
+  // ===================== SAFE LOAD WRAPPER =====================
+async function safeLoadDataFromDB(id = 1) {
   if (isLoadingFromDB) {
-    console.warn("⚠️ safeLoadFromSupabase() di-skip, masih berjalan");
+    console.warn("⚠️ loadDataFromDB() di-skip, masih jalan");
     return null;
   }
+
   isLoadingFromDB = true;
-
-  const restoId =
-    document.getElementById("restoPhone")?.value ||
-    document.getElementById("restoId")?.value;
-
-  const data = await loadDataFromDB(restoId);
-
-  isLoadingFromDB = false;
-  return data;
+  try {
+    const data = await loadDataFromDB(id);
+    return data;
+  } catch (err) {
+    console.error("❌ Gagal loadDataFromDB:", err);
+    return null;
+  } finally {
+    isLoadingFromDB = false;
+  }
 }
 
 async function safeLoadData(data) {
   if (window.sudahLoadData) {
-    console.warn("⚠️ loadData() sudah pernah jalan, skip");
+    console.warn("⚠️ loadData() sudah pernah jalan, skip render ulang");
     return;
   }
+
   window.sudahLoadData = true;
 
-  await loadData(data);
+  try {
+    await loadData(data);
+  } catch (err) {
+    console.error("❌ Gagal loadData:", err);
+  }
 }
+
 
 // ===================== TOGGLES MASTER =====================
 async function initAllToggles() {
+  // Pastikan seluruh DOM sudah complete
   await new Promise((resolve) => {
     if (document.readyState === "complete") return resolve();
     document.addEventListener("readystatechange", () => {
@@ -1443,17 +2647,28 @@ async function initAllToggles() {
 
   initOrderToggle();
   initRoomToggle();
-  await initVoucherToggle();
+  await initVoucherToggle(); // ini async
 }
+
 
 // ===================== ORDER TOGGLE =====================
 function initOrderToggle() {
   const toggleOrderPage = document.getElementById("toggleOrderPage");
+
+  // FIX: menyesuaikan HTML terbaru
   const orderContainerBox =
     document.getElementById("orderContainerBox") ||
     document.getElementById("orderToggleBox");
 
-  if (!toggleOrderPage || !orderContainerBox) return;
+  if (!toggleOrderPage) {
+    console.warn("⚠️ toggleOrderPage tidak ditemukan");
+    return;
+  }
+
+  if (!orderContainerBox) {
+    console.warn("⚠️ orderContainerBox belum ada, retry 300ms");
+    return setTimeout(initOrderToggle, 300);
+  }
 
   const saved = localStorage.getItem("page_order");
   toggleOrderPage.checked = saved === "true";
@@ -1466,12 +2681,16 @@ function initOrderToggle() {
   });
 }
 
+
 // ===================== ROOM TOGGLE =====================
 function initRoomToggle() {
   const toggleRoomPage = document.getElementById("toggleRoomPage");
   const roomContainerBox = document.getElementById("roomContainerBox");
 
-  if (!toggleRoomPage || !roomContainerBox) return;
+  if (!toggleRoomPage || !roomContainerBox) {
+    console.warn("⚠️ Elemen toggleRoomPage atau roomContainerBox tidak ditemukan");
+    return;
+  }
 
   const saved = localStorage.getItem("page_room");
   toggleRoomPage.checked = saved === "true";
@@ -1491,10 +2710,11 @@ async function initVoucherToggle() {
   const voucherContainerBox = document.getElementById("voucherContainerBox");
 
   if (!toggleVoucherPage || !voucherForm || !voucherContainerBox) {
-    console.warn("⚠️ elemen voucher tidak lengkap — skip initVoucherToggle()");
+    console.warn("⚠️ Elemen voucher toggle/form/container tidak lengkap, skip initVoucherToggle()");
     return;
   }
 
+  // PLAN CHECK
   const plan = localStorage.getItem("user_plan");
   if (plan === "monthly") {
     voucherContainerBox.style.display = "none";
@@ -1505,6 +2725,7 @@ async function initVoucherToggle() {
   toggleVoucherPage.checked = enabled;
   voucherForm.style.display = enabled ? "block" : "none";
 
+  // EVENT
   toggleVoucherPage.addEventListener("change", async (e) => {
     const enabled = e.target.checked;
     localStorage.setItem("page_voucher", enabled);
@@ -1517,32 +2738,40 @@ async function initVoucherToggle() {
     }
   });
 
+  // FIRST LOAD
   await loadVouchers();
 }
+
+
 
 // ===================== LOAD VOUCHERS =====================
 async function loadVouchers() {
   console.groupCollapsed("📥 Load Vouchers");
 
-  const restoId =
-    document.getElementById("restoPhone")?.value ||
-    document.getElementById("restoId")?.value;
+  let data = await loadDataFromDB(1);
 
-  const data = await loadDataFromDB(restoId);
+  if (!data || typeof data !== "object") {
+    console.warn("⚠️ Data DB invalid, reset object kosong");
+    data = { menuVoucher: [] };
+  }
 
-  if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
+  if (!Array.isArray(data.menuVoucher)) {
+    console.warn("⚠️ menuVoucher hilang → reset");
+    data.menuVoucher = [];
+  }
 
-  // auto remove expired
   const today = new Date();
+
+  // AUTO REMOVE EXPIRED
   const cleaned = data.menuVoucher.filter(v => {
     const exp = new Date(v.expiry);
     return isFinite(exp) && exp >= today;
   });
 
   if (cleaned.length !== data.menuVoucher.length) {
-    console.warn("🧹 Remove voucher expired...");
+    console.warn("🧹 Membersihkan voucher expired...");
     data.menuVoucher = cleaned;
-    await saveDataToDB(restoId, data);
+    await saveDataToDB(1, data);
   }
 
   console.log("📦 Voucher aktif:", cleaned);
@@ -1552,14 +2781,18 @@ async function loadVouchers() {
   return cleaned;
 }
 
-// Compatibility wrapper
+
+
+// ===================== SAVE VOUCHER WRAPPER =====================
 function saveVoucher() {
-  return typeof saveVoucherNew === "function"
+  return (typeof saveVoucherNew === "function")
     ? saveVoucherNew()
-    : (alert("Function saveVoucherNew() tidak ditemukan."), Promise.reject());
+    : (alert("Function saveVoucherNew() tidak ditemukan."), Promise.reject("saveVoucherNew missing"));
 }
 
-// ===================== SAVE / UPDATE VOUCHER =====================
+
+
+// ===================== SAVE VOUCHER BARU =====================
 async function saveVoucherNew() {
   const code = document.getElementById("voucherCode").value.trim();
   const discount = parseFloat(document.getElementById("voucherDiscount").value);
@@ -1570,51 +2803,62 @@ async function saveVoucherNew() {
     return;
   }
 
-  const restoId =
-    document.getElementById("restoPhone")?.value ||
-    document.getElementById("restoId")?.value;
-
-  const data = await loadDataFromDB(restoId);
+  const data = await loadDataFromDB(1);
   if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
 
   const codeUpper = code.toUpperCase();
+
   const existing = data.menuVoucher.find(v => v.code === codeUpper);
 
   if (existing) {
+    // UPDATE
     existing.discount = discount;
     existing.expiry = expiry;
     existing.updatedAt = new Date().toISOString();
+
+    console.log("✏️ Voucher updated:", existing);
   } else {
-    data.menuVoucher.push({
+    // NEW
+    const newVoucher = {
       id: crypto.randomUUID(),
       code: codeUpper,
       discount,
       expiry,
       createdAt: new Date().toISOString()
-    });
+    };
+
+    data.menuVoucher.push(newVoucher);
+    console.log("➕ Voucher ditambahkan:", newVoucher);
   }
 
-  await saveDataToDB(restoId, data);
+  await saveDataToDB(1, data);
+
   renderVoucher(data.menuVoucher);
   alert("✅ Voucher berhasil disimpan!");
 }
 
-// ===================== RENDERING =====================
+
+
+// ===================== RENDER VOUCHER =====================
 function renderVoucher(vouchers = []) {
   const box = document.getElementById("voucherPreview");
   if (!box) return;
 
+  if (!Array.isArray(vouchers)) vouchers = [];
+
   const today = new Date();
   vouchers = vouchers.filter(v => new Date(v.expiry) >= today);
 
-  if (!vouchers.length) {
+  if (vouchers.length === 0) {
     box.innerHTML = "<em>Belum ada voucher aktif</em>";
     return;
   }
 
   box.innerHTML = `
     <h3>Voucher Aktif</h3>
-    ${vouchers.map(v => `
+    ${vouchers
+      .map(
+        v => `
       <div class="voucher-item" style="border:1px solid #ccc; padding:8px; margin:8px 0; border-radius:8px;">
         <p><strong>Kode Voucher:</strong>
           <span class="voucher-code">${v.code}</span>
@@ -1623,52 +2867,73 @@ function renderVoucher(vouchers = []) {
         <p><strong>Diskon:</strong> ${v.discount}%</p>
         <p><strong>Berlaku sampai:</strong> ${v.expiry}</p>
       </div>
-    `).join("")}
+    `
+      )
+      .join("")}
   `;
 }
 
-// ===================== COPY =====================
+
+
+// ===================== CLIPBOARD =====================
 function copyVoucherCode(code) {
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(code).then(() => {
-      alert(`Kode voucher "${code}" berhasil disalin!`);
-    }).catch(() => fallbackCopy(code));
+  if (!code) return;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard
+      .writeText(code)
+      .then(() => alert(`Kode voucher "${code}" berhasil disalin!`))
+      .catch(err => {
+        console.error("Clipboard error:", err);
+        fallbackCopy(code);
+      });
   } else {
     fallbackCopy(code);
   }
 }
 
 function fallbackCopy(text) {
-  const temp = document.createElement("input");
-  temp.value = text;
-  document.body.appendChild(temp);
-  temp.select();
+  const tempInput = document.createElement("input");
+  tempInput.value = text;
+  document.body.appendChild(tempInput);
+  tempInput.select();
   document.execCommand("copy");
-  temp.remove();
+  tempInput.remove();
   alert(`Kode voucher "${text}" berhasil disalin!`);
 }
 
+</script>
+<script>
 /* ============================================================
    1. PRELOAD + UNLOCK AUDIO
 ============================================================ */
 let notifAudio;
 
 document.addEventListener("DOMContentLoaded", () => {
-  initVoucherToggle(); 
+  // Voucher toggle jalan dulu, sesuai struktur admin
+  initVoucherToggle();
+
+  // Preload audio
   notifAudio = new Audio("beep.mp3");
   notifAudio.load();
 
+  // Unlock audio untuk mobile browser
   const unlock = () => {
-    notifAudio.play().then(() => {
-      notifAudio.pause();
-      notifAudio.currentTime = 0;
-    }).catch(()=>{});
+    notifAudio.play()
+      .then(() => {
+        notifAudio.pause();
+        notifAudio.currentTime = 0;
+      })
+      .catch(() => {});
     document.body.removeEventListener("click", unlock);
   };
+
   document.body.addEventListener("click", unlock);
 
+  // Start realtime order checker
   startRealtimeOrderChecker();
 });
+
 
 /* ============================================================
    2. MAIN SOUND
@@ -1676,12 +2941,21 @@ document.addEventListener("DOMContentLoaded", () => {
 function playNotifSound() {
   if (!notifAudio) return;
   notifAudio.currentTime = 0;
-  notifAudio.play().catch(()=>{});
+  notifAudio.play().catch(() => {});
 }
+
 
 /* ============================================================
    3. Helpers
 ============================================================ */
+function idbGetAll(store) {
+  return new Promise((resolve, reject) => {
+    const req = store.getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
 function updateReceiveBadge(count) {
   const badge = document.getElementById("receiveBadge");
   if (!badge) return;
@@ -1694,25 +2968,24 @@ function updateReceiveBadge(count) {
   }
 }
 
+
 /* ============================================================
-   4. REALTIME CHECK ORDERS - SUPABASE
+   4. REALTIME CHECK ORDERS
 ============================================================ */
 let lastCount = 0;
 
 async function cekOrderBaru() {
   try {
-    // Ambil semua order yang status_internal "new"
-    const { data, error } = await supabase
-      .from("Orders")
-      .select("id")
-      .eq("status_internal", "new");
+    const db = await initDB();
+    const tx = db.transaction("ordersData", "readonly");
+    const store = tx.objectStore("ordersData");
 
-    if (error) throw error;
-
-    const newCount = Array.isArray(data) ? data.length : 0;
+    const all = await idbGetAll(store);
+    const newCount = all.filter(o => o.status === "new").length;
 
     updateReceiveBadge(newCount);
 
+    // Bunyi hanya ketika jumlah "new" bertambah
     if (newCount > lastCount) {
       playNotifSound();
     }
@@ -1724,30 +2997,38 @@ async function cekOrderBaru() {
   }
 }
 
+
 /* ============================================================
    5. LOOP REALTIME (1 detik)
 ============================================================ */
 let intervalStarted = false;
 
 function startRealtimeOrderChecker() {
-  if (intervalStarted) return;
+  if (intervalStarted) return; // Hindari double interval
   intervalStarted = true;
 
-  cekOrderBaru();
-  setInterval(cekOrderBaru, 1000);
+  cekOrderBaru(); // Run awal
+  setInterval(cekOrderBaru, 1000); // Jalan per detik
 }
+
 
 /* ============================================================
    6. Mark as read + go
 ============================================================ */
 async function markOrdersAsRead() {
   try {
-    const { error } = await supabase
-      .from("Orders")
-      .update({ status_internal: "read" })
-      .eq("status_internal", "new");
+    const db = await initDB();
+    const tx = db.transaction("ordersData", "readwrite");
+    const store = tx.objectStore("ordersData");
 
-    if (error) throw error;
+    const all = await idbGetAll(store);
+
+    for (const o of all) {
+      if (o.status === "new") {
+        o.status = "read";
+        store.put(o);
+      }
+    }
 
     updateReceiveBadge(0);
     lastCount = 0;
@@ -1765,5 +3046,3 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
-
-
