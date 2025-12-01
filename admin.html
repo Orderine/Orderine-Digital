@@ -830,8 +830,7 @@ async function getDB() {
     ONLINE_MODE = false;
   }
 })();
-
-  async function saveDataToDB(id, newData) {
+async function saveDataToDB(id, newData) {
   console.groupCollapsed("💾 [HYBRID SAVE] saveDataToDB()");
 
   id = Number(id) || 1;
@@ -846,48 +845,38 @@ async function getDB() {
     req.onsuccess = async () => {
       let oldData = req.result || buatDataDefault(id);
 
-      // =============== MERGE DATA (TIDAK HILANG FIELD) ==================
-      const finalData = {
-        ...oldData,
-        ...newData,
-      };
+      const finalData = { ...oldData, ...newData };
 
-      // Anti corrupt data voucher
+      // Jaga voucher agar tidak corrupt
       if (!Array.isArray(finalData.menuVoucher)) {
-        finalData.menuVoucher = Array.isArray(oldData.menuVoucher)
-          ? oldData.menuVoucher
-          : [];
+        finalData.menuVoucher = oldData.menuVoucher || [];
       }
 
-      // =============== SIMPAN KE INDEXEDDB (OFFLINE) =================
+      // ========== SIMPAN OFFLINE =============
       const saveReq = store.put(finalData);
 
       saveReq.onsuccess = async () => {
         console.log("💾 IndexedDB → OK");
 
-        // ===============================================================
-        // 🔥 SUPABASE SYNC (ONLINE MODE)
-        // ===============================================================
+        // ========== SYNC SUPABASE ============
         if (ONLINE_MODE) {
           try {
             console.log("🌐 Sync ke Supabase...");
 
-            const { error: upsertError } = await supabase
-              .from("admin_data")
+            const { error } = await supabase
+              .from("menuva_data")
               .upsert({
                 id: id,
                 data: finalData,
                 updated_at: new Date().toISOString(),
               });
 
-            if (upsertError) throw upsertError;
+            if (error) throw error;
 
             console.log("🌐 Supabase sync → OK");
           } catch (err) {
             console.warn("⚠ Supabase sync gagal:", err.message);
           }
-        } else {
-          console.warn("⚠ Supabase OFFLINE → skip sync");
         }
 
         console.groupEnd();
@@ -909,18 +898,18 @@ async function getDB() {
   });
 }
 
- async function loadDataFromDB(id = 1) {
+async function loadDataFromDB(id = 1) {
   console.groupCollapsed("📥 [HYBRID LOAD] loadDataFromDB()");
 
   // ============================================================
-  // 1️⃣ COBA LOAD DARI SUPABASE (JIKA ONLINE MODE)
+  // 1️⃣ LOAD DARI SUPABASE
   // ============================================================
   if (ONLINE_MODE) {
     try {
       console.log("🌐 Mencoba load dari Supabase...");
 
       const { data, error } = await supabase
-        .from("admin_data")
+        .from("menuva_data")
         .select("data")
         .eq("id", id)
         .maybeSingle();
@@ -930,11 +919,8 @@ async function getDB() {
       }
 
       if (data && data.data) {
-        console.log("🌐 Supabase → DATA DITEMUKAN:", data.data);
-
         const r = data.data;
 
-        // ========== SAFE STRUCTURE CHECKING (ANTI HILANG) ==========
         const safe = {
           id,
           restoId: r.restoId || "",
@@ -958,12 +944,10 @@ async function getDB() {
     } catch (err) {
       console.warn("⚠ Supabase load error:", err);
     }
-  } else {
-    console.warn("⚠ ONLINE_MODE = false → skip load Supabase");
   }
 
   // ============================================================
-  // 2️⃣ FALLBACK: INDEXEDDB
+  // 2️⃣ FALLBACK INDEXEDDB
   // ============================================================
   console.log("💾 Load dari IndexedDB...");
 
@@ -975,23 +959,8 @@ async function getDB() {
     const req = store.get(id);
 
     req.onsuccess = () => {
-      let r = req.result;
+      let r = req.result || buatDataDefault(id);
 
-      console.log("💾 IndexedDB (raw):", r);
-
-      // Jika field rooms hilang → tambahkan
-      if (r && !Array.isArray(r.rooms)) {
-        console.warn("⚠ Field ROOMS hilang → tambahkan default");
-        r.rooms = [];
-      }
-
-      // Jika kosong total → buat default
-      if (!r) {
-        console.warn("⚠ IndexedDB kosong → create default");
-        r = buatDataDefault(id);
-      }
-
-      // ========== SAFE STRUCTURE CHECKING ==========
       const safe = {
         id,
         restoId: r.restoId || "",
@@ -1020,14 +989,6 @@ async function getDB() {
     };
   });
 }
-
-// =========================
-// HYBRID DEFAULT STRUCTURE
-// =========================
-// digunakan oleh kedua sistem:
-// - IndexedDB (offline)
-// - Supabase (online DB)
-// agar struktur SELALU UTUH
 
 function buatDataDefault(id = 1) {
   return {
@@ -1184,17 +1145,13 @@ async function simpanDataHybrid() {
 // ====================== SUPABASE SAVE ======================
 async function saveDataToSupabase(id, data) {
   try {
-    const { data: existing } = await supabase
+    await supabase
       .from("menuva_data")
-      .select("id")
-      .eq("id", id)
-      .single();
-
-    if (!existing) {
-      await supabase.from("menuva_data").insert([{ id, ...data }]);
-    } else {
-      await supabase.from("menuva_data").update(data).eq("id", id);
-    }
+      .upsert({
+        id,
+        data,
+        updated_at: new Date().toISOString(),
+      });
 
     console.log("☁️ Supabase sync OK");
   } catch (err) {
@@ -3046,3 +3003,4 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
