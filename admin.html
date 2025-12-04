@@ -2436,10 +2436,12 @@ let voucherLoaded = false;
 // ======================================================
 async function safeLoadDataFromDB() {
   try {
-    const restoId =
-      document.getElementById("restoId")?.value ||
-      document.getElementById("restoPhone")?.value ||
-      "resto-main";
+   // ID utama = nomor HP resto (paling unik, selalu ada)
+    const restoKey =
+    document.getElementById("restoPhone")?.value?.trim() ||
+    document.getElementById("restoId")?.value?.trim() ||
+    "0000"; // fallback aman
+
 
     // 1. LOAD DARI SUPABASE
     if (window.supabase) {
@@ -2447,7 +2449,7 @@ async function safeLoadDataFromDB() {
         const { data, error } = await supabase
           .from("menuva")
           .select("*")
-          .eq("restoId", restoId)
+          .eq("restoId", restoKey)
           .maybeSingle();
 
         if (!error && data) {
@@ -2953,6 +2955,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
