@@ -2435,27 +2435,31 @@ let voucherLoaded = false;
 // ======================================================
 async function safeLoadDataFromDB() {
   try {
-    // --- PRIORITAS UTAMA: Ambil restoId dari IndexedDB (paling pasti ada) ---
+    // 1️⃣ AMBIL DARI INDEXEDDB JIKA ADA
     let cached = null;
     try {
       cached = await loadDataFromDB(1);
     } catch (e) {
-      console.warn("⚠️ Tidak bisa membaca IndexedDB saat ambil restoId");
+      console.warn("⚠ IndexedDB tidak bisa dibaca", e);
     }
 
-    // --- RESTO KEY LOGIC (Sudah fixed) ---
-    const restoKey =
-      cached?.restoId?.trim() ||                                         // Paling benar
-      document.getElementById("restoPhone")?.value?.trim() ||            // Input HTML
-      document.getElementById("restoId")?.value?.trim() ||               // Input HTML
-      "0000";                                                            // Fallback aman
+    const cachedRestoId = cached?.restoId?.trim();
+    const htmlPhone = document.getElementById("restoPhone")?.value?.trim();
+    const htmlRestoId = document.getElementById("restoId")?.value?.trim();
 
-    console.log("🆔 restoKey yang dipakai untuk Supabase:", restoKey);
+    // 2️⃣ PILIH RESTO KEY YANG PALING VALID
+    let restoKey = null;
 
-    // ======================================================
-    // 1. LOAD DARI SUPABASE
-    // ======================================================
-    if (window.supabase) {
+    if (cachedRestoId) restoKey = cachedRestoId;
+    else if (htmlPhone) restoKey = htmlPhone;
+    else if (htmlRestoId) restoKey = htmlRestoId;
+
+    console.log("🆔 restoKey FINAL:", restoKey || "(NULL)");
+
+    // ----------------------------------------
+    // 3️⃣ LOAD DARI SUPABASE (hanya jika restoKey valid)
+    // ----------------------------------------
+    if (window.supabase && restoKey) {
       try {
         const { data, error } = await supabase
           .from("menuva")
@@ -2463,45 +2467,37 @@ async function safeLoadDataFromDB() {
           .eq("restoId", restoKey)
           .maybeSingle();
 
-        if (!error && data) {
+        if (data && !error) {
           console.log("🌐 Data dari Supabase:", data);
-
-          // ❗ Pastikan restoId masuk kembali ke data (jaga sinkron)
-          if (!data.restoId) data.restoId = restoKey;
-
           return data;
-        } else {
-          console.warn("⚠️ Supabase kosong atau error → fallback ke IndexedDB");
         }
+
+        console.warn("⚠ Supabase kosong, lanjut ke IndexedDB...");
       } catch (err) {
-        console.warn("⚠️ Supabase load error:", err);
+        console.warn("⚠ Supabase gagal:", err);
       }
     }
 
-    // ======================================================
-    // 2. LOAD DARI INDEXEDDB
-    // ======================================================
-    try {
-      if (cached) {
-        console.log("📦 Data dari IndexedDB:", cached);
-        return cached;
-      }
-    } catch (err) {
-      console.warn("⚠️ IndexedDB load error:", err);
+    // ----------------------------------------
+    // 4️⃣ LOAD INDEXEDDB JIKA ADA
+    // ----------------------------------------
+    if (cached) {
+      console.log("📦 Data dari IndexedDB:", cached);
+      return cached;
     }
 
-    // ======================================================
-    // 3. DEFAULT DATA
-    // ======================================================
-    console.warn("⚠️ Tidak ada data → pakai default");
+    // ----------------------------------------
+    // 5️⃣ DEFAULT VALUE (masukkan restoKey kalau ada)
+    // ----------------------------------------
     const def = buatDataDefault(1);
-    def.restoId = restoKey;  // Pastikan restoId tetap masuk
+    if (restoKey) def.restoId = restoKey;
+
+    console.warn("⚠ Tidak ada data → pakai default");
     return def;
 
   } catch (err) {
-    console.error("❌ safeLoadDataFromDB() FAILED:", err);
-    const def = buatDataDefault(1);
-    return def;
+    console.error("❌ safeLoadDataFromDB Fatal:", err);
+    return buatDataDefault(1);
   }
 }
 
@@ -2976,6 +2972,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
