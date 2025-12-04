@@ -2430,20 +2430,31 @@ async function clearDataDB() {
 let isLoadingFromDB = false;
 let voucherLoaded = false;
 
-
 // ======================================================
 // HYBRID LOADER (Supabase → IndexedDB → Default fallback)
 // ======================================================
 async function safeLoadDataFromDB() {
   try {
-   // ID utama = nomor HP resto (paling unik, selalu ada)
+    // --- PRIORITAS UTAMA: Ambil restoId dari IndexedDB (paling pasti ada) ---
+    let cached = null;
+    try {
+      cached = await loadDataFromDB(1);
+    } catch (e) {
+      console.warn("⚠️ Tidak bisa membaca IndexedDB saat ambil restoId");
+    }
+
+    // --- RESTO KEY LOGIC (Sudah fixed) ---
     const restoKey =
-    document.getElementById("restoPhone")?.value?.trim() ||
-    document.getElementById("restoId")?.value?.trim() ||
-    "0000"; // fallback aman
+      cached?.restoId?.trim() ||                                         // Paling benar
+      document.getElementById("restoPhone")?.value?.trim() ||            // Input HTML
+      document.getElementById("restoId")?.value?.trim() ||               // Input HTML
+      "0000";                                                            // Fallback aman
 
+    console.log("🆔 restoKey yang dipakai untuk Supabase:", restoKey);
 
+    // ======================================================
     // 1. LOAD DARI SUPABASE
+    // ======================================================
     if (window.supabase) {
       try {
         const { data, error } = await supabase
@@ -2454,6 +2465,10 @@ async function safeLoadDataFromDB() {
 
         if (!error && data) {
           console.log("🌐 Data dari Supabase:", data);
+
+          // ❗ Pastikan restoId masuk kembali ke data (jaga sinkron)
+          if (!data.restoId) data.restoId = restoKey;
+
           return data;
         } else {
           console.warn("⚠️ Supabase kosong atau error → fallback ke IndexedDB");
@@ -2463,24 +2478,30 @@ async function safeLoadDataFromDB() {
       }
     }
 
+    // ======================================================
     // 2. LOAD DARI INDEXEDDB
+    // ======================================================
     try {
-      const localData = await loadDataFromDB(1);
-      if (localData) {
-        console.log("📦 Data dari IndexedDB:", localData);
-        return localData;
+      if (cached) {
+        console.log("📦 Data dari IndexedDB:", cached);
+        return cached;
       }
     } catch (err) {
       console.warn("⚠️ IndexedDB load error:", err);
     }
 
+    // ======================================================
     // 3. DEFAULT DATA
+    // ======================================================
     console.warn("⚠️ Tidak ada data → pakai default");
-    return buatDataDefault(1);
+    const def = buatDataDefault(1);
+    def.restoId = restoKey;  // Pastikan restoId tetap masuk
+    return def;
 
   } catch (err) {
     console.error("❌ safeLoadDataFromDB() FAILED:", err);
-    return buatDataDefault(1);
+    const def = buatDataDefault(1);
+    return def;
   }
 }
 
@@ -2955,6 +2976,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
