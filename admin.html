@@ -2435,51 +2435,93 @@ let voucherLoaded = false;
 // ======================================================
 async function safeLoadDataFromDB() {
   try {
-
-    // 1️⃣ Coba baca dari IndexedDB dulu (PALING STABIL)
+    // 1️⃣ Ambil cache dari IndexedDB
     let cached = null;
     try {
       cached = await loadDataFromDB(1);
-      if (cached) {
-        console.log("📦 Data dari IndexedDB:", cached);
-      }
+      if (cached) console.log("📦 Cached IndexedDB:", cached);
     } catch (e) {
       console.warn("⚠ IndexedDB gagal dibaca:", e);
     }
 
-    // 2️⃣ Ambil restoKey dari data lokal (PALING FIX)
+    // 2️⃣ Ambil restoKey dari cache
     const restoKey =
-      cached?.restoId?.trim() ||
       cached?.restoPhone?.trim() ||
+      cached?.restoId?.trim() ||
       null;
 
-    console.log("🆔 restoKey yang dipakai:", restoKey || "(null)");
+    console.log("🆔 restoKey:", restoKey || "(null)");
 
-    // 3️⃣ Jika ada restoKey → coba load dari Supabase
+    // 3️⃣ Jika ada restoKey → load dari Supabase
     if (window.supabase && restoKey) {
       try {
-        const { data, error } = await supabase
-          .from("menuva")
+        // RESTO SETTINGS
+        const rs = await supabase
+          .from("restosettings")
           .select("*")
-          .eq("restoId", restoKey)
+          .eq("phone", restoKey)
           .maybeSingle();
 
-        if (data && !error) {
-          console.log("🌐 Data dari Supabase:", data);
-          return data;  // ← PRIORITAS SUPABASE
+        // KATEGORI
+        const ct = await supabase
+          .from("categories")
+          .select("*")
+          .eq("resto_phone", restoKey);
+
+        // MENU ITEMS
+        const mi = await supabase
+          .from("menuitems")
+          .select("*")
+          .eq("resto_phone", restoKey);
+
+        // PROMO
+        const pr = await supabase
+          .from("promos")
+          .select("*")
+          .eq("resto_phone", restoKey);
+
+        // VOUCHERS
+        const vc = await supabase
+          .from("vouchers")
+          .select("*")
+          .eq("resto_phone", restoKey);
+
+        console.log("🌐 Supabase Loaded:", {
+          restosettings: rs.data,
+          categories: ct.data,
+          menuitems: mi.data,
+          promos: pr.data,
+          vouchers: vc.data
+        });
+
+        if (rs.data) {
+          // RAKIT DATA UNTUK ADMIN.JS
+          const mergedData = {
+            restoPhone: restoKey,
+            restoData: rs.data,
+            categories: ct.data || [],
+            menuData: mi.data || [],
+            menuPromo: pr.data || [],
+            voucherData: vc.data || []
+          };
+
+          console.log("📦 Final Merged Supabase Data:", mergedData);
+
+          return mergedData; // PRIORITAS SUPABASE
         }
 
-        console.warn("⚠ Supabase kosong → pakai IndexedDB");
+        console.warn("⚠ Supabase kosong → fallback ke IndexedDB");
+
       } catch (err) {
         console.warn("⚠ Supabase load error:", err);
       }
     }
 
-    // 4️⃣ IndexedDB fallback
+    // 4️⃣ Jika ada cache → pakai IndexedDB
     if (cached) return cached;
 
-    // 5️⃣ Default (hanya jika benar-benar kosong)
-    console.warn("⚠ Tidak ada data sama sekali → pakai default");
+    // 5️⃣ Default terakhir
+    console.warn("⚠ Tidak ada data sama sekali → default");
     return buatDataDefault(1);
 
   } catch (err) {
@@ -2488,9 +2530,6 @@ async function safeLoadDataFromDB() {
   }
 }
 
-// ======================================================
-// RENDER WRAPPER AMAN
-// ======================================================
 async function safeLoadData(data) {
   try {
     if (!data) data = buatDataDefault(1);
@@ -2499,7 +2538,6 @@ async function safeLoadData(data) {
     console.error("❌ safeLoadData() error:", err);
   }
 }
-
 
 // ======================================================
 // INIT UTAMA — HYBRID SYSTEM
@@ -2958,6 +2996,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
