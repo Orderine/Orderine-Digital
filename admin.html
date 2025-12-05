@@ -2502,7 +2502,7 @@ async function safeLoadDataFromDB() {
       console.warn("⚠ IndexedDB gagal dibaca:", e);
     }
 
-    // Ambil restoKey dari cached (ID yang dipakai untuk Supabase)
+    // Ambil restoKey dari cached
     const restoKey =
       cached?.restoId?.trim() ||
       cached?.restoPhone?.trim() ||
@@ -2516,7 +2516,7 @@ async function safeLoadDataFromDB() {
     // ===================== 2. LOAD DARI SUPABASE =====================
     if (window.supabase && restoKey) {
       try {
-        // -------- RESTO SETTINGS (restosettings table) --------
+        // RESTO SETTINGS
         const { data: setting, error: settingErr } = await supabase
           .from("restosettings")
           .select("*")
@@ -2528,7 +2528,7 @@ async function safeLoadDataFromDB() {
           console.log("🌐 resto settings:", setting);
         }
 
-        // -------- CATEGORIES (categories table) --------
+        // CATEGORIES
         const { data: ct, error: ctErr } = await supabase
           .from("categories")
           .select("*")
@@ -2539,20 +2539,33 @@ async function safeLoadDataFromDB() {
           console.log("📂 Categories:", finalData.categories);
         }
 
-        // -------- VOUCHERS (vouchers table) --------
+        // VOUCHERS
         const { data: vc, error: vcErr } = await supabase
           .from("vouchers")
           .select("*")
           .eq("resto_id", restoKey);
 
         if (!vcErr && vc) {
-          finalData.vouchers = vc.map(fixVoucher);
-          console.log("🎟️ Vouchers:", finalData.vouchers);
+          finalData.menuVoucher = vc.map(fixVoucher);  
+          delete finalData.vouchers;  // hapus field bentrok
+          console.log("🎟️ Vouchers loaded:", finalData.menuVoucher);
         }
+
       } catch (err) {
         console.warn("⚠ Supabase fetch error:", err);
       }
     }
+
+    // ===================== FALLBACK / SYNC =====================
+    if (!Array.isArray(finalData.menuVoucher) && Array.isArray(finalData.vouchers)) {
+      finalData.menuVoucher = finalData.vouchers;
+    }
+
+    if (!Array.isArray(finalData.menuVoucher)) {
+      finalData.menuVoucher = [];
+    }
+
+    delete finalData.vouchers;
 
     return finalData;
 
@@ -2587,20 +2600,23 @@ async function safeLoadDataFromDB() {
 }
 
   // ====================== SAFE LOAD TO UI ======================
+// ====================== SAFE LOAD TO UI ======================
 async function safeLoadData(data) {
   try {
-    // Jika data null / undefined → pakai default
     const finalData = data || buatDataDefault(1);
 
-    // Proteksi data minimal agar tidak bikin error ke UI
+    // Proteksi data minimal
     finalData.categories = finalData.categories || [];
-    finalData.vouchers = finalData.vouchers || [];
     finalData.menus = finalData.menus || [];
 
-    // Load ke UI renderer utama
+    // MASTER VOUCHER FIELD = menuVoucher
+    finalData.menuVoucher = finalData.menuVoucher || finalData.vouchers || [];
+    delete finalData.vouchers;
+
+    // Load UI
     await loadData(finalData);
 
-    console.log("📲 UI data loaded:", finalData);
+    console.log("📲 UI data loaded (clean):", finalData);
 
   } catch (err) {
     console.error("❌ safeLoadData() error:", err);
@@ -3064,4 +3080,5 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
