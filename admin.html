@@ -2430,12 +2430,8 @@ async function clearDataDB() {
 let isLoadingFromDB = false;
 let voucherLoaded = false;
 
-// ======================================================
-// HYBRID LOADER (Supabase → IndexedDB → Default fallback)
-// ======================================================
 async function safeLoadDataFromDB() {
   try {
-    // 1️⃣ Ambil cache dari IndexedDB
     let cached = null;
     try {
       cached = await loadDataFromDB(1);
@@ -2444,91 +2440,89 @@ async function safeLoadDataFromDB() {
       console.warn("⚠ IndexedDB gagal dibaca:", e);
     }
 
-    // 2️⃣ Ambil restoKey dari cache
     const restoKey =
-      cached?.restoPhone?.trim() ||
       cached?.restoId?.trim() ||
+      cached?.restoPhone?.trim() ||
       null;
 
     console.log("🆔 restoKey:", restoKey || "(null)");
 
-    // 3️⃣ Jika ada restoKey → load dari Supabase
+    let finalData = cached || buatDataDefault(1);
+
+    // ========== LOAD SUPABASE ==========
     if (window.supabase && restoKey) {
       try {
-        // RESTO SETTINGS
-        const rs = await supabase
+        // LOAD RESTO SETTINGS (orderine_data alias admin data)
+        const { data: setting, error: settingErr } = await supabase
           .from("restosettings")
           .select("*")
-          .eq("phone", restoKey)
+          .eq("resto_id", restoKey)
           .maybeSingle();
 
-        // KATEGORI
-        const ct = await supabase
-          .from("categories")
-          .select("*")
-          .eq("resto_phone", restoKey);
-
-        // MENU ITEMS
-        const mi = await supabase
-          .from("menuitems")
-          .select("*")
-          .eq("resto_phone", restoKey);
-
-        // PROMO
-        const pr = await supabase
-          .from("promos")
-          .select("*")
-          .eq("resto_phone", restoKey);
-
-        // VOUCHERS
-        const vc = await supabase
-          .from("vouchers")
-          .select("*")
-          .eq("resto_phone", restoKey);
-
-        console.log("🌐 Supabase Loaded:", {
-          restosettings: rs.data,
-          categories: ct.data,
-          menuitems: mi.data,
-          promos: pr.data,
-          vouchers: vc.data
-        });
-
-        if (rs.data) {
-          // RAKIT DATA UNTUK ADMIN.JS
-          const mergedData = {
-            restoPhone: restoKey,
-            restoData: rs.data,
-            categories: ct.data || [],
-            menuData: mi.data || [],
-            menuPromo: pr.data || [],
-            voucherData: vc.data || []
-          };
-
-          console.log("📦 Final Merged Supabase Data:", mergedData);
-
-          return mergedData; // PRIORITAS SUPABASE
+        if (!settingErr && setting) {
+          finalData = { ...finalData, ...setting };
+          console.log("🌐 resto settings:", setting);
         }
 
-        console.warn("⚠ Supabase kosong → fallback ke IndexedDB");
+        // LOAD CATEGORIES
+        const { data: ct } = await supabase
+          .from("categories")
+          .select("*")
+          .eq("resto_id", restoKey);
+
+        if (ct) {
+          finalData.categories = ct.map(fixCategory);
+          console.log("📂 Categories:", finalData.categories);
+        }
+
+        // LOAD VOUCHERS
+        const { data: vc } = await supabase
+          .from("vouchers")
+          .select("*")
+          .eq("resto_id", restoKey);
+
+        if (vc) {
+          finalData.vouchers = vc.map(fixVoucher);
+          console.log("🎟️ Vouchers:", finalData.vouchers);
+        }
 
       } catch (err) {
-        console.warn("⚠ Supabase load error:", err);
+        console.warn("⚠ Supabase fetch error:", err);
       }
     }
 
-    // 4️⃣ Jika ada cache → pakai IndexedDB
-    if (cached) return cached;
-
-    // 5️⃣ Default terakhir
-    console.warn("⚠ Tidak ada data sama sekali → default");
-    return buatDataDefault(1);
+    return finalData;
 
   } catch (err) {
     console.error("❌ safeLoadDataFromDB ERROR:", err);
     return buatDataDefault(1);
   }
 }
+
+  function fixCategory(cat) {
+  return {
+    id: cat.id,
+    name: cat.name,
+    resto_id: cat.resto_id,
+    created_at: cat.created_at,
+    image: cat.image || "assets/default-category.png" // default gambar
+  };
+}
+
+  function fixVoucher(v) {
+  return {
+    id: v.id,
+    code: v.code,
+    discount: v.value,          // mapping
+    expiry: v.expires_at,       // mapping
+    createdAt: v.created_at,    // mapping
+    type: v.type,
+    minOrder: v.min_order,
+    isActive: v.is_active,
+    description: v.description
+  };
+}
+
 
 async function safeLoadData(data) {
   try {
@@ -2996,6 +2990,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
