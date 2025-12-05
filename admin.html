@@ -1212,13 +1212,21 @@ function tambahMenu(kategori = "food", nama = "", harga = "", image = "") {
 
     <input type="file" id="menuImage_${uid}" accept="image/*"
       onchange="uploadMenuImage(event, this)">
-    
-    <img class="menuPreview" src="${image}" style="max-height:80px;margin:5px 0; ${image ? "" : "display:none"}">
+
+    <img class="menuPreview" src="${image}" 
+      style="max-height:80px;margin:5px 0; ${image ? "" : "display:none"}">
 
     <button class="btn-danger" onclick="hapusMenuItem(this)">Delete</button>
   `;
   
   container.appendChild(div);
+
+  // ======================= FIX PENTING !!! =======================
+  const fileInput = div.querySelector(`#menuImage_${uid}`);
+  if (image && fileInput) {
+    fileInput.setAttribute("data-image", image); // ➜ memastikan image tidak hilang
+  }
+
   scheduleMenuSave();
 }
 
@@ -3056,3 +3064,4 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
