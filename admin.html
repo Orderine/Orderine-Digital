@@ -2435,30 +2435,27 @@ let voucherLoaded = false;
 // ======================================================
 async function safeLoadDataFromDB() {
   try {
-    // 1️⃣ AMBIL DARI INDEXEDDB JIKA ADA
+
+    // 1️⃣ Coba baca dari IndexedDB dulu (PALING STABIL)
     let cached = null;
     try {
       cached = await loadDataFromDB(1);
+      if (cached) {
+        console.log("📦 Data dari IndexedDB:", cached);
+      }
     } catch (e) {
-      console.warn("⚠ IndexedDB tidak bisa dibaca", e);
+      console.warn("⚠ IndexedDB gagal dibaca:", e);
     }
 
-    const cachedRestoId = cached?.restoId?.trim();
-    const htmlPhone = document.getElementById("restoPhone")?.value?.trim();
-    const htmlRestoId = document.getElementById("restoId")?.value?.trim();
+    // 2️⃣ Ambil restoKey dari data lokal (PALING FIX)
+    const restoKey =
+      cached?.restoId?.trim() ||
+      cached?.restoPhone?.trim() ||
+      null;
 
-    // 2️⃣ PILIH RESTO KEY YANG PALING VALID
-    let restoKey = null;
+    console.log("🆔 restoKey yang dipakai:", restoKey || "(null)");
 
-    if (cachedRestoId) restoKey = cachedRestoId;
-    else if (htmlPhone) restoKey = htmlPhone;
-    else if (htmlRestoId) restoKey = htmlRestoId;
-
-    console.log("🆔 restoKey FINAL:", restoKey || "(NULL)");
-
-    // ----------------------------------------
-    // 3️⃣ LOAD DARI SUPABASE (hanya jika restoKey valid)
-    // ----------------------------------------
+    // 3️⃣ Jika ada restoKey → coba load dari Supabase
     if (window.supabase && restoKey) {
       try {
         const { data, error } = await supabase
@@ -2469,38 +2466,27 @@ async function safeLoadDataFromDB() {
 
         if (data && !error) {
           console.log("🌐 Data dari Supabase:", data);
-          return data;
+          return data;  // ← PRIORITAS SUPABASE
         }
 
-        console.warn("⚠ Supabase kosong, lanjut ke IndexedDB...");
+        console.warn("⚠ Supabase kosong → pakai IndexedDB");
       } catch (err) {
-        console.warn("⚠ Supabase gagal:", err);
+        console.warn("⚠ Supabase load error:", err);
       }
     }
 
-    // ----------------------------------------
-    // 4️⃣ LOAD INDEXEDDB JIKA ADA
-    // ----------------------------------------
-    if (cached) {
-      console.log("📦 Data dari IndexedDB:", cached);
-      return cached;
-    }
+    // 4️⃣ IndexedDB fallback
+    if (cached) return cached;
 
-    // ----------------------------------------
-    // 5️⃣ DEFAULT VALUE (masukkan restoKey kalau ada)
-    // ----------------------------------------
-    const def = buatDataDefault(1);
-    if (restoKey) def.restoId = restoKey;
-
-    console.warn("⚠ Tidak ada data → pakai default");
-    return def;
+    // 5️⃣ Default (hanya jika benar-benar kosong)
+    console.warn("⚠ Tidak ada data sama sekali → pakai default");
+    return buatDataDefault(1);
 
   } catch (err) {
-    console.error("❌ safeLoadDataFromDB Fatal:", err);
+    console.error("❌ safeLoadDataFromDB ERROR:", err);
     return buatDataDefault(1);
   }
 }
-
 
 // ======================================================
 // RENDER WRAPPER AMAN
@@ -2972,6 +2958,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
