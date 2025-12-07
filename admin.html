@@ -1212,16 +1212,9 @@ function scheduleHybridSave() {
 // ====================== HYBRID SAVE CORE ======================
 async function simpanDataHybrid() {
 
-  // ======================
-  // SINKRONISASI VOUCHER
-  // ======================
-  // Pastikan dua-duanya konsisten
-  const voucherFinal = Array.isArray(voucher) ? voucher : [];
-  const menuVoucherFinal = Array.isArray(menuVoucher) ? menuVoucher : voucherFinal;
-
-  // Buat mirror biar script lama & baru sama-sama jalan
-  const syncedVoucher = voucherFinal.length ? voucherFinal : menuVoucherFinal;
-
+ // Voucher UI selalu pakai menuVoucher
+// Voucher lama (voucher) biasanya kosong → jangan dipakai
+const syncedVoucher = Array.isArray(menuVoucher) ? menuVoucher : [];
 
   const finalData = {
     // ======================
@@ -3302,6 +3295,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
