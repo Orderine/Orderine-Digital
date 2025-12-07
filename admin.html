@@ -831,7 +831,7 @@ async function getDB() {
   }
 })();
 
- async function saveDataToDB(id, newData) {
+async function saveDataToDB(id, newData) {
   console.groupCollapsed("💾 [HYBRID SAVE] saveDataToDB()");
 
   id = Number(id) || 1;
@@ -847,29 +847,39 @@ async function getDB() {
       let oldData = req.result || buatDataDefault(id);
 
       // Gabungkan data lama dan baru
-      const finalData = { ...oldData, ...newData };
+      let finalData = { ...oldData, ...newData };
 
-      // Perbaikan khusus voucher agar tidak corrupt
-      if (!Array.isArray(finalData.voucher)) {
-        finalData.voucher = oldData.voucher || [];
+      // --- PERBAIKAN KHUSUS VOUCHER (WAJIB) ---
+      // Jika newData berisi voucher, harus selalu array
+      if (newData.voucher !== undefined) {
+        if (!Array.isArray(newData.voucher)) {
+          console.warn("⚠ Voucher bukan array — diperbaiki otomatis");
+          finalData.voucher = [...(oldData.voucher || [])];
+        }
       }
 
-      // ========== SIMPAN OFFLINE =============
+      // Jika hilang atau null, set default []
+      if (!Array.isArray(finalData.voucher)) {
+        console.warn("⚠ Voucher corrupt — reset ke []");
+        finalData.voucher = [];
+      }
+
+      // ===================== SAVE OFFLINE =====================
       const saveReq = store.put(finalData);
 
       saveReq.onsuccess = async () => {
         console.log("💾 IndexedDB → OK");
 
-        // ========== SYNC SUPABASE ============
+        // ===================== SYNC ONLINE ======================
         if (ONLINE_MODE) {
           try {
             console.log("🌐 Sync ke Supabase...");
 
-            // OPSI A: Tidak memakai UPSERT
+            // OPSI A — WAJIB: update hanya kolom data
             const { error } = await supabase
               .from("menuva_data")
               .update({
-                data: finalData,
+                data: finalData,              // seluruh data termasuk voucher
                 updated_at: new Date().toISOString(),
               })
               .eq("id", id);
@@ -917,11 +927,14 @@ async function loadDataFromDB(id = 1) {
         .eq("id", id)
         .maybeSingle();
 
-      if (error) console.warn("⚠ Supabase error:", error.message);
+      if (error) {
+        console.warn("⚠ Supabase error:", error.message);
+      }
 
       if (data && data.data) {
         const r = data.data;
 
+        // ===================== SAFE FIX ======================
         const safe = {
           id,
           restoId: r.restoId || "",
@@ -929,14 +942,25 @@ async function loadDataFromDB(id = 1) {
           restoAddress: r.restoAddress || "",
           restoPhone: r.restoPhone || "",
           logo: r.logo || "",
-          categories: Array.isArray(r.categories) ? r.categories : [],     // ⬅ tambahan agar kategori aman
+
+          categories: Array.isArray(r.categories) ? r.categories : [],
+
           menu: Array.isArray(r.menu) ? r.menu : [],
           menuPromo: Array.isArray(r.menuPromo) ? r.menuPromo : [],
-          voucher: Array.isArray(r.voucher) ? r.voucher : [],              // ⬅ perbaikan OPSI A
+
+          // ===================== PATCH VOUCHER (WAJIB OPSI A) =====================
+          voucher: Array.isArray(r.voucher) ? r.voucher : [],
+
           rooms: Array.isArray(r.rooms) ? r.rooms : [],
           nomorWaAdmin: Array.isArray(r.nomorWaAdmin) ? r.nomorWaAdmin : [],
-          flipbookRuanganImages: Array.isArray(r.flipbookRuanganImages) ? r.flipbookRuanganImages : [],
-          flipbookMenuImages: Array.isArray(r.flipbookMenuImages) ? r.flipbookMenuImages : []
+
+          flipbookRuanganImages: Array.isArray(r.flipbookRuanganImages)
+            ? r.flipbookRuanganImages
+            : [],
+
+          flipbookMenuImages: Array.isArray(r.flipbookMenuImages)
+            ? r.flipbookMenuImages
+            : []
         };
 
         console.log("🌐 Supabase SAFE-FIX:", safe);
@@ -980,7 +1004,6 @@ async function loadDataFromDB(id = 1) {
   return def;
 }
 
-
 function buatDataDefault(id = 1) {
   return {
     id: Number(id) || 1,
@@ -998,10 +1021,15 @@ function buatDataDefault(id = 1) {
     // ======================
     // DATA MENU
     // ======================
-    menu: [],             // menu utama
-    menuData: [],         // beberapa script lama pakai ini → tetap dipertahankan
-    menuPromo: [],        // promosi
-    menuVoucher: [],      // voucher wajib ada
+    menu: [],              // menu utama
+    menuData: [],          // kompatibilitas script lama
+    menuPromo: [],         // promosi
+
+    // ======================
+    // VOUCHER (WAJIB SINKRON OPSI A)
+    // ======================
+    voucher: [],           // ← field utama yang dipakai Supabase + UI
+    menuVoucher: [],       // ← backup agar script lama tidak error, nanti di-sync otomatis
 
     // ======================
     // ROOM / FLIPBOOK
@@ -1115,9 +1143,20 @@ function scheduleHybridSave() {
   window._saveTimeout = setTimeout(() => simpanDataHybrid(), 300);
 }
 
-
 // ====================== HYBRID SAVE CORE ======================
 async function simpanDataHybrid() {
+
+  // ======================
+  // SINKRONISASI VOUCHER
+  // ======================
+  // Pastikan dua-duanya konsisten
+  const voucherFinal = Array.isArray(voucher) ? voucher : [];
+  const menuVoucherFinal = Array.isArray(menuVoucher) ? menuVoucher : voucherFinal;
+
+  // Buat mirror biar script lama & baru sama-sama jalan
+  const syncedVoucher = voucherFinal.length ? voucherFinal : menuVoucherFinal;
+
+
   const finalData = {
     // ======================
     // DATA RESTORAN
@@ -1139,7 +1178,12 @@ async function simpanDataHybrid() {
     // ======================
     menu,
     menuPromo,
-    voucher,   // OPSI A: voucher, bukan menuVoucher
+
+    // ======================
+    // VOUCHER (OPSI A WAJIB)
+    // ======================
+    voucher: syncedVoucher,        // field utama (Supabase)
+    menuVoucher: syncedVoucher,    // field lama (UI)
 
     // ======================
     // ROOM / FLIPBOOK
@@ -1155,7 +1199,7 @@ async function simpanDataHybrid() {
   };
 
   try {
-    await saveDataToDB(1, finalData);   // IndexedDB + otomatis sync Supabase
+    await saveDataToDB(1, finalData);   // IndexedDB + auto sync Supabase
     console.log("🍽️ Hybrid Save OK (IndexedDB + Supabase)");
   } catch (err) {
     console.error("❌ Hybrid save failed:", err);
@@ -1860,8 +1904,6 @@ async function simpanData() {
     }
 
     let restoId = document.getElementById("restoId")?.value?.trim();
-
-    // Jika belum ada → buat auto dari nomor HP
     if (!restoId || restoId === "") {
       restoId = "resto-" + restoPhone.replace(/\D/g, "");
     }
@@ -1878,8 +1920,11 @@ async function simpanData() {
     const promo = Array.isArray(menuPromo) ? menuPromo : [];
     const flipRuangan = Array.isArray(flipbookRuanganImages) ? flipbookRuanganImages : [];
     const flipMenu = Array.isArray(flipbookMenuImages) ? flipbookMenuImages : [];
-    const voucherList = Array.isArray(window.menuVoucher) ? window.menuVoucher : [];
     const rooms = ambilSemuaRoom() || [];
+
+    // ================= VOUCHER SYNC ==================
+    const voucherUI = Array.isArray(window.menuVoucher) ? window.menuVoucher : [];
+    const voucherFinal = voucherUI.length ? voucherUI : [];
 
     // ================= FINAL DATA ==================
     const data = {
@@ -1892,7 +1937,10 @@ async function simpanData() {
 
       menu: menuData,
       menuPromo: promo,
-      menuVoucher: voucherList,
+
+      // OPSI A — WAJIB KONSISTEN
+      voucher: voucherFinal,
+      menuVoucher: voucherFinal,
 
       flipbookRuanganImages: flipRuangan,
       flipbookMenuImages: flipMenu,
@@ -1902,13 +1950,14 @@ async function simpanData() {
 
     console.log("💾 FINAL SAVE DATA:", data);
 
-    // ================= SIMPAN KE IndexedDB ==================
+    // ================= SIMPAN KE IndexedDB + Supabase (HYBRID) ==================
     await saveDataToDB(1, data);
 
-    // ================= SIMPAN KE SUPABASE ==================
-    if (window.supabase) {
-      await saveDataToSupabase(1, data);
-    }
+    // ❌ OPSI A TIDAK BOLEH pakai saveDataToSupabase()
+    // (karena akan overwrite struktur dan menghapus voucher)
+    // if (window.supabase) {
+    //   await saveDataToSupabase(1, data);
+    // }
 
     // ================= SYNC restoId hidden ==================
     let restoIdEl = document.getElementById("restoId");
@@ -1944,20 +1993,20 @@ async function loadData(data) {
   try {
     showLoader();
 
-    // ================= VALIDASI =================
+    // ================= VALIDASI ROOT =================
     if (!data || typeof data !== "object") {
       console.warn("⚠️ data invalid -> pakai default");
       data = buatDataDefault(1);
     }
 
-    // ================= HARDENING =================
-    data.menu = Array.isArray(data.menu) ? data.menu : [];
-    data.menuPromo = Array.isArray(data.menuPromo) ? data.menuPromo : [];
-    data.menuVoucher = Array.isArray(data.menuVoucher) ? data.menuVoucher : [];
-    data.flipbookRuanganImages = Array.isArray(data.flipbookRuanganImages) ? data.flipbookRuanganImages : [];
-    data.flipbookMenuImages = Array.isArray(data.flipbookMenuImages) ? data.flipbookMenuImages : [];
-    data.rooms = Array.isArray(data.rooms) ? data.rooms : [];
-    data.nomorWaAdmin = Array.isArray(data.nomorWaAdmin) ? data.nomorWaAdmin : [];
+    // ================= HARDENING ARRAY =================
+    data.menu                    = Array.isArray(data.menu) ? data.menu : [];
+    data.menuPromo               = Array.isArray(data.menuPromo) ? data.menuPromo : [];
+    data.menuVoucher             = Array.isArray(data.menuVoucher) ? data.menuVoucher : [];
+    data.flipbookRuanganImages   = Array.isArray(data.flipbookRuanganImages) ? data.flipbookRuanganImages : [];
+    data.flipbookMenuImages      = Array.isArray(data.flipbookMenuImages) ? data.flipbookMenuImages : [];
+    data.rooms                   = Array.isArray(data.rooms) ? data.rooms : [];
+    data.nomorWaAdmin            = Array.isArray(data.nomorWaAdmin) ? data.nomorWaAdmin : [];
 
     console.log("📦 FINAL loadData():", data);
 
@@ -1966,11 +2015,12 @@ async function loadData(data) {
       if (el) el.value = value || "";
     };
 
-    // ================= FILL FORM =================
+    // ================= FORM =================
     safeSet("namaRestoran", data.namaRestoran);
     safeSet("restoAddress", data.restoAddress);
     safeSet("restoPhone", data.restoPhone);
 
+    // ================= LOGO =================
     if (data.logo && document.getElementById("previewLogo")) {
       document.getElementById("previewLogo").src = data.logo;
     }
@@ -1988,13 +2038,13 @@ async function loadData(data) {
       renderPromoUI();
     }
 
-    // ================= VOUCHER =================
+    // ================= VOUCHER (MULTI DEVICE SAFE) =================
     window.menuVoucher = data.menuVoucher.slice();
     if (typeof renderVoucher === "function") {
       renderVoucher(window.menuVoucher);
     }
 
-    // ================= RESET KATEGORI =================
+    // ================= RESET KATEGORI UI =================
     const containerMap = {
       food: "menuFoodContainer",
       snack: "menuSnackContainer",
@@ -2018,7 +2068,6 @@ async function loadData(data) {
       const harga = m.harga || m.price || "";
       const image = m.image || m.gambar || "";
 
-      // pastikan UI tidak crash
       tambahMenu(kategori.toLowerCase(), nama, harga, image);
     });
 
@@ -2046,7 +2095,7 @@ async function loadData(data) {
       console.warn("⚠️ restoreRoomFromData() tidak ditemukan.");
     }
 
-    // ================= SYNC RESTO ID =================
+    // ================= RESTO ID SAFE =================
     let restoIdEl = document.getElementById("restoId");
     if (!restoIdEl) {
       restoIdEl = document.createElement("input");
@@ -2069,8 +2118,6 @@ async function loadData(data) {
 }
 
 // ====================== RESET & BACKUP ======================
-
-// 🔥 RESET HYBRID: IndexedDB + Supabase
 async function resetData() {
   if (!confirm("Are you sure you want to delete all data?")) return;
 
@@ -2168,8 +2215,6 @@ async function backupData() {
   }
 }
 
-
-
 // ====================== RESTORE FROM FILE (HYBRID) ======================
 function restoreDataFromFile(event) {
   const file = event.target.files[0];
@@ -2183,49 +2228,64 @@ function restoreDataFromFile(event) {
 
       let json = JSON.parse(e.target.result);
 
-      // Unwrap (kadang paket lama dipaksa {data:{...}})
-      if (json.profile && typeof json.profile === "object") json = json.profile;
-      else if (json.data && typeof json.data === "object") json = json.data;
+      // ========== AUTO UNWRAP BACKUP VARIAN ==========
+      if (json.profile && typeof json.profile === "object") {
+        json = json.profile;
+      } else if (json.data && typeof json.data === "object") {
+        json = json.data;
+      }
 
-      // Jika array → ambil index 0
+      // Backup lama bentuk array → pakai index 0
       if (Array.isArray(json)) {
-        if (json.length === 0) throw new Error("File kosong");
+        if (json.length === 0) throw new Error("File JSON kosong.");
         json = json[0];
       }
 
-      // ========== PERBAIKAN STRUKTUR WAJIB ==========
-      json.menuPromo = Array.isArray(json.menuPromo) ? json.menuPromo : [];
-      json.menuVoucher = Array.isArray(json.menuVoucher) ? json.menuVoucher : [];
-      json.flipbookRuanganImages = Array.isArray(json.flipbookRuanganImages) ? json.flipbookRuanganImages : [];
-      json.flipbookMenuImages = Array.isArray(json.flipbookMenuImages) ? json.flipbookMenuImages : [];
-      json.rooms = Array.isArray(json.rooms) ? json.rooms : [];
-      json.nomorWaAdmin = Array.isArray(json.nomorWaAdmin) ? json.nomorWaAdmin : [];
+      if (!json || typeof json !== "object") {
+        throw new Error("Format JSON tidak valid.");
+      }
 
-      // ========== RESTO ID FIX ==========
-      if (!json.restoId) {
+      // ========== PERBAIKAN STRUKTUR WAJIB ==========
+      json.menu              = Array.isArray(json.menu) ? json.menu : [];
+      json.menuPromo         = Array.isArray(json.menuPromo) ? json.menuPromo : [];
+      json.menuVoucher       = Array.isArray(json.menuVoucher) ? json.menuVoucher : [];
+      json.flipbookRuanganImages = Array.isArray(json.flipbookRuanganImages) ? json.flipbookRuanganImages : [];
+      json.flipbookMenuImages    = Array.isArray(json.flipbookMenuImages) ? json.flipbookMenuImages : [];
+      json.rooms             = Array.isArray(json.rooms) ? json.rooms : [];
+      json.nomorWaAdmin      = Array.isArray(json.nomorWaAdmin) ? json.nomorWaAdmin : [];
+
+      // ========== PERBAIKAN RESTO ID (ULTRA SAFE) ==========
+      if (!json.restoId || typeof json.restoId !== "string") {
         json.restoId =
           json.restoPhone ||
           (json.namaRestoran ? slugify(json.namaRestoran) : ("resto" + Date.now()));
       }
-      if (!json.restoPhone) json.restoPhone = json.restoId;
 
-      // ========== ID ==========
+      if (!json.restoPhone) {
+        json.restoPhone = json.restoId; // fallback aman
+      }
+
+      // ========== ID NUMBER (LOCAL INDEXEDDB) ==========
       let idResto = 1;
       if (typeof json.id === "number") idResto = json.id;
-      else if (typeof json.restoId === "number") idResto = json.restoId;
       idResto = Number(idResto) || 1;
 
-      // ========== Simpan HYBRID ==========
-      await saveDataToDB(idResto, json);       // IndexedDB
-      await saveDataToSupabase(json.restoId, json); // Supabase
+      // ========== HYBRID RESTORE: IndexedDB + Supabase =============
+      
+      // LOCAL
+      await saveDataToDB(idResto, json);
 
+      // REMOTE
+      await saveDataToSupabase(json.restoId, json);
+
+      // ========== AUTO OK ==========
       alert("✅ Data restored successfully! Page will reload.");
       location.reload();
 
     } catch (err) {
       hideLoader();
       console.error("❌ Restore failed:", err);
-      alert("❌ Failed to restore JSON file.\nLihat console untuk detail.");
+      alert("❌ Failed to restore JSON file.\nCek console untuk detail.");
     }
   };
 
@@ -2502,7 +2562,7 @@ async function safeLoadDataFromDB() {
       console.warn("⚠ IndexedDB gagal dibaca:", e);
     }
 
-    // Ambil restoKey dari cached
+    // Ambil restoKey terbaik
     const restoKey =
       cached?.restoId?.trim() ||
       cached?.restoPhone?.trim() ||
@@ -2510,13 +2570,13 @@ async function safeLoadDataFromDB() {
 
     console.log("🆔 restoKey:", restoKey || "(null)");
 
-    // Kalau IndexedDB kosong → buat default
+    // IndexedDB kosong → bikin default
     let finalData = cached || buatDataDefault(1);
 
     // ===================== 2. LOAD DARI SUPABASE =====================
     if (window.supabase && restoKey) {
       try {
-        // RESTO SETTINGS
+        // ========== RESTO SETTINGS ==========
         const { data: setting, error: settingErr } = await supabase
           .from("restosettings")
           .select("*")
@@ -2528,18 +2588,20 @@ async function safeLoadDataFromDB() {
           console.log("🌐 resto settings:", setting);
         }
 
-        // CATEGORIES
+        // ========== CATEGORIES ==========
         const { data: ct, error: ctErr } = await supabase
           .from("categories")
           .select("*")
           .eq("resto_id", restoKey);
 
-        if (!ctErr && ct) {
+        if (!ctErr && Array.isArray(ct)) {
           finalData.categories = ct.map(fixCategory);
           console.log("📂 Categories:", finalData.categories);
+        } else {
+          console.warn("⚠ Categories fetch fail, gunakan cached jika ada.");
         }
 
-        // ====================== VOUCHERS ======================
+        // ========== VOUCHERS (OPS A: TABLE VOUCHERS) ==========
         try {
           const { data: vc, error: vcErr } = await supabase
             .from("vouchers")
@@ -2548,34 +2610,48 @@ async function safeLoadDataFromDB() {
 
           if (!vcErr && Array.isArray(vc)) {
             finalData.menuVoucher = vc.map(fixVoucher);
-            console.log("🎟️ Voucher loaded dari Supabase:", finalData.menuVoucher);
-          } else {
-            console.warn("⚠ Voucher fetch error → fallback IndexedDB", vcErr);
+            voucherLoaded = true;
+            console.log("🎟️ Voucher dari Supabase:", finalData.menuVoucher);
 
-            if (Array.isArray(finalData.vouchers)) {
+          } else {
+            console.warn("⚠ Voucher fetch error:", vcErr);
+
+            // fallback ke IndexedDB jika ada
+            if (Array.isArray(finalData.menuVoucher)) {
+              console.log("🎟️ Fallback ke IndexedDB voucher.");
+            } else if (Array.isArray(finalData.vouchers)) {
               finalData.menuVoucher = finalData.vouchers;
-            } else if (!Array.isArray(finalData.menuVoucher)) {
+            } else {
               finalData.menuVoucher = [];
             }
           }
         } catch (e) {
-          console.warn("⚠ Exception voucher fetch:", e);
+          console.warn("⚠ Exception saat ambil voucher:", e);
           if (!Array.isArray(finalData.menuVoucher)) {
             finalData.menuVoucher = finalData.vouchers || [];
           }
         }
 
       } catch (err) {
-        console.warn("⚠ Supabase fetch error:", err);
+        console.warn("⚠ Supabase fetch error utama:", err);
       }
     }
 
     // ===================== CLEANUP FIELD BENTROK =====================
+    // Hapus field lama supaya tidak overwrite
     delete finalData.vouchers;
+    delete finalData.voucher; 
+    delete finalData.voucherList;
 
-    // pastikan menuVoucher array
+    // pastikan aman
     if (!Array.isArray(finalData.menuVoucher)) finalData.menuVoucher = [];
 
+    // FIX JSON lama yang masih pakai menuData
+    if (!Array.isArray(finalData.menu) && Array.isArray(finalData.menuData)) {
+      finalData.menu = finalData.menuData;
+    }
+
+    console.log("🎉 FINAL SAFE LOAD:", finalData);
     return finalData;
 
   } catch (err) {
@@ -2594,34 +2670,56 @@ async function safeLoadDataFromDB() {
   };
 }
 
-  function fixVoucher(v) {
+ /* ======================================================
+    FIX VOUCHER (SUPABASE → LOCAL OBJECT)
+======================================================*/
+function fixVoucher(v) {
+  if (!v || typeof v !== "object") return null;
+
   return {
     id: v.id,
     code: v.code,
-    discount: v.value,          // mapping
-    expiry: v.expires_at,       // mapping
-    createdAt: v.created_at,    // mapping
-    type: v.type,
-    minOrder: v.min_order,
-    isActive: v.is_active,
-    description: v.description
+    discount: v.value || v.discount || 0,
+    expiry: v.expires_at || v.expiry || null,
+    createdAt: v.created_at,
+    type: v.type || "percentage",
+    minOrder: v.min_order || 0,
+    isActive: v.is_active ?? true,
+    description: v.description || ""
   };
 }
 
+/* ======================================================
+    SAFE LOAD DATA (FINAL MERGE → UI)
+======================================================*/
 async function safeLoadData(data) {
   try {
+    // Kalau tidak ada → default
     const finalData = data || buatDataDefault(1);
 
     // Proteksi field minimal
-    finalData.categories = finalData.categories || [];
-    finalData.menus = finalData.menus || [];
+    finalData.categories = Array.isArray(finalData.categories)
+      ? finalData.categories
+      : [];
 
-    // MASTER voucher field: menuVoucher
+    finalData.menu = Array.isArray(finalData.menu)
+      ? finalData.menu
+      : (Array.isArray(finalData.menuData) ? finalData.menuData : []);
+
+    // ===================== MASTER VOUCHER FIELD =====================
+    // hanya pakai menuVoucher (Ops A)
     finalData.menuVoucher = Array.isArray(finalData.menuVoucher)
       ? finalData.menuVoucher
-      : (finalData.vouchers || []);
+      : Array.isArray(finalData.vouchers)
+        ? finalData.vouchers
+        : [];
 
-    // Load UI utama
+    // Hapus field bentrok lama
+    delete finalData.vouchers;
+    delete finalData.voucher;
+    delete finalData.voucherList;
+
+    // ===================== LOAD UI =====================
     await loadData(finalData);
 
     console.log("📲 UI data loaded:", finalData);
@@ -2633,9 +2731,8 @@ async function safeLoadData(data) {
 
 
 /* ======================================================
-   INIT UTAMA — HYBRID SYSTEM
+    INIT UTAMA — HYBRID SYSTEM
 ======================================================*/
-
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Init mulai...");
   showLoader();
@@ -2646,31 +2743,37 @@ document.addEventListener("DOMContentLoaded", async () => {
   }, 8000);
 
   try {
+    // --- INIT IndexedDB ---
     await initDB();
     console.log("✅ IndexedDB siap");
 
+    // --- Ambil data dari DB hybrid ---
     const data = await safeLoadDataFromDB();
+    console.log("📦 Hybrid data (before UI):", data);
+
+    // --- Render ke UI ---
     await safeLoadData(data);
 
-    console.log("📦 Data loaded (HYBRID):", data);
-
+    // --- INIT toggle UI ---
     await initAllToggles();
 
+    // --- Fix padding bar bawah ---
     const fixbar = document.querySelector(".fixed-bar");
     if (fixbar) {
       document.body.style.paddingBottom = fixbar.offsetHeight + "px";
     }
 
-    console.log("✅ Admin siap (Hybrid Ready)");
+    console.log("✅ Admin siap (Hybrid Ready, Voucher Multi Device OK)");
 
   } catch (err) {
     console.error("❌ Error saat init:", err);
-    alert("Terjadi error saat init. Refresh halaman.");
+    alert("Terjadi error saat init. Silakan refresh halaman.");
   } finally {
     clearTimeout(timeout);
     hideLoader();
   }
 });
+
 // ===================== TOGGLES MASTER =====================
 async function initAllToggles() {
   // Pastikan seluruh DOM sudah complete
@@ -2739,29 +2842,30 @@ function initRoomToggle() {
   });
 }
 
-// ===================== VOUCHER TOGGLE =====================
+  // ===================== VOUCHER TOGGLE =====================
 async function initVoucherToggle() {
   const toggleVoucherPage = document.getElementById("toggleVoucherPage");
   const voucherForm = document.getElementById("voucherForm");
   const voucherContainerBox = document.getElementById("voucherContainerBox");
 
   if (!toggleVoucherPage || !voucherForm || !voucherContainerBox) {
-    console.warn("⚠️ Elemen voucher toggle/form/container tidak lengkap, skip initVoucherToggle()");
+    console.warn("⚠️ Elemen toggle/form/container voucher tidak lengkap → skip initVoucherToggle()");
     return;
   }
 
-  // PLAN CHECK
+  // ===================== PLAN CHECK =====================
   const plan = localStorage.getItem("user_plan");
   if (plan === "monthly") {
     voucherContainerBox.style.display = "none";
     return;
   }
 
+  // ===================== RESTORE STATE =====================
   const enabled = localStorage.getItem("page_voucher") === "true";
   toggleVoucherPage.checked = enabled;
   voucherForm.style.display = enabled ? "block" : "none";
 
-  // EVENT
+  // ===================== EVENT HANDLER =====================
   toggleVoucherPage.addEventListener("change", async (e) => {
     const enabled = e.target.checked;
     localStorage.setItem("page_voucher", enabled);
@@ -2770,11 +2874,11 @@ async function initVoucherToggle() {
     if (!enabled) {
       renderVoucher([]);
     } else {
-      await loadVouchers();
+      await loadVouchers(); // reload semua voucher
     }
   });
 
-  // FIRST LOAD
+  // ===================== FIRST LOAD =====================
   await loadVouchers();
 }
 
@@ -2786,27 +2890,30 @@ async function loadVouchers() {
 
   let data = await loadDataFromDB(1);
 
+  // Proteksi struktur agar tidak error saat diakses
   if (!data || typeof data !== "object") {
-    console.warn("⚠️ Data DB invalid, reset object kosong");
+    console.warn("⚠ Data DB invalid → reset object kosong");
     data = { menuVoucher: [] };
   }
 
   if (!Array.isArray(data.menuVoucher)) {
-    console.warn("⚠️ menuVoucher hilang → reset");
+    console.warn("⚠ menuVoucher hilang → set array kosong");
     data.menuVoucher = [];
   }
 
   const today = new Date();
 
-  // AUTO REMOVE EXPIRED
+  // ===================== AUTO REMOVE EXPIRED =====================
   const cleaned = data.menuVoucher.filter(v => {
     const exp = new Date(v.expiry);
     return isFinite(exp) && exp >= today;
   });
 
   if (cleaned.length !== data.menuVoucher.length) {
-    console.warn("🧹 Membersihkan voucher expired...");
+    console.warn("🧹 Cleaning voucher expired...");
     data.menuVoucher = cleaned;
+
+    // Hybrid-safe → save to IndexedDB only (Supabase sync lewat saveVoucherNew)
     await saveDataToDB(1, data);
   }
 
@@ -2817,8 +2924,6 @@ async function loadVouchers() {
   return cleaned;
 }
 
-
-
 // ===================== SAVE VOUCHER WRAPPER =====================
 function saveVoucher() {
   return (typeof saveVoucherNew === "function")
@@ -2826,56 +2931,83 @@ function saveVoucher() {
     : (alert("Function saveVoucherNew() tidak ditemukan."), Promise.reject("saveVoucherNew missing"));
 }
 
-
-
-// ===================== SAVE VOUCHER BARU =====================
+  // ===================== SAVE VOUCHER BARU (HYBRID SAFE) =====================
 async function saveVoucherNew() {
   const code = document.getElementById("voucherCode").value.trim();
   const discount = parseFloat(document.getElementById("voucherDiscount").value);
   const expiry = document.getElementById("voucherExpiry").value;
 
+  const type = document.getElementById("voucherType")?.value || "percent";
+  const minOrder = parseFloat(document.getElementById("voucherMinOrder")?.value) || 0;
+  const description = document.getElementById("voucherDescription")?.value || "";
+  const active = document.getElementById("voucherActive")?.checked ?? true;
+
   if (!code || isNaN(discount) || !expiry) {
-    alert("⚠️ Harap isi semua form!");
+    alert("⚠️ Harap isi semua form voucher!");
     return;
   }
 
+  // Load existing data
   const data = await loadDataFromDB(1);
   if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
 
   const codeUpper = code.toUpperCase();
+  const now = new Date().toISOString();
 
-  const existing = data.menuVoucher.find(v => v.code === codeUpper);
+  // Check existing voucher
+  let existing = data.menuVoucher.find(v => v.code === codeUpper);
 
   if (existing) {
-    // UPDATE
+    // ====================== UPDATE ======================
     existing.discount = discount;
     existing.expiry = expiry;
-    existing.updatedAt = new Date().toISOString();
+    existing.type = type;
+    existing.minOrder = minOrder;
+    existing.description = description;
+    existing.isActive = active;
+    existing.updatedAt = now;
 
     console.log("✏️ Voucher updated:", existing);
+
+    // Sync Supabase
+    if (typeof saveVoucherToSupabase === "function") {
+      await saveVoucherToSupabase(existing);
+    }
+
   } else {
-    // NEW
+    // ====================== CREATE NEW ======================
     const newVoucher = {
       id: crypto.randomUUID(),
       code: codeUpper,
       discount,
       expiry,
-      createdAt: new Date().toISOString()
+      type,
+      minOrder,
+      description,
+      isActive: active,
+      createdAt: now
     };
 
     data.menuVoucher.push(newVoucher);
-    console.log("➕ Voucher ditambahkan:", newVoucher);
+
+    console.log("➕ Voucher baru:", newVoucher);
+
+    // Sync Supabase
+    if (typeof saveVoucherToSupabase === "function") {
+      await saveVoucherToSupabase(newVoucher);
+    }
   }
 
+  // Save ke IndexedDB
   await saveDataToDB(1, data);
 
+  // Refresh UI
   renderVoucher(data.menuVoucher);
+
   alert("✅ Voucher berhasil disimpan!");
 }
 
-
-
-// ===================== RENDER VOUCHER =====================
+  // ===================== RENDER VOUCHER (HYBRID NEW) =====================
 function renderVoucher(vouchers = []) {
   const box = document.getElementById("voucherPreview");
   if (!box) return;
@@ -2883,7 +3015,17 @@ function renderVoucher(vouchers = []) {
   if (!Array.isArray(vouchers)) vouchers = [];
 
   const today = new Date();
-  vouchers = vouchers.filter(v => new Date(v.expiry) >= today);
+
+  // Filter voucher aktif & valid
+  vouchers = vouchers.filter(v => {
+    const exp = new Date(v.expiry);
+    return (
+      v &&
+      v.isActive !== false &&        // default aktif
+      isFinite(exp) &&
+      exp >= today
+    );
+  });
 
   if (vouchers.length === 0) {
     box.innerHTML = "<em>Belum ada voucher aktif</em>";
@@ -2891,16 +3033,28 @@ function renderVoucher(vouchers = []) {
   }
 
   box.innerHTML = `
-    <h3>Voucher Aktif</h3>
+    <h3 style="margin-bottom:10px;">Voucher Aktif</h3>
     ${vouchers
       .map(
         v => `
-      <div class="voucher-item" style="border:1px solid #ccc; padding:8px; margin:8px 0; border-radius:8px;">
+      <div class="voucher-item"
+        style="border:1px solid #ccc; padding:10px; margin:8px 0; border-radius:10px; background:#fafafa;">
+        
         <p><strong>Kode Voucher:</strong>
           <span class="voucher-code">${v.code}</span>
           <button onclick="copyVoucherCode('${v.code}')">📋 Copy</button>
         </p>
-        <p><strong>Diskon:</strong> ${v.discount}%</p>
+
+        <p><strong>Diskon:</strong> 
+          ${v.type === "percent" ? v.discount + "%" : "Rp " + v.discount.toLocaleString()}
+        </p>
+
+        <p><strong>Minimal Order:</strong> 
+          Rp ${Number(v.minOrder || 0).toLocaleString()}
+        </p>
+
+        ${v.description ? `<p><strong>Deskripsi:</strong> ${v.description}</p>` : ""}
+
         <p><strong>Berlaku sampai:</strong> ${v.expiry}</p>
       </div>
     `
@@ -3082,8 +3236,4 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
-
-
-
-
 
