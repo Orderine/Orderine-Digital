@@ -849,20 +849,31 @@ async function saveDataToDB(id, newData) {
       // Gabungkan data lama dan baru
       let finalData = { ...oldData, ...newData };
 
-      // --- PERBAIKAN KHUSUS VOUCHER (WAJIB) ---
-      // Jika newData berisi voucher, harus selalu array
-      if (newData.voucher !== undefined) {
-        if (!Array.isArray(newData.voucher)) {
-          console.warn("⚠ Voucher bukan array — diperbaiki otomatis");
-          finalData.voucher = [...(oldData.voucher || [])];
+      // ==========================================================
+      // 🔥 FIX PENTING (WAJIB)
+      // Field utama voucher adalah menuVoucher
+      // ==========================================================
+      if (newData.menuVoucher !== undefined) {
+        if (!Array.isArray(newData.menuVoucher)) {
+          console.warn("⚠ menuVoucher bukan array → diperbaiki");
+          finalData.menuVoucher = Array.isArray(oldData.menuVoucher)
+            ? oldData.menuVoucher.slice()
+            : [];
         }
       }
 
-      // Jika hilang atau null, set default []
-      if (!Array.isArray(finalData.voucher)) {
-        console.warn("⚠ Voucher corrupt — reset ke []");
-        finalData.voucher = [];
+      // fallback legacy "voucher"
+      if (newData.voucher !== undefined && Array.isArray(newData.voucher)) {
+        finalData.menuVoucher = newData.voucher.slice();
       }
+
+      if (!Array.isArray(finalData.menuVoucher)) {
+        console.warn("⚠ menuVoucher corrupt → reset []");
+        finalData.menuVoucher = [];
+      }
+
+      // Hapus field legacy supaya tidak bentrok
+      delete finalData.voucher;
 
       // ===================== SAVE OFFLINE =====================
       const saveReq = store.put(finalData);
@@ -875,11 +886,10 @@ async function saveDataToDB(id, newData) {
           try {
             console.log("🌐 Sync ke Supabase...");
 
-            // OPSI A — WAJIB: update hanya kolom data
             const { error } = await supabase
               .from("menuva_data")
               .update({
-                data: finalData,              // seluruh data termasuk voucher
+                data: finalData,
                 updated_at: new Date().toISOString(),
               })
               .eq("id", id);
@@ -911,7 +921,7 @@ async function saveDataToDB(id, newData) {
   });
 }
 
-async function loadDataFromDB(id = 1) {
+   async function loadDataFromDB(id = 1) {
   console.groupCollapsed("📥 [HYBRID LOAD] loadDataFromDB()");
 
   // ============================================================
@@ -927,14 +937,11 @@ async function loadDataFromDB(id = 1) {
         .eq("id", id)
         .maybeSingle();
 
-      if (error) {
-        console.warn("⚠ Supabase error:", error.message);
-      }
+      if (error) console.warn("⚠ Supabase error:", error.message);
 
       if (data && data.data) {
         const r = data.data;
 
-        // ===================== SAFE FIX ======================
         const safe = {
           id,
           restoId: r.restoId || "",
@@ -948,8 +955,12 @@ async function loadDataFromDB(id = 1) {
           menu: Array.isArray(r.menu) ? r.menu : [],
           menuPromo: Array.isArray(r.menuPromo) ? r.menuPromo : [],
 
-          // ===================== PATCH VOUCHER (WAJIB OPSI A) =====================
-          voucher: Array.isArray(r.voucher) ? r.voucher : [],
+          // ==========================================================
+          // 🔥 FIX WAJIB — Field resmi = menuVoucher
+          // ==========================================================
+          menuVoucher: Array.isArray(r.menuVoucher)
+            ? r.menuVoucher
+            : (Array.isArray(r.voucher) ? r.voucher : []),
 
           rooms: Array.isArray(r.rooms) ? r.rooms : [],
           nomorWaAdmin: Array.isArray(r.nomorWaAdmin) ? r.nomorWaAdmin : [],
@@ -973,7 +984,7 @@ async function loadDataFromDB(id = 1) {
   }
 
   // ============================================================
-  // 2️⃣ Fallback ke IndexedDB
+  // 2️⃣ Fallback IndexedDB
   // ============================================================
   try {
     const db = await getDB();
@@ -987,6 +998,12 @@ async function loadDataFromDB(id = 1) {
     });
 
     if (data) {
+      // patch voucher legacy
+      if (!Array.isArray(data.menuVoucher)) {
+        data.menuVoucher = Array.isArray(data.voucher) ? data.voucher : [];
+      }
+      delete data.voucher;
+
       console.log("📦 IndexedDB → data ditemukan");
       console.groupEnd();
       return data;
@@ -996,9 +1013,9 @@ async function loadDataFromDB(id = 1) {
   }
 
   // ============================================================
-  // 3️⃣ Default data jika semua gagal
+  // 3️⃣ Default data
   // ============================================================
-  console.warn("⚠ Tidak ada data di Supabase / IndexedDB → pakai default");
+  console.warn("⚠ Tidak ada data → default");
   const def = buatDataDefault(id);
   console.groupEnd();
   return def;
@@ -3236,4 +3253,5 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
