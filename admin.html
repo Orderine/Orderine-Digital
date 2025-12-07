@@ -2540,39 +2540,49 @@ async function safeLoadDataFromDB() {
         }
 
         // ====================== VOUCHERS ======================
-try {
-  const { data: vc, error: vcErr } = await supabase
-    .from("vouchers")
-    .select("*")
-    .eq("resto_id", restoKey);
+        try {
+          const { data: vc, error: vcErr } = await supabase
+            .from("vouchers")
+            .select("*")
+            .eq("resto_id", restoKey);
 
-  // Jika Supabase berhasil (data array / error null)
-  if (!vcErr && Array.isArray(vc)) {
-    finalData.menuVoucher = vc.map(fixVoucher);
-    console.log("🎟️ Voucher loaded dari Supabase:", finalData.menuVoucher);
-  } 
-  else {
-    // Jika Supabase error → JANGAN hapus voucher lokal!
-    console.warn("⚠ Voucher fetch error, gunakan data IndexedDB:", vcErr);
+          if (!vcErr && Array.isArray(vc)) {
+            finalData.menuVoucher = vc.map(fixVoucher);
+            console.log("🎟️ Voucher loaded dari Supabase:", finalData.menuVoucher);
+          } else {
+            console.warn("⚠ Voucher fetch error → fallback IndexedDB", vcErr);
 
-    if (Array.isArray(finalData.vouchers)) {
-      finalData.menuVoucher = finalData.vouchers;
-    } else if (Array.isArray(finalData.menuVoucher)) {
-      // sudah aman
-    } else {
-      finalData.menuVoucher = [];
+            if (Array.isArray(finalData.vouchers)) {
+              finalData.menuVoucher = finalData.vouchers;
+            } else if (!Array.isArray(finalData.menuVoucher)) {
+              finalData.menuVoucher = [];
+            }
+          }
+        } catch (e) {
+          console.warn("⚠ Exception voucher fetch:", e);
+          if (!Array.isArray(finalData.menuVoucher)) {
+            finalData.menuVoucher = finalData.vouchers || [];
+          }
+        }
+
+      } catch (err) {
+        console.warn("⚠ Supabase fetch error:", err);
+      }
     }
-  }
 
-} catch (e) {
-  console.warn("⚠ Exception voucher fetch:", e);
+    // ===================== CLEANUP FIELD BENTROK =====================
+    delete finalData.vouchers;
 
-  if (!Array.isArray(finalData.menuVoucher)) {
-    finalData.menuVoucher = finalData.vouchers || [];
+    // pastikan menuVoucher array
+    if (!Array.isArray(finalData.menuVoucher)) finalData.menuVoucher = [];
+
+    return finalData;
+
+  } catch (err) {
+    console.error("❌ safeLoadDataFromDB ERROR:", err);
+    return buatDataDefault(1);
   }
 }
-
-delete finalData.vouchers;
 
   function fixCategory(cat) {
   return {
@@ -2598,76 +2608,69 @@ delete finalData.vouchers;
   };
 }
 
-// ====================== SAFE LOAD TO UI ======================
 async function safeLoadData(data) {
   try {
     const finalData = data || buatDataDefault(1);
 
-    // Proteksi data minimal
+    // Proteksi field minimal
     finalData.categories = finalData.categories || [];
     finalData.menus = finalData.menus || [];
 
-    // MASTER VOUCHER FIELD = menuVoucher
-   finalData.menuVoucher = Array.isArray(finalData.menuVoucher)
-  ? finalData.menuVoucher
-  : (finalData.vouchers || []);
+    // MASTER voucher field: menuVoucher
+    finalData.menuVoucher = Array.isArray(finalData.menuVoucher)
+      ? finalData.menuVoucher
+      : (finalData.vouchers || []);
 
-    // Load UI
+    // Load UI utama
     await loadData(finalData);
 
-    console.log("📲 UI data loaded (clean):", finalData);
+    console.log("📲 UI data loaded:", finalData);
 
   } catch (err) {
     console.error("❌ safeLoadData() error:", err);
   }
 }
 
-// ======================================================
-// INIT UTAMA — HYBRID SYSTEM
-// ======================================================
+
+/* ======================================================
+   INIT UTAMA — HYBRID SYSTEM
+======================================================*/
+
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Init mulai...");
   showLoader();
 
   const timeout = setTimeout(() => {
-    console.warn("⚠️ Init terlalu lama → hide loader paksa");
+    console.warn("⚠ Init lama → hide loader paksa");
     hideLoader();
   }, 8000);
 
   try {
-    // INIT INDEXEDDB
     await initDB();
     console.log("✅ IndexedDB siap");
 
-    // HYBRID LOAD
     const data = await safeLoadDataFromDB();
-    if (data) {
-      await safeLoadData(data);
-      console.log("📦 Data di-load (hybrid):", data);
-    } else {
-      console.warn("⚠️ Tidak ada data ditemukan");
-    }
+    await safeLoadData(data);
 
-    // INIT TOGGLES
+    console.log("📦 Data loaded (HYBRID):", data);
+
     await initAllToggles();
 
-    // FIXED BAR PADDING
     const fixbar = document.querySelector(".fixed-bar");
     if (fixbar) {
       document.body.style.paddingBottom = fixbar.offsetHeight + "px";
     }
 
-    console.log("✅ Admin siap digunakan (Hybrid Ready)");
+    console.log("✅ Admin siap (Hybrid Ready)");
 
   } catch (err) {
     console.error("❌ Error saat init:", err);
-    alert("Terjadi kesalahan saat memuat data. Silakan refresh.");
+    alert("Terjadi error saat init. Refresh halaman.");
   } finally {
     clearTimeout(timeout);
     hideLoader();
   }
 });
-
 // ===================== TOGGLES MASTER =====================
 async function initAllToggles() {
   // Pastikan seluruh DOM sudah complete
@@ -3079,6 +3082,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
