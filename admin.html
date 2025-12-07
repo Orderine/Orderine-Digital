@@ -957,9 +957,9 @@ async function saveDataToDB(id, newData) {
   });
 }
 
+// ====================== FUNGSI 2 (LOAD) + LOG DETECTOR ======================
 async function loadDataFromDB(id = 1) {
   console.groupCollapsed("📥 [HYBRID LOAD] loadDataFromDB()");
-  console.log("🟦 REQUEST LOAD id:", id); // >>> LOG
 
   // ============================================================
   // 1️⃣ LOAD DARI SUPABASE
@@ -974,17 +974,13 @@ async function loadDataFromDB(id = 1) {
         .eq("id", id)
         .maybeSingle();
 
-      // >>> LOG
-      console.log("🟪 RAW SUPABASE RESPONSE:", JSON.parse(JSON.stringify(data)));
       if (error) console.warn("⚠ Supabase error:", error.message);
 
       if (data && data.data) {
         const r = data.data;
 
-        // >>> LOG
-        console.log("🟧 SUPABASE r.data sebelum SAFE-FIX:", JSON.parse(JSON.stringify(r)));
-        console.log("🟧 r.menuVoucher:", r.menuVoucher);
-        console.log("🟧 r.voucher (legacy):", r.voucher);
+        console.log("🧪 [CHECK] Supabase.r.voucher:", r.voucher);
+        console.log("🧪 [CHECK] Supabase.r.menuVoucher:", r.menuVoucher);
 
         const safe = {
           id,
@@ -999,12 +995,11 @@ async function loadDataFromDB(id = 1) {
           menu: Array.isArray(r.menu) ? r.menu : [],
           menuPromo: Array.isArray(r.menuPromo) ? r.menuPromo : [],
 
-          // ==========================================================
-          // 🔥 FIX WAJIB — Field resmi = menuVoucher
-          // ==========================================================
-          menuVoucher: Array.isArray(r.menuVoucher)
-            ? r.menuVoucher
-            : (Array.isArray(r.voucher) ? r.voucher : []),
+          // ========== FIX WAJIB ==========
+          menuVoucher:
+            Array.isArray(r.menuVoucher)
+              ? r.menuVoucher
+              : (Array.isArray(r.voucher) ? r.voucher : []),
 
           rooms: Array.isArray(r.rooms) ? r.rooms : [],
           nomorWaAdmin: Array.isArray(r.nomorWaAdmin) ? r.nomorWaAdmin : [],
@@ -1018,27 +1013,18 @@ async function loadDataFromDB(id = 1) {
             : []
         };
 
-        // >>> LOG
-        console.log("🟩 SAFE-FIX RESULT (FINAL SUPABASE DATA):", JSON.parse(JSON.stringify(safe)));
-        console.log("🟩 FINAL menuVoucher:", safe.menuVoucher);
-
+        console.log("🌐 Supabase SAFE-FIX:", safe);
         console.groupEnd();
         return safe;
-      } else {
-        console.warn("⚠ Supabase mengembalikan NULL data"); // >>> LOG
       }
     } catch (err) {
       console.warn("⚠ Supabase load error:", err);
     }
-  } else {
-    console.log("🌐 ONLINE_MODE = false → skip Supabase"); // >>> LOG
   }
 
   // ============================================================
   // 2️⃣ Fallback IndexedDB
   // ============================================================
-  console.log("📦 Mencoba load dari IndexedDB..."); // >>> LOG
-
   try {
     const db = await getDB();
     const tx = db.transaction(STORE_NAME, "readonly");
@@ -1046,30 +1032,30 @@ async function loadDataFromDB(id = 1) {
 
     const data = await new Promise((resolve, reject) => {
       const req = store.get(id);
-
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error);
     });
 
-    // >>> LOG
-    console.log("🟫 RAW IndexedDB RESULT:", JSON.parse(JSON.stringify(data)));
-
     if (data) {
-      // patch voucher legacy
+      console.log("📦 IndexedDB raw:", data);
+      console.log("🧪 IndexedDB.voucher:", data.voucher);
+      console.log("🧪 IndexedDB.menuVoucher:", data.menuVoucher);
+
+      // ====== DETEKSI BUG ======
+      if (Array.isArray(data.voucher) && data.voucher.length > 0 &&
+          Array.isArray(data.menuVoucher) && data.menuVoucher.length === 0) {
+        console.error("🔥 FOUND ROOT CAUSE: FIELD voucher ADA TAPI menuVoucher KOSONG → patch membunuh voucher!");
+      }
+
+      // patch official
       if (!Array.isArray(data.menuVoucher)) {
-        console.warn("⚠ menuVoucher tidak valid → fallback ke legacy voucher"); // >>> LOG
         data.menuVoucher = Array.isArray(data.voucher) ? data.voucher : [];
       }
       delete data.voucher;
 
-      // >>> LOG
-      console.log("🟩 IndexedDB FINAL DATA:", JSON.parse(JSON.stringify(data)));
-      console.log("🟩 IndexedDB menuVoucher:", data.menuVoucher);
-
+      console.log("📦 IndexedDB setelah patch:", data);
       console.groupEnd();
       return data;
-    } else {
-      console.warn("⚠ IndexedDB kosong untuk id:", id); // >>> LOG
     }
   } catch (err) {
     console.warn("⚠ IndexedDB load error:", err);
@@ -1080,14 +1066,9 @@ async function loadDataFromDB(id = 1) {
   // ============================================================
   console.warn("⚠ Tidak ada data → default");
   const def = buatDataDefault(id);
-
-  // >>> LOG
-  console.log("⬜ DEFAULT RETURN:", JSON.parse(JSON.stringify(def)));
-
   console.groupEnd();
   return def;
 }
-
 
 function buatDataDefault(id = 1) {
   return {
@@ -3321,6 +3302,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
