@@ -855,42 +855,41 @@ async function saveDataToDB(id, newData) {
       console.log("🟨 OLD DATA SEBELUM MERGE:", JSON.parse(JSON.stringify(oldData)));
       console.log("🟨 oldData.menuVoucher:", oldData.menuVoucher);
 
-      // Gabungkan data lama dan baru
-      let finalData = { ...oldData, ...newData };
+      // ==========================================================
+      // 🔥 FIX MERGE UTAMA:
+      // Jangan pernah timpa menuVoucher jika newData tidak punya.
+      // ==========================================================
+      let finalData = {
+        ...oldData,
+        ...newData,
+
+        menuVoucher:
+          Array.isArray(newData.menuVoucher)
+            ? newData.menuVoucher            // newData punya → pakai
+            : Array.isArray(oldData.menuVoucher)
+              ? oldData.menuVoucher          // newData ga punya → pakai data lama
+              : [],                          // kalau dua2nya ga ada → default []
+      };
 
       // >>> LOG
-      console.log("🟧 SETELAH MERGE:", JSON.parse(JSON.stringify(finalData)));
-      console.log("🟧 finalData.menuVoucher (before fix):", finalData.menuVoucher);
+      console.log("🟧 SETELAH MERGE (FIXED):", JSON.parse(JSON.stringify(finalData)));
+      console.log("🟧 finalData.menuVoucher (before legacy fix):", finalData.menuVoucher);
 
       // ==========================================================
-      // 🔥 FIX PENTING (WAJIB)
-      // Field utama voucher adalah menuVoucher
+      // 🔥 FIX LEGACY FIELD "voucher"
       // ==========================================================
-      if (newData.menuVoucher !== undefined) {
-        if (!Array.isArray(newData.menuVoucher)) {
-          console.warn("⚠ menuVoucher bukan array → diperbaiki");
-          finalData.menuVoucher = Array.isArray(oldData.menuVoucher)
-            ? oldData.menuVoucher.slice()
-            : [];
-
-          // >>> LOG
-          console.log("🔴 FIX: newData.menuVoucher bukan array → pakai oldData.menuVoucher");
-        }
-      }
-
-      // fallback legacy "voucher"
       if (newData.voucher !== undefined && Array.isArray(newData.voucher)) {
         finalData.menuVoucher = newData.voucher.slice();
 
-        // >>> LOG
         console.log("🟣 AUTO-MAP legacy voucher → menuVoucher:", finalData.menuVoucher);
       }
 
+      // ==========================================================
+      // Safety: menuVoucher harus selalu array
+      // ==========================================================
       if (!Array.isArray(finalData.menuVoucher)) {
         console.warn("⚠ menuVoucher corrupt → reset []");
         finalData.menuVoucher = [];
-
-        // >>> LOG
         console.log("❗ menuVoucher CORRUPT, RESET → []");
       }
 
@@ -907,7 +906,7 @@ async function saveDataToDB(id, newData) {
       saveReq.onsuccess = async () => {
         console.log("💾 IndexedDB → OK");
 
-        // >>> LOG
+        // >>> LOG verifikasi
         const verify = store.get(id);
         verify.onsuccess = () => {
           console.log("🔁 DATA TERSIMPAN DI INDEXEDDB:", JSON.parse(JSON.stringify(verify.result)));
@@ -3295,3 +3294,4 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
