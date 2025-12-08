@@ -3150,6 +3150,40 @@ function fallbackCopy(text) {
   alert(`Kode voucher "${text}" berhasil disalin!`);
 }
 
+  /* ======================================================
+    SAVE VOUCHER KE SUPABASE
+======================================================*/
+async function saveVoucherToOnline(restoKey, vouchers) {
+  if (!window.supabase || !restoKey) return;
+
+  try {
+    // 1. HAPUS semua voucher lama
+    await supabase.from("vouchers")
+      .delete()
+      .eq("resto_id", restoKey);
+
+    // 2. MASUKKAN voucher baru
+    const rows = vouchers.map(v => ({
+      resto_id: restoKey,
+      code: v.code,
+      value: v.discount,
+      expires_at: v.expiry,
+      type: v.type || "percentage",
+      min_order: v.minOrder || 0,
+      is_active: v.isActive ?? true,
+      description: v.description || ""
+    }));
+
+    const { error } = await supabase.from("vouchers").insert(rows);
+
+    if (error) throw error;
+
+    console.log("✅ Voucher berhasil disimpan online");
+  } catch (err) {
+    console.error("❌ Gagal simpan voucher:", err);
+  }
+}
+
 </script>
 <script>
 /* ============================================================
@@ -3294,4 +3328,5 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
