@@ -3084,9 +3084,7 @@ async function persistVoucher() {
 let notifAudio;
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Voucher toggle jalan dulu, sesuai struktur admin
-  initVoucherToggle();
-
+  
   // Preload audio
   notifAudio = new Audio("beep.mp3");
   notifAudio.load();
@@ -3220,5 +3218,6 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
