@@ -2917,125 +2917,123 @@ async function initVoucherToggle() {
     }
   });
 
-  // ===================== FIRST LOAD =====================
-  await loadVouchers();
-}
+ // ===================== FIRST LOAD =====================
+// dipanggil dari initAllToggles -> initVoucherToggle,
+// tapi untuk safety pastikan load saat DOM ready juga
+// await loadVouchers();  <-- dipanggil di initVoucherToggle sehingga tidak perlu di sini
 
-  async function loadVoucher() {
+// ===================== LOAD VOUCHERS (OPS A - FINAL) =====================
+async function loadVouchers() {
+  console.groupCollapsed("🎟️ loadVouchers()");
   try {
-    const db = await getDB();
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const data = await tx.objectStore(STORE_NAME).get(1);
+    // Ambil data master dari IndexedDB dulu (hybrid)
+    const dbRec = await loadDataFromDB(1); // gunakan fungsi hybrid yang sudah ada
+    let vouchers = Array.isArray(dbRec?.menuVoucher) ? dbRec.menuVoucher.slice() : [];
 
-    // From IndexedDB
-    if (data && data.voucher) {
-      voucher = data.voucher;
-      console.log("🔄 Voucher loaded from IndexedDB:", voucher);
-      renderVoucherList();
-      return;
-    }
+    console.log("📦 Voucher dari IndexedDB (cache):", vouchers);
 
-    // From Supabase
-    if (window.supabase) {
-      const { data: supa } = await supabase
-        .from("resto_data")
-        .select("voucher")
-        .eq("id", 1)
-        .single();
+    // Supabase authoritative (table 'vouchers') — ambil jika tersedia
+    const restoKey = (dbRec?.restoId || dbRec?.restoPhone || "").toString().trim() || null;
+    if (window.supabase && restoKey) {
+      try {
+        const { data: supa, error } = await supabase
+          .from("vouchers")
+          .select("*")
+          .eq("resto_id", restoKey);
 
-      if (supa && supa.voucher) {
-        voucher = supa.voucher;
-        await persistVoucher(); // sync kembali ke IndexedDB
-        renderVoucherList();
-        console.log("☁️ Voucher loaded from Supabase:", voucher);
-        return;
+        if (!error && Array.isArray(supa)) {
+          // normalize rows
+          vouchers = supa.map(fixVoucher);
+          console.log("☁️ Voucher dari Supabase:", vouchers);
+
+          // Tulis hasil authoritative ke IndexedDB (merge via saveDataToDB)
+          const updated = await loadDataFromDB(1);
+          updated.menuVoucher = vouchers;
+          await saveDataToDB(1, updated);
+        } else {
+          console.warn("⚠ Supabase vouchers fetch error:", error);
+        }
+      } catch (e) {
+        console.warn("⚠ Exception fetching vouchers from Supabase:", e);
       }
     }
 
-    console.warn("⚠️ Tidak ada voucher di DB manapun.");
+    // Auto-remove expired (only keep future or today)
+    const today = new Date();
+    const active = vouchers.filter(v => {
+      const exp = new Date(v.expiry || v.expires_at || v.expiresAt || v.expiresAt);
+      return isFinite(exp) && exp >= today;
+    });
 
+    if (active.length !== (vouchers.length || 0)) {
+      console.warn("🧹 Auto-clean expired voucher...");
+      // update store record safely (merge with existing data)
+      const data = await loadDataFromDB(1);
+      data.menuVoucher = active;
+      await saveDataToDB(1, data);
+      vouchers = active;
+    }
+
+    // expose to global for compatibility
+    window.menuVoucher = vouchers.slice();
+    // render admin UI (function renderVoucher expects array of vouchers)
+    if (typeof renderVoucher === "function") {
+      renderVoucher(vouchers);
+    } else {
+      console.warn("renderVoucher() not found — ensure admin UI renderer exists");
+    }
+
+    console.groupEnd();
+    return vouchers;
   } catch (err) {
-    console.error("❌ loadVoucher error:", err);
+    console.error("❌ loadVouchers() error:", err);
+    console.groupEnd();
+    return [];
   }
 }
 
-  // ===================== AUTO REMOVE EXPIRED =====================
-  const cleaned = data.menuVoucher.filter(v => {
-    const exp = new Date(v.expiry);
-    return isFinite(exp) && exp >= today;
-  });
-
-  if (cleaned.length !== data.menuVoucher.length) {
-    console.warn("🧹 Cleaning voucher expired...");
-    data.menuVoucher = cleaned;
-
-    // Hybrid-safe → save to IndexedDB only (Supabase sync lewat saveVoucherNew)
-    await saveDataToDB(1, data);
-  }
-
-  console.log("📦 Voucher aktif:", cleaned);
-  console.groupEnd();
-
-  renderVoucher(cleaned);
-  return cleaned;
+// ===================== NORMALIZER =====================
+function fixVoucher(v) {
+  // v from supabase table or legacy - normalize to unified shape
+  return {
+    id: v.id ?? v.id?.toString() ?? ("v_" + Date.now() + Math.random().toString(16).slice(2)),
+    code: (v.code || v.code?.toString() || "").toUpperCase(),
+    discount: Number(v.value ?? v.discount ?? v.value ?? 0),
+    expiry: v.expires_at ?? v.expiry ?? v.expiresAt ?? null,
+    isActive: (v.is_active ?? v.isActive ?? true),
+    minOrder: v.min_order ?? v.minOrder ?? 0,
+    description: v.description ?? ""
+  };
 }
 
-// ===================== SAVE VOUCHER WRAPPER =====================
+// ===================== SAVE VOUCHER WRAPPER (KEEP as wrapper) =====================
 function saveVoucher() {
   return (typeof saveVoucherNew === "function")
     ? saveVoucherNew()
     : (alert("Function saveVoucherNew() tidak ditemukan."), Promise.reject("saveVoucherNew missing"));
 }
 
-function saveVoucher() {
-  const code = document.getElementById("voucherCode").value.trim();
-  const discount = Number(document.getElementById("voucherDiscount").value);
-  const expiry = document.getElementById("voucherExpiry").value;
-
-  if (!code || !discount || !expiry) {
-    alert("Semua field wajib diisi.");
-    return;
-  }
-
-  // Jika voucher sudah ada → update tapi tidak pernah delete
-  const exist = voucher.find(v => v.code === code);
-
-  if (exist) {
-    exist.discount = discount;
-    exist.expiredAt = expiry;
-  } else {
-    voucher.push({
-      id: "VCR-" + Date.now(),
-      code,
-      discount,
-      expiredAt: expiry,
-      isActive: true,
-    });
-  }
-
-  persistVoucher();
-  renderVoucherList();
-
-  document.getElementById("voucherCode").value = "";
-  document.getElementById("voucherDiscount").value = "";
-  document.getElementById("voucherExpiry").value = "";
-}
-
-  function renderVoucherList() {
+// ===================== RENDER (compat layer) =====================
+// Render legacy-style list if other renderer absent
+function renderVoucherList() {
   const box = document.getElementById("voucherPreview");
   box.innerHTML = "";
 
-  if (!voucher.length) {
+  const list = Array.isArray(window.menuVoucher) ? window.menuVoucher : (Array.isArray(window.voucher) ? window.voucher : []);
+
+  if (!list.length) {
     box.innerHTML = "<p>Belum ada voucher.</p>";
     return;
   }
 
-  voucher.forEach(v => {
+  list.forEach(v => {
+    const expiryDisplay = v.expiry || v.expires_at || v.expiresAt || v.expiredAt || "";
+    const disc = (v.discount !== undefined) ? `${v.discount}%` : (v.value ? v.value : "");
     box.innerHTML += `
       <div class="voucher-item">
         <strong>${v.code}</strong><br>
-        Diskon: ${v.discount}%<br>
-        Expired: ${v.expiredAt}<br>
+        Diskon: ${disc}<br>
+        Expired: ${expiryDisplay}<br>
         <span style="color:green;font-weight:bold;">
           Voucher permanen (tidak bisa dihapus)
         </span>
@@ -3046,65 +3044,36 @@ function saveVoucher() {
 }
 
 // ==========================
-// TOGGLE FORM
-// ==========================
-document.getElementById("toggleVoucherPage").addEventListener("change", function () {
-  document.getElementById("voucherForm").style.display = this.checked ? "block" : "none";
-});
+// TOGGLE FORM (safe attach)
+const tv = document.getElementById("toggleVoucherPage");
+if (tv) {
+  tv.addEventListener("change", function () {
+    const vf = document.getElementById("voucherForm");
+    if (vf) vf.style.display = this.checked ? "block" : "none";
+  });
+}
 
 // ==========================
-// INIT LOAD
-// ==========================
+// INIT LOAD (call loadVouchers, not old loadVoucher)
 document.addEventListener("DOMContentLoaded", () => {
-  loadVoucher();
+  // do not call old loadVoucher() — use loadVouchers which is canonical OPS A
+  // but protect: if initVoucherToggle already calls loadVouchers, duplicates are fine
+  try { loadVouchers(); } catch (e) { console.warn("loadVouchers init:", e); }
 });
-// ===================== CLIPBOARD =====================
-function copyVoucherCode(code) {
-  if (!code) return;
 
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard
-      .writeText(code)
-      .then(() => alert(`Kode voucher "${code}" berhasil disalin!`))
-      .catch(err => {
-        console.error("Clipboard error:", err);
-        fallbackCopy(code);
-      });
-  } else {
-    fallbackCopy(code);
-  }
-}
-
-  async function persistVoucher() {
+// ===================== PERSIST (merge-safe) =====================
+async function persistVoucher() {
   try {
-    const db = await getDB();
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).put({ id: 1, voucher });
-    await tx.complete;
-
-    console.log("💾 Voucher saved → IndexedDB");
-
-    // SUPABASE
-    if (window.supabase) {
-      await supabase.from("resto_data").upsert({
-        id: 1,
-        voucher: voucher
-      });
-      console.log("☁️ Voucher synced → Supabase");
-    }
+    // read current menuva_data record, merge menuVoucher, then save via saveDataToDB to preserve other fields
+    const data = await loadDataFromDB(1);
+    // ensure we have an array to persist
+    const toSave = Array.isArray(window.menuVoucher) ? window.menuVoucher.slice() : (Array.isArray(window.voucher) ? window.voucher.slice() : []);
+    data.menuVoucher = toSave;
+    await saveDataToDB(1, data); // uses existing hybrid save (IndexedDB + Supabase sync per your setup)
+    console.log("💾 Voucher merged into indexedDB via saveDataToDB");
   } catch (err) {
-    console.error("❌ Error persistVoucher:", err);
+    console.error("❌ Error persistVoucher (merge):", err);
   }
-}
-  
-function fallbackCopy(text) {
-  const tempInput = document.createElement("input");
-  tempInput.value = text;
-  document.body.appendChild(tempInput);
-  tempInput.select();
-  document.execCommand("copy");
-  tempInput.remove();
-  alert(`Kode voucher "${text}" berhasil disalin!`);
 }
 
 </script>
@@ -3251,4 +3220,5 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
