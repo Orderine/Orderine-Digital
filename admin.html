@@ -807,28 +807,29 @@ async function initDB() {
   return dbPromise;
 }
 
-function getDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
 
-    request.onupgradeneeded = function (e) {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id" });
-      }
-    };
-
-    request.onsuccess = function (e) {
-      db = e.target.result;
-      resolve(db);
-    };
-
-    request.onerror = function () {
-      reject("IndexedDB gagal dibuka");
-    };
-  });
+// ====================== GET DB INSTANCE ========================
+async function getDB() {
+  if (dbInstance) return dbInstance;
+  return await initDB();
 }
 
+
+// ====================== TEST SUPABASE CONNECTION ===============
+(async () => {
+  try {
+    const { data, error } = await supabase.from("admin_healthcheck").select("id").limit(1);
+
+    if (error) throw error;
+
+    console.log("🌐 Supabase Online Mode → ACTIVE");
+    ONLINE_MODE = true;
+
+  } catch (err) {
+    console.warn("⚠ Supabase tidak dapat diakses, fallback ke Offline Mode");
+    ONLINE_MODE = false;
+  }
+})();
 
 async function saveDataToDB(id, newData) {
   console.groupCollapsed("💾 [HYBRID SAVE] saveDataToDB()");
@@ -2728,6 +2729,25 @@ async function safeLoadDataFromDB() {
   };
 }
 
+ /* ======================================================
+    FIX VOUCHER (SUPABASE → LOCAL OBJECT)
+======================================================*/
+function fixVoucher(v) {
+  if (!v || typeof v !== "object") return null;
+
+  return {
+    id: v.id,
+    code: v.code,
+    discount: v.value || v.discount || 0,
+    expiry: v.expires_at || v.expiry || null,
+    createdAt: v.created_at,
+    type: v.type || "percentage",
+    minOrder: v.min_order || 0,
+    isActive: v.is_active ?? true,
+    description: v.description || ""
+  };
+}
+
 /* ======================================================
     SAFE LOAD DATA (FINAL MERGE → UI)
 ======================================================*/
@@ -2881,7 +2901,7 @@ function initRoomToggle() {
   });
 }
 
-// ===================== VOUCHER TOGGLE =====================
+  // ===================== VOUCHER TOGGLE =====================
 async function initVoucherToggle() {
   const toggleVoucherPage = document.getElementById("toggleVoucherPage");
   const voucherForm = document.getElementById("voucherForm");
@@ -2918,164 +2938,217 @@ async function initVoucherToggle() {
   });
 
   // ===================== FIRST LOAD =====================
-  // hanya load saat voucher page diaktifkan
-  if (enabled) {
-    await loadVouchers();
-  }
+  await loadVouchers();
 }
 
-// ===================== LOAD VOUCHERS (OPS A - FINAL) =====================
+
+
+// ===================== LOAD VOUCHERS =====================
 async function loadVouchers() {
-  console.groupCollapsed("🎟️ loadVouchers()");
-  try {
-    // Ambil data master dari IndexedDB dulu (hybrid)
-    const dbRec = await loadDataFromDB(1); // gunakan fungsi hybrid yang sudah ada
-    let vouchers = Array.isArray(dbRec?.menuVoucher) ? dbRec.menuVoucher.slice() : [];
+  console.groupCollapsed("📥 Load Vouchers");
 
-    console.log("📦 Voucher dari IndexedDB (cache):", vouchers);
+  let data = await loadDataFromDB(1);
 
-    // Supabase authoritative (table 'vouchers') — ambil jika tersedia
-    const restoKey = (dbRec?.restoId || dbRec?.restoPhone || "").toString().trim() || null;
-    if (window.supabase && restoKey) {
-      try {
-        const { data: supa, error } = await supabase
-          .from("vouchers")
-          .select("*")
-          .eq("resto_id", restoKey);
-
-        if (!error && Array.isArray(supa)) {
-          // normalize rows
-          vouchers = supa.map(fixVoucher);
-          console.log("☁️ Voucher dari Supabase:", vouchers);
-
-          // Tulis hasil authoritative ke IndexedDB (merge via saveDataToDB)
-          const updated = await loadDataFromDB(1);
-          updated.menuVoucher = vouchers;
-          await saveDataToDB(1, updated);
-        } else {
-          console.warn("⚠ Supabase vouchers fetch error:", error);
-        }
-      } catch (e) {
-        console.warn("⚠ Exception fetching vouchers from Supabase:", e);
-      }
-    }
-
-    // Auto-remove expired (only keep future or today)
-    const today = new Date();
-    const active = vouchers.filter(v => {
-      const exp = new Date(v.expiry || v.expires_at || v.expiresAt || v.expiresAt);
-      return isFinite(exp) && exp >= today;
-    });
-
-    if (active.length !== (vouchers.length || 0)) {
-      console.warn("🧹 Auto-clean expired voucher...");
-      // update store record safely (merge with existing data)
-      const data = await loadDataFromDB(1);
-      data.menuVoucher = active;
-      await saveDataToDB(1, data);
-      vouchers = active;
-    }
-
-    // expose to global for compatibility
-    window.menuVoucher = vouchers.slice();
-    // render admin UI (function renderVoucher expects array of vouchers)
-    if (typeof renderVoucher === "function") {
-      renderVoucher(vouchers);
-    } else {
-      console.warn("renderVoucher() not found — ensure admin UI renderer exists");
-    }
-
-    console.groupEnd();
-    return vouchers;
-  } catch (err) {
-    console.error("❌ loadVouchers() error:", err);
-    console.groupEnd();
-    return [];
+  // Proteksi struktur agar tidak error saat diakses
+  if (!data || typeof data !== "object") {
+    console.warn("⚠ Data DB invalid → reset object kosong");
+    data = { menuVoucher: [] };
   }
+
+  if (!Array.isArray(data.menuVoucher)) {
+    console.warn("⚠ menuVoucher hilang → set array kosong");
+    data.menuVoucher = [];
+  }
+
+  const today = new Date();
+
+  // ===================== AUTO REMOVE EXPIRED =====================
+  const cleaned = data.menuVoucher.filter(v => {
+    const exp = new Date(v.expiry);
+    return isFinite(exp) && exp >= today;
+  });
+
+  if (cleaned.length !== data.menuVoucher.length) {
+    console.warn("🧹 Cleaning voucher expired...");
+    data.menuVoucher = cleaned;
+
+    // Hybrid-safe → save to IndexedDB only (Supabase sync lewat saveVoucherNew)
+    await saveDataToDB(1, data);
+  }
+
+  console.log("📦 Voucher aktif:", cleaned);
+  console.groupEnd();
+
+  renderVoucher(cleaned);
+  return cleaned;
 }
 
-// ===================== NORMALIZER =====================
-function fixVoucher(v) {
-  // v from supabase table or legacy - normalize to unified shape
-  return {
-    id: v.id ?? v.id?.toString() ?? ("v_" + Date.now() + Math.random().toString(16).slice(2)),
-    code: (v.code || v.code?.toString() || "").toUpperCase(),
-    discount: Number(v.value ?? v.discount ?? v.value ?? 0),
-    expiry: v.expires_at ?? v.expiry ?? v.expiresAt ?? null,
-    isActive: (v.is_active ?? v.isActive ?? true),
-    minOrder: v.min_order ?? v.minOrder ?? 0,
-    description: v.description ?? ""
-  };
-}
-
-// ===================== SAVE VOUCHER WRAPPER (KEEP as wrapper) =====================
+// ===================== SAVE VOUCHER WRAPPER =====================
 function saveVoucher() {
   return (typeof saveVoucherNew === "function")
     ? saveVoucherNew()
     : (alert("Function saveVoucherNew() tidak ditemukan."), Promise.reject("saveVoucherNew missing"));
 }
 
-// ===================== RENDER (compat layer) =====================
-// Render legacy-style list if other renderer absent
-function renderVoucherList() {
-  const box = document.getElementById("voucherPreview");
-  box.innerHTML = "";
+  // ===================== SAVE VOUCHER BARU (HYBRID SAFE) =====================
+async function saveVoucherNew() {
+  const code = document.getElementById("voucherCode").value.trim();
+  const discount = parseFloat(document.getElementById("voucherDiscount").value);
+  const expiry = document.getElementById("voucherExpiry").value;
 
-  const list = Array.isArray(window.menuVoucher) ? window.menuVoucher : (Array.isArray(window.voucher) ? window.voucher : []);
+  const type = document.getElementById("voucherType")?.value || "percent";
+  const minOrder = parseFloat(document.getElementById("voucherMinOrder")?.value) || 0;
+  const description = document.getElementById("voucherDescription")?.value || "";
+  const active = document.getElementById("voucherActive")?.checked ?? true;
 
-  if (!list.length) {
-    box.innerHTML = "<p>Belum ada voucher.</p>";
+  if (!code || isNaN(discount) || !expiry) {
+    alert("⚠️ Harap isi semua form voucher!");
     return;
   }
 
-  list.forEach(v => {
-    const expiryDisplay = v.expiry || v.expires_at || v.expiresAt || v.expiredAt || "";
-    const disc = (v.discount !== undefined) ? `${v.discount}%` : (v.value ? v.value : "");
-    box.innerHTML += `
-      <div class="voucher-item">
-        <strong>${v.code}</strong><br>
-        Diskon: ${disc}<br>
-        Expired: ${expiryDisplay}<br>
-        <span style="color:green;font-weight:bold;">
-          Voucher permanen (tidak bisa dihapus)
-        </span>
-      </div>
-      <hr>
-    `;
-  });
-}
+  // Load existing data
+  const data = await loadDataFromDB(1);
+  if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
 
-// ==========================
-// TOGGLE FORM (safe attach)
-const tv = document.getElementById("toggleVoucherPage");
-if (tv) {
-  tv.addEventListener("change", function () {
-    const vf = document.getElementById("voucherForm");
-    if (vf) vf.style.display = this.checked ? "block" : "none";
-  });
-}
+  const codeUpper = code.toUpperCase();
+  const now = new Date().toISOString();
 
-// ==========================
-// INIT LOAD (call loadVouchers, not old loadVoucher)
-document.addEventListener("DOMContentLoaded", () => {
-  // do not call old loadVoucher() — use loadVouchers which is canonical OPS A
-  // but protect: if initVoucherToggle already calls loadVouchers, duplicates are fine
-  try { loadVouchers(); } catch (e) { console.warn("loadVouchers init:", e); }
-});
+  // Check existing voucher
+  let existing = data.menuVoucher.find(v => v.code === codeUpper);
 
-// ===================== PERSIST (merge-safe) =====================
-async function persistVoucher() {
-  try {
-    // read current menuva_data record, merge menuVoucher, then save via saveDataToDB to preserve other fields
-    const data = await loadDataFromDB(1);
-    // ensure we have an array to persist
-    const toSave = Array.isArray(window.menuVoucher) ? window.menuVoucher.slice() : (Array.isArray(window.voucher) ? window.voucher.slice() : []);
-    data.menuVoucher = toSave;
-    await saveDataToDB(1, data); // uses existing hybrid save (IndexedDB + Supabase sync per your setup)
-    console.log("💾 Voucher merged into indexedDB via saveDataToDB");
-  } catch (err) {
-    console.error("❌ Error persistVoucher (merge):", err);
+  if (existing) {
+    // ====================== UPDATE ======================
+    existing.discount = discount;
+    existing.expiry = expiry;
+    existing.type = type;
+    existing.minOrder = minOrder;
+    existing.description = description;
+    existing.isActive = active;
+    existing.updatedAt = now;
+
+    console.log("✏️ Voucher updated:", existing);
+
+    // Sync Supabase
+    if (typeof saveVoucherToSupabase === "function") {
+      await saveVoucherToSupabase(existing);
+    }
+
+  } else {
+    // ====================== CREATE NEW ======================
+    const newVoucher = {
+      id: crypto.randomUUID(),
+      code: codeUpper,
+      discount,
+      expiry,
+      type,
+      minOrder,
+      description,
+      isActive: active,
+      createdAt: now
+    };
+
+    data.menuVoucher.push(newVoucher);
+
+    console.log("➕ Voucher baru:", newVoucher);
+
+    // Sync Supabase
+    if (typeof saveVoucherToSupabase === "function") {
+      await saveVoucherToSupabase(newVoucher);
+    }
   }
+
+  // Save ke IndexedDB
+  await saveDataToDB(1, data);
+
+  // Refresh UI
+  renderVoucher(data.menuVoucher);
+
+  alert("✅ Voucher berhasil disimpan!");
+}
+
+  // ===================== RENDER VOUCHER (HYBRID NEW) =====================
+function renderVoucher(vouchers = []) {
+  const box = document.getElementById("voucherPreview");
+  if (!box) return;
+
+  if (!Array.isArray(vouchers)) vouchers = [];
+
+  const today = new Date();
+
+  // Filter voucher aktif & valid
+  vouchers = vouchers.filter(v => {
+    const exp = new Date(v.expiry);
+    return (
+      v &&
+      v.isActive !== false &&        // default aktif
+      isFinite(exp) &&
+      exp >= today
+    );
+  });
+
+  if (vouchers.length === 0) {
+    box.innerHTML = "<em>Belum ada voucher aktif</em>";
+    return;
+  }
+
+  box.innerHTML = `
+    <h3 style="margin-bottom:10px;">Voucher Aktif</h3>
+    ${vouchers
+      .map(
+        v => `
+      <div class="voucher-item"
+        style="border:1px solid #ccc; padding:10px; margin:8px 0; border-radius:10px; background:#fafafa;">
+        
+        <p><strong>Kode Voucher:</strong>
+          <span class="voucher-code">${v.code}</span>
+          <button onclick="copyVoucherCode('${v.code}')">📋 Copy</button>
+        </p>
+
+        <p><strong>Diskon:</strong> 
+          ${v.type === "percent" ? v.discount + "%" : "Rp " + v.discount.toLocaleString()}
+        </p>
+
+        <p><strong>Minimal Order:</strong> 
+          Rp ${Number(v.minOrder || 0).toLocaleString()}
+        </p>
+
+        ${v.description ? `<p><strong>Deskripsi:</strong> ${v.description}</p>` : ""}
+
+        <p><strong>Berlaku sampai:</strong> ${v.expiry}</p>
+      </div>
+    `
+      )
+      .join("")}
+  `;
+}
+
+
+
+// ===================== CLIPBOARD =====================
+function copyVoucherCode(code) {
+  if (!code) return;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard
+      .writeText(code)
+      .then(() => alert(`Kode voucher "${code}" berhasil disalin!`))
+      .catch(err => {
+        console.error("Clipboard error:", err);
+        fallbackCopy(code);
+      });
+  } else {
+    fallbackCopy(code);
+  }
+}
+
+function fallbackCopy(text) {
+  const tempInput = document.createElement("input");
+  tempInput.value = text;
+  document.body.appendChild(tempInput);
+  tempInput.select();
+  document.execCommand("copy");
+  tempInput.remove();
+  alert(`Kode voucher "${text}" berhasil disalin!`);
 }
 
 </script>
@@ -3086,7 +3159,9 @@ async function persistVoucher() {
 let notifAudio;
 
 document.addEventListener("DOMContentLoaded", () => {
-  
+  // Voucher toggle jalan dulu, sesuai struktur admin
+  initVoucherToggle();
+
   // Preload audio
   notifAudio = new Audio("beep.mp3");
   notifAudio.load();
@@ -3220,7 +3295,3 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
-
-
-
-
