@@ -2881,7 +2881,7 @@ function initRoomToggle() {
   });
 }
 
-  // ===================== VOUCHER TOGGLE =====================
+// ===================== VOUCHER TOGGLE =====================
 async function initVoucherToggle() {
   const toggleVoucherPage = document.getElementById("toggleVoucherPage");
   const voucherForm = document.getElementById("voucherForm");
@@ -2917,10 +2917,12 @@ async function initVoucherToggle() {
     }
   });
 
- // ===================== FIRST LOAD =====================
-// dipanggil dari initAllToggles -> initVoucherToggle,
-// tapi untuk safety pastikan load saat DOM ready juga
-// await loadVouchers();  <-- dipanggil di initVoucherToggle sehingga tidak perlu di sini
+  // ===================== FIRST LOAD =====================
+  // hanya load saat voucher page diaktifkan
+  if (enabled) {
+    await loadVouchers();
+  }
+}
 
 // ===================== LOAD VOUCHERS (OPS A - FINAL) =====================
 async function loadVouchers() {
@@ -3218,6 +3220,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
