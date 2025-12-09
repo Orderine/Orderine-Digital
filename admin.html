@@ -3006,53 +3006,62 @@ async function loadVouchers() {
   }
 }
 
-async function saveVoucher() {
-  // Ambil input
-  const code = document.getElementById("voucherCode").value.trim();
-  const discount = parseInt(document.getElementById("voucherDiscount").value);
-  const expiry = document.getElementById("voucherExpiry").value;
+  async function saveVoucher() {
+  console.groupCollapsed("💾 Save Voucher");
 
-  if (!code || !discount) {
-    alert("Kode dan diskon wajib diisi.");
-    return;
+  try {
+    // Ambil input
+    const code = document.getElementById("voucherCode").value.trim();
+    const discount = parseInt(document.getElementById("voucherDiscount").value);
+    const expiry = document.getElementById("voucherExpiry").value;
+
+    if (!code || !discount || !expiry) {
+      alert("Kode, diskon, dan tanggal kadaluarsa wajib diisi.");
+      console.groupEnd();
+      return;
+    }
+
+    // Ambil data aktif
+    let data = await loadDataFromDB(1);
+    if (!data || typeof data !== "object") data = { menuVoucher: [] };
+    if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
+
+    // Buat voucher baru
+    const newVoucher = {
+      id: Date.now(),
+      code,
+      discount,
+      expiry,
+      isActive: true
+    };
+
+    // Gabungkan
+    data.menuVoucher.push(newVoucher);
+
+    // Simpan ke IndexedDB
+    await saveDataToDB(1, data);
+
+    // Simpan ke Supabase
+    const restoKey = data.restoId || data.restoPhone || null;
+    await saveVoucherToOnline(restoKey, data.menuVoucher);
+
+    // Render ulang UI
+    renderVoucher(data.menuVoucher);
+
+    // Reset form
+    document.getElementById("voucherCode").value = "";
+    document.getElementById("voucherDiscount").value = "";
+    document.getElementById("voucherExpiry").value = "";
+
+    alert("Voucher berhasil disimpan!");
+
+  } catch (err) {
+    console.error("🔥 ERROR saveVoucher():", err);
+    alert("Terjadi error saat menyimpan voucher.\nLihat console untuk detail.");
   }
 
-  // Ambil data sekarang dari IndexedDB (biar konsisten)
-  let data = await loadDataFromDB(1);
-  if (!data) data = buatDataDefault(1);
-
-  if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
-
-  // Buat voucher baru
-  const newVoucher = {
-    id: Date.now(),
-    code,
-    discount,
-    expiry,
-    isActive: true
-  };
-
-  // Masukkan ke array
-  data.menuVoucher.push(newVoucher);
-
-  // Simpan ke IndexedDB
-  await saveDataToDB(data);
-
-  // Simpan ke Supabase
-  const restoKey = data.restoId || data.restoPhone;
-  await saveVoucherToOnline(restoKey, data.menuVoucher);
-
-  // Tampilkan ulang di preview
-  renderVoucherList(data.menuVoucher);
-
-  // Reset input
-  document.getElementById("voucherCode").value = "";
-  document.getElementById("voucherDiscount").value = "";
-  document.getElementById("voucherExpiry").value = "";
-
-  alert("Voucher berhasil disimpan!");
+  console.groupEnd();
 }
-
 
   function renderVoucherList(vouchers) {
   const box = document.getElementById("voucherPreview");
@@ -3130,7 +3139,6 @@ async function saveVoucherToOnline(restoKey, vouchers) {
     console.error("❌ Gagal simpan voucher:", err);
   }
 }
-
 
 </script>
 <script>
@@ -3276,6 +3284,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
