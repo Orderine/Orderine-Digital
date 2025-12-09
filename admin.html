@@ -3063,6 +3063,62 @@ async function loadVouchers() {
   console.groupEnd();
 }
 
+   // ===================== RENDER VOUCHER (HYBRID NEW) =====================
+function renderVoucher(vouchers = []) {
+  const box = document.getElementById("voucherPreview");
+  if (!box) return;
+
+  if (!Array.isArray(vouchers)) vouchers = [];
+
+  const today = new Date();
+
+  // Filter voucher aktif & valid
+  vouchers = vouchers.filter(v => {
+    const exp = new Date(v.expiry);
+    return (
+      v &&
+      v.isActive !== false &&        // default aktif
+      isFinite(exp) &&
+      exp >= today
+    );
+  });
+
+  if (vouchers.length === 0) {
+    box.innerHTML = "<em>Belum ada voucher aktif</em>";
+    return;
+  }
+
+  box.innerHTML = `
+    <h3 style="margin-bottom:10px;">Voucher Aktif</h3>
+    ${vouchers
+      .map(
+        v => `
+      <div class="voucher-item"
+        style="border:1px solid #ccc; padding:10px; margin:8px 0; border-radius:10px; background:#fafafa;">
+        
+        <p><strong>Kode Voucher:</strong>
+          <span class="voucher-code">${v.code}</span>
+          <button onclick="copyVoucherCode('${v.code}')">📋 Copy</button>
+        </p>
+
+        <p><strong>Diskon:</strong> 
+          ${v.type === "percent" ? v.discount + "%" : "Rp " + v.discount.toLocaleString()}
+        </p>
+
+        <p><strong>Minimal Order:</strong> 
+          Rp ${Number(v.minOrder || 0).toLocaleString()}
+        </p>
+
+        ${v.description ? `<p><strong>Deskripsi:</strong> ${v.description}</p>` : ""}
+
+        <p><strong>Berlaku sampai:</strong> ${v.expiry}</p>
+      </div>
+    `
+      )
+      .join("")}
+  `;
+}
+
 // ===================== CLIPBOARD =====================
 function copyVoucherCode(code) {
   if (!code) return;
@@ -3266,6 +3322,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
