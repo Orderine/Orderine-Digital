@@ -2916,46 +2916,94 @@ async function initVoucherToggle() {
   await loadVouchers();
 }
 
-
-
-// ===================== LOAD VOUCHERS =====================
+// ===================== LOAD VOUCHERS (FINAL SAFE VERSION) =====================
 async function loadVouchers() {
   console.groupCollapsed("📥 Load Vouchers");
 
-  let data = await loadDataFromDB(1);
+  try {
+    // ============= AMBIL DATA DARI DB =============
+    let data = null;
 
-  // Proteksi struktur agar tidak error saat diakses
-  if (!data || typeof data !== "object") {
-    console.warn("⚠ Data DB invalid → reset object kosong");
-    data = { menuVoucher: [] };
+    try {
+      data = await loadDataFromDB(1);
+      console.log("📦 Raw voucher data from DB:", data);
+    } catch (dbErr) {
+      console.error("🔥 ERROR loadDataFromDB:", dbErr);
+      data = null; // fallback
+    }
+
+    // ============= VALIDASI STRUKTUR DATA =============
+    if (!data || typeof data !== "object") {
+      console.warn("⚠ Data DB invalid → reset object kosong");
+      data = { menuVoucher: [] };
+    }
+
+    if (!Array.isArray(data.menuVoucher)) {
+      console.warn("⚠ menuVoucher tidak ditemukan → paksa array kosong");
+      data.menuVoucher = [];
+    }
+
+    let vouchers = [...data.menuVoucher];
+
+    // ============= SAFETY VALIDASI TIAP VOUCHER =============
+    vouchers = vouchers.filter((v, i) => {
+      if (!v || typeof v !== "object") {
+        console.warn("⚠ Voucher rusak, index:", i, v);
+        return false;
+      }
+      if (!v.expiry) {
+        console.warn("⚠ Voucher tanpa expiry → hapus:", v);
+        return false;
+      }
+      return true;
+    });
+
+    const today = new Date();
+
+    // ============= BERSIHKAN VOUCHER EXPIRED =============
+    const cleaned = vouchers.filter(v => {
+      let exp = new Date(v.expiry);
+      if (!isFinite(exp)) {
+        console.warn("⚠ expiry invalid → hapus voucher:", v);
+        return false;
+      }
+      return exp >= today;
+    });
+
+    if (cleaned.length !== vouchers.length) {
+      console.warn("🧹 Cleaning expired vouchers…");
+      data.menuVoucher = cleaned;
+
+      try {
+        await saveDataToDB(1, data);
+        console.log("💾 Voucher cleaned saved to IndexedDB");
+      } catch (saveErr) {
+        console.error("🔥 ERROR saveDataToDB:", saveErr);
+      }
+    }
+
+    // ============= LOG HASIL AKHIR =============
+    console.log("📌 Final vouchers:", cleaned);
+    console.groupEnd();
+
+    // ============= RENDER KE UI =============
+    try {
+      renderVoucher(cleaned);
+    } catch (uiErr) {
+      console.error("🔥 UI Rendering Voucher ERROR:", uiErr);
+    }
+
+    return cleaned;
+
+  } catch (err) {
+    // ============= ERROR UTAMA (tidak boleh silent!) =============
+    console.error("❌ FATAL ERROR loadVouchers:", err);
+    console.error(err?.stack || "(no stack)");
+    console.groupEnd();
+
+    // return array kosong supaya UI tetap jalan
+    return [];
   }
-
-  if (!Array.isArray(data.menuVoucher)) {
-    console.warn("⚠ menuVoucher hilang → set array kosong");
-    data.menuVoucher = [];
-  }
-
-  const today = new Date();
-
-  // ===================== AUTO REMOVE EXPIRED =====================
-  const cleaned = data.menuVoucher.filter(v => {
-    const exp = new Date(v.expiry);
-    return isFinite(exp) && exp >= today;
-  });
-
-  if (cleaned.length !== data.menuVoucher.length) {
-    console.warn("🧹 Cleaning voucher expired...");
-    data.menuVoucher = cleaned;
-
-    // Hybrid-safe → save to IndexedDB only (Supabase sync lewat saveVoucherNew)
-    await saveDataToDB(1, data);
-  }
-
-  console.log("📦 Voucher aktif:", cleaned);
-  console.groupEnd();
-
-  renderVoucher(cleaned);
-  return cleaned;
 }
 
 async function saveVoucher() {
@@ -3228,6 +3276,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
