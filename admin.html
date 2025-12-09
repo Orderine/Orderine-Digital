@@ -2607,12 +2607,14 @@ async function clearDataDB() {
 let isLoadingFromDB = false;
 let voucherLoaded = false;
 
-// ====================== SAFE LOAD DATA (FINAL FIXED) ======================
+// ====================== SAFE LOAD DATA (FINAL SUPER STABIL) ======================
 async function safeLoadDataFromDB() {
   try {
+    console.groupCollapsed("🛡 SAFE LOAD DATA");
+
     let cached = null;
 
-    // 1. LOAD DARI INDEXEDDB
+    // ================== 1. LOAD LOCAL (INDEXEDDB) ==================
     try {
       cached = await loadDataFromDB(1);
       if (cached) console.log("📦 Cached IndexedDB:", cached);
@@ -2620,70 +2622,87 @@ async function safeLoadDataFromDB() {
       console.warn("⚠ IndexedDB gagal dibaca:", e);
     }
 
+    // Buat default jika kosong
+    let finalData = cached || buatDataDefault(1);
+
     // Ambil restoKey terbaik
     const restoKey =
       cached?.restoId?.trim() ||
       cached?.restoPhone?.trim() ||
+      finalData?.restoId?.trim() ||
+      finalData?.restoPhone?.trim() ||
       null;
 
     console.log("🆔 restoKey:", restoKey || "(null)");
 
-    // IndexedDB kosong → bikin default
-    let finalData = cached || buatDataDefault(1);
-
-    // 2. LOAD ONLINE DARI SUPABASE
-    if (window.supabase && restoKey) {
-      try {
-        // RESTO SETTINGS
-        const { data: setting } = await supabase
-          .from("restosettings")
-          .select("*")
-          .eq("resto_id", restoKey)
-          .maybeSingle();
-
-        if (setting) {
-          finalData = { ...finalData, ...setting };
-        }
-
-        // CATEGORIES
-        const { data: ct } = await supabase
-          .from("categories")
-          .select("*")
-          .eq("resto_id", restoKey);
-
-        if (Array.isArray(ct)) {
-          finalData.categories = ct.map(fixCategory);
-        }
-
-        // VOUCHERS — FIX UTAMA
-        const { data: vc } = await supabase
-          .from("vouchers")
-          .select("*")
-          .eq("resto_id", restoKey);
-
-        if (Array.isArray(vc)) {
-          finalData.menuVoucher = vc.map(fixVoucher);
-          console.log("🎟 Voucher Supabase:", finalData.menuVoucher);
-        } else {
-          console.warn("⚠ Voucher fetch gagal, fallback ke cached");
-        }
-
-      } catch (err) {
-        console.warn("⚠ Supabase fetch error:", err);
-      }
+    // ================== Jika tidak ada key → cuma pakai local ==================
+    if (!restoKey || !window.supabase) {
+      console.warn("⛔ Tidak ada restoKey → pakai data lokal saja");
+      console.groupEnd();
+      return finalData;
     }
 
-    // CLEANUP FIELD BENTROK
+    // ================== 2. LOAD ONLINE (SUPABASE) ==================
+    try {
+      // ===== SETTINGS =====
+      const { data: setting } = await supabase
+        .from("restosettings")
+        .select("*")
+        .eq("resto_id", restoKey)
+        .maybeSingle();
+
+      if (setting && typeof setting === "object") {
+        console.log("⚙ Menggabungkan SETTING dari Supabase");
+        finalData = { ...finalData, ...setting };
+      }
+
+      // ===== CATEGORIES =====
+      const { data: ct } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("resto_id", restoKey);
+
+      if (Array.isArray(ct)) {
+        finalData.categories = ct.map(fixCategory);
+        console.log("📂 Categories:", finalData.categories);
+      }
+
+      // ===== VOUCHERS (PERBAIKAN INTI) =====
+      const { data: vc } = await supabase
+        .from("vouchers")
+        .select("*")
+        .eq("resto_id", restoKey);
+
+      if (Array.isArray(vc)) {
+        finalData.menuVoucher = vc.map(fixVoucher);
+        console.log("🎟 Voucher Supabase:", finalData.menuVoucher);
+      } else {
+        console.warn("⚠ Voucher Supabase tidak valid → pakai cached");
+        // JANGAN overwrite kalau Supabase error
+        if (!Array.isArray(finalData.menuVoucher)) {
+          finalData.menuVoucher = cached?.menuVoucher || [];
+        }
+      }
+    } catch (err) {
+      console.warn("⚠ Supabase fetch error:", err);
+
+      // SUPABASE ERROR → fallback ke local
+      finalData.menuVoucher = cached?.menuVoucher || finalData.menuVoucher || [];
+    }
+
+    // ================== 3. BERSIHKAN FIELD BENTROK ==================
     delete finalData.vouchers;
     delete finalData.voucher;
     delete finalData.voucherList;
 
-    // Pastikan voucher valid
+    // Pastikan voucher selalu array
     if (!Array.isArray(finalData.menuVoucher)) {
       finalData.menuVoucher = [];
     }
 
     console.log("🎉 FINAL SAFE LOAD:", finalData);
+    console.groupEnd();
+
     return finalData;
 
   } catch (err) {
@@ -2759,9 +2778,7 @@ async function safeLoadData(data) {
   }
 }
 
-/* ======================================================
-    INIT UTAMA — HYBRID SYSTEM
-======================================================*/
+
 /* ======================================================
     INIT UTAMA — HYBRID SYSTEM
 ======================================================*/
@@ -3322,6 +3339,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
