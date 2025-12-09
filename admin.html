@@ -2750,7 +2750,7 @@ async function safeLoadData(data) {
     await loadData(finalData);
 
     // Render voucher list sekali saja
-    renderVoucherList(finalData.menuVoucher);
+    renderVoucher(finalData.menuVoucher);
 
     console.log("📲 UI data loaded (final):", finalData);
 
@@ -3063,24 +3063,6 @@ async function loadVouchers() {
   console.groupEnd();
 }
 
-  function renderVoucherList(vouchers) {
-  const box = document.getElementById("voucherPreview");
-  if (!box) return;
-
-  if (!vouchers || vouchers.length === 0) {
-    box.innerHTML = `<p style="opacity:0.6;">Belum ada voucher.</p>`;
-    return;
-  }
-
-  box.innerHTML = vouchers.map(v => `
-    <div class="voucher-item">
-      <b>${v.code}</b> — ${v.discount}% off  
-      <br><small>Exp: ${v.expiry || "-"}</small>
-    </div>
-  `).join("");
-}
-
- 
 // ===================== CLIPBOARD =====================
 function copyVoucherCode(code) {
   if (!code) return;
@@ -3284,6 +3266,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
