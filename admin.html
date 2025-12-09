@@ -831,12 +831,16 @@ async function getDB() {
   }
 })();
 
+// ====================== HYBRID SAVE (IndexedDB + Supabase) ======================
 async function saveDataToDB(id, newData) {
   console.groupCollapsed("💾 [HYBRID SAVE] saveDataToDB()");
 
-  id = Number(id) || 1;
+  // ❌ Jangan paksa jadi Number — biarkan string (resto-xxxx)
+  // id = Number(id) || 1;
+  const key = String(id).trim();
 
-  // LOG — before anything
+  console.log("🆔 KEY FINAL:", key);
+
   console.log("🟦 NEW DATA MASUK:", JSON.parse(JSON.stringify(newData)));
   console.log("🟦 newData.menuVoucher:", newData.menuVoucher);
   console.log("🟦 newData.voucher (legacy):", newData.voucher);
@@ -846,15 +850,15 @@ async function saveDataToDB(id, newData) {
   const store = tx.objectStore(STORE_NAME);
 
   return new Promise((resolve, reject) => {
-    const req = store.get(id);
+    const req = store.get(key);
 
     req.onsuccess = async () => {
-      let oldData = req.result || buatDataDefault(id);
+      let oldData = req.result || buatDataDefault(key);
 
       console.log("🟨 OLD DATA:", JSON.parse(JSON.stringify(oldData)));
 
       // ==========================================================
-      // 🔥 FIX MERGE UTAMA untuk mencegah voucher hilang
+      // 🔥 MERGE FIX — voucher tidak boleh hilang
       // ==========================================================
       let finalData = {
         ...oldData,
@@ -868,49 +872,50 @@ async function saveDataToDB(id, newData) {
               : [],
       };
 
-      // Legacy → auto-convert
+      // Legacy → auto-migrasi
       if (Array.isArray(newData.voucher)) {
         finalData.menuVoucher = newData.voucher.slice();
         console.log("🟣 IMPORT legacy voucher → menuVoucher:", finalData.menuVoucher);
       }
 
-      // Safety
       if (!Array.isArray(finalData.menuVoucher)) {
         console.warn("⚠ menuVoucher corrupt → reset");
         finalData.menuVoucher = [];
       }
 
+      // hilangkan field lama supaya tidak dobel
       delete finalData.voucher;
 
       console.log("🟩 FINAL DATA SIAP SIMPAN:", JSON.parse(JSON.stringify(finalData)));
 
       // ==========================================================
-      // 🔒 SIMPAN OFFLINE (IndexedDB)
+      // 💾 SIMPAN OFFLINE (IndexedDB)
       // ==========================================================
-      const saveReq = store.put(finalData);
+      const saveReq = store.put({ ...finalData, id: key });
 
       saveReq.onsuccess = async () => {
         console.log("💾 IndexedDB → OK");
 
-        const verify = store.get(id);
+        // verify
+        const verify = store.get(key);
         verify.onsuccess = () => {
           console.log("🔁 VERIFY IndexedDB:", JSON.parse(JSON.stringify(verify.result)));
         };
 
         // ==========================================================
-        // ☁️ SIMPAN ONLINE (SUPABASE)
+        // ☁️ SUPABASE SYNC
         // ==========================================================
         try {
           const restoKey =
             finalData.restoId?.trim() ||
             finalData.restoPhone?.trim() ||
-            null;
+            key; // fallback paling aman
 
           console.log("🌐 restoKey (for Supabase):", restoKey);
 
           const payload = {
-            id: id,
-            resto_key: restoKey,
+            id: key,             // penting → string
+            resto_id: restoKey,  // kolom Supabase
             data: finalData,
             updated_at: new Date().toISOString(),
           };
@@ -926,6 +931,7 @@ async function saveDataToDB(id, newData) {
           } else {
             console.log("🌐 Supabase sync → SUCCESS");
           }
+
         } catch (err) {
           console.warn("⚠ Supabase gagal:", err.message);
         }
@@ -949,6 +955,7 @@ async function saveDataToDB(id, newData) {
   });
 }
 
+
 // ====================== FUNGSI 2 (LOAD) + LOG DETECTOR ======================
 async function loadDataFromDB(id = 1) {
   console.groupCollapsed("📥 [HYBRID LOAD] loadDataFromDB()");
@@ -960,34 +967,37 @@ async function loadDataFromDB(id = 1) {
     try {
       console.log("🌐 Mencoba load dari Supabase...");
 
-      const { data, error } = await supabase
+      const { data: row, error } = await supabase
         .from("menuva_data")
-        .select("data")
+        .select("resto_id, data")
         .eq("id", id)
         .maybeSingle();
 
       if (error) console.warn("⚠ Supabase error:", error.message);
 
-      if (data && data.data) {
-        const r = data.data;
+      // === Jika ada record di Supabase ===
+      if (row && row.data) {
+        const r = row.data;
 
         console.log("🧪 [CHECK] Supabase.r.voucher:", r.voucher);
         console.log("🧪 [CHECK] Supabase.r.menuVoucher:", r.menuVoucher);
 
+        // ========== SAFE MERGE ==========
         const safe = {
           id,
-          restoId: r.restoId || "",
+
+          // ⭐ Ambil dari kolom Supabase: resto_id
+          restoId: row.resto_id || r.restoId || "",
           namaRestoran: r.namaRestoran || "",
           restoAddress: r.restoAddress || "",
           restoPhone: r.restoPhone || "",
           logo: r.logo || "",
 
           categories: Array.isArray(r.categories) ? r.categories : [],
-
           menu: Array.isArray(r.menu) ? r.menu : [],
           menuPromo: Array.isArray(r.menuPromo) ? r.menuPromo : [],
 
-          // ========== FIX WAJIB ==========
+          // ========== FIX WAJIB (voucher hilang) ==========
           menuVoucher:
             Array.isArray(r.menuVoucher)
               ? r.menuVoucher
@@ -995,11 +1005,9 @@ async function loadDataFromDB(id = 1) {
 
           rooms: Array.isArray(r.rooms) ? r.rooms : [],
           nomorWaAdmin: Array.isArray(r.nomorWaAdmin) ? r.nomorWaAdmin : [],
-
           flipbookRuanganImages: Array.isArray(r.flipbookRuanganImages)
             ? r.flipbookRuanganImages
             : [],
-
           flipbookMenuImages: Array.isArray(r.flipbookMenuImages)
             ? r.flipbookMenuImages
             : []
@@ -1204,14 +1212,14 @@ function scheduleHybridSave() {
 // ====================== HYBRID SAVE CORE ======================
 async function simpanDataHybrid() {
 
- // Voucher UI selalu pakai menuVoucher
-// Voucher lama (voucher) biasanya kosong → jangan dipakai
-const syncedVoucher = Array.isArray(menuVoucher) ? menuVoucher : [];
+  // Voucher UI selalu pakai menuVoucher
+  const syncedVoucher = Array.isArray(menuVoucher) ? menuVoucher : [];
 
+  // ======================
+  // FINAL DATA (untuk IndexedDB + Supabase.data)
+  // ======================
   const finalData = {
-    // ======================
-    // DATA RESTORAN
-    // ======================
+    // -------- DATA RESTORAN --------
     restoId,
     namaRestoran,
     restoAddress,
@@ -1219,65 +1227,54 @@ const syncedVoucher = Array.isArray(menuVoucher) ? menuVoucher : [];
     logo,
     background,
 
-    // ======================
-    // KATEGORI
-    // ======================
+    // -------- KATEGORI --------
     categories,
 
-    // ======================
-    // MENU
-    // ======================
+    // -------- MENU --------
     menu,
     menuPromo,
 
-    // ======================
-    // VOUCHER (OPSI A WAJIB)
-    // ======================
-    voucher: syncedVoucher,        // field utama (Supabase)
-    menuVoucher: syncedVoucher,    // field lama (UI)
+    // -------- VOUCHER (sync) --------
+    voucher: syncedVoucher,        // legacy
+    menuVoucher: syncedVoucher,    // UI utama
 
-    // ======================
-    // ROOM / FLIPBOOK
-    // ======================
+    // -------- ROOMS & GALERI --------
     rooms,
     flipbookRuanganImages,
     flipbookMenuImages,
 
-    // ======================
-    // NOMOR WA ADMIN
-    // ======================
+    // -------- ADMIN WA --------
     nomorWaAdmin
   };
 
   try {
-    await saveDataToDB(1, finalData);   // IndexedDB + auto sync Supabase
+    // Ini akan:
+    // 1. Simpan ke IndexedDB
+    // 2. Sync otomatis ke Supabase (via saveDataToDB)
+    await saveDataToDB(1, finalData);
+
     console.log("🍽️ Hybrid Save OK (IndexedDB + Supabase)");
   } catch (err) {
     console.error("❌ Hybrid save failed:", err);
   }
 }
 
-
-// ====================== SUPABASE SAVE (OPSI A FINAL) ======================
-// Catatan:
-// - Supabase sudah di-sync melalui saveDataToDB()
-// - Fungsi ini tetap ada agar tidak merusak script yang masih memanggilnya
-// - Tidak melakukan upsert lagi (mencegah double save & error 400)
-
-async function saveDataToSupabase(id, data) {
+   async function saveDataToSupabase(restoId, id, data) {
   console.log("🌥️ Mengirim data ke Supabase...");
 
   try {
     const record = {
+      resto_id: restoId,
       id: id,
       data: data,
       updated_at: new Date().toISOString()
     };
 
-    // cek apakah record sudah ada
+    // cek apakah record sudah ada (berdasarkan resto)
     const { data: existing, error: checkErr } = await supabase
       .from("menuva_data")
       .select("id")
+      .eq("resto_id", restoId)
       .eq("id", id)
       .maybeSingle();
 
@@ -1294,7 +1291,9 @@ async function saveDataToSupabase(id, data) {
       response = await supabase
         .from("menuva_data")
         .update(record)
+        .eq("resto_id", restoId)
         .eq("id", id);
+
     } else {
       console.log("➕ Record tidak ada → lakukan INSERT");
 
@@ -1317,13 +1316,14 @@ async function saveDataToSupabase(id, data) {
   }
 }
 
-   // ====================== LOAD DATA DARI SUPABASE ======================
-async function loadDataFromSupabase(id = 1) {
+  // ====================== LOAD DATA DARI SUPABASE ======================
+async function loadDataFromSupabase(restoId, id = 1) {
   console.log("🌥️ Mengambil data dari Supabase...");
 
   const { data, error } = await supabase
     .from("menuva_data")
     .select("data")
+    .eq("resto_id", restoId)
     .eq("id", id)
     .maybeSingle();
 
@@ -1338,15 +1338,15 @@ async function loadDataFromSupabase(id = 1) {
   }
 
   console.log("✅ Data berhasil diambil dari Supabase!");
-  return data.data;      // karena kolom = { data: {...} }
+  return data.data; 
 }
 
-   // ====================== HYBRID LOAD CORE ======================
-async function loadHybridData() {
+// ====================== HYBRID LOAD CORE ======================
+async function loadHybridData(restoId) {
   console.log("🔄 Hybrid Load: Supabase → IndexedDB → UI");
 
   // 1. Coba load dari Supabase (utama)
-  let fetched = await loadDataFromSupabase(1);
+  let fetched = await loadDataFromSupabase(restoId, 1);
 
   if (fetched) {
     console.log("🌥️ Menggunakan data dari Supabase");
@@ -1366,7 +1366,6 @@ async function loadHybridData() {
   console.warn("🚫 Tidak ada data di manapun.");
   return null;
 }
-
 
 // ====================== MENU ======================
 // Tambah menu ke kategori (UI)
@@ -2048,6 +2047,7 @@ async function simpanData() {
       return;
     }
 
+    // ================= RESTO ID ==================
     let restoId = document.getElementById("restoId")?.value?.trim();
     if (!restoId || restoId === "") {
       restoId = "resto-" + restoPhone.replace(/\D/g, "");
@@ -2083,7 +2083,6 @@ async function simpanData() {
       menu: menuData,
       menuPromo: promo,
 
-      // OPSI A — WAJIB KONSISTEN
       voucher: voucherFinal,
       menuVoucher: voucherFinal,
 
@@ -2095,14 +2094,9 @@ async function simpanData() {
 
     console.log("💾 FINAL SAVE DATA:", data);
 
-    // ================= SIMPAN KE IndexedDB + Supabase (HYBRID) ==================
-    await saveDataToDB(1, data);
-
-    // ❌ OPSI A TIDAK BOLEH pakai saveDataToSupabase()
-    // (karena akan overwrite struktur dan menghapus voucher)
-    // if (window.supabase) {
-    //   await saveDataToSupabase(1, data);
-    // }
+    // ================= HYBRID SAVE DB + SUPABASE ==================
+    // UPDATE DI SINI: pakai restoId, bukan 1
+    await saveDataToDB(restoId, data);
 
     // ================= SYNC restoId hidden ==================
     let restoIdEl = document.getElementById("restoId");
@@ -2126,12 +2120,12 @@ async function simpanData() {
   }
 }
 
-let sudahLoadData = false;
+   let sudahLoadData = false;
 
 async function loadData(data) {
   if (sudahLoadData) {
     console.warn("⚠️ loadData sudah pernah jalan.");
-    return;
+    return data;
   }
   sudahLoadData = true;
 
@@ -2140,8 +2134,13 @@ async function loadData(data) {
 
     // ================= VALIDASI ROOT =================
     if (!data || typeof data !== "object") {
-      console.warn("⚠️ data invalid -> pakai default");
-      data = buatDataDefault(1);
+      console.warn("⚠️ data invalid → pakai default");
+
+      // Ambil restoId hidden (supaya multi resto tetap aman)
+      let ridEl = document.getElementById("restoId");
+      let rid = ridEl?.value?.trim() || "resto-main";
+
+      data = buatDataDefault(rid);
     }
 
     // ================= HARDENING ARRAY =================
@@ -2183,8 +2182,11 @@ async function loadData(data) {
       renderPromoUI();
     }
 
-    // ================= VOUCHER (MULTI DEVICE SAFE) =================
-    window.menuVoucher = data.menuVoucher.slice();
+    // ================= VOUCHER (ANTI CORRUPT) =================
+    window.menuVoucher = Array.isArray(data.menuVoucher)
+      ? data.menuVoucher.slice()
+      : [];
+
     if (typeof renderVoucher === "function") {
       renderVoucher(window.menuVoucher);
     }
@@ -2253,14 +2255,113 @@ async function loadData(data) {
       data.restoId ||
       (data.restoPhone ? "resto-" + data.restoPhone.replace(/\D/g, "") : "resto-main");
 
+    console.log("🔐 restoId final:", restoIdEl.value);
+
     console.log("✅ FINAL loadData COMPLETE tanpa kehilangan data.");
+    return data;
 
   } catch (err) {
     console.error("❌ loadData gagal:", err);
+    return data || {};
   } finally {
     hideLoader();
   }
 }
+
+   // ====================== PATCH 10 ======================
+//   AUTO LOAD: ONLINE FIRST → OFFLINE → ONLINE SYNC
+// =======================================================
+
+async function autoLoadOnlineFirst() {
+  console.groupCollapsed("🌐 [PATCH 10] autoLoadOnlineFirst()");
+
+  try {
+    showLoader();
+
+    const restoIdEl = document.getElementById("restoId");
+    let restoId =
+      restoIdEl?.value?.trim() ||
+      document.getElementById("restoPhone")?.value?.trim() ||
+      null;
+
+    if (!restoId) {
+      console.warn("⚠️ restoId kosong → generate default");
+      restoId = "resto-main";
+    }
+
+    // ================== 1) LOAD DARI SUPABASE ==================
+    console.log("☁️ Cek data online untuk restoId:", restoId);
+
+    let onlineData = null;
+
+    try {
+      const { data, error } = await supabase
+        .from("menuva_data")
+        .select("data")
+        .eq("resto_id", restoId)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.warn("⚠️ Supabase error:", error.message);
+      } else if (data) {
+        console.log("☁️ Data ONLINE ditemukan:", data);
+        onlineData = data.data;
+      }
+    } catch (err) {
+      console.warn("⚠️ Supabase gagal:", err.message);
+    }
+
+    // ================== 2) JIKA ADA DATA ONLINE ==================
+    if (onlineData) {
+      console.log("☑️ Memakai data ONLINE");
+      await loadData(onlineData);
+
+      // sync ke offline
+      await saveDataToDB(1, onlineData);
+
+      console.groupEnd();
+      hideLoader();
+      return;
+    }
+
+    // ================== 3) JIKA ONLINE KOSONG → CEK OFFLINE ==================
+    console.log("⚠️ Tidak ada data online → cek IndexedDB");
+
+    let offlineData = await loadDataFromDB();
+
+    if (offlineData) {
+      console.log("📦 Memakai data OFFLINE:", offlineData);
+
+      // Render UI dari offline
+      await loadData(offlineData);
+
+      // Upload ke Supabase agar menjadi data utama
+      console.log("⬆️ Sync OFFLINE → ONLINE");
+      await saveDataToDB(1, offlineData);
+
+      hideLoader();
+      console.groupEnd();
+      return;
+    }
+
+    // ================== 4) ONLINE & OFFLINE KOSONG → DEFAULT ==================
+    console.log("❗ Tidak ada data sama sekali → pakai default");
+
+    const defaultData = buatDataDefault(1);
+
+    await loadData(defaultData);
+    await saveDataToDB(1, defaultData);
+
+    hideLoader();
+    console.groupEnd();
+  } catch (err) {
+    console.error("❌ autoLoadOnlineFirst() error:", err);
+    hideLoader();
+    console.groupEnd();
+  }
+}
+
 
 // ====================== RESET & BACKUP ======================
 async function resetData() {
@@ -2272,17 +2373,23 @@ async function resetData() {
     // --- 1) CLEAR INDEXEDDB ---
     await clearDataDB();
 
-    // --- 2) CLEAR SUPABASE ---
+    // --- 2) CLEAR SUPABASE (FIXED) ---
     try {
       const restoIdEl = document.getElementById("restoId");
       const restoId = restoIdEl?.value || "resto-main";
 
-      const { error } = await supabase
-        .from("profile")
-        .delete()
-        .eq("restoId", restoId);
+      console.log("🗑️ Delete Supabase untuk resto_id:", restoId);
 
-      if (error) console.warn("⚠ Supabase delete error (diabaikan):", error);
+      const { error } = await supabase
+        .from("menuva_data")       // ✅ FIX: tabel yang benar
+        .delete()
+        .eq("resto_id", restoId);  // ✅ FIX: kolom yang benar
+
+      if (error) {
+        console.warn("⚠ Supabase delete error (diabaikan):", error);
+      } else {
+        console.log("🗑️ Supabase delete SUCCESS");
+      }
 
     } catch (err) {
       console.warn("⚠ Tidak bisa delete Supabase:", err.message);
@@ -2298,7 +2405,6 @@ async function resetData() {
     hideLoader();
   }
 }
-
 
 // 🔥 BACKUP HYBRID (IndexedDB → File JSON)
 async function backupData() {
@@ -3282,6 +3388,63 @@ async function saveVoucherToOnline(restoKey, vouchers) {
   }
 }
 
+  // ====================== REALTIME SYNC ======================
+function autoSyncRealtime() {
+  if (!window.supabase) {
+    console.warn("⚠️ Supabase belum siap, realtime dimatikan.");
+    return;
+  }
+
+  console.log("🔌 Mengaktifkan Realtime Sync (Supabase)...");
+
+  try {
+    const channel = supabase
+      .channel("menuva_realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",             // insert, update, delete
+          schema: "public",
+          table: "menuva_data",
+          filter: "id=eq.1"       // hanya sync untuk data ID 1
+        },
+        async (payload) => {
+          console.log("🔔 REALTIME UPDATE TERDETEKSI:", payload);
+
+          // Ambil latest dari Supabase
+          const newData = await loadDataFromSupabase(1);
+
+          if (!newData) {
+            console.warn("⚠️ Realtime: data baru kosong.");
+            return;
+          }
+
+          console.log("🔄 Updating UI dari Realtime...");
+          await saveDataToDB(1, newData); // cache terbaru
+          await loadData(newData);        // refresh UI
+        }
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          console.log("🟢 Realtime Sync aktif");
+        }
+      });
+
+    window.realtimeChannel = channel;
+  } catch (err) {
+    console.error("❌ Realtime init error:", err);
+  }
+}
+
+  document.addEventListener("DOMContentLoaded", () => {
+  autoLoadOnlineFirst();
+});
+
+  document.addEventListener("DOMContentLoaded", async () => {
+  await autoLoadOnlineFirst();
+  autoSyncRealtime();
+});
+
 </script>
 <script>
 /* ============================================================
@@ -3426,6 +3589,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
