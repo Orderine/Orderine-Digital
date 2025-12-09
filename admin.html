@@ -834,12 +834,12 @@ async function getDB() {
 async function saveDataToDB(id, newData) {
   console.groupCollapsed("💾 [HYBRID SAVE] saveDataToDB()");
 
-  // >>> LOG
+  id = Number(id) || 1;
+
+  // LOG — before anything
   console.log("🟦 NEW DATA MASUK:", JSON.parse(JSON.stringify(newData)));
   console.log("🟦 newData.menuVoucher:", newData.menuVoucher);
   console.log("🟦 newData.voucher (legacy):", newData.voucher);
-
-  id = Number(id) || 1;
 
   const db = await getDB();
   const tx = db.transaction(STORE_NAME, "readwrite");
@@ -851,13 +851,10 @@ async function saveDataToDB(id, newData) {
     req.onsuccess = async () => {
       let oldData = req.result || buatDataDefault(id);
 
-      // >>> LOG
-      console.log("🟨 OLD DATA SEBELUM MERGE:", JSON.parse(JSON.stringify(oldData)));
-      console.log("🟨 oldData.menuVoucher:", oldData.menuVoucher);
+      console.log("🟨 OLD DATA:", JSON.parse(JSON.stringify(oldData)));
 
       // ==========================================================
-      // 🔥 FIX MERGE UTAMA:
-      // Jangan pernah timpa menuVoucher jika newData tidak punya.
+      // 🔥 FIX MERGE UTAMA untuk mencegah voucher hilang
       // ==========================================================
       let finalData = {
         ...oldData,
@@ -865,76 +862,72 @@ async function saveDataToDB(id, newData) {
 
         menuVoucher:
           Array.isArray(newData.menuVoucher)
-            ? newData.menuVoucher            // newData punya → pakai
+            ? newData.menuVoucher
             : Array.isArray(oldData.menuVoucher)
-              ? oldData.menuVoucher          // newData ga punya → pakai data lama
-              : [],                          // kalau dua2nya ga ada → default []
+              ? oldData.menuVoucher
+              : [],
       };
 
-      // >>> LOG
-      console.log("🟧 SETELAH MERGE (FIXED):", JSON.parse(JSON.stringify(finalData)));
-      console.log("🟧 finalData.menuVoucher (before legacy fix):", finalData.menuVoucher);
-
-      // ==========================================================
-      // 🔥 FIX LEGACY FIELD "voucher"
-      // ==========================================================
-      if (newData.voucher !== undefined && Array.isArray(newData.voucher)) {
+      // Legacy → auto-convert
+      if (Array.isArray(newData.voucher)) {
         finalData.menuVoucher = newData.voucher.slice();
-
-        console.log("🟣 AUTO-MAP legacy voucher → menuVoucher:", finalData.menuVoucher);
+        console.log("🟣 IMPORT legacy voucher → menuVoucher:", finalData.menuVoucher);
       }
 
-      // ==========================================================
-      // Safety: menuVoucher harus selalu array
-      // ==========================================================
+      // Safety
       if (!Array.isArray(finalData.menuVoucher)) {
-        console.warn("⚠ menuVoucher corrupt → reset []");
+        console.warn("⚠ menuVoucher corrupt → reset");
         finalData.menuVoucher = [];
-        console.log("❗ menuVoucher CORRUPT, RESET → []");
       }
 
-      // Hapus field legacy supaya tidak bentrok
       delete finalData.voucher;
 
-      // >>> LOG
-      console.log("🟩 FINAL DATA SIAP DISIMPAN:", JSON.parse(JSON.stringify(finalData)));
-      console.log("🟩 FINAL menuVoucher:", finalData.menuVoucher);
+      console.log("🟩 FINAL DATA SIAP SIMPAN:", JSON.parse(JSON.stringify(finalData)));
 
-      // ===================== SAVE OFFLINE =====================
+      // ==========================================================
+      // 🔒 SIMPAN OFFLINE (IndexedDB)
+      // ==========================================================
       const saveReq = store.put(finalData);
 
       saveReq.onsuccess = async () => {
         console.log("💾 IndexedDB → OK");
 
-        // >>> LOG verifikasi
         const verify = store.get(id);
         verify.onsuccess = () => {
-          console.log("🔁 DATA TERSIMPAN DI INDEXEDDB:", JSON.parse(JSON.stringify(verify.result)));
-          console.log("🔁 IndexedDB.menuVoucher:", verify.result?.menuVoucher);
+          console.log("🔁 VERIFY IndexedDB:", JSON.parse(JSON.stringify(verify.result)));
         };
 
-        // ===================== SYNC ONLINE ======================
-        if (ONLINE_MODE) {
-          try {
-            console.log("🌐 Sync ke Supabase...");
+        // ==========================================================
+        // ☁️ SIMPAN ONLINE (SUPABASE)
+        // ==========================================================
+        try {
+          const restoKey =
+            finalData.restoId?.trim() ||
+            finalData.restoPhone?.trim() ||
+            null;
 
-            const { error } = await supabase
-              .from("menuva_data")
-              .update({
-                data: finalData,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", id);
+          console.log("🌐 restoKey (for Supabase):", restoKey);
 
-            if (error) throw error;
+          const payload = {
+            id: id,
+            resto_key: restoKey,
+            data: finalData,
+            updated_at: new Date().toISOString(),
+          };
 
-            console.log("🌐 Supabase sync → OK");
+          console.log("☁️ PAYLOAD TERKIRIM:", JSON.parse(JSON.stringify(payload)));
 
-            // >>> LOG
-            console.log("🌐 DATA TERKIRIM KE SUPABASE:", JSON.parse(JSON.stringify(finalData)));
-          } catch (err) {
-            console.warn("⚠ Supabase sync gagal:", err.message);
+          const { error } = await supabase
+            .from("menuva_data")
+            .upsert(payload, { onConflict: "id" });
+
+          if (error) {
+            console.error("❌ Supabase ERROR:", error);
+          } else {
+            console.log("🌐 Supabase sync → SUCCESS");
           }
+        } catch (err) {
+          console.warn("⚠ Supabase gagal:", err.message);
         }
 
         console.groupEnd();
@@ -1264,6 +1257,7 @@ const syncedVoucher = Array.isArray(menuVoucher) ? menuVoucher : [];
   }
 }
 
+
 // ====================== SUPABASE SAVE (OPSI A FINAL) ======================
 // Catatan:
 // - Supabase sudah di-sync melalui saveDataToDB()
@@ -1271,15 +1265,108 @@ const syncedVoucher = Array.isArray(menuVoucher) ? menuVoucher : [];
 // - Tidak melakukan upsert lagi (mencegah double save & error 400)
 
 async function saveDataToSupabase(id, data) {
-  console.log("ℹ️ [OPSI A] saveDataToSupabase() dipanggil");
+  console.log("🌥️ Mengirim data ke Supabase...");
 
   try {
-    // Tidak usah simpan ke Supabase lagi
-    console.log("☁️ Skip Supabase sync (karena OPSI A pakai saveDataToDB untuk sync utama)");
+    const record = {
+      id: id,
+      data: data,
+      updated_at: new Date().toISOString()
+    };
+
+    // cek apakah record sudah ada
+    const { data: existing, error: checkErr } = await supabase
+      .from("menuva_data")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (checkErr) {
+      console.error("❌ Error saat cek record:", checkErr.message);
+      return false;
+    }
+
+    let response;
+
+    if (existing) {
+      console.log("✏️ Record ditemukan → lakukan UPDATE");
+
+      response = await supabase
+        .from("menuva_data")
+        .update(record)
+        .eq("id", id);
+    } else {
+      console.log("➕ Record tidak ada → lakukan INSERT");
+
+      response = await supabase
+        .from("menuva_data")
+        .insert(record);
+    }
+
+    if (response.error) {
+      console.error("❌ Supabase save error:", response.error.message);
+      return false;
+    }
+
+    console.log("✅ Data berhasil disimpan ke Supabase!");
+    return true;
+
   } catch (err) {
-    console.error("❌ saveDataToSupabase wrapper error:", err.message);
+    console.error("🔥 Fatal error saveDataToSupabase:", err.message);
+    return false;
   }
 }
+
+   // ====================== LOAD DATA DARI SUPABASE ======================
+async function loadDataFromSupabase(id = 1) {
+  console.log("🌥️ Mengambil data dari Supabase...");
+
+  const { data, error } = await supabase
+    .from("menuva_data")
+    .select("data")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("❌ Supabase load error:", error.message);
+    return null;
+  }
+
+  if (!data) {
+    console.warn("⚠️ Tidak ada data di Supabase");
+    return null;
+  }
+
+  console.log("✅ Data berhasil diambil dari Supabase!");
+  return data.data;      // karena kolom = { data: {...} }
+}
+
+   // ====================== HYBRID LOAD CORE ======================
+async function loadHybridData() {
+  console.log("🔄 Hybrid Load: Supabase → IndexedDB → UI");
+
+  // 1. Coba load dari Supabase (utama)
+  let fetched = await loadDataFromSupabase(1);
+
+  if (fetched) {
+    console.log("🌥️ Menggunakan data dari Supabase");
+    await saveDataToDB(1, fetched);     // cache ke IndexedDB
+    return fetched;
+  }
+
+  // 2. Jika gagal → fallback ke IndexedDB
+  console.warn("⚠️ Supabase tidak ada → fallback IndexedDB");
+  const localData = await loadDataFromDB();
+
+  if (localData) {
+    console.log("📦 Menggunakan data dari IndexedDB");
+    return localData;
+  }
+
+  console.warn("🚫 Tidak ada data di manapun.");
+  return null;
+}
+
 
 // ====================== MENU ======================
 // Tambah menu ke kategori (UI)
@@ -3339,6 +3426,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
