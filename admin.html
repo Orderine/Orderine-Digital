@@ -2762,6 +2762,9 @@ async function safeLoadData(data) {
 /* ======================================================
     INIT UTAMA — HYBRID SYSTEM
 ======================================================*/
+/* ======================================================
+    INIT UTAMA — HYBRID SYSTEM
+======================================================*/
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Init mulai...");
   showLoader();
@@ -2794,15 +2797,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     console.log("✅ Admin siap (Hybrid Ready, Voucher Multi Device OK)");
 
- } catch (err) {
-  console.error("❌ ERROR SAAT INIT (DETAIL WAJIB):", err ?? "(err kosong)");
+  } catch (err) {
+    console.error("❌ ERROR SAAT INIT (DETAIL WAJIB):", err ?? "(err kosong)");
 
-  // tampilkan error ke layar biar keliatan
-  alert("INIT ERROR:\n" + JSON.stringify(err, null, 2));
-
-  throw err; // lempar ulang supaya muncul di console browser
-}
-
+    alert("INIT ERROR:\n" + JSON.stringify(err, null, 2));
+    // Catatan: throw err TIDAK DIPAKAI lagi karena bikin init berhenti total
   } finally {
     clearTimeout(timeout);
     hideLoader();
@@ -3229,6 +3228,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
