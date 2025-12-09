@@ -2607,12 +2607,12 @@ async function clearDataDB() {
 let isLoadingFromDB = false;
 let voucherLoaded = false;
 
-// ====================== SAFE LOAD DATA (OPSI A) ======================
+// ====================== SAFE LOAD DATA (FINAL FIXED) ======================
 async function safeLoadDataFromDB() {
   try {
     let cached = null;
 
-    // ===================== 1. LOAD DARI INDEXEDDB =====================
+    // 1. LOAD DARI INDEXEDDB
     try {
       cached = await loadDataFromDB(1);
       if (cached) console.log("📦 Cached IndexedDB:", cached);
@@ -2631,82 +2631,56 @@ async function safeLoadDataFromDB() {
     // IndexedDB kosong → bikin default
     let finalData = cached || buatDataDefault(1);
 
-    // ===================== 2. LOAD DARI SUPABASE =====================
+    // 2. LOAD ONLINE DARI SUPABASE
     if (window.supabase && restoKey) {
       try {
-        // ========== RESTO SETTINGS ==========
-        const { data: setting, error: settingErr } = await supabase
+        // RESTO SETTINGS
+        const { data: setting } = await supabase
           .from("restosettings")
           .select("*")
           .eq("resto_id", restoKey)
           .maybeSingle();
 
-        if (!settingErr && setting) {
+        if (setting) {
           finalData = { ...finalData, ...setting };
-          console.log("🌐 resto settings:", setting);
         }
 
-        // ========== CATEGORIES ==========
-        const { data: ct, error: ctErr } = await supabase
+        // CATEGORIES
+        const { data: ct } = await supabase
           .from("categories")
           .select("*")
           .eq("resto_id", restoKey);
 
-        if (!ctErr && Array.isArray(ct)) {
+        if (Array.isArray(ct)) {
           finalData.categories = ct.map(fixCategory);
-          console.log("📂 Categories:", finalData.categories);
-        } else {
-          console.warn("⚠ Categories fetch fail, gunakan cached jika ada.");
         }
 
-        // ========== VOUCHERS (OPS A: TABLE VOUCHERS) ==========
-        try {
-          const { data: vc, error: vcErr } = await supabase
-            .from("vouchers")
-            .select("*")
-            .eq("resto_id", restoKey);
+        // VOUCHERS — FIX UTAMA
+        const { data: vc } = await supabase
+          .from("vouchers")
+          .select("*")
+          .eq("resto_id", restoKey);
 
-          if (!vcErr && Array.isArray(vc)) {
-            finalData.menuVoucher = vc.map(fixVoucher);
-            voucherLoaded = true;
-            console.log("🎟️ Voucher dari Supabase:", finalData.menuVoucher);
-
-          } else {
-            console.warn("⚠ Voucher fetch error:", vcErr);
-
-            // fallback ke IndexedDB jika ada
-            if (Array.isArray(finalData.menuVoucher)) {
-              console.log("🎟️ Fallback ke IndexedDB voucher.");
-            } else if (Array.isArray(finalData.vouchers)) {
-              finalData.menuVoucher = finalData.vouchers;
-            } else {
-              finalData.menuVoucher = [];
-            }
-          }
-        } catch (e) {
-          console.warn("⚠ Exception saat ambil voucher:", e);
-          if (!Array.isArray(finalData.menuVoucher)) {
-            finalData.menuVoucher = finalData.vouchers || [];
-          }
+        if (Array.isArray(vc)) {
+          finalData.menuVoucher = vc.map(fixVoucher);
+          console.log("🎟 Voucher Supabase:", finalData.menuVoucher);
+        } else {
+          console.warn("⚠ Voucher fetch gagal, fallback ke cached");
         }
 
       } catch (err) {
-        console.warn("⚠ Supabase fetch error utama:", err);
+        console.warn("⚠ Supabase fetch error:", err);
       }
     }
 
-    // ===================== CLEANUP FIELD BENTROK =====================
-    // Hapus field lama supaya tidak overwrite
+    // CLEANUP FIELD BENTROK
     delete finalData.vouchers;
-    delete finalData.voucher; 
+    delete finalData.voucher;
     delete finalData.voucherList;
 
-    // pastikan aman
-    if (!Array.isArray(finalData.menuVoucher)) finalData.menuVoucher = [];
-
-    // FIX JSON lama yang masih pakai menuData
-    if (!Array.isArray(finalData.menu) && Array.isArray(finalData.menuData)) {
-      finalData.menu = finalData.menuData;
+    // Pastikan voucher valid
+    if (!Array.isArray(finalData.menuVoucher)) {
+      finalData.menuVoucher = [];
     }
 
     console.log("🎉 FINAL SAFE LOAD:", finalData);
@@ -2747,48 +2721,43 @@ function fixVoucher(v) {
   };
 }
 
-/* ======================================================
-    SAFE LOAD DATA (FINAL MERGE → UI)
-======================================================*/
+// ====================== SAFE LOAD UI (FINAL FIXED) ======================
 async function safeLoadData(data) {
   try {
-    // Kalau tidak ada → default
     const finalData = data || buatDataDefault(1);
 
-    // Proteksi field minimal
+    // Categories aman
     finalData.categories = Array.isArray(finalData.categories)
       ? finalData.categories
       : [];
 
+    // Menu aman
     finalData.menu = Array.isArray(finalData.menu)
       ? finalData.menu
       : (Array.isArray(finalData.menuData) ? finalData.menuData : []);
 
-    // ===================== MASTER VOUCHER FIELD =====================
-    // hanya pakai menuVoucher (Ops A)
-    finalData.menuVoucher = Array.isArray(finalData.menuVoucher)
-      ? finalData.menuVoucher
-      : Array.isArray(finalData.vouchers)
-        ? finalData.vouchers
-        : [];
+    // VOUCHER — FIX PALING PENTING
+    if (!Array.isArray(finalData.menuVoucher)) {
+      finalData.menuVoucher = [];
+    }
 
-    // Hapus field bentrok lama
+    // Hapus field lama agar tidak tabrakan
     delete finalData.vouchers;
     delete finalData.voucher;
     delete finalData.voucherList;
 
-    // ===================== LOAD UI =====================
+    // Render utama UI
     await loadData(finalData);
 
+    // Render voucher list sekali saja
     renderVoucherList(finalData.menuVoucher);
 
-    console.log("📲 UI data loaded:", finalData);
+    console.log("📲 UI data loaded (final):", finalData);
 
   } catch (err) {
     console.error("❌ safeLoadData() error:", err);
   }
 }
-
 
 /* ======================================================
     INIT UTAMA — HYBRID SYSTEM
@@ -3254,6 +3223,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
