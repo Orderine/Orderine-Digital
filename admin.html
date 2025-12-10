@@ -902,39 +902,38 @@ async function saveDataToDB(id, newData) {
           console.log("🔁 VERIFY IndexedDB:", JSON.parse(JSON.stringify(verify.result)));
         };
 
-        // ==========================================================
-        // ☁️ SUPABASE SYNC
-        // ==========================================================
-        try {
-          const restoKey =
-            finalData.restoId?.trim() ||
-            finalData.restoPhone?.trim() ||
-            key; // fallback paling aman
+      // ==========================================================
+// ☁️ SUPABASE SYNC (FIXED VERSION)
+// ==========================================================
+try {
+  const restoKey =
+    finalData.restoId?.trim() ||
+    finalData.restoPhone?.trim() ||
+    key; // fallback aman
 
-          console.log("🌐 restoKey (for Supabase):", restoKey);
+  console.log("🌐 restoKey (for Supabase):", restoKey);
 
-          const payload = {
-            id: key,             // penting → string
-            resto_id: restoKey,  // kolom Supabase
-            data: finalData,
-            updated_at: new Date().toISOString(),
-          };
+  const payload = {
+    resto_id: restoKey,   // unique key utama Supabase
+    data: finalData,      // seluruh data (termasuk voucher)
+    updated_at: new Date().toISOString(),
+  };
 
-          console.log("☁️ PAYLOAD TERKIRIM:", JSON.parse(JSON.stringify(payload)));
+  console.log("☁️ PAYLOAD TERKIRIM:", JSON.parse(JSON.stringify(payload)));
 
-          const { error } = await supabase
-            .from("menuva_data")
-            .upsert(payload, { onConflict: "id" });
+  const { error } = await supabase
+    .from("menuva_data")
+    .upsert(payload, { onConflict: "resto_id" });
 
-          if (error) {
-            console.error("❌ Supabase ERROR:", error);
-          } else {
-            console.log("🌐 Supabase sync → SUCCESS");
-          }
+  if (error) {
+    console.error("❌ Supabase ERROR:", error);
+  } else {
+    console.log("🌐 Supabase sync → SUCCESS");
+  }
 
-        } catch (err) {
-          console.warn("⚠ Supabase gagal:", err.message);
-        }
+} catch (err) {
+  console.warn("⚠ Supabase gagal:", err.message);
+}
 
         console.groupEnd();
         resolve(finalData);
@@ -956,22 +955,26 @@ async function saveDataToDB(id, newData) {
 }
 
 
-// ====================== FUNGSI 2 (LOAD) + LOG DETECTOR ======================
-async function loadDataFromDB(id = 1) {
+   // ====================== FUNGSI 2 (LOAD) ======================
+async function loadDataFromDB(restoKey) {
   console.groupCollapsed("📥 [HYBRID LOAD] loadDataFromDB()");
+
+  // pastikan restoKey string
+  restoKey = String(restoKey).trim();
 
   // ============================================================
   // 1️⃣ LOAD DARI SUPABASE
   // ============================================================
   if (ONLINE_MODE) {
     try {
-      console.log("🌐 Mencoba load dari Supabase...");
+      console.log("🌐 Mencoba load dari Supabase... KEY:", restoKey);
 
       const { data: row, error } = await supabase
-        .from("menuva_data")
-        .select("resto_id, data")
-        .eq("id", id)
-        .maybeSingle();
+  .from("menuva_data")
+  .select("resto_id, data")
+  .eq("resto_id", String(id).trim())
+  .maybeSingle();
+
 
       if (error) console.warn("⚠ Supabase error:", error.message);
 
@@ -984,9 +987,7 @@ async function loadDataFromDB(id = 1) {
 
         // ========== SAFE MERGE ==========
         const safe = {
-          id,
-
-          // ⭐ Ambil dari kolom Supabase: resto_id
+          id: restoKey,
           restoId: row.resto_id || r.restoId || "",
           namaRestoran: r.namaRestoran || "",
           restoAddress: r.restoAddress || "",
@@ -1005,12 +1006,8 @@ async function loadDataFromDB(id = 1) {
 
           rooms: Array.isArray(r.rooms) ? r.rooms : [],
           nomorWaAdmin: Array.isArray(r.nomorWaAdmin) ? r.nomorWaAdmin : [],
-          flipbookRuanganImages: Array.isArray(r.flipbookRuanganImages)
-            ? r.flipbookRuanganImages
-            : [],
-          flipbookMenuImages: Array.isArray(r.flipbookMenuImages)
-            ? r.flipbookMenuImages
-            : []
+          flipbookRuanganImages: Array.isArray(r.flipbookRuanganImages) ? r.flipbookRuanganImages : [],
+          flipbookMenuImages: Array.isArray(r.flipbookMenuImages) ? r.flipbookMenuImages : []
         };
 
         console.log("🌐 Supabase SAFE-FIX:", safe);
@@ -1031,7 +1028,7 @@ async function loadDataFromDB(id = 1) {
     const store = tx.objectStore(STORE_NAME);
 
     const data = await new Promise((resolve, reject) => {
-      const req = store.get(id);
+      const req = store.get(restoKey);
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error);
     });
@@ -1041,13 +1038,13 @@ async function loadDataFromDB(id = 1) {
       console.log("🧪 IndexedDB.voucher:", data.voucher);
       console.log("🧪 IndexedDB.menuVoucher:", data.menuVoucher);
 
-      // ====== DETEKSI BUG ======
+      // ====== Deteksi bug lama ======
       if (Array.isArray(data.voucher) && data.voucher.length > 0 &&
           Array.isArray(data.menuVoucher) && data.menuVoucher.length === 0) {
-        console.error("🔥 FOUND ROOT CAUSE: FIELD voucher ADA TAPI menuVoucher KOSONG → patch membunuh voucher!");
+        console.error("🔥 ROOT CAUSE: field voucher ada, menuVoucher kosong → patch lama hilangkan data voucher!");
       }
 
-      // patch official
+      // perbaikan resmi
       if (!Array.isArray(data.menuVoucher)) {
         data.menuVoucher = Array.isArray(data.voucher) ? data.voucher : [];
       }
@@ -1065,7 +1062,7 @@ async function loadDataFromDB(id = 1) {
   // 3️⃣ Default data
   // ============================================================
   console.warn("⚠ Tidak ada data → default");
-  const def = buatDataDefault(id);
+  const def = buatDataDefault(restoKey);
   console.groupEnd();
   return def;
 }
@@ -1259,72 +1256,84 @@ async function simpanDataHybrid() {
   }
 }
 
-   async function saveDataToSupabase(restoId, id, data) {
-  console.log("🌥️ Mengirim data ke Supabase...");
+   async function loadHybridData(restoId) {
+  console.log("🔄 Hybrid Load: Supabase → IndexedDB → UI");
 
-  try {
-    const record = {
-      resto_id: restoId,
-      id: id,
-      data: data,
-      updated_at: new Date().toISOString()
-    };
+  // 1. Coba load dari Supabase
+  let fetched = await loadDataFromSupabase(restoId);
 
-    // cek apakah record sudah ada (berdasarkan resto)
-    const { data: existing, error: checkErr } = await supabase
-      .from("menuva_data")
-      .select("id")
-      .eq("resto_id", restoId)
-      .eq("id", id)
-      .maybeSingle();
-
-    if (checkErr) {
-      console.error("❌ Error saat cek record:", checkErr.message);
-      return false;
-    }
-
-    let response;
-
-    if (existing) {
-      console.log("✏️ Record ditemukan → lakukan UPDATE");
-
-      response = await supabase
-        .from("menuva_data")
-        .update(record)
-        .eq("resto_id", restoId)
-        .eq("id", id);
-
-    } else {
-      console.log("➕ Record tidak ada → lakukan INSERT");
-
-      response = await supabase
-        .from("menuva_data")
-        .insert(record);
-    }
-
-    if (response.error) {
-      console.error("❌ Supabase save error:", response.error.message);
-      return false;
-    }
-
-    console.log("✅ Data berhasil disimpan ke Supabase!");
-    return true;
-
-  } catch (err) {
-    console.error("🔥 Fatal error saveDataToSupabase:", err.message);
-    return false;
+  if (fetched) {
+    console.log("🌥️ Menggunakan data dari Supabase");
+    await saveDataToDB(restoId, fetched);  
+    return fetched;
   }
+
+  // 2. Fallback ke IndexedDB
+  console.warn("⚠️ Supabase kosong → fallback ke IndexedDB");
+  const localData = await loadDataFromDB(restoId);
+
+  if (localData) {
+    console.log("📦 Menggunakan data dari IndexedDB");
+    return localData;
+  }
+
+  console.warn("🚫 Tidak ada data sama sekali.");
+  return null;
 }
 
-  // ====================== LOAD DATA DARI SUPABASE ======================
-async function loadDataFromSupabase(restoId, id = 1) {
+
+ async function saveDataToSupabase(restoId, data) {
+  console.log("🌥️ Mengirim data ke Supabase...");
+
+  const record = {
+    resto_id: restoId,
+    data: data,
+    updated_at: new Date().toISOString()
+  };
+
+  // cek apakah sudah ada
+  const { data: existing, error: checkErr } = await supabase
+    .from("menuva_data")
+    .select("resto_id")
+    .eq("resto_id", restoId)
+    .maybeSingle();
+
+  if (checkErr) {
+    console.error("❌ Error cek record:", checkErr.message);
+    return false;
+  }
+
+  let response;
+
+  if (existing) {
+    // update
+    response = await supabase
+      .from("menuva_data")
+      .update(record)
+      .eq("resto_id", restoId);
+  } else {
+    // insert
+    response = await supabase
+      .from("menuva_data")
+      .insert(record);
+  }
+
+  if (response.error) {
+    console.error("❌ Supabase save error:", response.error.message);
+    return false;
+  }
+
+  console.log("✅ Data sukses disimpan ke Supabase!");
+  return true;
+}
+
+   async function loadDataFromSupabase(restoId) {
   console.log("🌥️ Mengambil data dari Supabase...");
 
   const { data, error } = await supabase
     .from("menuva_data")
     .select("data")
     .eq("resto_id", restoId)
-    .eq("id", id)
     .maybeSingle();
 
   if (error) {
@@ -1333,38 +1342,12 @@ async function loadDataFromSupabase(restoId, id = 1) {
   }
 
   if (!data) {
-    console.warn("⚠️ Tidak ada data di Supabase");
+    console.warn("⚠️ Tidak ada data untuk restoId:", restoId);
     return null;
   }
 
-  console.log("✅ Data berhasil diambil dari Supabase!");
-  return data.data; 
-}
-
-// ====================== HYBRID LOAD CORE ======================
-async function loadHybridData(restoId) {
-  console.log("🔄 Hybrid Load: Supabase → IndexedDB → UI");
-
-  // 1. Coba load dari Supabase (utama)
-  let fetched = await loadDataFromSupabase(restoId, 1);
-
-  if (fetched) {
-    console.log("🌥️ Menggunakan data dari Supabase");
-    await saveDataToDB(1, fetched);     // cache ke IndexedDB
-    return fetched;
-  }
-
-  // 2. Jika gagal → fallback ke IndexedDB
-  console.warn("⚠️ Supabase tidak ada → fallback IndexedDB");
-  const localData = await loadDataFromDB();
-
-  if (localData) {
-    console.log("📦 Menggunakan data dari IndexedDB");
-    return localData;
-  }
-
-  console.warn("🚫 Tidak ada data di manapun.");
-  return null;
+  console.log("✅ Data Supabase ditemukan!");
+  return data.data;
 }
 
 // ====================== MENU ======================
@@ -2097,6 +2080,7 @@ async function simpanData() {
     // ================= HYBRID SAVE DB + SUPABASE ==================
     // UPDATE DI SINI: pakai restoId, bukan 1
     await saveDataToDB(restoId, data);
+    await saveDataToSupabase(restoId, data);
 
     // ================= SYNC restoId hidden ==================
     let restoIdEl = document.getElementById("restoId");
@@ -2120,7 +2104,7 @@ async function simpanData() {
   }
 }
 
-   let sudahLoadData = false;
+ let sudahLoadData = false;
 
 async function loadData(data) {
   if (sudahLoadData) {
@@ -2805,93 +2789,75 @@ async function safeLoadDataFromDB() {
   try {
     console.groupCollapsed("🛡 SAFE LOAD DATA");
 
-    let cached = null;
+    let localData = null;
 
-    // ================== 1. LOAD LOCAL (INDEXEDDB) ==================
+    // ================== 1. LOAD LOCAL (IndexedDB) ==================
     try {
-      cached = await loadDataFromDB(1);
-      if (cached) console.log("📦 Cached IndexedDB:", cached);
+      localData = await loadDataFromDB(1);
+      if (localData) console.log("📦 Cached IndexedDB:", localData);
     } catch (e) {
       console.warn("⚠ IndexedDB gagal dibaca:", e);
     }
 
-    // Buat default jika kosong
-    let finalData = cached || buatDataDefault(1);
+    // Pakai default jika tidak ada local
+    let finalData = localData || buatDataDefault(1);
 
-    // Ambil restoKey terbaik
+    // Ambil restoKey
     const restoKey =
-      cached?.restoId?.trim() ||
-      cached?.restoPhone?.trim() ||
-      finalData?.restoId?.trim() ||
-      finalData?.restoPhone?.trim() ||
+      finalData.restoId?.trim() ||
+      finalData.restoPhone?.trim() ||
       null;
 
     console.log("🆔 restoKey:", restoKey || "(null)");
 
-    // ================== Jika tidak ada key → cuma pakai local ==================
+    // Jika tidak ada key → pakai offline saja
     if (!restoKey || !window.supabase) {
-      console.warn("⛔ Tidak ada restoKey → pakai data lokal saja");
+      console.warn("⛔ Tidak ada restoKey → pakai local");
       console.groupEnd();
       return finalData;
     }
 
-    // ================== 2. LOAD ONLINE (SUPABASE) ==================
+    // ================== 2. LOAD ONLINE (SUPABASE, SINGLE TABLE) ===============
     try {
-      // ===== SETTINGS =====
-      const { data: setting } = await supabase
-        .from("restosettings")
-        .select("*")
+      const { data: row, error } = await supabase
+        .from("menuva_data")
+        .select("resto_id, data")
         .eq("resto_id", restoKey)
         .maybeSingle();
 
-      if (setting && typeof setting === "object") {
-        console.log("⚙ Menggabungkan SETTING dari Supabase");
-        finalData = { ...finalData, ...setting };
-      }
+      if (error) console.warn("⚠ Supabase error:", error);
 
-      // ===== CATEGORIES =====
-      const { data: ct } = await supabase
-        .from("categories")
-        .select("*")
-        .eq("resto_id", restoKey);
+      if (row && row.data) {
+        const r = row.data;
 
-      if (Array.isArray(ct)) {
-        finalData.categories = ct.map(fixCategory);
-        console.log("📂 Categories:", finalData.categories);
-      }
+        console.log("🌐 ONLINE DATA:", r);
 
-      // ===== VOUCHERS (PERBAIKAN INTI) =====
-      const { data: vc } = await supabase
-        .from("vouchers")
-        .select("*")
-        .eq("resto_id", restoKey);
+        // merge dengan local
+        finalData = {
+          ...finalData,
+          ...r,
 
-      if (Array.isArray(vc)) {
-        finalData.menuVoucher = vc.map(fixVoucher);
-        console.log("🎟 Voucher Supabase:", finalData.menuVoucher);
-      } else {
-        console.warn("⚠ Voucher Supabase tidak valid → pakai cached");
-        // JANGAN overwrite kalau Supabase error
+          menuVoucher: Array.isArray(r.menuVoucher)
+            ? r.menuVoucher
+            : Array.isArray(finalData.menuVoucher)
+              ? finalData.menuVoucher
+              : []
+        };
+
+        // patch anti-korup
         if (!Array.isArray(finalData.menuVoucher)) {
-          finalData.menuVoucher = cached?.menuVoucher || [];
+          finalData.menuVoucher = [];
         }
       }
+
     } catch (err) {
-      console.warn("⚠ Supabase fetch error:", err);
-
-      // SUPABASE ERROR → fallback ke local
-      finalData.menuVoucher = cached?.menuVoucher || finalData.menuVoucher || [];
+      console.warn("⚠ Supabase load error:", err);
     }
 
-    // ================== 3. BERSIHKAN FIELD BENTROK ==================
-    delete finalData.vouchers;
+    // ================== 3. Bersihkan field legacy ==================
     delete finalData.voucher;
+    delete finalData.vouchers;
     delete finalData.voucherList;
-
-    // Pastikan voucher selalu array
-    if (!Array.isArray(finalData.menuVoucher)) {
-      finalData.menuVoucher = [];
-    }
 
     console.log("🎉 FINAL SAFE LOAD:", finalData);
     console.groupEnd();
@@ -2903,6 +2869,7 @@ async function safeLoadDataFromDB() {
     return buatDataDefault(1);
   }
 }
+
 
   function fixCategory(cat) {
   return {
@@ -2921,17 +2888,17 @@ function fixVoucher(v) {
   if (!v || typeof v !== "object") return null;
 
   return {
-    id: v.id,
-    code: v.code,
-    discount: v.value || v.discount || 0,
-    expiry: v.expires_at || v.expiry || null,
-    createdAt: v.created_at,
+    id: v.id || Date.now(),
+    code: v.code || "",
+    discount: v.discount ?? v.value ?? 0,
+    expiry: v.expiry ?? v.expires_at ?? null,
     type: v.type || "percentage",
-    minOrder: v.min_order || 0,
-    isActive: v.is_active ?? true,
+    minOrder: v.minOrder ?? v.min_order ?? 0,
+    isActive: v.isActive ?? v.is_active ?? true,
     description: v.description || ""
   };
 }
+
 
 // ====================== SAFE LOAD UI (FINAL FIXED) ======================
 async function safeLoadData(data) {
@@ -3128,146 +3095,95 @@ async function initVoucherToggle() {
 
 // ===================== LOAD VOUCHERS (FINAL SAFE VERSION) =====================
 async function loadVouchers() {
-  console.groupCollapsed("📥 Load Vouchers");
+  console.groupCollapsed("📥 Load Vouchers (HYBRID)");
 
   try {
-    // ============= AMBIL DATA DARI DB =============
-    let data = null;
+    let data = await loadDataFromDB(1);
+    if (!data || typeof data !== "object") data = {};
+    if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
 
-    try {
-      data = await loadDataFromDB(1);
-      console.log("📦 Raw voucher data from DB:", data);
-    } catch (dbErr) {
-      console.error("🔥 ERROR loadDataFromDB:", dbErr);
-      data = null; // fallback
-    }
-
-    // ============= VALIDASI STRUKTUR DATA =============
-    if (!data || typeof data !== "object") {
-      console.warn("⚠ Data DB invalid → reset object kosong");
-      data = { menuVoucher: [] };
-    }
-
-    if (!Array.isArray(data.menuVoucher)) {
-      console.warn("⚠ menuVoucher tidak ditemukan → paksa array kosong");
-      data.menuVoucher = [];
-    }
-
-    let vouchers = [...data.menuVoucher];
-
-    // ============= SAFETY VALIDASI TIAP VOUCHER =============
-    vouchers = vouchers.filter((v, i) => {
-      if (!v || typeof v !== "object") {
-        console.warn("⚠ Voucher rusak, index:", i, v);
-        return false;
-      }
-      if (!v.expiry) {
-        console.warn("⚠ Voucher tanpa expiry → hapus:", v);
-        return false;
-      }
-      return true;
-    });
+    let vouchers = data.menuVoucher.map(v => fixVoucher(v)).filter(v => v);
 
     const today = new Date();
-
-    // ============= BERSIHKAN VOUCHER EXPIRED =============
     const cleaned = vouchers.filter(v => {
-      let exp = new Date(v.expiry);
-      if (!isFinite(exp)) {
-        console.warn("⚠ expiry invalid → hapus voucher:", v);
-        return false;
-      }
-      return exp >= today;
+      const exp = new Date(v.expiry);
+      return isFinite(exp) && exp >= today;
     });
 
+    // Jika ada pembersihan
     if (cleaned.length !== vouchers.length) {
-      console.warn("🧹 Cleaning expired vouchers…");
       data.menuVoucher = cleaned;
 
-      try {
-        await saveDataToDB(1, data);
-        console.log("💾 Voucher cleaned saved to IndexedDB");
-      } catch (saveErr) {
-        console.error("🔥 ERROR saveDataToDB:", saveErr);
-      }
+      await saveDataToDB(1, data);
+
+      const restoId =
+        data.restoId ||
+        (data.restoPhone ? "resto-" + data.restoPhone.replace(/\D/g, "") : "resto-main");
+
+      await saveDataToSupabase(restoId, data);
     }
 
-    // ============= LOG HASIL AKHIR =============
     console.log("📌 Final vouchers:", cleaned);
     console.groupEnd();
 
-    // ============= RENDER KE UI =============
-    try {
-      renderVoucher(cleaned);
-    } catch (uiErr) {
-      console.error("🔥 UI Rendering Voucher ERROR:", uiErr);
-    }
-
+    renderVoucher(cleaned);
     return cleaned;
 
   } catch (err) {
-    // ============= ERROR UTAMA (tidak boleh silent!) =============
-    console.error("❌ FATAL ERROR loadVouchers:", err);
-    console.error(err?.stack || "(no stack)");
+    console.error("❌ ERROR loadVouchers:", err);
     console.groupEnd();
-
-    // return array kosong supaya UI tetap jalan
     return [];
   }
 }
 
-  async function saveVoucher() {
+async function saveVoucher() {
   console.groupCollapsed("💾 Save Voucher");
 
   try {
-    // Ambil input
-    const code = document.getElementById("voucherCode").value.trim();
-    const discount = parseInt(document.getElementById("voucherDiscount").value);
-    const expiry = document.getElementById("voucherExpiry").value;
+    const code = voucherCode.value.trim();
+    const discount = parseInt(voucherDiscount.value);
+    const expiry = voucherExpiry.value;
 
     if (!code || !discount || !expiry) {
-      alert("Kode, diskon, dan tanggal kadaluarsa wajib diisi.");
-      console.groupEnd();
+      alert("Kode, diskon, dan expired wajib diisi.");
       return;
     }
 
-    // Ambil data aktif
     let data = await loadDataFromDB(1);
-    if (!data || typeof data !== "object") data = { menuVoucher: [] };
+    if (!data || typeof data !== "object") data = {};
     if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
 
-    // Buat voucher baru
-    const newVoucher = {
+    const newVoucher = fixVoucher({
       id: Date.now(),
       code,
       discount,
       expiry,
       isActive: true
-    };
+    });
 
-    // Gabungkan
     data.menuVoucher.push(newVoucher);
 
-    // Simpan ke IndexedDB
+    // 💾 Simpan offline
     await saveDataToDB(1, data);
 
-    // Simpan ke Supabase
-    const restoKey = data.restoId || data.restoPhone || null;
-    await saveVoucherToOnline(restoKey, data.menuVoucher);
+    // ☁️ Simpan ke Supabase
+    const restoId =
+      data.restoId ||
+      (data.restoPhone ? "resto-" + data.restoPhone.replace(/\D/g, "") : "resto-main");
 
-    // Render ulang UI
+    await saveDataToSupabase(restoId, data);
+
     renderVoucher(data.menuVoucher);
 
-    // Reset form
-    document.getElementById("voucherCode").value = "";
-    document.getElementById("voucherDiscount").value = "";
-    document.getElementById("voucherExpiry").value = "";
+    voucherCode.value = "";
+    voucherDiscount.value = "";
+    voucherExpiry.value = "";
 
     alert("Voucher berhasil disimpan!");
 
   } catch (err) {
-    console.error("🔥 ERROR saveVoucher():", err);
-    alert("Terjadi error saat menyimpan voucher.\nLihat console untuk detail.");
+    console.error("🔥 saveVoucher() error:", err);
+    alert("Error saat menyimpan voucher.");
   }
 
   console.groupEnd();
@@ -3278,20 +3194,12 @@ function renderVoucher(vouchers = []) {
   const box = document.getElementById("voucherPreview");
   if (!box) return;
 
-  if (!Array.isArray(vouchers)) vouchers = [];
+  vouchers = (Array.isArray(vouchers) ? vouchers : [])
+    .map(v => fixVoucher(v))
+    .filter(v => v && v.isActive);
 
   const today = new Date();
-
-  // Filter voucher aktif & valid
-  vouchers = vouchers.filter(v => {
-    const exp = new Date(v.expiry);
-    return (
-      v &&
-      v.isActive !== false &&        // default aktif
-      isFinite(exp) &&
-      exp >= today
-    );
-  });
+  vouchers = vouchers.filter(v => new Date(v.expiry) >= today);
 
   if (vouchers.length === 0) {
     box.innerHTML = "<em>Belum ada voucher aktif</em>";
@@ -3300,32 +3208,18 @@ function renderVoucher(vouchers = []) {
 
   box.innerHTML = `
     <h3 style="margin-bottom:10px;">Voucher Aktif</h3>
-    ${vouchers
-      .map(
-        v => `
-      <div class="voucher-item"
-        style="border:1px solid #ccc; padding:10px; margin:8px 0; border-radius:10px; background:#fafafa;">
-        
+    ${vouchers.map(v => `
+      <div class="voucher-item" 
+           style="border:1px solid #ccc; padding:10px; margin:8px 0; border-radius:10px; background:#fafafa;">
         <p><strong>Kode Voucher:</strong>
-          <span class="voucher-code">${v.code}</span>
+          <span>${v.code}</span>
           <button onclick="copyVoucherCode('${v.code}')">📋 Copy</button>
         </p>
-
-        <p><strong>Diskon:</strong> 
-          ${v.type === "percent" ? v.discount + "%" : "Rp " + v.discount.toLocaleString()}
-        </p>
-
-        <p><strong>Minimal Order:</strong> 
-          Rp ${Number(v.minOrder || 0).toLocaleString()}
-        </p>
-
-        ${v.description ? `<p><strong>Deskripsi:</strong> ${v.description}</p>` : ""}
-
-        <p><strong>Berlaku sampai:</strong> ${v.expiry}</p>
+        <p><strong>Diskon:</strong> ${v.discount}%</p>
+        <p><strong>Minimal Order:</strong> Rp ${Number(v.minOrder).toLocaleString()}</p>
+        <p><strong>Expired:</strong> ${v.expiry}</p>
       </div>
-    `
-      )
-      .join("")}
+    `).join("")}
   `;
 }
 
@@ -3589,6 +3483,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
