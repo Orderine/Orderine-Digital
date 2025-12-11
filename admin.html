@@ -2375,91 +2375,19 @@ async function autoLoadOnlineFirst() {
   try {
     showLoader();
 
-    // ================== Ambil restoId ==================
-    let restoId =
-      document.getElementById("restoId")?.value?.trim() ||
-      document.getElementById("restoPhone")?.value?.trim() ||
-      null;
+    // ================== FIX RESTOID ==================
+    let restoIdInput = document.getElementById("restoId");
+    let restoId = "";
 
-    if (!restoId) {
+    if (restoIdInput && restoIdInput.value.trim() !== "") {
+      restoId = restoIdInput.value.trim();
+    } else {
       console.warn("⚠️ restoId kosong → pakai default resto-main");
       restoId = "resto-main";
+      restoIdInput.value = "resto-main"; // tulis balik ke input
     }
 
     console.log("🔑 FINAL restoId:", restoId);
-
-    // ================== 1) LOAD DARI SUPABASE ==================
-    console.log("☁️ Cek data online untuk restoId:", restoId);
-
-    let onlineData = null;
-
-    try {
-      const { data, error } = await supabase
-        .from("menuva_data")
-        .select("data")
-        .eq("resto_id", restoId)
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.warn("⚠️ Supabase error:", error.message);
-      } else if (data) {
-        console.log("☁️ Data ONLINE ditemukan:", data);
-        onlineData = data.data;
-      }
-    } catch (err) {
-      console.warn("⚠️ Supabase gagal:", err.message);
-    }
-
-    // ================== 2) JIKA ADA DATA ONLINE ==================
-    if (onlineData) {
-      console.log("☑️ Memakai data ONLINE");
-      await loadData(onlineData);
-
-      // sync ke offline
-      await saveDataToDB(restoId, onlineData);
-
-      console.groupEnd();
-      hideLoader();
-      return;
-    }
-
-    // ================== 3) CEK OFFLINE (IndexedDB) ==================
-    console.log("⚠️ Tidak ada data online → cek IndexedDB restoId:", restoId);
-
-    let offlineData = await loadDataFromDB(restoId);
-
-    if (offlineData) {
-      console.log("📦 Memakai data OFFLINE:", offlineData);
-
-      await loadData(offlineData);
-
-      // Sync offline → online
-      console.log("⬆️ Upload OFFLINE ke Supabase sebagai data utama");
-      await saveDataToSupabase(restoId, offlineData);
-
-      console.groupEnd();
-      hideLoader();
-      return;
-    }
-
-    // ================== 4) ONLINE & OFFLINE KOSONG ==================
-    console.log("❗ Tidak ada data sama sekali → pakai default");
-
-    const defaultData = buatDataDefault(restoId);
-
-    await loadData(defaultData);
-    await saveDataToDB(restoId, defaultData);
-
-    console.groupEnd();
-    hideLoader();
-
-  } catch (err) {
-    console.error("❌ autoLoadOnlineFirst() error:", err);
-    hideLoader();
-    console.groupEnd();
-  }
-}
 
 // ====================== RESET & BACKUP ======================
 async function resetData() {
@@ -2908,7 +2836,7 @@ async function safeLoadDataFromDB() {
     }
 
     // Pakai default jika tidak ada local
-    let finalData = localData || buatDataDefault(restoId);
+   let finalData = localData || buatDataDefault(key);
 
     // Ambil restoId langsung dari local data
     const restoId = finalData.restoId?.trim() || null;
@@ -3533,6 +3461,3 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
-
-
-
