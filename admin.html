@@ -842,13 +842,13 @@ async function getDB() {
 async function saveDataToDB(restoId, newData) {
   console.groupCollapsed("💾 [HYBRID SAVE] saveDataToDB()");
 
-  // pastikan restoId string
   const key = String(restoId).trim();
+  if (!key) {
+    console.error("❌ restoId kosong pada saveDataToDB()");
+    return;
+  }
 
   console.log("🆔 RESTO ID:", key);
-  console.log("🟦 NEW DATA MASUK:", JSON.parse(JSON.stringify(newData)));
-  console.log("🟦 newData.menuVoucher:", newData.menuVoucher);
-  console.log("🟦 newData.voucher (legacy):", newData.voucher);
 
   const db = await getDB();
   const tx = db.transaction(STORE_NAME, "readwrite");
@@ -861,85 +861,87 @@ async function saveDataToDB(restoId, newData) {
       let oldData = req.result || buatDataDefault(key);
 
       console.log("🟨 OLD DATA:", JSON.parse(JSON.stringify(oldData)));
+      console.log("🟦 NEW DATA:", JSON.parse(JSON.stringify(newData)));
 
-      // ==========================================================
-      // VOUCHER MERGE FIX
-      // ==========================================================
-      let finalData = {
-        ...oldData,
-        ...newData,
-
-        menuVoucher:
-          Array.isArray(newData.menuVoucher)
-            ? newData.menuVoucher
-            : Array.isArray(oldData.menuVoucher)
-              ? oldData.menuVoucher
-              : [],
+      // ============================
+      // MERGE AMAN (tidak hapus data lama)
+      // ============================
+      const safeMerge = (oldVal, newVal) => {
+        return newVal !== undefined ? newVal : oldVal;
       };
 
-      // Legacy migration
-      if (Array.isArray(newData.voucher)) {
-        finalData.menuVoucher = newData.voucher.slice();
-        console.log("🟣 IMPORT legacy voucher → menuVoucher:", finalData.menuVoucher);
-      }
+      let finalData = {
+        restoId: key,
 
-      if (!Array.isArray(finalData.menuVoucher)) {
-        console.warn("⚠ menuVoucher corrupt → reset");
+        // ===== BUSINESS IDENTITY =====
+        namaRestoran: safeMerge(oldData.namaRestoran, newData.namaRestoran),
+        restoAddress: safeMerge(oldData.restoAddress, newData.restoAddress),
+        restoPhone: safeMerge(oldData.restoPhone, newData.restoPhone),
+        logo: safeMerge(oldData.logo, newData.logo),
+        background: safeMerge(oldData.background, newData.background),
+
+        // ===== CATEGORIES =====
+        categories: safeMerge(oldData.categories, newData.categories),
+
+        // ===== MENU =====
+        menu: safeMerge(oldData.menu, newData.menu),
+        menuPromo: safeMerge(oldData.menuPromo, newData.menuPromo),
+
+        // ===== ROOMS & GALLERY =====
+        rooms: safeMerge(oldData.rooms, newData.rooms),
+        flipbookRuanganImages: safeMerge(oldData.flipbookRuanganImages, newData.flipbookRuanganImages),
+        flipbookMenuImages: safeMerge(oldData.flipbookMenuImages, newData.flipbookMenuImages),
+
+        // ===== ADMIN WA =====
+        nomorWaAdmin: safeMerge(oldData.nomorWaAdmin, newData.nomorWaAdmin),
+      };
+
+      // ============================
+      // VOUCHER MERGE KHUSUS
+      // ============================
+      if (Array.isArray(newData.menuVoucher)) {
+        finalData.menuVoucher = newData.menuVoucher.slice();
+      } else if (Array.isArray(oldData.menuVoucher)) {
+        finalData.menuVoucher = oldData.menuVoucher.slice();
+      } else {
         finalData.menuVoucher = [];
       }
 
-      // buang field lama
+      // migrate legacy
+      if (Array.isArray(newData.voucher)) {
+        finalData.menuVoucher = newData.voucher.slice();
+      }
+
       delete finalData.voucher;
 
-      // pastikan restoId tetap benar
-      finalData.restoId = key;
+      console.log("🟩 FINAL DATA:", JSON.parse(JSON.stringify(finalData)));
 
-      console.log("🟩 FINAL DATA SIAP SIMPAN:", JSON.parse(JSON.stringify(finalData)));
-
-      // ==========================================================
-      // 💾 SIMPAN OFFLINE (IndexedDB)
-      // ==========================================================
+      // ============================
+      // SAVE OFFLINE
+      // ============================
       const saveReq = store.put({ ...finalData, id: key });
 
       saveReq.onsuccess = async () => {
         console.log("💾 IndexedDB → OK");
 
-        // verify
-        const verify = store.get(key);
-        verify.onsuccess = () => {
-          console.log("🔁 VERIFY IndexedDB:", JSON.parse(JSON.stringify(verify.result)));
-        };
-
-        // ==========================================================
-        // ☁️ SUPABASE SYNC — WAJIB PAKAI restoId
-        // ==========================================================
+        // ============================
+        // SAVE ONLINE
+        // ============================
         try {
-          const restoIdFinal = String(finalData.restoId || "").trim();
+          const payload = {
+            resto_id: key,
+            data: finalData,
+            updated_at: new Date().toISOString(),
+          };
 
-          if (!restoIdFinal) {
-            console.error("❌ ERROR: restoId kosong! Tidak bisa sync Supabase.");
-            console.log("FinalData =", finalData);
-          } else {
-            const payload = {
-              resto_id: restoIdFinal,
-              data: finalData,
-              updated_at: new Date().toISOString(),
-            };
+          const { error } = await supabase
+            .from("menuva_data")
+            .upsert(payload, { onConflict: "resto_id" });
 
-            console.log("☁️ PAYLOAD TERKIRIM:", JSON.parse(JSON.stringify(payload)));
-
-            const { error } = await supabase
-              .from("menuva_data")
-              .upsert(payload, { onConflict: "resto_id" });
-
-            if (error) {
-              console.error("❌ Supabase ERROR:", error);
-            } else {
-              console.log("🌐 Supabase sync → SUCCESS");
-            }
-          }
-        } catch (err) {
-          console.warn("⚠ Supabase gagal:", err.message);
+          if (error) console.error("❌ Supabase ERROR:", error);
+          else console.log("🌐 Supabase sync → OK");
+        } catch (e) {
+          console.warn("⚠ Supabase gagal:", e.message);
         }
 
         console.groupEnd();
@@ -1207,74 +1209,72 @@ function scheduleHybridSave() {
   window._saveTimeout = setTimeout(() => simpanDataHybrid(), 300);
 }
 
-// ====================== HYBRID SAVE CORE (FINAL PATCH) ======================
+// ====================== HYBRID SAVE (FINAL FIX) ======================
 async function simpanDataHybrid() {
-  console.groupCollapsed("💾 simpanDataHybrid()");
+
+  // AMBIL SEMUA DATA DARI FORM ================================
+  const restoId = document.getElementById("restoId").value || "";
+
+  const namaRestoran = document.getElementById("namaRestoran").value || "";
+  const restoAddress = document.getElementById("restoAddress").value || "";
+  const restoPhone = document.getElementById("restoPhone").value || "";
+
+  const logo = window.currentLogo || "";
+  const background = window.currentBackground || "";
+
+  // MENU (sudah dikumpulkan oleh script lain)
+  const menu = window.menu || [];
+  const menuPromo = window.menuPromo || [];
+
+  // VOUCHER (Opsi A)
+  const syncedVoucher = Array.isArray(window.menuVoucher) ? window.menuVoucher : [];
+
+  // ROOM & GALERI
+  const rooms = window.rooms || [];
+  const flipbookRuanganImages = window.flipbookRuanganImages || [];
+  const flipbookMenuImages = window.flipbookMenuImages || [];
+
+  // ADMIN WA
+  const nomorWaAdmin = window.nomorWaAdmin || [];
+
+  // PAGE TOGGLE
+  const toggleOrderPage = document.getElementById("toggleOrderPage").checked;
+  const toggleRoomPage = document.getElementById("toggleRoomPage").checked;
+  const toggleVoucherPage = document.getElementById("toggleVoucherPage").checked;
+
+  // FINAL DATA ================================================
+  const finalData = {
+    restoId,
+
+    namaRestoran,
+    restoAddress,
+    restoPhone,
+    logo,
+    background,
+
+    menu,
+    menuPromo,
+
+    voucher: syncedVoucher,
+    menuVoucher: syncedVoucher,
+
+    rooms,
+    flipbookRuanganImages,
+    flipbookMenuImages,
+
+    nomorWaAdmin,
+
+    toggleOrderPage,
+    toggleRoomPage,
+    toggleVoucherPage
+  };
+
 
   try {
-    // ======================
-    // 1. Ambil data terbaru dari IndexedDB
-    // ======================
-    let data = await loadDataFromDB(restoId);
-    if (!data || typeof data !== "object") data = {};
-
-    // Pastikan menuVoucher selalu array
-    const syncedVoucher = Array.isArray(data.menuVoucher) ? data.menuVoucher : [];
-
-    // ======================
-    // 2. FINAL DATA
-    // ======================
-    const finalData = {
-      // ID RESTORAN (WAJIB)
-      restoId: restoId,
-
-      // DATA PROFIL USAHA
-      namaRestoran: namaRestoran,
-      restoAddress: restoAddress,
-      restoPhone: restoPhone,
-      logo: logo,
-      background: background,
-
-      // KATEGORI
-      categories: categories,
-
-      // MENU
-      menu: menu,
-      menuPromo: menuPromo,
-
-      // VOUCHER
-      menuVoucher: syncedVoucher,  // UI utama
-
-      // ROOM & GALERI
-      rooms: rooms,
-      flipbookRuanganImages: flipbookRuanganImages,
-      flipbookMenuImages: flipbookMenuImages,
-
-      // WA ADMIN
-      nomorWaAdmin: nomorWaAdmin
-    };
-
-    // Hapus legacy supaya tidak konflik
-    delete finalData.voucher;
-    delete finalData.vouchers;
-    delete finalData.voucherList;
-
-    // ======================
-    // 3. SIMPAN OFFLINE (IndexedDB)
-    // ======================
     await saveDataToDB(restoId, finalData);
-
-    // ======================
-    // 4. SIMPAN ONLINE (Supabase)
-    // ======================
-    await saveDataToSupabase(restoId, finalData);
-
-    console.log("✅ Hybrid Save Success (IDB + Supabase)", finalData);
-    console.groupEnd();
-
+    console.log("🍽️ Hybrid Save OK (IndexedDB + Supabase)");
   } catch (err) {
     console.error("❌ Hybrid save failed:", err);
-    console.groupEnd();
   }
 }
 
@@ -3533,4 +3533,5 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
