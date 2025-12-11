@@ -2901,14 +2901,14 @@ async function safeLoadDataFromDB() {
 
     // ================== 1. LOAD LOCAL (IndexedDB) ==================
     try {
-      localData = await loadDataFromDB(1);
+     localData = await loadDataFromDB(restoId);
       if (localData) console.log("📦 Cached IndexedDB:", localData);
     } catch (e) {
       console.warn("⚠ IndexedDB gagal dibaca:", e);
     }
 
     // Pakai default jika tidak ada local
-    let finalData = localData || buatDataDefault(1);
+    let finalData = localData || buatDataDefault(restoId);
 
     // Ambil restoId langsung dari local data
     const restoId = finalData.restoId?.trim() || null;
@@ -2971,7 +2971,7 @@ async function safeLoadDataFromDB() {
 
   } catch (err) {
     console.error("❌ safeLoadDataFromDB ERROR:", err);
-    return buatDataDefault(1);
+    return buatDataDefault(restoId);
   }
 }
 
@@ -3116,7 +3116,7 @@ async function loadVouchers() {
   console.groupCollapsed("📥 Load Vouchers (HYBRID)");
 
   try {
-    let data = await loadDataFromDB(1);
+    let data = await loadDataFromDB(restoId);
     if (!data || typeof data !== "object") data = {};
     if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
 
@@ -3167,7 +3167,7 @@ async function loadVouchers() {
       return;
     }
 
-    let data = await loadDataFromDB(1);
+    let data = await loadDataFromDB(restoId);
     if (!data || typeof data !== "object") data = {};
 
     if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
@@ -3360,7 +3360,7 @@ function fallbackCopy(text) {
 }
 
   async function autoLoadOnlineFirst() {
-  let local = await loadDataFromDB(1);
+  let local = await loadDataFromDB(restoId);
 
   const restoId =
     local?.restoId?.trim() ||
@@ -3533,5 +3533,6 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
