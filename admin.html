@@ -1207,58 +1207,76 @@ function scheduleHybridSave() {
   window._saveTimeout = setTimeout(() => simpanDataHybrid(), 300);
 }
 
-// ====================== HYBRID SAVE CORE ======================
+// ====================== HYBRID SAVE CORE (FINAL PATCH) ======================
 async function simpanDataHybrid() {
-
-  // Voucher UI selalu pakai menuVoucher
-  const syncedVoucher = Array.isArray(menuVoucher) ? menuVoucher : [];
-
-  // ======================
-  // FINAL DATA (untuk IndexedDB + Supabase)
-  // ======================
-  const finalData = {
-    // -------- ID RESTORAN --------
-    restoId,                    // ⬅ WAJIB, satu-satunya key di Supabase
-
-    // -------- DATA RESTORAN --------
-    namaRestoran,
-    restoAddress,
-    restoPhone,
-    logo,
-    background,
-
-    // -------- KATEGORI --------
-    categories,
-
-    // -------- MENU --------
-    menu,
-    menuPromo,
-
-    // -------- VOUCHER --------
-    voucher: syncedVoucher,        // legacy
-    menuVoucher: syncedVoucher,    // UI utama
-
-    // -------- ROOM & GALERI --------
-    rooms,
-    flipbookRuanganImages,
-    flipbookMenuImages,
-
-    // -------- ADMIN WA --------
-    nomorWaAdmin
-  };
+  console.groupCollapsed("💾 simpanDataHybrid()");
 
   try {
-    // ⬅ WAJIB DIGANTI
-    // saveDataToDB HANYA boleh memakai restoId, tidak boleh angka 1
+    // ======================
+    // 1. Ambil data terbaru dari IndexedDB
+    // ======================
+    let data = await loadDataFromDB(restoId);
+    if (!data || typeof data !== "object") data = {};
+
+    // Pastikan menuVoucher selalu array
+    const syncedVoucher = Array.isArray(data.menuVoucher) ? data.menuVoucher : [];
+
+    // ======================
+    // 2. FINAL DATA
+    // ======================
+    const finalData = {
+      // ID RESTORAN (WAJIB)
+      restoId: restoId,
+
+      // DATA PROFIL USAHA
+      namaRestoran: namaRestoran,
+      restoAddress: restoAddress,
+      restoPhone: restoPhone,
+      logo: logo,
+      background: background,
+
+      // KATEGORI
+      categories: categories,
+
+      // MENU
+      menu: menu,
+      menuPromo: menuPromo,
+
+      // VOUCHER
+      menuVoucher: syncedVoucher,  // UI utama
+
+      // ROOM & GALERI
+      rooms: rooms,
+      flipbookRuanganImages: flipbookRuanganImages,
+      flipbookMenuImages: flipbookMenuImages,
+
+      // WA ADMIN
+      nomorWaAdmin: nomorWaAdmin
+    };
+
+    // Hapus legacy supaya tidak konflik
+    delete finalData.voucher;
+    delete finalData.vouchers;
+    delete finalData.voucherList;
+
+    // ======================
+    // 3. SIMPAN OFFLINE (IndexedDB)
+    // ======================
     await saveDataToDB(restoId, finalData);
 
-    console.log("🍽️ Hybrid Save OK (IndexedDB + Supabase)");
+    // ======================
+    // 4. SIMPAN ONLINE (Supabase)
+    // ======================
+    await saveDataToSupabase(restoId, finalData);
+
+    console.log("✅ Hybrid Save Success (IDB + Supabase)", finalData);
+    console.groupEnd();
+
   } catch (err) {
     console.error("❌ Hybrid save failed:", err);
+    console.groupEnd();
   }
 }
-
-
 
 // ===============================================================
 // =============== HYBRID LOAD CORE (RestorId Only) ==============
@@ -3515,3 +3533,4 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
