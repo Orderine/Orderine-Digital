@@ -1112,7 +1112,6 @@ function buatDataDefault(restoId = "") {
 }
 
    // ====================== GLOBAL ======================
-let menuPromo = [];
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
@@ -1224,7 +1223,7 @@ async function simpanDataHybrid() {
 
   // MENU (sudah dikumpulkan oleh script lain)
   const menu = window.menu || [];
-  const menuPromo = window.menuPromo || [];
+  const syncedPromo = window.menuPromo || [];
 
   // VOUCHER (Opsi A)
   const syncedVoucher = Array.isArray(window.menuVoucher) ? window.menuVoucher : [];
@@ -2375,7 +2374,6 @@ async function autoLoadOnlineFirst() {
   try {
     showLoader();
 
-    // ================== FIX RESTOID ==================
     let restoIdInput = document.getElementById("restoId");
     let restoId = "";
 
@@ -2384,10 +2382,20 @@ async function autoLoadOnlineFirst() {
     } else {
       console.warn("⚠️ restoId kosong → pakai default resto-main");
       restoId = "resto-main";
-      restoIdInput.value = "resto-main"; // tulis balik ke input
+      restoIdInput.value = "resto-main";
     }
 
     console.log("🔑 FINAL restoId:", restoId);
+
+    // 🔥🔥🔥 Di sini fungsi autoLoadOnlineFirst SEHARUSNYA diakhiri
+  } catch (err) {
+    console.error("❌ autoLoadOnlineFirst error:", err);
+  } finally {
+    hideLoader();
+    console.groupEnd();
+  }
+}   // ← INI YANG HILANG BRO
+
 
 // ====================== RESET & BACKUP ======================
 async function resetData() {
@@ -3482,6 +3490,3 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
-
-
-
