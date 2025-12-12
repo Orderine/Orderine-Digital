@@ -811,19 +811,17 @@ async function initDB() {
   return dbPromise;
 }
 
-
 // ====================== GET DB INSTANCE ========================
 async function getDB() {
   if (dbInstance) return dbInstance;
   return await initDB();
 }
-
-
+   
 // ====================== TEST SUPABASE CONNECTION ===============
 (async () => {
   try {
     const { data, error } = await supabase
-      .from("admin_healthcheck")
+      .from("menuva_data")
       .select("id")
       .limit(1);
 
@@ -3490,4 +3488,5 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
