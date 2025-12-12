@@ -2816,6 +2816,7 @@ async function clearDataDB() {
 }
 
 </script>
+  
 <script>
 let isLoadingFromDB = false;
 let voucherLoaded = false;
@@ -2829,17 +2830,17 @@ async function safeLoadDataFromDB() {
 
     // ================== 1. LOAD LOCAL (IndexedDB) ==================
     try {
-     localData = await loadDataFromDB(restoId);
+      localData = await loadDataFromDB();
       if (localData) console.log("📦 Cached IndexedDB:", localData);
     } catch (e) {
       console.warn("⚠ IndexedDB gagal dibaca:", e);
     }
 
-    // Pakai default jika tidak ada local
-   let finalData = localData || buatDataDefault(key);
+    // Gunakan default jika local null
+    let finalData = localData || buatDataDefault();
 
-    // Ambil restoId langsung dari local data
-    const restoId = finalData.restoId?.trim() || null;
+    // Ambil restoId setelah finalData pasti ada
+    const restoId = finalData?.restoId?.trim() || null;
 
     console.log("🆔 restoId:", restoId || "(null)");
 
@@ -2850,7 +2851,7 @@ async function safeLoadDataFromDB() {
       return finalData;
     }
 
-    // ================== 2. LOAD ONLINE (SUPABASE, SINGLE TABLE) ===============
+    // ================== 2. LOAD ONLINE (SUPABASE) ==================
     try {
       const { data: row, error } = await supabase
         .from("menuva_data")
@@ -2860,29 +2861,23 @@ async function safeLoadDataFromDB() {
 
       if (error) console.warn("⚠ Supabase error:", error);
 
-      if (row && row.data) {
+      if (row?.data) {
         const r = row.data;
 
         console.log("🌐 ONLINE DATA:", r);
 
-        // merge online + local
+        // Merge dengan aman
         finalData = {
           ...finalData,
           ...r,
-
-          menuVoucher: Array.isArray(r.menuVoucher)
-            ? r.menuVoucher
-            : Array.isArray(finalData.menuVoucher)
-              ? finalData.menuVoucher
-              : []
+          menuVoucher:
+            Array.isArray(r.menuVoucher)
+              ? r.menuVoucher
+              : Array.isArray(finalData.menuVoucher)
+                ? finalData.menuVoucher
+                : []
         };
-
-        // patch anti-corrupt
-        if (!Array.isArray(finalData.menuVoucher)) {
-          finalData.menuVoucher = [];
-        }
       }
-
     } catch (err) {
       console.warn("⚠ Supabase load error:", err);
     }
@@ -2899,10 +2894,9 @@ async function safeLoadDataFromDB() {
 
   } catch (err) {
     console.error("❌ safeLoadDataFromDB ERROR:", err);
-    return buatDataDefault(restoId);
+    return buatDataDefault();
   }
 }
-
 
 // ====================== FIX CATEGORY (PASTI RESTOID) ======================
 function fixCategory(cat) {
@@ -3039,50 +3033,8 @@ async function initVoucherToggle() {
   await loadVouchers();
 }
 
-// ===================== LOAD VOUCHERS (FINAL SAFE VERSION, RESTOID ONLY) =====================
-async function loadVouchers() {
-  console.groupCollapsed("📥 Load Vouchers (HYBRID)");
-
-  try {
-    let data = await loadDataFromDB(restoId);
-    if (!data || typeof data !== "object") data = {};
-    if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
-
-    let vouchers = data.menuVoucher.map(v => fixVoucher(v)).filter(v => v);
-
-    const today = new Date();
-    const cleaned = vouchers.filter(v => {
-      const exp = new Date(v.expiry);
-      return isFinite(exp) && exp >= today;
-    });
-
-    // Jika ada voucher expired → hapus lalu simpan ulang
-    if (cleaned.length !== vouchers.length) {
-      data.menuVoucher = cleaned;
-
-      // 💾 SIMPAN LOCAL
-      await saveDataToDB(1, data);
-
-      // ☁️ SIMPAN ONLINE jika restoId ada
-      if (data.restoId) {
-        await saveDataToSupabase(data.restoId, data);
-      }
-    }
-
-    console.log("📌 Final vouchers:", cleaned);
-    console.groupEnd();
-
-    renderVoucher(cleaned);
-    return cleaned;
-
-  } catch (err) {
-    console.error("❌ ERROR loadVouchers:", err);
-    console.groupEnd();
-    return [];
-  }
-}
-
-  async function saveVoucher() {
+// ===================== SAVE VOUCHER (FINAL SAFE VERSION) =====================
+async function saveVoucher() {
   console.groupCollapsed("💾 Save Voucher");
 
   try {
@@ -3091,15 +3043,17 @@ async function loadVouchers() {
     const expiry = voucherExpiry.value;
 
     if (!code || !discount || !expiry) {
-      alert("Kode, diskon, dan expired wajib diisi.");
+      alert("Kode, diskon, dan tanggal expired wajib diisi.");
       return;
     }
 
-    let data = await loadDataFromDB(restoId);
-    if (!data || typeof data !== "object") data = {};
+    // 1. Load local
+    let data = await loadDataFromDB();
+    if (!data || typeof data !== "object") data = buatDataDefault();
 
     if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
 
+    // 2. Buat voucher baru
     const newVoucher = fixVoucher({
       id: Date.now(),
       code,
@@ -3110,17 +3064,17 @@ async function loadVouchers() {
 
     data.menuVoucher.push(newVoucher);
 
-    // 💾 Simpan offline
-    await saveDataToDB(1, data);
+    // 3. Simpan offline
+    await saveDataToDB(null, data);
 
-    // ☁️ Simpan online hanya jika restoId tersedia
+    // 4. Simpan online
     if (data.restoId) {
       await saveDataToSupabase(data.restoId, data);
     } else {
-      console.warn("⚠️ restoId kosong — voucher belum disimpan ke Supabase");
+      console.warn("⚠️ restoId kosong — belum bisa sync ke Supabase");
     }
 
-    // Render ulang UI
+    // Refresh UI
     renderVoucher(data.menuVoucher);
 
     // Reset input
@@ -3246,7 +3200,10 @@ function fallbackCopy(text) {
   }
 }
 
-  function autoSyncRealtime(restoId) {
+ // ========================= REALTIME SYNC (FINAL SAFE VERSION) =========================
+let isRealtimeSyncing = false;   // Anti-loop
+
+function autoSyncRealtime(restoId) {
   if (!window.supabase || !restoId) {
     console.warn("⚠️ Supabase belum siap / restoId kosong → realtime dimatikan.");
     return;
@@ -3263,19 +3220,60 @@ function fallbackCopy(text) {
           event: "*",
           schema: "public",
           table: "menuva_data",
-          filter: `resto_id=eq.${restoId}`  // pakai restoId
+          filter: `resto_id=eq.${restoId}`
         },
         async (payload) => {
           console.log("🔔 REALTIME UPDATE:", payload);
 
-          const newData = await loadDataFromSupabase(restoId);
-          if (!newData) return;
+          if (isRealtimeSyncing) {
+            console.log("⏳ Skip — sedang sync realtime...");
+            return;
+          }
 
-          await saveDataToDB(1, newData);
-          await loadData(newData);
+          isRealtimeSyncing = true;
+
+          try {
+            // 1. Ambil local dulu
+            let local = await loadDataFromDB() || {};
+            if (typeof local !== "object") local = {};
+
+            // 2. Ambil online
+            let online = await loadDataFromSupabase(restoId);
+            if (!online || typeof online !== "object") {
+              console.warn("⚠ Online kosong, skip update realtime.");
+              return;
+            }
+
+            // 3. Merge aman
+            const merged = {
+              ...local,
+              ...online
+            };
+
+            // 4. Jaga voucher array agar tidak corrupt
+            if (!Array.isArray(merged.menuVoucher)) {
+              merged.menuVoucher = [];
+            }
+
+            // 5. Simpan local dengan ID otomatis
+            await saveDataToDB(null, merged);
+
+            // 6. Update UI
+            await loadData(merged);
+
+            console.log("🟢 Realtime sync SUCCESS:", merged);
+
+          } catch (err) {
+            console.error("❌ ERROR during realtime sync:", err);
+          }
+
+          // Delay anti-loop
+          setTimeout(() => {
+            isRealtimeSyncing = false;
+          }, 500);
         }
       )
-      .subscribe(status => {
+      .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           console.log("🟢 Realtime aktif untuk restoId:", restoId);
         }
@@ -3287,32 +3285,64 @@ function fallbackCopy(text) {
   }
 }
 
-  async function autoLoadOnlineFirst() {
-  let local = await loadDataFromDB(restoId);
+// ========================= AUTO LOAD ONLINE FIRST (FINAL SUPER SAFE) =========================
+async function autoLoadOnlineFirst() {
+  console.groupCollapsed("🌐 AUTO LOAD ONLINE FIRST");
 
+  // 1. Load local tanpa restoId
+  let local = await loadDataFromDB();
+  if (!local || typeof local !== "object") {
+    local = buatDataDefault();
+  }
+
+  // 2. Cari restoId (prioritas local)
   const restoId =
-    local?.restoId?.trim() ||
+    local.restoId?.trim() ||
     document.getElementById("restoId")?.value?.trim() ||
     null;
 
   if (!restoId || !window.supabase) {
-    console.warn("⛔ No restoId → skip online load");
+    console.warn("⛔ Tidak ada restoId → skip online load");
+    console.groupEnd();
     return;
   }
 
-  console.log("🌐 Auto Load Online First untuk restoId:", restoId);
+  console.log("🌐 Load data online untuk restoId:", restoId);
 
+  // 3. Load online
   const online = await loadDataFromSupabase(restoId);
 
-  if (online) {
-    await saveDataToDB(1, online);
-    await loadData(online);
+  if (online && typeof online === "object") {
+    // 4. Merge aman
+    const merged = {
+      ...local,     // prioritas lokal agar tidak hilang
+      ...online,    // override hanya yang online punya
+    };
+
+    // 5. Pastikan voucher array aman
+    if (!Array.isArray(merged.menuVoucher)) {
+      merged.menuVoucher = [];
+    }
+
+    // 6. Simpan offline dengan ID otomatis
+    await saveDataToDB(null, merged);
+
+    // 7. Render ke UI
+    await loadData(merged);
+
+    console.log("✅ ONLINE MERGE SUCCESS:", merged);
+  } else {
+    console.warn("⚠ Online kosong → tetap pakai local");
+    await loadData(local);
   }
 
-  // aktifkan realtime berdasarkan restoId
+  // 8. Aktifkan realtime sync
   autoSyncRealtime(restoId);
+
+  console.groupEnd();
 }
 
+// Auto-run saat halaman dibuka
 document.addEventListener("DOMContentLoaded", async () => {
   await autoLoadOnlineFirst();
 });
@@ -3461,4 +3491,5 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
