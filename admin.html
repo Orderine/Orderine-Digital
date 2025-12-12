@@ -3092,20 +3092,13 @@ async function saveVoucher() {
   console.groupEnd();
 }
 
-  // ===================== RENDER VOUCHER (HYBRID NEW) =====================
 function renderVoucher(vouchers = []) {
   const box = document.getElementById("voucherPreview");
   if (!box) return;
 
-  // Pastikan array aman
   vouchers = Array.isArray(vouchers) ? vouchers : [];
+  vouchers = vouchers.map(v => fixVoucher(v)).filter(v => v && v.isActive);
 
-  // Perbaiki format voucher + buang yang invalid
-  vouchers = vouchers
-    .map(v => fixVoucher(v))
-    .filter(v => v && v.isActive);
-
-  // Filter expired
   const today = new Date();
   vouchers = vouchers.filter(v => {
     const exp = new Date(v.expiry);
@@ -3117,12 +3110,10 @@ function renderVoucher(vouchers = []) {
     return;
   }
 
-  // Render final
-  box.innerHTML = `
-    <h3 style="margin-bottom:10px;">Voucher Aktif</h3>
-    ${vouchers
-      .map(
-        v => `
+  let html = `<h3 style="margin-bottom:10px;">Voucher Aktif</h3>`;
+
+  vouchers.forEach(v => {
+    html += `
       <div class="voucher-item"
            style="border:1px solid #ccc; padding:10px; margin:8px 0; border-radius:10px; background:#fafafa;">
         <p><strong>Kode Voucher:</strong>
@@ -3133,10 +3124,10 @@ function renderVoucher(vouchers = []) {
         <p><strong>Minimal Order:</strong> Rp ${Number(v.minOrder).toLocaleString()}</p>
         <p><strong>Expired:</strong> ${v.expiry}</p>
       </div>
-      `
-      )
-      .join("")}
-  `;
+    `;
+  });
+
+  box.innerHTML = html;
 }
 
 // ===================== CLIPBOARD =====================
@@ -3491,5 +3482,6 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
