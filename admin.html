@@ -771,6 +771,301 @@ if (!window.indexedDB) {
 
 let dbPromise = null;
 
+
+// ====================== INIT DB (IndexedDB) ====================
+async function initDB() {
+  if (dbInstance) return dbInstance;
+  if (dbPromise) return dbPromise;
+
+  dbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        // Key harus sama → restoId
+        db.createObjectStore(STORE_NAME, { keyPath: "restoId" });
+      }
+
+      if (!db.objectStoreNames.contains("ordersData")) {
+        db.createObjectStore("ordersData", {
+          keyPath: "id",
+          autoIncrement: true
+        });
+      }
+    };
+
+    request.onsuccess = (e) => {
+      dbInstance = e.target.result;
+      dbPromise = null;
+      resolve(dbInstance);
+    };
+
+    request.onerror = (e) => {
+      dbPromise = null;
+      reject(e.target.error);
+    };
+  });
+
+  return dbPromise;
+}
+
+
+// ====================== GET DB INSTANCE ========================
+async function getDB() {
+  if (dbInstance) return dbInstance;
+  return await initDB();
+}
+
+
+// ====================== TEST SUPABASE CONNECTION ===============
+(async () => {
+  try {
+    const { data, error } = await supabase
+      .from("admin_healthcheck")
+      .select("id")
+      .limit(1);
+
+    if (error) throw error;
+
+    console.log("🌐 Supabase Online Mode → ACTIVE");
+    ONLINE_MODE = true;
+
+  } catch (err) {
+    console.warn("⚠ Supabase tidak dapat diakses, fallback ke Offline Mode");
+    ONLINE_MODE = false;
+  }
+})();
+
+// ====================== HYBRID SAVE (IndexedDB + Supabase) ======================
+async function saveDataToDB(restoId, newData) {
+  console.groupCollapsed("💾 [HYBRID SAVE] saveDataToDB()");
+
+  const key = String(restoId).trim();
+  if (!key) {
+    console.error("❌ restoId kosong pada saveDataToDB()");
+    return;
+  }
+
+  console.log("🆔 RESTO ID:", key);
+
+  const db = await getDB();
+  const tx = db.transaction(STORE_NAME, "readwrite");
+  const store = tx.objectStore(STORE_NAME);
+
+  return new Promise((resolve, reject) => {
+    const req = store.get(key);
+
+    req.onsuccess = async () => {
+      let oldData = req.result || buatDataDefault(key);
+
+      console.log("🟨 OLD DATA:", JSON.parse(JSON.stringify(oldData)));
+      console.log("🟦 NEW DATA:", JSON.parse(JSON.stringify(newData)));
+
+      // ============================
+      // MERGE AMAN (tidak hapus data lama)
+      // ============================
+      const safeMerge = (oldVal, newVal) => {
+        return newVal !== undefined ? newVal : oldVal;
+      };
+
+      let finalData = {
+        restoId: key,
+
+        // ===== BUSINESS IDENTITY =====
+        namaRestoran: safeMerge(oldData.namaRestoran, newData.namaRestoran),
+        restoAddress: safeMerge(oldData.restoAddress, newData.restoAddress),
+        restoPhone: safeMerge(oldData.restoPhone, newData.restoPhone),
+        logo: safeMerge(oldData.logo, newData.logo),
+        background: safeMerge(oldData.background, newData.background),
+
+        // ===== CATEGORIES =====
+        categories: safeMerge(oldData.categories, newData.categories),
+
+        // ===== MENU =====
+        menu: safeMerge(oldData.menu, newData.menu),
+        menuPromo: safeMerge(oldData.menuPromo, newData.menuPromo),
+
+        // ===== ROOMS & GALLERY =====
+        rooms: safeMerge(oldData.rooms, newData.rooms),
+        flipbookRuanganImages: safeMerge(oldData.flipbookRuanganImages, newData.flipbookRuanganImages),
+        flipbookMenuImages: safeMerge(oldData.flipbookMenuImages, newData.flipbookMenuImages),
+
+        // ===== ADMIN WA =====
+        nomorWaAdmin: safeMerge(oldData.nomorWaAdmin, newData.nomorWaAdmin),
+      };
+
+      // ============================
+      // VOUCHER MERGE KHUSUS
+      // ============================
+      if (Array.isArray(newData.menuVoucher)) {
+        finalData.menuVoucher = newData.menuVoucher.slice();
+      } else if (Array.isArray(oldData.menuVoucher)) {
+        finalData.menuVoucher = oldData.menuVoucher.slice();
+      } else {
+        finalData.menuVoucher = [];
+      }
+
+      // migrate legacy
+      if (Array.isArray(newData.voucher)) {
+        finalData.menuVoucher = newData.voucher.slice();
+      }
+
+      delete finalData.voucher;
+
+      console.log("🟩 FINAL DATA:", JSON.parse(JSON.stringify(finalData)));
+
+      // ============================
+      // SAVE OFFLINE
+      // ============================
+      const saveReq = store.put({ ...finalData, id: key });
+
+      saveReq.onsuccess = async () => {
+        console.log("💾 IndexedDB → OK");
+
+        // ============================
+        // SAVE ONLINE
+        // ============================
+        try {
+          const payload = {
+            resto_id: key,
+            data: finalData,
+            updated_at: new Date().toISOString(),
+          };
+
+          const { error } = await supabase
+            .from("menuva_data")
+            .upsert(payload, { onConflict: "resto_id" });
+
+          if (error) console.error("❌ Supabase ERROR:", error);
+          else console.log("🌐 Supabase sync → OK");
+        } catch (e) {
+          console.warn("⚠ Supabase gagal:", e.message);
+        }
+
+        console.groupEnd();
+        resolve(finalData);
+      };
+
+      saveReq.onerror = (e) => {
+        console.error("❌ IndexedDB save error:", e.target.error);
+        console.groupEnd();
+        reject(e.target.error);
+      };
+    };
+
+    req.onerror = (e) => {
+      console.error("❌ IndexedDB read error:", e.target.error);
+      console.groupEnd();
+      reject(e.target.error);
+    };
+  });
+}
+
+// ====================== FUNGSI 2 (LOAD) ======================
+async function loadDataFromDB(restoId) {
+  console.groupCollapsed("📥 [HYBRID LOAD] loadDataFromDB()");
+
+  restoId = String(restoId || "").trim();
+
+  // ============================================================
+  // 1️⃣ LOAD DARI SUPABASE
+  // ============================================================
+  if (ONLINE_MODE) {
+    try {
+      console.log("🌐 Mencoba load dari Supabase... restoId:", restoId);
+
+      const { data: row, error } = await supabase
+        .from("menuva_data")
+        .select("resto_id, data")
+        .eq("resto_id", restoId)
+        .maybeSingle();
+
+      if (error) console.warn("⚠ Supabase error:", error.message);
+
+      if (row && row.data) {
+        const r = row.data;
+
+        console.log("🧪 [CHECK] Supabase.r.voucher:", r.voucher);
+        console.log("🧪 [CHECK] Supabase.r.menuVoucher:", r.menuVoucher);
+
+        // ========== SAFE MERGE ==========
+        const safe = {
+          id: restoId,
+          restoId: row.resto_id || r.restoId || restoId,
+
+          namaRestoran: r.namaRestoran || "",
+          restoAddress: r.restoAddress || "",
+          restoPhone: r.restoPhone || "",
+          logo: r.logo || "",
+
+          categories: Array.isArray(r.categories) ? r.categories : [],
+          menu: Array.isArray(r.menu) ? r.menu : [],
+          menuPromo: Array.isArray(r.menuPromo) ? r.menuPromo : [],
+
+          // 🔥 FIX voucher
+          menuVoucher:
+            Array.isArray(r.menuVoucher)
+              ? r.menuVoucher
+              : (Array.isArray(r.voucher) ? r.voucher : []),
+
+          rooms: Array.isArray(r.rooms) ? r.rooms : [],
+          nomorWaAdmin: Array.isArray(r.nomorWaAdmin) ? r.nomorWaAdmin : [],
+
+          flipbookRuanganImages: Array.isArray(r.flipbookRuanganImages) ? r.flipbookRuanganImages : [],
+          flipbookMenuImages: Array.isArray(r.flipbookMenuImages) ? r.flipbookMenuImages : []
+        };
+
+        console.log("🌐 Supabase SAFE-FIX:", safe);
+        console.groupEnd();
+        return safe;
+      }
+    } catch (err) {
+      console.warn("⚠ Supabase load error:", err);
+    }
+  }
+
+  // ============================================================
+  // 2️⃣ Fallback IndexedDB
+  // ============================================================
+  try {
+    const db = await getDB();
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+
+    const data = await new Promise((resolve, reject) => {
+      const req = store.get(restoId);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+
+    if (data) {
+      console.log("📦 IndexedDB raw:", data);
+
+      // voucher fix
+      if (!Array.isArray(data.menuVoucher)) {
+        data.menuVoucher = Array.isArray(data.voucher) ? data.voucher : [];
+      }
+      delete data.voucher;
+
+      console.log("📦 IndexedDB setelah patch:", data);
+      console.groupEnd();
+      return data;
+    }
+  } catch (err) {
+    console.warn("⚠ IndexedDB load error:", err);
+  }
+
+  // ============================================================
+  // 3️⃣ Default data
+  // ============================================================
+  console.warn("⚠ Tidak ada data → default");
+  const def = buatDataDefault(restoId);
+  console.groupEnd();
+  return def;
+}
+
 function buatDataDefault(restoId = "") {
   restoId = String(restoId).trim();
 
