@@ -1,4 +1,4 @@
-// ====================== SUPABASE SYNC ======================
+// ====================== SUPABASE SYNC (PUSH & PULL) ======================
 console.log("🧩 supabase-sync.js LOADED");
 
 // ====================== INIT SUPABASE ======================
@@ -11,11 +11,9 @@ const supabase = window.supabase.createClient(
 );
 
 // ====================== INDEXEDDB HELPERS ======================
-
-function dumpIndexedDB() {
+function dumpMenuvaData() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open("MenuvaDB", 10);
-
     req.onerror = () => reject(req.error);
 
     req.onsuccess = () => {
@@ -30,10 +28,9 @@ function dumpIndexedDB() {
   });
 }
 
-function clearIndexedDB() {
+function clearMenuvaData() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open("MenuvaDB", 10);
-
     req.onerror = () => reject(req.error);
 
     req.onsuccess = () => {
@@ -48,10 +45,9 @@ function clearIndexedDB() {
   });
 }
 
-function restoreIndexedDB(snapshot) {
+function insertSnapshot(snapshot) {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open("MenuvaDB", 10);
-
     req.onerror = () => reject(req.error);
 
     req.onsuccess = () => {
@@ -67,8 +63,7 @@ function restoreIndexedDB(snapshot) {
   });
 }
 
-// ====================== UTIL ======================
-
+// ====================== SUPABASE ACTIONS ======================
 function extractRestoId(snapshot) {
   for (const item of snapshot) {
     if (
@@ -82,14 +77,14 @@ function extractRestoId(snapshot) {
   return null;
 }
 
-// ====================== PUSH ======================
-
 async function pushSnapshotToSupabase() {
-  const snapshot = await dumpIndexedDB();
-  if (!snapshot.length) return alert("Snapshot kosong");
-
+  const snapshot = await dumpMenuvaData();
   const restoId = extractRestoId(snapshot);
-  if (!restoId) return alert("Resto ID tidak ditemukan");
+
+  if (!restoId) {
+    alert("❌ Resto ID tidak ditemukan");
+    return;
+  }
 
   const payload = {
     version: "orderine-indexeddb-v1",
@@ -109,12 +104,9 @@ async function pushSnapshotToSupabase() {
     console.error(error);
     alert("❌ Sync gagal");
   } else {
-    console.log("✅ Sync sukses:", restoId);
-    alert("Sync online sukses");
+    alert("✅ Sync online sukses");
   }
 }
-
-// ====================== PULL ======================
 
 async function pullSnapshotFromSupabase(restoId) {
   const { data, error } = await supabase
@@ -124,20 +116,18 @@ async function pullSnapshotFromSupabase(restoId) {
     .single();
 
   if (error || !data?.data?.snapshot) {
-    console.error(error);
-    alert("❌ Snapshot tidak ditemukan");
+    alert("❌ Data tidak ditemukan");
     return;
   }
 
-  await clearIndexedDB();
-  await restoreIndexedDB(data.data.snapshot);
+  await clearMenuvaData();
+  await insertSnapshot(data.data.snapshot);
 
-  console.log("✅ Restore selesai:", data.data.snapshot.length);
+  console.log("✅ Snapshot restored");
   location.reload();
 }
 
-// ====================== EXPOSE (PALING BAWAH) ======================
-
-window.dumpIndexedDB = dumpIndexedDB;
+// ====================== EXPOSE KE CONSOLE ======================
 window.pushSnapshotToSupabase = pushSnapshotToSupabase;
 window.pullSnapshotFromSupabase = pullSnapshotFromSupabase;
+window.dumpIndexedDB = dumpMenuvaData;
