@@ -148,6 +148,15 @@ window.testClearIndexedDB = testClearIndexedDB;
 window.restoreSnapshot = restoreSnapshot;
 window.dumpIndexedDB = dumpIndexedDB;
 
+// ====================== ALIAS & GLOBAL EXPOSE ======================
 
+// alias biar konsisten dengan step-step sebelumnya
+const dumpIndexedDB = dumpMenuvaData;
 
+// expose ke window untuk console testing
+window.dumpIndexedDB = dumpIndexedDB;
+window.testPullSnapshot = testPullSnapshot;
+window.testClearIndexedDB = testClearIndexedDB;
+window.restoreSnapshot = restoreSnapshot;
+window.pushSnapshotToSupabase = pushSnapshotToSupabase;
 
