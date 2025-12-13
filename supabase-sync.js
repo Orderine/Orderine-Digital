@@ -10,7 +10,8 @@ const supabase = window.supabase.createClient(
   SUPABASE_ANON_KEY
 );
 
-// ====================== INDEXEDDB DUMP ======================
+// ====================== INDEXEDDB HELPERS ======================
+
 function dumpIndexedDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open("MenuvaDB", 10);
@@ -29,7 +30,45 @@ function dumpIndexedDB() {
   });
 }
 
-// ====================== EXTRACT RESTO ID ======================
+function clearIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("MenuvaDB", 10);
+
+    req.onerror = () => reject(req.error);
+
+    req.onsuccess = () => {
+      const db = req.result;
+      const tx = db.transaction("menuvaData", "readwrite");
+      const store = tx.objectStore("menuvaData");
+
+      const clearReq = store.clear();
+      clearReq.onsuccess = () => resolve();
+      clearReq.onerror = () => reject(clearReq.error);
+    };
+  });
+}
+
+function restoreIndexedDB(snapshot) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("MenuvaDB", 10);
+
+    req.onerror = () => reject(req.error);
+
+    req.onsuccess = () => {
+      const db = req.result;
+      const tx = db.transaction("menuvaData", "readwrite");
+      const store = tx.objectStore("menuvaData");
+
+      snapshot.forEach(item => store.put(item));
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    };
+  });
+}
+
+// ====================== UTIL ======================
+
 function extractRestoId(snapshot) {
   for (const item of snapshot) {
     if (
@@ -43,19 +82,14 @@ function extractRestoId(snapshot) {
   return null;
 }
 
-// ====================== PUSH SNAPSHOT ======================
+// ====================== PUSH ======================
+
 async function pushSnapshotToSupabase() {
   const snapshot = await dumpIndexedDB();
-  if (!snapshot.length) {
-    console.warn("⚠️ Snapshot kosong");
-    return;
-  }
+  if (!snapshot.length) return alert("Snapshot kosong");
 
   const restoId = extractRestoId(snapshot);
-  if (!restoId) {
-    alert("❌ Resto ID tidak ditemukan");
-    return;
-  }
+  if (!restoId) return alert("Resto ID tidak ditemukan");
 
   const payload = {
     version: "orderine-indexeddb-v1",
@@ -72,47 +106,17 @@ async function pushSnapshotToSupabase() {
     });
 
   if (error) {
-    console.error("❌ Push gagal:", error);
+    console.error(error);
+    alert("❌ Sync gagal");
   } else {
-    console.log("✅ Push sukses:", restoId);
+    console.log("✅ Sync sukses:", restoId);
+    alert("Sync online sukses");
   }
 }
 
-// ====================== TEST PULL ======================
-async function testPullSnapshot(restoId) {
-  const { data, error } = await supabase
-    .from("menuva_data")
-    .select("data")
-    .eq("resto_id", restoId)
-    .single();
+// ====================== PULL ======================
 
-  if (error) {
-    console.error("❌ Supabase error:", error);
-    return;
-  }
-
-  console.group("📥 SUPABASE SNAPSHOT");
-  console.log("Resto ID:", restoId);
-  console.log("Snapshot count:", data.data.snapshot.length);
-  console.groupEnd();
-}
-
-// ====================== CLEAR INDEXEDDB ======================
-function testClearIndexedDB() {
-  const req = indexedDB.open("MenuvaDB", 10);
-  req.onsuccess = () => {
-    const db = req.result;
-    const tx = db.transaction("menuvaData", "readwrite");
-    const store = tx.objectStore("menuvaData");
-
-    store.clear().onsuccess = () => {
-      console.log("🧹 IndexedDB CLEARED");
-    };
-  };
-}
-
-// ====================== RESTORE SNAPSHOT ======================
-async function restoreSnapshot(restoId) {
+async function pullSnapshotFromSupabase(restoId) {
   const { data, error } = await supabase
     .from("menuva_data")
     .select("data")
@@ -120,35 +124,20 @@ async function restoreSnapshot(restoId) {
     .single();
 
   if (error || !data?.data?.snapshot) {
-    console.error("❌ Snapshot tidak ditemukan");
+    console.error(error);
+    alert("❌ Snapshot tidak ditemukan");
     return;
   }
 
-  const snapshot = data.data.snapshot;
+  await clearIndexedDB();
+  await restoreIndexedDB(data.data.snapshot);
 
-  const req = indexedDB.open("MenuvaDB", 10);
-  req.onsuccess = () => {
-    const db = req.result;
-    const tx = db.transaction("menuvaData", "readwrite");
-    const store = tx.objectStore("menuvaData");
-
-    snapshot.forEach(item => store.put(item));
-
-    tx.oncomplete = () => {
-      console.log("✅ Snapshot restored:", snapshot.length);
-      location.reload();
-    };
-  };
+  console.log("✅ Restore selesai:", data.data.snapshot.length);
+  location.reload();
 }
 
-// ====================== ALIAS LEGACY ======================
-// biar console & test step 4 jalan
+// ====================== EXPOSE (PALING BAWAH) ======================
 
-window.dumpIndexedDB = dumpMenuvaData;
-window.testPullSnapshot = testPullSnapshot;
-window.testClearIndexedDB = testClearIndexedDB;
-window.restoreSnapshot = restoreSnapshot;
+window.dumpIndexedDB = dumpIndexedDB;
 window.pushSnapshotToSupabase = pushSnapshotToSupabase;
-
-console.log("✅ supabase-sync.js READY");
-
+window.pullSnapshotFromSupabase = pullSnapshotFromSupabase;
