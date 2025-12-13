@@ -141,9 +141,14 @@ async function restoreSnapshot(restoId) {
   };
 }
 
-// ====================== EXPOSE TO WINDOW ======================
-window.dumpIndexedDB = dumpIndexedDB;
-window.pushSnapshotToSupabase = pushSnapshotToSupabase;
+// ====================== ALIAS LEGACY ======================
+// biar console & test step 4 jalan
+
+window.dumpIndexedDB = dumpMenuvaData;
 window.testPullSnapshot = testPullSnapshot;
 window.testClearIndexedDB = testClearIndexedDB;
 window.restoreSnapshot = restoreSnapshot;
+window.pushSnapshotToSupabase = pushSnapshotToSupabase;
+
+console.log("✅ supabase-sync.js READY");
+
