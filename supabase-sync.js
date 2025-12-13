@@ -1,4 +1,5 @@
 // ====================== SUPABASE SYNC (PUSH) ======================
+console.log("🧩 supabase-sync.js LOADED");
 
 // 1️⃣ INIT SUPABASE
 const SUPABASE_URL = "https://yscjjisqvlbedtuomrmf.supabase.co";
@@ -141,5 +142,12 @@ async function restoreSnapshot(restoId) {
     };
   };
 }
+
+window.testPullSnapshot = testPullSnapshot;
+window.testClearIndexedDB = testClearIndexedDB;
+window.restoreSnapshot = restoreSnapshot;
+window.dumpIndexedDB = dumpIndexedDB;
+
+
 
 
