@@ -1,7 +1,7 @@
-// ====================== SUPABASE SYNC (PUSH) ======================
+// ====================== SUPABASE SYNC ======================
 console.log("🧩 supabase-sync.js LOADED");
 
-// 1️⃣ INIT SUPABASE
+// ====================== INIT SUPABASE ======================
 const SUPABASE_URL = "https://yscjjisqvlbedtuomrmf.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_L69H0-PapAm3jMWrTyYayQ_4kOd2MMD";
 
@@ -10,8 +10,8 @@ const supabase = window.supabase.createClient(
   SUPABASE_ANON_KEY
 );
 
-// 2️⃣ DUMP MENUVA DATA (ALL RECORDS)
-async function dumpMenuvaData() {
+// ====================== INDEXEDDB DUMP ======================
+function dumpIndexedDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open("MenuvaDB", 10);
 
@@ -29,9 +29,8 @@ async function dumpMenuvaData() {
   });
 }
 
-// 3️⃣ AMBIL RESTO ID (NO TLP)
+// ====================== EXTRACT RESTO ID ======================
 function extractRestoId(snapshot) {
-  // cari record yang punya restoId valid
   for (const item of snapshot) {
     if (
       typeof item.restoId === "string" &&
@@ -44,9 +43,9 @@ function extractRestoId(snapshot) {
   return null;
 }
 
-// 4️⃣ PUSH KE SUPABASE
+// ====================== PUSH SNAPSHOT ======================
 async function pushSnapshotToSupabase() {
-  const snapshot = await dumpMenuvaData();
+  const snapshot = await dumpIndexedDB();
   if (!snapshot.length) {
     console.warn("⚠️ Snapshot kosong");
     return;
@@ -54,7 +53,7 @@ async function pushSnapshotToSupabase() {
 
   const restoId = extractRestoId(snapshot);
   if (!restoId) {
-    alert("❌ Resto ID (no tlp) tidak ditemukan");
+    alert("❌ Resto ID tidak ditemukan");
     return;
   }
 
@@ -73,14 +72,13 @@ async function pushSnapshotToSupabase() {
     });
 
   if (error) {
-    console.error("❌ Sync gagal:", error);
-    alert("Sync ke Supabase gagal");
+    console.error("❌ Push gagal:", error);
   } else {
-    console.log("✅ Sync ke Supabase sukses:", restoId);
-    alert("Sync online sukses");
+    console.log("✅ Push sukses:", restoId);
   }
 }
 
+// ====================== TEST PULL ======================
 async function testPullSnapshot(restoId) {
   const { data, error } = await supabase
     .from("menuva_data")
@@ -95,25 +93,25 @@ async function testPullSnapshot(restoId) {
 
   console.group("📥 SUPABASE SNAPSHOT");
   console.log("Resto ID:", restoId);
-  console.log("Payload:", data.data);
   console.log("Snapshot count:", data.data.snapshot.length);
   console.groupEnd();
 }
 
-async function testClearIndexedDB() {
+// ====================== CLEAR INDEXEDDB ======================
+function testClearIndexedDB() {
   const req = indexedDB.open("MenuvaDB", 10);
-
   req.onsuccess = () => {
     const db = req.result;
     const tx = db.transaction("menuvaData", "readwrite");
     const store = tx.objectStore("menuvaData");
 
     store.clear().onsuccess = () => {
-      console.log("🧹 IndexedDB menuvaData CLEARED");
+      console.log("🧹 IndexedDB CLEARED");
     };
   };
 }
 
+// ====================== RESTORE SNAPSHOT ======================
 async function restoreSnapshot(restoId) {
   const { data, error } = await supabase
     .from("menuva_data")
@@ -137,26 +135,15 @@ async function restoreSnapshot(restoId) {
     snapshot.forEach(item => store.put(item));
 
     tx.oncomplete = () => {
-      console.log("✅ Snapshot restored:", snapshot.length, "records");
+      console.log("✅ Snapshot restored:", snapshot.length);
       location.reload();
     };
   };
 }
 
-window.testPullSnapshot = testPullSnapshot;
-window.testClearIndexedDB = testClearIndexedDB;
-window.restoreSnapshot = restoreSnapshot;
+// ====================== EXPOSE TO WINDOW ======================
 window.dumpIndexedDB = dumpIndexedDB;
-
-// ====================== ALIAS & GLOBAL EXPOSE ======================
-
-// alias biar konsisten dengan step-step sebelumnya
-const dumpIndexedDB = dumpMenuvaData;
-
-// expose ke window untuk console testing
-window.dumpIndexedDB = dumpIndexedDB;
-window.testPullSnapshot = testPullSnapshot;
-window.testClearIndexedDB = testClearIndexedDB;
-window.restoreSnapshot = restoreSnapshot;
 window.pushSnapshotToSupabase = pushSnapshotToSupabase;
-
+window.testPullSnapshot = testPullSnapshot;
+window.testClearIndexedDB = testClearIndexedDB;
+window.restoreSnapshot = restoreSnapshot;
