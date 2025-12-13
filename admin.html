@@ -2497,9 +2497,9 @@ async function backupData() {
   }
 }
 
-// ====================== RESTORE FROM FILE (HYBRID) ======================
-function restoreDataFromFile(event) {
-  const file = event.target.files[0];
+// ====================== RESTORE FROM FILE (FINAL FIX) ======================
+async function restoreDataFromFile(event) {
+  const file = event.target.files?.[0];
   if (!file) return;
 
   const reader = new FileReader();
@@ -2508,64 +2508,79 @@ function restoreDataFromFile(event) {
     try {
       showLoader();
 
-      let json = JSON.parse(e.target.result);
-
-      // ========== AUTO UNWRAP BACKUP VARIAN ==========
-      if (json.profile && typeof json.profile === "object") {
-        json = json.profile;
-      } else if (json.data && typeof json.data === "object") {
-        json = json.data;
+      // ====================== PARSE JSON ======================
+      let json;
+      try {
+        json = JSON.parse(e.target.result);
+      } catch {
+        throw new Error("File bukan JSON valid");
       }
 
-      // Backup lama bentuk array → pakai index 0
+      // ====================== UNWRAP VARIAN BACKUP ======================
+      if (json.profile && typeof json.profile === "object") json = json.profile;
+      else if (json.data && typeof json.data === "object") json = json.data;
+
       if (Array.isArray(json)) {
-        if (json.length === 0) throw new Error("File JSON kosong.");
+        if (!json.length) throw new Error("File JSON kosong");
         json = json[0];
       }
 
       if (!json || typeof json !== "object") {
-        throw new Error("Format JSON tidak valid.");
+        throw new Error("Struktur JSON tidak valid");
       }
 
-      // ========== PERBAIKAN STRUKTUR WAJIB ==========
-      json.menu                    = Array.isArray(json.menu) ? json.menu : [];
-      json.menuPromo               = Array.isArray(json.menuPromo) ? json.menuPromo : [];
-      json.menuVoucher             = Array.isArray(json.menuVoucher) ? json.menuVoucher : [];
-      json.flipbookRuanganImages   = Array.isArray(json.flipbookRuanganImages) ? json.flipbookRuanganImages : [];
-      json.flipbookMenuImages      = Array.isArray(json.flipbookMenuImages) ? json.flipbookMenuImages : [];
-      json.rooms                   = Array.isArray(json.rooms) ? json.rooms : [];
-      json.nomorWaAdmin            = Array.isArray(json.nomorWaAdmin) ? json.nomorWaAdmin : [];
+      // ====================== NORMALISASI STRUKTUR ======================
+      json = {
+        ...buatDataDefault(json.restoId || json.id || ""),
+        ...json
+      };
 
-      // ========== PERBAIKAN RESTO ID (ONLY restoId) ==========
+      json.menu                  = Array.isArray(json.menu) ? json.menu : [];
+      json.menuPromo             = Array.isArray(json.menuPromo) ? json.menuPromo : [];
+      json.menuVoucher           = Array.isArray(json.menuVoucher) ? json.menuVoucher : [];
+      json.rooms                 = Array.isArray(json.rooms) ? json.rooms : [];
+      json.flipbookRuanganImages = Array.isArray(json.flipbookRuanganImages) ? json.flipbookRuanganImages : [];
+      json.flipbookMenuImages    = Array.isArray(json.flipbookMenuImages) ? json.flipbookMenuImages : [];
+      json.nomorWaAdmin          = Array.isArray(json.nomorWaAdmin) ? json.nomorWaAdmin : [];
+
+      // ====================== FIX RESTOID (STRING ONLY) ======================
       if (!json.restoId || typeof json.restoId !== "string") {
         json.restoId =
           (json.restoPhone ? "resto-" + json.restoPhone.replace(/\D/g, "") : "") ||
-          (json.namaRestoran ? slugify(json.namaRestoran) : ("resto-" + Date.now()));
+          (json.namaRestoran ? slugify(json.namaRestoran) : "resto-" + Date.now());
       }
 
-      // Safety tambahan
       json.restoId = String(json.restoId).trim();
 
-      // ========== ID NUMBER (LOCAL INDEXEDDB) ==========
-      let idResto = Number(json.id);
-      if (!idResto || isNaN(idResto)) idResto = 1;
+      if (!json.restoId) {
+        throw new Error("Gagal menentukan restoId");
+      }
 
-      // ========== HYBRID RESTORE: IndexedDB + Supabase =============
+      // ====================== TULIS KE INPUT ======================
+      const restoIdInput = document.getElementById("restoId");
+      if (restoIdInput) restoIdInput.value = json.restoId;
 
-      // LOCAL
-      await saveDataToDB(idResto, json);
+      console.log("♻️ RESTORE restoId:", json.restoId);
 
-      // REMOTE (ONLY restoId)
-      await saveDataToSupabase(json.restoId, json);
+      // ====================== SAVE INDEXEDDB ======================
+      await saveDataToDB(json.restoId, json);
+      console.log("✅ IndexedDB restore OK");
 
-      // ========== AUTO OK ==========
-      alert("✅ Data restored successfully! Page will reload.");
+      // ====================== SAVE SUPABASE ======================
+      if (window.supabase) {
+        await saveDataToSupabase(json.restoId, json);
+        console.log("✅ Supabase restore OK");
+      } else {
+        console.warn("⚠️ Supabase tidak tersedia → restore offline only");
+      }
+
+      alert("✅ Restore berhasil! Halaman akan direload.");
       location.reload();
 
     } catch (err) {
+      console.error("❌ RESTORE FAILED:", err);
+      alert("❌ Restore gagal:\n" + err.message);
       hideLoader();
-      console.error("❌ Restore failed:", err);
-      alert("❌ Failed to restore JSON file.\nCek console untuk detail.");
     }
   };
 
@@ -3488,5 +3503,6 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
