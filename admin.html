@@ -1113,15 +1113,18 @@ function buatDataDefault(restoId = "") {
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
-// ====================== PROMO UI RENDERER ======================
-function renderPromoUI() {
+async function renderPromoUI() {
   const container = document.getElementById("promoContainer");
   if (!container) return;
 
+  const data = await loadDataFromDB();
+  const promos = Array.isArray(data?.menuPromo) ? data.menuPromo : [];
+
   container.innerHTML = "";
+
   const promoCategories = ["PROMO", "DISKON", "SPECIAL", "EVENT"];
 
-  menuPromo.forEach((promo, index) => {
+  promos.forEach((promo, index) => {
     const div = document.createElement("div");
     div.className = "menu-item";
 
@@ -1130,17 +1133,20 @@ function renderPromoUI() {
       .join("");
 
     div.innerHTML = `
-      <input type="text" id="promoName_${index}" value="${promo.namaPromo || ""}"
+      <input type="text" value="${promo.namaPromo || ""}"
         onchange="updatePromo(${index}, 'namaPromo', this.value)">
       
-      <input type="file" accept="image/*" onchange="uploadPromoImage(event, ${index})">
+      <input type="file" accept="image/*"
+        onchange="uploadPromoImage(event, ${index})">
       <img id="promoImgPreview${index}" src="${promo.image || ""}" style="max-height:80px;margin:5px 0">
       
       <input type="text" placeholder="Description Promo"
-        value="${promo.deskripsi || ""}" onchange="updatePromo(${index}, 'deskripsi', this.value)">
+        value="${promo.deskripsi || ""}"
+        onchange="updatePromo(${index}, 'deskripsi', this.value)">
       
       <input type="number" placeholder="Promo Price"
-        value="${promo.harga || ""}" onchange="updatePromo(${index}, 'harga', this.value)">
+        value="${promo.harga || ""}"
+        onchange="updatePromo(${index}, 'harga', this.value)">
       
       <select onchange="updatePromo(${index}, 'kategori', this.value)">
         ${optionsHTML}
@@ -1149,55 +1155,75 @@ function renderPromoUI() {
       <input type="date" value="${promo.tanggalAkhir || ""}"
         onchange="updatePromo(${index}, 'tanggalAkhir', this.value)">
       
-      <button class="btn-danger" onclick="hapusPromo(${index})">Delete Promo List</button>
+      <button class="btn-danger" onclick="hapusPromo(${index})">
+        Delete Promo List
+      </button>
     `;
 
     container.appendChild(div);
   });
 }
 
-// ====================== ADD PROMO ======================
-function tambahPromo(promo = {}) {
-  menuPromo.push({
-    namaPromo: promo.namaPromo || "",
-    image: promo.image || "",
-    deskripsi: promo.deskripsi || "",
-    harga: promo.harga || "",
-    kategori: promo.kategori || "PROMO",
-    tanggalAkhir: promo.tanggalAkhir || ""
+   async function tambahPromo() {
+  let data = await loadDataFromDB();
+  if (!data || typeof data !== "object") data = buatDataDefault();
+
+  if (!Array.isArray(data.menuPromo)) data.menuPromo = [];
+
+  data.menuPromo.push({
+    id: Date.now(),
+    namaPromo: "",
+    image: "",
+    deskripsi: "",
+    harga: "",
+    kategori: "PROMO",
+    tanggalAkhir: ""
   });
 
+  await saveDataToDB(null, data);
+
+  if (data.restoId) saveDataToSupabase(data.restoId, data).catch(() => {});
+
   renderPromoUI();
-  scheduleHybridSave();
 }
 
-// ====================== UPDATE PROMO ======================
-function updatePromo(index, key, value) {
-  if (!menuPromo[index]) return;
-  menuPromo[index][key] = value;
-  scheduleHybridSave();
+   async function updatePromo(index, key, value) {
+  let data = await loadDataFromDB();
+  if (!data?.menuPromo?.[index]) return;
+
+  data.menuPromo[index][key] = value;
+
+  await saveDataToDB(null, data);
+  if (data.restoId) saveDataToSupabase(data.restoId, data).catch(() => {});
 }
 
-// ====================== DELETE PROMO ======================
-function hapusPromo(index) {
-  menuPromo.splice(index, 1);
+   async function hapusPromo(index) {
+  let data = await loadDataFromDB();
+  if (!Array.isArray(data.menuPromo)) return;
+
+  data.menuPromo.splice(index, 1);
+
+  await saveDataToDB(null, data);
+  if (data.restoId) saveDataToSupabase(data.restoId, data).catch(() => {});
+
   renderPromoUI();
-  scheduleHybridSave();
 }
 
-// ====================== IMAGE UPLOAD ======================
-function uploadPromoImage(event, index) {
+   async function uploadPromoImage(event, index) {
   const file = event.target.files[0];
   if (!file) return;
 
-  resizeIfNeeded(file)
-    .then((resized) => {
-      const el = document.getElementById(`promoImgPreview${index}`);
-      if (el) el.src = resized;
+  const resized = await resizeIfNeeded(file);
 
-      updatePromo(index, "image", resized);
-    })
-    .catch(err => console.error("Failed upload promo:", err));
+  let data = await loadDataFromDB();
+  if (!data?.menuPromo?.[index]) return;
+
+  data.menuPromo[index].image = resized;
+
+  await saveDataToDB(null, data);
+  if (data.restoId) saveDataToSupabase(data.restoId, data).catch(() => {});
+
+  renderPromoUI();
 }
 
 // ====================== HYBRID SAVE SCHEDULE ======================
@@ -3503,6 +3529,7 @@ function markViewedAndGo() {
 </script>
 </body>
 </html>
+
 
 
 
