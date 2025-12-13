@@ -113,17 +113,29 @@ async function pullSnapshotFromSupabase(restoId) {
     .from("menuva_data")
     .select("data")
     .eq("resto_id", restoId)
-    .single();
+    .limit(1);
 
-  if (error || !data?.data?.snapshot) {
-    alert("❌ Data tidak ditemukan");
+  if (error) {
+    console.error("❌ Supabase error:", error);
+    alert("Gagal load data online");
     return;
   }
 
-  await clearMenuvaData();
-  await insertSnapshot(data.data.snapshot);
+  if (!data || data.length === 0) {
+    console.warn("❌ Data tidak ditemukan untuk resto:", restoId);
+    alert("Data online belum ada");
+    return;
+  }
 
-  console.log("✅ Snapshot restored");
+  const snapshot = data[0].data.snapshot;
+
+  console.log("📥 Snapshot diterima:", snapshot.length, "records");
+
+  // CLEAR + RESTORE
+  await clearMenuvaData();
+  await insertSnapshot(snapshot);
+
+  console.log("✅ Restore IndexedDB sukses");
   location.reload();
 }
 
@@ -131,3 +143,4 @@ async function pullSnapshotFromSupabase(restoId) {
 window.pushSnapshotToSupabase = pushSnapshotToSupabase;
 window.pullSnapshotFromSupabase = pullSnapshotFromSupabase;
 window.dumpIndexedDB = dumpMenuvaData;
+
