@@ -1,7 +1,6 @@
-// ====================== SUPABASE SYNC (PUSH & PULL) ======================
-console.log("🧩 supabase-sync.js LOADED");
+// ====================== SUPABASE SYNC (SAFE MODE) ======================
+console.log("🧩 supabase-sync.js LOADED (SAFE MODE)");
 
-// ====================== INIT SUPABASE ======================
 const SUPABASE_URL = "https://yscjjisqvlbedtuomrmf.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_L69H0-PapAm3jMWrTyYayQ_4kOd2MMD";
 
@@ -10,12 +9,12 @@ const supabase = window.supabase.createClient(
   SUPABASE_ANON_KEY
 );
 
-// ====================== INDEXEDDB HELPERS ======================
-function dumpMenuvaData() {
+// ====================== INDEXEDDB DUMP ======================
+async function dumpIndexedDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open("MenuvaDB", 10);
-    req.onerror = () => reject(req.error);
 
+    req.onerror = () => reject(req.error);
     req.onsuccess = () => {
       const db = req.result;
       const tx = db.transaction("menuvaData", "readonly");
@@ -28,67 +27,26 @@ function dumpMenuvaData() {
   });
 }
 
-function clearMenuvaData() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open("MenuvaDB", 10);
-    req.onerror = () => reject(req.error);
-
-    req.onsuccess = () => {
-      const db = req.result;
-      const tx = db.transaction("menuvaData", "readwrite");
-      const store = tx.objectStore("menuvaData");
-
-      const clearReq = store.clear();
-      clearReq.onsuccess = () => resolve();
-      clearReq.onerror = () => reject(clearReq.error);
-    };
-  });
-}
-
-function insertSnapshot(snapshot) {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open("MenuvaDB", 10);
-    req.onerror = () => reject(req.error);
-
-    req.onsuccess = () => {
-      const db = req.result;
-      const tx = db.transaction("menuvaData", "readwrite");
-      const store = tx.objectStore("menuvaData");
-
-      snapshot.forEach(item => store.put(item));
-
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    };
-  });
-}
-
-// ====================== SUPABASE ACTIONS ======================
-function extractRestoId(snapshot) {
-  for (const item of snapshot) {
-    if (
-      typeof item.restoId === "string" &&
-      item.restoId.trim() !== "" &&
-      item.restoId !== "null"
-    ) {
-      return item.restoId;
-    }
-  }
-  return null;
-}
-
+// ====================== PUSH (MANUAL ONLY) ======================
 async function pushSnapshotToSupabase() {
-  const snapshot = await dumpMenuvaData();
-  const restoId = extractRestoId(snapshot);
+  const snapshot = await dumpIndexedDB();
+
+  if (!snapshot.length) {
+    console.warn("⚠️ Snapshot kosong");
+    return;
+  }
+
+  const restoId = snapshot.find(
+    x => typeof x.restoId === "string" && x.restoId && x.restoId !== "null"
+  )?.restoId;
 
   if (!restoId) {
-    alert("❌ Resto ID tidak ditemukan");
+    alert("❌ restoId tidak ditemukan");
     return;
   }
 
   const payload = {
     version: "orderine-indexeddb-v1",
-    restoId,
     snapshot
   };
 
@@ -96,51 +54,45 @@ async function pushSnapshotToSupabase() {
     .from("menuva_data")
     .upsert({
       resto_id: restoId,
-      data: payload,
-      updated_at: new Date().toISOString()
+      data: payload
     });
 
   if (error) {
-    console.error(error);
-    alert("❌ Sync gagal");
+    console.error("❌ PUSH ERROR:", error);
   } else {
-    alert("✅ Sync online sukses");
+    console.log("✅ PUSH OK:", restoId);
   }
 }
 
+// ====================== PULL (NO AUTO RELOAD) ======================
 async function pullSnapshotFromSupabase(restoId) {
   const { data, error } = await supabase
     .from("menuva_data")
     .select("data")
     .eq("resto_id", restoId)
-    .limit(1);
+    .maybeSingle(); // ⬅️ PENTING
 
-  if (error) {
-    console.error("❌ Supabase error:", error);
-    alert("Gagal load data online");
+  if (error || !data) {
+    console.warn("⚠️ Data tidak ditemukan");
     return;
   }
 
-  if (!data || data.length === 0) {
-    console.warn("❌ Data tidak ditemukan untuk resto:", restoId);
-    alert("Data online belum ada");
-    return;
-  }
+  const snapshot = data.data.snapshot;
 
-  const snapshot = data[0].data.snapshot;
+  const req = indexedDB.open("MenuvaDB", 10);
+  req.onsuccess = () => {
+    const db = req.result;
+    const tx = db.transaction("menuvaData", "readwrite");
+    const store = tx.objectStore("menuvaData");
 
-  console.log("📥 Snapshot diterima:", snapshot.length, "records");
-
-  // CLEAR + RESTORE
-  await clearMenuvaData();
-  await insertSnapshot(snapshot);
-
-  console.log("✅ Restore IndexedDB sukses");
-  location.reload();
+    store.clear().onsuccess = () => {
+      snapshot.forEach(item => store.put(item));
+      console.log("✅ RESTORE OK:", snapshot.length);
+    };
+  };
 }
 
-// ====================== EXPOSE KE CONSOLE ======================
+// ====================== EXPOSE MANUAL ======================
+window.dumpIndexedDB = dumpIndexedDB;
 window.pushSnapshotToSupabase = pushSnapshotToSupabase;
 window.pullSnapshotFromSupabase = pullSnapshotFromSupabase;
-window.dumpIndexedDB = dumpMenuvaData;
-
