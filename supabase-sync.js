@@ -138,8 +138,58 @@ async function pullSnapshotFromSupabase(restoId) {
   };
 }
 
+async function restoreFromOnline(restoId) {
+  console.warn("⚠️ RESTORE ONLINE DIMULAI:", restoId);
+
+  const { data, error } = await supabase
+    .from("menuva_snapshots")
+    .select("section, data")
+    .eq("resto_id", restoId);
+
+  if (error || !data || !data.length) {
+    alert("❌ Data online tidak ditemukan");
+    return;
+  }
+
+  // Gabungkan semua section
+  let snapshot = [];
+  data.forEach(row => {
+    if (Array.isArray(row.data)) {
+      snapshot.push(...row.data);
+    } else if (typeof row.data === "object") {
+      snapshot.push(row.data);
+    }
+  });
+
+  if (!snapshot.length) {
+    alert("❌ Snapshot kosong");
+    return;
+  }
+
+  console.log("📥 TOTAL SNAPSHOT:", snapshot.length);
+
+  // CLEAR & RESTORE INDEXEDDB
+  const req = indexedDB.open("MenuvaDB", 10);
+  req.onsuccess = () => {
+    const db = req.result;
+    const tx = db.transaction("menuvaData", "readwrite");
+    const store = tx.objectStore("menuvaData");
+
+    store.clear().onsuccess = () => {
+      snapshot.forEach(item => store.put(item));
+
+      tx.oncomplete = () => {
+        alert("✅ RESTORE ONLINE BERHASIL\nHalaman akan dimuat ulang");
+        location.reload();
+      };
+    };
+  };
+}
+
+
 // ====================== EXPOSE ======================
 window.dumpIndexedDB = dumpIndexedDB;
 window.pushSnapshotToSupabase = pushSnapshotToSupabase;
 window.pullSnapshotFromSupabase = pullSnapshotFromSupabase;
+
 
