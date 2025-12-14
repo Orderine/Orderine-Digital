@@ -186,10 +186,39 @@ async function restoreFromOnline(restoId) {
   };
 }
 
+function openRestorePopup() {
+  document.getElementById("restoreModal").classList.remove("hidden");
+}
+
+function closeRestorePopup() {
+  document.getElementById("restoreModal").classList.add("hidden");
+}
+
+async function confirmRestore() {
+  const restoId = document.getElementById("restoreRestoId").value.trim();
+
+  if (!restoId) {
+    alert("❌ No Telp Resto wajib diisi");
+    return;
+  }
+
+  const yakin = confirm(
+    "INI AKAN MENGHAPUS SEMUA DATA LOKAL.\n\nLANJUTKAN?"
+  );
+
+  if (!yakin) return;
+
+  closeRestorePopup();
+
+  console.log("🔥 RESTORE START:", restoId);
+  await pullSnapshotFromSupabase(restoId);
+}
+
 
 // ====================== EXPOSE ======================
 window.dumpIndexedDB = dumpIndexedDB;
 window.pushSnapshotToSupabase = pushSnapshotToSupabase;
 window.pullSnapshotFromSupabase = pullSnapshotFromSupabase;
+
 
 
