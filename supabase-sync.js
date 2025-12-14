@@ -13,31 +13,32 @@ const supabase = window.supabase.createClient(
 async function dumpIndexedDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open("MenuvaDB", 10);
-
     req.onerror = () => reject(req.error);
     req.onsuccess = () => {
       const db = req.result;
       const tx = db.transaction("menuvaData", "readonly");
       const store = tx.objectStore("menuvaData");
-
       const getAll = store.getAll();
-      getAll.onsuccess = () => resolve(getAll.result);
+      getAll.onsuccess = () => resolve(getAll.result || []);
       getAll.onerror = () => reject(getAll.error);
     };
   });
 }
 
-// ====================== RESTO ID ======================
+// ====================== HELPERS ======================
 function extractRestoId(snapshot) {
   for (const item of snapshot) {
-    if (typeof item.restoId === "string" && item.restoId.trim() !== "") {
+    if (item?.restoId && item.restoId !== "null") {
       return item.restoId;
     }
   }
   return null;
 }
 
-// ====================== SPLIT SNAPSHOT ======================
+function sanitizeSnapshot(snapshot) {
+  return snapshot.filter(x => x && typeof x === "object");
+}
+
 function splitSnapshot(snapshot) {
   return {
     core: snapshot.filter(x => x.restoId),
@@ -49,11 +50,25 @@ function splitSnapshot(snapshot) {
   };
 }
 
+function mergeSections(rows) {
+  let snapshot = [];
+  rows.forEach(row => {
+    if (Array.isArray(row.data)) snapshot.push(...row.data);
+    else if (row.data?.snapshot) snapshot.push(...row.data.snapshot);
+    else if (typeof row.data === "object") snapshot.push(row.data);
+  });
+  return sanitizeSnapshot(snapshot);
+}
+
 // ====================== PUSH ======================
 async function pushSnapshotToSupabase() {
-  const snapshot = await dumpIndexedDB();
-  const restoId = extractRestoId(snapshot);
+  const snapshot = sanitizeSnapshot(await dumpIndexedDB());
+  if (!snapshot.length) {
+    alert("❌ IndexedDB kosong, tidak ada yang di-push");
+    return;
+  }
 
+  const restoId = extractRestoId(snapshot);
   if (!restoId) {
     alert("❌ restoId tidak ditemukan");
     return;
@@ -64,8 +79,6 @@ async function pushSnapshotToSupabase() {
   for (const [section, data] of Object.entries(sections)) {
     if (!data.length) continue;
 
-    console.log("⬆️ Push section:", section, data.length);
-
     const { error } = await supabase
       .from("menuva_snapshots")
       .insert({
@@ -75,56 +88,30 @@ async function pushSnapshotToSupabase() {
       });
 
     if (error) {
-      console.error("❌ Gagal push", section, error);
-      alert("Gagal sync bagian: " + section);
+      console.error("❌ PUSH ERROR:", section, error);
       return;
     }
+
+    console.log("⬆️ Push section:", section, data.length);
   }
 
   console.log("✅ ALL SNAPSHOT PARTS PUSHED");
-  alert("Sync online selesai (split mode)");
+  alert("Sync online selesai");
 }
 
-function mergeSections(rows) {
-  let snapshot = [];
-
-  rows.forEach(row => {
-    const data = row.data;
-
-    // CASE 1: data = { version, restoId, snapshot: [...] }
-    if (data && Array.isArray(data.snapshot)) {
-      snapshot.push(...data.snapshot);
-      return;
-    }
-
-    // CASE 2: data = array langsung
-    if (Array.isArray(data)) {
-      snapshot.push(...data);
-      return;
-    }
-
-    // CASE 3: object tunggal
-    if (typeof data === "object") {
-      snapshot.push(data);
-    }
-  });
-
-  return snapshot;
-}
-
+// ====================== PULL ======================
 async function pullSnapshotFromSupabase(restoId) {
   const { data, error } = await supabase
     .from("menuva_snapshots")
     .select("section, data")
     .eq("resto_id", restoId);
 
-  if (error || !data || !data.length) {
+  if (error || !data?.length) {
     console.warn("⚠️ Data tidak ditemukan");
     return;
   }
 
   const snapshot = mergeSections(data);
-
   console.log("📥 MERGED SNAPSHOT:", snapshot.length);
 
   const req = indexedDB.open("MenuvaDB", 10);
@@ -140,8 +127,7 @@ async function pullSnapshotFromSupabase(restoId) {
   };
 }
 
-// ====================== EXPOSE MANUAL ======================
+// ====================== EXPOSE ======================
 window.dumpIndexedDB = dumpIndexedDB;
 window.pushSnapshotToSupabase = pushSnapshotToSupabase;
 window.pullSnapshotFromSupabase = pullSnapshotFromSupabase;
-
