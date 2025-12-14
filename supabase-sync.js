@@ -1,7 +1,6 @@
 // ====================== SUPABASE SYNC (SAFE MODE) ======================
 console.log("🧩 supabase-sync.js LOADED (SAFE MODE)");
 
-// ====================== SUPABASE INIT ======================
 const SUPABASE_URL = "https://yscjjisqvlbedtuomrmf.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_L69H0-PapAm3jMWrTyYayQ_4kOd2MMD";
 
@@ -22,48 +21,20 @@ async function dumpIndexedDB() {
       const store = tx.objectStore("menuvaData");
 
       const getAll = store.getAll();
-      getAll.onsuccess = () => resolve(getAll.result || []);
+      getAll.onsuccess = () => resolve(getAll.result);
       getAll.onerror = () => reject(getAll.error);
     };
   });
 }
 
-// ====================== RESTO ID EXTRACT ======================
+// ====================== RESTO ID ======================
 function extractRestoId(snapshot) {
   for (const item of snapshot) {
-    if (
-      typeof item?.restoId === "string" &&
-      item.restoId.trim() !== "" &&
-      item.restoId !== "null"
-    ) {
+    if (typeof item.restoId === "string" && item.restoId.trim() !== "") {
       return item.restoId;
     }
   }
   return null;
-}
-
-// ====================== SNAPSHOT SANITIZER ======================
-function sanitizeSnapshot(snapshot) {
-  return snapshot.map(item => {
-    const clean = {};
-
-    for (const key in item) {
-      const value = item[key];
-
-      // ❌ buang function & undefined
-      if (typeof value === "function" || value === undefined) continue;
-
-      // ❌ buang data DOM / event
-      if (value instanceof HTMLElement) continue;
-
-      // ❌ buang string super besar (>200KB)
-      if (typeof value === "string" && value.length > 200_000) continue;
-
-      clean[key] = value;
-    }
-
-    return clean;
-  });
 }
 
 // ====================== SPLIT SNAPSHOT ======================
@@ -78,31 +49,22 @@ function splitSnapshot(snapshot) {
   };
 }
 
-// ====================== PUSH SNAPSHOT (SAFE SPLIT MODE) ======================
+// ====================== PUSH ======================
 async function pushSnapshotToSupabase() {
-  console.group("⬆️ PUSH SNAPSHOT");
+  const snapshot = await dumpIndexedDB();
+  const restoId = extractRestoId(snapshot);
 
-  const rawSnapshot = await dumpIndexedDB();
-  if (!rawSnapshot.length) {
-    console.warn("⚠️ IndexedDB kosong");
-    console.groupEnd();
-    return;
-  }
-
-  const restoId = extractRestoId(rawSnapshot);
   if (!restoId) {
     alert("❌ restoId tidak ditemukan");
-    console.groupEnd();
     return;
   }
 
-  const sanitized = sanitizeSnapshot(rawSnapshot);
-  const sections = splitSnapshot(sanitized);
+  const sections = splitSnapshot(snapshot);
 
   for (const [section, data] of Object.entries(sections)) {
     if (!data.length) continue;
 
-    console.log(`⬆️ Push section [${section}]`, data.length);
+    console.log("⬆️ Push section:", section, data.length);
 
     const { error } = await supabase
       .from("menuva_snapshots")
@@ -113,35 +75,45 @@ async function pushSnapshotToSupabase() {
       });
 
     if (error) {
-      console.error("❌ PUSH FAILED:", section, error);
+      console.error("❌ Gagal push", section, error);
       alert("Gagal sync bagian: " + section);
-      console.groupEnd();
       return;
     }
   }
 
   console.log("✅ ALL SNAPSHOT PARTS PUSHED");
-  alert("Sync online selesai (SAFE MODE)");
-  console.groupEnd();
+  alert("Sync online selesai (split mode)");
 }
 
-// ====================== PULL SNAPSHOT (SINGLE JSON) ======================
+// ====================== MERGE SECTIONS ======================
+function mergeSections(rows) {
+  const snapshot = [];
+
+  rows.forEach(row => {
+    if (Array.isArray(row.data)) {
+      snapshot.push(...row.data);
+    } else if (typeof row.data === "object") {
+      snapshot.push(row.data);
+    }
+  });
+
+  return snapshot;
+}
+
+// ====================== PULL & RESTORE ======================
 async function pullSnapshotFromSupabase(restoId) {
-  console.group("📥 PULL SNAPSHOT");
+  const { data: rows, error } = await supabase
+    .from("menuva_snapshots")
+    .select("section, data")
+    .eq("resto_id", restoId);
 
-  const { data, error } = await supabase
-    .from("menuva_data")
-    .select("data")
-    .eq("resto_id", restoId)
-    .maybeSingle();
-
-  if (error || !data?.data?.snapshot) {
+  if (error || !rows || !rows.length) {
     console.warn("⚠️ Data tidak ditemukan");
-    console.groupEnd();
     return;
   }
 
-  const snapshot = data.data.snapshot;
+  const snapshot = mergeSections(rows);
+  console.log("📥 MERGED SNAPSHOT:", snapshot.length);
 
   const req = indexedDB.open("MenuvaDB", 10);
   req.onsuccess = () => {
@@ -152,7 +124,6 @@ async function pullSnapshotFromSupabase(restoId) {
     store.clear().onsuccess = () => {
       snapshot.forEach(item => store.put(item));
       console.log("✅ RESTORE OK:", snapshot.length);
-      console.groupEnd();
     };
   };
 }
