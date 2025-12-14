@@ -62,15 +62,15 @@ function mergeSections(rows) {
 
 // ====================== PUSH ======================
 async function pushSnapshotToSupabase() {
-  const snapshot = sanitizeSnapshot(await dumpIndexedDB());
-  if (!snapshot.length) {
-    alert("❌ IndexedDB kosong, tidak ada yang di-push");
+  const restoId = getActiveRestoId();
+  if (!restoId) {
+    alert("❌ restoId aktif tidak ditemukan");
     return;
   }
 
-  const restoId = extractRestoId(snapshot);
-  if (!restoId) {
-    alert("❌ restoId tidak ditemukan");
+  const snapshot = await dumpIndexedDB();
+  if (!snapshot.length) {
+    alert("⚠️ IndexedDB kosong, tidak ada data untuk sync");
     return;
   }
 
@@ -97,6 +97,17 @@ async function pushSnapshotToSupabase() {
 
   console.log("✅ ALL SNAPSHOT PARTS PUSHED");
   alert("Sync online selesai");
+}
+
+function getActiveRestoId() {
+  // PRIORITAS 1: dari localStorage admin
+  const fromLocal = localStorage.getItem("menuva_resto_phone");
+  if (fromLocal) return fromLocal;
+
+  // PRIORITAS 2: dari IndexedDB snapshot
+  // (fallback, bukan utama)
+  console.warn("⚠️ restoId fallback ke snapshot");
+  return null;
 }
 
 // ====================== PULL ======================
@@ -131,3 +142,4 @@ async function pullSnapshotFromSupabase(restoId) {
 window.dumpIndexedDB = dumpIndexedDB;
 window.pushSnapshotToSupabase = pushSnapshotToSupabase;
 window.pullSnapshotFromSupabase = pullSnapshotFromSupabase;
+
