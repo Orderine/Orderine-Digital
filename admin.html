@@ -531,6 +531,58 @@ button {
   font-weight: bold;
   display: none; /* awalnya disembunyikan */
 }
+    .restore-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.restore-modal.hidden {
+  display: none;
+}
+
+.restore-box {
+  background: #111;
+  color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  max-width: 360px;
+  text-align: center;
+}
+
+.restore-box input {
+  width: 100%;
+  padding: 10px;
+  margin: 12px 0;
+  border-radius: 8px;
+  border: none;
+}
+
+.restore-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.restore-actions button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+}
+
+.danger-btn {
+  background: #d32f2f;
+  color: #fff;
+}
+
+.danger-text {
+  color: #ff5252;
+  font-size: 13px;
+}
 
   </style>
 </head>
@@ -718,19 +770,56 @@ button {
 </div>
 
 <div class="fixed-bar">
-<div class="nav-item" onclick="markViewedAndGo()">
+
+  <div class="nav-item" onclick="markViewedAndGo()">
     <div class="icon-wrapper">
-        <ion-icon name="cube-outline" class="icon"></ion-icon>
-        <span id="receiveBadge" class="badge">0</span>
+      <ion-icon name="cube-outline" class="icon"></ion-icon>
+      <span id="receiveBadge" class="badge">0</span>
     </div>
     <div class="label">Receives</div>
-</div>
+  </div>
 
-   <div class="nav-item" onclick="window.location.href='index.html'">
+  <!-- 🔥 RESTORE CLOUD -->
+  <div class="nav-item danger" onclick="openRestorePopup()">
+    <ion-icon name="cloud-download-outline" class="icon"></ion-icon>
+    <div class="label">Restore</div>
+  </div>
+
+  <div class="nav-item" onclick="window.location.href='index.html'">
     <ion-icon name="log-out-outline" class="icon"></ion-icon>
     <div class="label">Logout</div>
   </div>
+
 </div>
+
+  <div id="restoreModal" class="restore-modal hidden">
+  <div class="restore-box">
+    <h2>⚠️ PERINGATAN KERAS</h2>
+
+    <p>
+      Fitur ini akan <b>MENGHAPUS SEMUA DATA LOKAL</b><br>
+      dan menggantinya dengan data dari cloud.
+    </p>
+
+    <p class="danger-text">
+      Gunakan HANYA jika data admin benar-benar hilang.
+    </p>
+
+    <input
+      type="text"
+      id="restoreRestoId"
+      placeholder="Masukkan No Telp Resto"
+    />
+
+    <div class="restore-actions">
+      <button onclick="closeRestorePopup()">Cancel</button>
+      <button class="danger-btn" onclick="confirmRestore()">
+        Restore Sekarang
+      </button>
+    </div>
+  </div>
+</div>
+
   
  <script>
 console.log("Admin Script Version: 2025-11-07-STABLE");
@@ -2414,20 +2503,36 @@ function markViewedAndGo() {
   markOrdersAsRead();
   window.location.href = "recieves.html";
 }
+
+  function openRestorePopup() {
+  document.getElementById("restoreModal").classList.remove("hidden");
+}
+
+function closeRestorePopup() {
+  document.getElementById("restoreModal").classList.add("hidden");
+}
+
+async function confirmRestore() {
+  const restoId = document.getElementById("restoreRestoId").value.trim();
+
+  if (!restoId) {
+    alert("❌ No Telp Resto wajib diisi");
+    return;
+  }
+
+  const yakin = confirm(
+    "INI AKAN MENGHAPUS SEMUA DATA LOKAL.\n\nLANJUTKAN?"
+  );
+
+  if (!yakin) return;
+
+  closeRestorePopup();
+
+  console.log("🔥 RESTORE START:", restoId);
+  await pullSnapshotFromSupabase(restoId);
+}
+
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
