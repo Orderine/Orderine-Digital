@@ -85,34 +85,46 @@ async function pushSnapshotToSupabase() {
   alert("Sync online selesai (split mode)");
 }
 
-// ====================== MERGE SECTIONS ======================
 function mergeSections(rows) {
-  const snapshot = [];
+  let snapshot = [];
 
   rows.forEach(row => {
-    if (Array.isArray(row.data)) {
-      snapshot.push(...row.data);
-    } else if (typeof row.data === "object") {
-      snapshot.push(row.data);
+    const data = row.data;
+
+    // CASE 1: data = { version, restoId, snapshot: [...] }
+    if (data && Array.isArray(data.snapshot)) {
+      snapshot.push(...data.snapshot);
+      return;
+    }
+
+    // CASE 2: data = array langsung
+    if (Array.isArray(data)) {
+      snapshot.push(...data);
+      return;
+    }
+
+    // CASE 3: object tunggal
+    if (typeof data === "object") {
+      snapshot.push(data);
     }
   });
 
   return snapshot;
 }
 
-// ====================== PULL & RESTORE ======================
 async function pullSnapshotFromSupabase(restoId) {
-  const { data: rows, error } = await supabase
+  const { data, error } = await supabase
     .from("menuva_snapshots")
     .select("section, data")
     .eq("resto_id", restoId);
 
-  if (error || !rows || !rows.length) {
+  if (error || !data || !data.length) {
     console.warn("⚠️ Data tidak ditemukan");
     return;
   }
 
-  const snapshot = mergeSections(rows);
+  const snapshot = mergeSections(data);
+
   console.log("📥 MERGED SNAPSHOT:", snapshot.length);
 
   const req = indexedDB.open("MenuvaDB", 10);
@@ -132,3 +144,4 @@ async function pullSnapshotFromSupabase(restoId) {
 window.dumpIndexedDB = dumpIndexedDB;
 window.pushSnapshotToSupabase = pushSnapshotToSupabase;
 window.pullSnapshotFromSupabase = pullSnapshotFromSupabase;
+
