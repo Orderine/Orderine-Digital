@@ -111,32 +111,40 @@ function getActiveRestoId() {
 }
 
 async function pullSnapshotFromSupabase(restoId) {
-  // STEP 1: ambil daftar row TANPA data
+  console.warn("⚠️ RESTORE ONLINE DIMULAI:", restoId);
+
+  // STEP 1: ambil daftar row TANPA data besar
   const { data: rows, error } = await supabase
     .from("menuva_snapshots")
     .select("id, section")
     .eq("resto_id", restoId);
 
-  if (error || !rows?.length) {
+  if (error || !rows || !rows.length) {
     console.warn("⚠️ Data tidak ditemukan");
     return;
   }
 
   let merged = [];
 
-  // STEP 2: ambil data SATU-SATU
+  // STEP 2: ambil data SATU-SATU (anti hang)
   for (const row of rows) {
-    const { data, error } = await supabase
+    const { data: rowData, error: rowError } = await supabase
       .from("menuva_snapshots")
       .select("data")
       .eq("id", row.id)
       .single();
 
-    if (error || !data) continue;
+    if (rowError || !rowData?.data) continue;
 
-    if (Array.isArray(data)) merged.push(...data);
-    else if (data.snapshot) merged.push(...data.snapshot);
-    else if (typeof data === "object") merged.push(data);
+    const payload = rowData.data;
+
+    if (Array.isArray(payload)) {
+      merged.push(...payload);
+    } else if (payload.snapshot && Array.isArray(payload.snapshot)) {
+      merged.push(...payload.snapshot);
+    } else if (typeof payload === "object") {
+      merged.push(payload);
+    }
   }
 
   if (!merged.length) {
@@ -146,7 +154,17 @@ async function pullSnapshotFromSupabase(restoId) {
 
   console.log("📥 MERGED SNAPSHOT:", merged.length);
 
-  // RESTORE KE INDEXEDDB
+  // STEP 3: sanitize + pastikan ID (ANTI IndexedDB ERROR)
+  const safeSnapshot = merged
+    .filter(x => x && typeof x === "object")
+    .map((item, index) => {
+      if (item.id === undefined || item.id === null) {
+        item.id = Date.now() + index; // fallback ID aman
+      }
+      return item;
+    });
+
+  // STEP 4: RESTORE KE INDEXEDDB
   const req = indexedDB.open("MenuvaDB", 10);
   req.onsuccess = () => {
     const db = req.result;
@@ -154,8 +172,11 @@ async function pullSnapshotFromSupabase(restoId) {
     const store = tx.objectStore("menuvaData");
 
     store.clear().onsuccess = () => {
-      merged.forEach(item => store.put(item));
-      console.log("✅ RESTORE OK:", merged.length);
+      safeSnapshot.forEach(item => store.put(item));
+
+      tx.oncomplete = () => {
+        console.log("✅ RESTORE OK:", safeSnapshot.length);
+      };
     };
   };
 }
@@ -202,6 +223,7 @@ async function confirmRestore() {
 window.dumpIndexedDB = dumpIndexedDB;
 window.pushSnapshotToSupabase = pushSnapshotToSupabase;
 window.pullSnapshotFromSupabase = pullSnapshotFromSupabase;
+
 
 
 
