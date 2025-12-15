@@ -110,21 +110,43 @@ function getActiveRestoId() {
   return null;
 }
 
-// ====================== PULL ======================
 async function pullSnapshotFromSupabase(restoId) {
-  const { data, error } = await supabase
+  // STEP 1: ambil daftar row TANPA data
+  const { data: rows, error } = await supabase
     .from("menuva_snapshots")
-    .select("section, data")
+    .select("id, section")
     .eq("resto_id", restoId);
 
-  if (error || !data?.length) {
+  if (error || !rows?.length) {
     console.warn("⚠️ Data tidak ditemukan");
     return;
   }
 
-  const snapshot = mergeSections(data);
-  console.log("📥 MERGED SNAPSHOT:", snapshot.length);
+  let merged = [];
 
+  // STEP 2: ambil data SATU-SATU
+  for (const row of rows) {
+    const { data, error } = await supabase
+      .from("menuva_snapshots")
+      .select("data")
+      .eq("id", row.id)
+      .single();
+
+    if (error || !data) continue;
+
+    if (Array.isArray(data)) merged.push(...data);
+    else if (data.snapshot) merged.push(...data.snapshot);
+    else if (typeof data === "object") merged.push(data);
+  }
+
+  if (!merged.length) {
+    console.warn("⚠️ Snapshot kosong");
+    return;
+  }
+
+  console.log("📥 MERGED SNAPSHOT:", merged.length);
+
+  // RESTORE KE INDEXEDDB
   const req = indexedDB.open("MenuvaDB", 10);
   req.onsuccess = () => {
     const db = req.result;
@@ -132,8 +154,8 @@ async function pullSnapshotFromSupabase(restoId) {
     const store = tx.objectStore("menuvaData");
 
     store.clear().onsuccess = () => {
-      snapshot.forEach(item => store.put(item));
-      console.log("✅ RESTORE OK:", snapshot.length);
+      merged.forEach(item => store.put(item));
+      console.log("✅ RESTORE OK:", merged.length);
     };
   };
 }
@@ -141,49 +163,10 @@ async function pullSnapshotFromSupabase(restoId) {
 async function restoreFromOnline(restoId) {
   console.warn("⚠️ RESTORE ONLINE DIMULAI:", restoId);
 
-  const { data, error } = await supabase
-    .from("menuva_snapshots")
-    .select("section, data")
-    .eq("resto_id", restoId);
+  await pullSnapshotFromSupabase(restoId);
 
-  if (error || !data || !data.length) {
-    alert("❌ Data online tidak ditemukan");
-    return;
-  }
-
-  // Gabungkan semua section
-  let snapshot = [];
-  data.forEach(row => {
-    if (Array.isArray(row.data)) {
-      snapshot.push(...row.data);
-    } else if (typeof row.data === "object") {
-      snapshot.push(row.data);
-    }
-  });
-
-  if (!snapshot.length) {
-    alert("❌ Snapshot kosong");
-    return;
-  }
-
-  console.log("📥 TOTAL SNAPSHOT:", snapshot.length);
-
-  // CLEAR & RESTORE INDEXEDDB
-  const req = indexedDB.open("MenuvaDB", 10);
-  req.onsuccess = () => {
-    const db = req.result;
-    const tx = db.transaction("menuvaData", "readwrite");
-    const store = tx.objectStore("menuvaData");
-
-    store.clear().onsuccess = () => {
-      snapshot.forEach(item => store.put(item));
-
-      tx.oncomplete = () => {
-        alert("✅ RESTORE ONLINE BERHASIL\nHalaman akan dimuat ulang");
-        location.reload();
-      };
-    };
-  };
+  alert("✅ RESTORE ONLINE BERHASIL\nHalaman akan dimuat ulang");
+  location.reload();
 }
 
 function openRestorePopup() {
@@ -219,6 +202,7 @@ async function confirmRestore() {
 window.dumpIndexedDB = dumpIndexedDB;
 window.pushSnapshotToSupabase = pushSnapshotToSupabase;
 window.pullSnapshotFromSupabase = pullSnapshotFromSupabase;
+
 
 
 
