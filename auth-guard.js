@@ -1,4 +1,3 @@
-<script>
 // ==================== ORDERINE ADMIN GUARD ====================
 (function () {
   try {
@@ -34,10 +33,7 @@
     }
 
     // ❌ Payment belum lunas (kecuali trial)
-    if (
-      activeUser.premiumPlan !== "trial" &&
-      activeUser.isPaid !== true
-    ) {
+    if (activeUser.premiumPlan !== "trial" && activeUser.isPaid !== true) {
       alert("❌ Payment not confirmed.\nPlease complete your payment.");
       location.replace("payment.html");
       return;
@@ -49,4 +45,4 @@
     location.replace("login.html");
   }
 })();
-</script>
+
