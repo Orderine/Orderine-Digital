@@ -126,11 +126,12 @@
       <div class="link back-link"><a href="index.html">⬅️ Back to Home</a></div>
     </form>
   </div>
-<script>
+
+  <script>
   const loginForm = document.getElementById("loginForm");
   const errorMsg = document.getElementById("errorMsg");
 
-  // ========== Toggle Password Visibility ==========
+  // ================== Toggle Password ==================
   const passwordInput = document.getElementById("password");
   const togglePassword = document.getElementById("togglePassword");
 
@@ -141,83 +142,43 @@
     togglePassword.textContent = type === "password" ? "👁️" : "🙈";
   });
 
-  // ========== Prefill Email Terakhir ==========
+  // ================== Prefill Email ==================
   window.addEventListener("DOMContentLoaded", () => {
-    try {
-      const storedUsers = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-      if (storedUsers.length > 0) {
-        const lastUser = storedUsers[storedUsers.length - 1];
-        document.getElementById("email").value = lastUser.email || "";
-      }
-    } catch (err) {
-      console.error("Error prefill email:", err);
+    const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+    if (users.length > 0) {
+      document.getElementById("email").value = users[users.length - 1].email;
     }
   });
 
-  // ========== Login Process ==========
-  loginForm?.addEventListener("submit", function (e) {
+  // ================== LOGIN ==================
+  loginForm.addEventListener("submit", function (e) {
     e.preventDefault();
+    errorMsg.textContent = "";
 
-    const emailValue = document.getElementById("email").value.trim().toLowerCase();
-    const passwordValue = document.getElementById("password").value;
+    const email = document.getElementById("email").value.trim().toLowerCase();
+    const password = document.getElementById("password").value;
 
-    let storedUsers = [];
-    try {
-      storedUsers = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-    } catch (err) {
-      console.error("Error reading users:", err);
-    }
+    let users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-    const matchedUser = storedUsers.find(
-      (user) => user.email === emailValue && user.password === passwordValue
+    const user = users.find(
+      (u) => u.email === email && u.password === password
     );
 
-    if (!matchedUser) {
-      errorMsg.textContent =
-        "❌ Incorrect email or password. Please register first.";
+    if (!user) {
+      errorMsg.textContent = "❌ Email or password incorrect.";
       return;
     }
 
-    const now = new Date();
+    // ================== 🔥 DEMO OVERRIDE ==================
+    // Trial / expired / unpaid TETAP BOLEH LOGIN
+    user.isExpired = false;
+    user.isPaid = true;
 
-    // === Cek Expired ===
-    if (matchedUser.premiumExpire) {
-      const expireDate = new Date(matchedUser.premiumExpire);
-      if (now > expireDate) {
-        matchedUser.isExpired = true;
-        localStorage.setItem("menuvaUsers", JSON.stringify(storedUsers));
+    localStorage.setItem("menuvaUsers", JSON.stringify(users));
 
-        if (matchedUser.premiumPlan === "trial") {
-          errorMsg.innerHTML =
-            "❌ Your free trial has expired.<br><a href='plans.html' style='color:#007bff;'>Upgrade to Premium</a> to continue.";
-        } else {
-          errorMsg.innerHTML =
-            "❌ Your subscription has expired.<br><a href='plans.html' style='color:#007bff;'>Renew your plan</a>.";
-        }
-        return;
-      }
-    }
-
-    // === Cegah Login Ulang Trial Expired ===
-    if (
-      matchedUser.premiumPlan === "trial" &&
-      matchedUser.trialUsed &&
-      matchedUser.isExpired
-    ) {
-      errorMsg.textContent =
-        "❌ Free trial is single-use only. Please upgrade to continue.";
-      return;
-    }
-
-    // === Cek Status Pembayaran ===
-    if (!matchedUser.isPaid && matchedUser.premiumPlan !== "trial") {
-      errorMsg.textContent = "❌ Your payment has not been confirmed yet.";
-      return;
-    }
-
-    // === Login Sukses ===
+    // ================== Login Success ==================
     localStorage.setItem("isLoggedIn", "true");
-    localStorage.setItem("activeUser", JSON.stringify(matchedUser));
+    localStorage.setItem("activeUser", JSON.stringify(user));
 
     window.location.href = "admin.html";
   });
@@ -225,11 +186,3 @@
 
 </body>
 </html>
-
-
-
-
-
-
-
-
