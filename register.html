@@ -124,10 +124,11 @@
       Already have an account? <a href="login.html">Login Here.!</a>
     </div>
   </div>
-<script>
-  const registerForm = document.getElementById('registerForm');
-  const errorMsg = document.getElementById('errorMsg');
-  
+
+  <script>
+  const registerForm = document.getElementById("registerForm");
+  const errorMsg = document.getElementById("errorMsg");
+
   // ================== Utility ==================
   function isValidEmail(email) {
     const regex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -135,12 +136,12 @@
   }
 
   function generateUserID() {
-    return 'KM-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    return "KM-" + Math.random().toString(36).substr(2, 9).toUpperCase();
   }
 
   function generateTrialCode(length = 8) {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = '';
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let code = "";
     for (let i = 0; i < length; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
@@ -150,64 +151,43 @@
   // ================== Plan ==================
   const selectedPlan = localStorage.getItem("selectedPlan") || "trial";
 
-  registerForm.addEventListener('submit', function (e) {
+  // ================== REGISTER ==================
+  registerForm.addEventListener("submit", function (e) {
     e.preventDefault();
-    const email = document.getElementById('email').value.trim().toLowerCase();
-    const password = document.getElementById('password').value;
-    
+
+    // 🔥 RESET STATE (ANTI KEJEBIT)
+    localStorage.removeItem("activeUser");
+
+    const email = document.getElementById("email").value.trim().toLowerCase();
+    const password = document.getElementById("password").value;
+
     // ========== Validasi dasar ==========
     if (!isValidEmail(email)) {
       errorMsg.textContent = "❌ Invalid email format!";
       return;
     }
+
     if (password.length < 6) {
       errorMsg.textContent = "❌ Password must be at least 6 characters!";
       return;
     }
 
     // ========== Ambil data user ==========
-    let users = JSON.parse(localStorage.getItem('menuvaUsers')) || [];
-    let existingUser = users.find(u => u.email === email);
+    let users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-    // ========== Cek status akun lama ==========
-    if (existingUser) {
-      const now = new Date();
-      const expire = new Date(existingUser.premiumExpire);
-      const trialExpired = existingUser.premiumPlan === "trial" && now > expire;
+    // 🔥 DEMO MODE: HAPUS USER LAMA JIKA ADA
+    users = users.filter((u) => u.email !== email);
 
-      // Jika akun premium aktif atau trial belum habis → blok
-      if (!trialExpired && existingUser.premiumPlan !== "trial") {
-        errorMsg.textContent = "❌ Your email is already registered and active!";
-        return;
-      }
-
-      // Jika trial sudah expired → hapus agar bisa daftar ulang ke premium
-      if (trialExpired) {
-        users = users.filter(u => u.email !== email);
-        localStorage.setItem('menuvaUsers', JSON.stringify(users));
-      }
-    }
-
-    // ========== Cegah trial ulang untuk email yang sama ==========
-    if (selectedPlan === "trial") {
-      if (existingUser && existingUser.trialUsed) {
-        errorMsg.textContent = "❌ This email has already used a free trial!";
-        return;
-      }
-    }
-
-    // ========== Tentukan durasi premium ==========
-    let durationDays;
-    switch (selectedPlan) {
-      case "trial": durationDays = 7; break;
-      case "monthly": durationDays = 30; break;
-      case "6month": durationDays = 180; break;
-      case "yearly": durationDays = 365; break;
-      default: durationDays = 7; break;
-    }
+    // ========== Tentukan durasi ==========
+    let durationDays = 7;
+    if (selectedPlan === "monthly") durationDays = 30;
+    if (selectedPlan === "6month") durationDays = 180;
+    if (selectedPlan === "yearly") durationDays = 365;
 
     const startDate = new Date().toISOString();
-    const expireDate = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+    const expireDate = new Date(
+      Date.now() + durationDays * 24 * 60 * 60 * 1000
+    ).toISOString();
 
     // ========== Buat user baru ==========
     const newUser = {
@@ -219,42 +199,41 @@
       premiumExpire: expireDate,
       trialUsed: selectedPlan === "trial",
       isExpired: false,
-      isPaid: selectedPlan === "trial", // ✅ Trial langsung aktif
+      isPaid: selectedPlan === "trial",
       trialCode: selectedPlan === "trial" ? generateTrialCode() : null
     };
 
-    // ========== Simpan data ==========
+    // ========== Simpan ==========
     users.push(newUser);
-    localStorage.setItem('menuvaUsers', JSON.stringify(users));
+    localStorage.setItem("menuvaUsers", JSON.stringify(users));
     localStorage.setItem("activeUser", JSON.stringify(newUser));
     localStorage.removeItem("selectedPlan");
 
     // ========== Redirect ==========
     if (selectedPlan === "trial") {
-      alert(`✅ Registration successful! Your 7-day FREE TRIAL has started.\nTrial Code: ${newUser.trialCode}`);
-      window.location.href = 'login.html';
+      alert(
+        `✅ Registration successful!\n\nFREE TRIAL 7 DAYS\nTrial Code: ${newUser.trialCode}`
+      );
+      window.location.href = "login.html";
     } else {
-      alert(`✅ Registration successful! Please complete payment for the "${selectedPlan}" plan.`);
-      window.location.href = 'payment.html';
+      alert(
+        `✅ Registration successful!\nPlease complete payment for "${selectedPlan}" plan.`
+      );
+      window.location.href = "payment.html";
     }
   });
 
   // ================== 👁️ Toggle Password ==================
-  const passwordInput = document.getElementById('password');
-  const togglePassword = document.getElementById('togglePassword');
-  togglePassword.addEventListener('click', () => {
-    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-    passwordInput.setAttribute('type', type);
-    togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+  const passwordInput = document.getElementById("password");
+  const togglePassword = document.getElementById("togglePassword");
+
+  togglePassword.addEventListener("click", () => {
+    const type =
+      passwordInput.getAttribute("type") === "password" ? "text" : "password";
+    passwordInput.setAttribute("type", type);
+    togglePassword.textContent = type === "password" ? "👁️" : "🙈";
   });
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
-
