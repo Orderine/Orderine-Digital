@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Choose Plan - Orderine</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="auth-guard.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #003366, #003366);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+    }
+    .box {
+      background: white;
+      color: black;
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 420px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #2e8b57, #3cb371);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="box">
+    <h2>Subscription Required</h2>
+    <p>Your access has expired.<br>Please choose a plan to continue.</p>
+
+    <button onclick="selectPlan('monthly')">Monthly</button>
+    <button onclick="selectPlan('6month')">6 Months</button>
+    <button onclick="selectPlan('yearly')">Yearly</button>
+
+    <button onclick="logout()" style="background:#999;margin-top:20px;">
+      Logout
+    </button>
+  </div>
+
+<script>
+  function selectPlan(plan) {
+    localStorage.setItem("selectedPlan", plan);
+    location.href = "payment.html";
+  }
+
+  function logout() {
+    localStorage.clear();
+    location.href = "login.html";
+  }
+</script>
+
+</body>
+</html>
