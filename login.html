@@ -127,62 +127,90 @@
     </form>
   </div>
 
-  <script>
-  const loginForm = document.getElementById("loginForm");
-  const errorMsg = document.getElementById("errorMsg");
+<script>
+const loginForm = document.getElementById("loginForm");
+const errorMsg = document.getElementById("errorMsg");
 
-  // ================== Toggle Password ==================
-  const passwordInput = document.getElementById("password");
-  const togglePassword = document.getElementById("togglePassword");
+// ================== 👁️ Toggle Password ==================
+const passwordInput = document.getElementById("password");
+const togglePassword = document.getElementById("togglePassword");
 
-  togglePassword?.addEventListener("click", () => {
-    const type =
-      passwordInput.getAttribute("type") === "password" ? "text" : "password";
-    passwordInput.setAttribute("type", type);
-    togglePassword.textContent = type === "password" ? "👁️" : "🙈";
-  });
+togglePassword?.addEventListener("click", () => {
+  const type =
+    passwordInput.getAttribute("type") === "password" ? "text" : "password";
+  passwordInput.setAttribute("type", type);
+  togglePassword.textContent = type === "password" ? "👁️" : "🙈";
+});
 
-  // ================== Prefill Email ==================
-  window.addEventListener("DOMContentLoaded", () => {
-    const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-    if (users.length > 0) {
-      document.getElementById("email").value = users[users.length - 1].email;
-    }
-  });
+// ================== Prefill Email (UX) ==================
+window.addEventListener("DOMContentLoaded", () => {
+  const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+  if (users.length > 0) {
+    document.getElementById("email").value = users[users.length - 1].email;
+  }
+});
 
-  // ================== LOGIN ==================
-  loginForm.addEventListener("submit", function (e) {
-    e.preventDefault();
-    errorMsg.textContent = "";
+// ================== LOGIN ==================
+loginForm.addEventListener("submit", function (e) {
+  e.preventDefault();
+  errorMsg.textContent = "";
 
-    const email = document.getElementById("email").value.trim().toLowerCase();
-    const password = document.getElementById("password").value;
+  const email = document.getElementById("email").value.trim().toLowerCase();
+  const password = document.getElementById("password").value;
 
-    let users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+  const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-    const user = users.find(
-      (u) => u.email === email && u.password === password
-    );
+  const user = users.find(
+    u => u.email === email && u.password === password
+  );
 
-    if (!user) {
-      errorMsg.textContent = "❌ Email or password incorrect.";
-      return;
-    }
+  if (!user) {
+    errorMsg.textContent = "❌ Email or password incorrect.";
+    return;
+  }
 
-    // ================== 🔥 DEMO OVERRIDE ==================
-    // Trial / expired / unpaid TETAP BOLEH LOGIN
-    user.isExpired = false;
-    user.isPaid = true;
+  // ================== VALIDASI STRUKTUR ==================
+  if (!user.restoID) {
+    errorMsg.textContent =
+      "❌ Account data incomplete. Please contact support.";
+    return;
+  }
+
+  // ================== CEK EXPIRED ==================
+  const now = new Date();
+  const expireDate = new Date(user.premiumExpire);
+
+  if (now > expireDate) {
+    user.isExpired = true;
 
     localStorage.setItem("menuvaUsers", JSON.stringify(users));
 
-    // ================== Login Success ==================
-    localStorage.setItem("isLoggedIn", "true");
-    localStorage.setItem("activeUser", JSON.stringify(user));
+    if (user.premiumPlan === "trial") {
+      errorMsg.innerHTML =
+        "❌ Free trial expired.<br><a href='plans.html'>Upgrade to continue</a>";
+    } else {
+      errorMsg.innerHTML =
+        "❌ Subscription expired.<br><a href='plans.html'>Renew your plan</a>";
+    }
+    return;
+  }
 
-    window.location.href = "admin.html";
-  });
+  // ================== CEK PEMBAYARAN ==================
+  if (!user.isPaid && user.premiumPlan !== "trial") {
+    errorMsg.innerHTML =
+      "❌ Payment not confirmed.<br><a href='payment.html'>Complete payment</a>";
+    return;
+  }
+
+  // ================== LOGIN SUCCESS ==================
+  localStorage.setItem("isLoggedIn", "true");
+  localStorage.setItem("activeUser", JSON.stringify(user));
+
+  window.location.href = "admin.html";
+});
 </script>
+
 
 </body>
 </html>
+
