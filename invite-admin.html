@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Invite Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .box {
+      background: #1c1c1c;
+      padding: 24px;
+      width: 100%;
+      max-width: 420px;
+      border-radius: 12px;
+    }
+    h2 {
+      margin-bottom: 16px;
+    }
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: none;
+    }
+    button {
+      background: #4caf50;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .error {
+      color: #ff6b6b;
+      margin-top: 10px;
+    }
+    .success {
+      color: #4caf50;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="box">
+    <h2>👥 Invite Admin</h2>
+
+    <form id="inviteForm">
+      <input
+        type="email"
+        id="email"
+        placeholder="Admin email"
+        required
+      />
+      <button type="submit">Generate Invite</button>
+    </form>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById("inviteForm");
+    const result = document.getElementById("result");
+
+    function generateToken(len = 24) {
+      const chars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      let token = "";
+      for (let i = 0; i < len; i++) {
+        token += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return token;
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      result.textContent = "";
+
+      const email = document
+        .getElementById("email")
+        .value.trim()
+        .toLowerCase();
+
+      const activeUser = JSON.parse(
+        localStorage.getItem("activeUser") || "null"
+      );
+
+      if (!activeUser || activeUser.role !== "owner") {
+        result.innerHTML =
+          "<div class='error'>❌ Unauthorized</div>";
+        return;
+      }
+
+      const invites =
+        JSON.parse(localStorage.getItem("menuvaInvites")) || [];
+
+      if (invites.some(i => i.email === email && !i.isUsed)) {
+        result.innerHTML =
+          "<div class='error'>❌ Email already invited</div>";
+        return;
+      }
+
+      const invite = {
+        inviteID: "INV-" + crypto.randomUUID(),
+        email,
+        restoID: activeUser.restoID,
+        ownerID: activeUser.userID,
+        role: "admin",
+        token: generateToken(),
+        isUsed: false,
+        createdAt: new Date().toISOString(),
+        expireAt: new Date(
+          Date.now() + 24 * 60 * 60 * 1000
+        ).toISOString()
+      };
+
+      invites.push(invite);
+      localStorage.setItem("menuvaInvites", JSON.stringify(invites));
+
+      result.innerHTML = `
+        <div class="success">
+          ✅ Invite created<br><br>
+          <b>Invite Link:</b><br>
+          <small>
+            ${location.origin}/accept-invite.html?token=${invite.token}
+          </small>
+        </div>
+      `;
+
+      form.reset();
+    });
+  </script>
+</body>
+</html>
