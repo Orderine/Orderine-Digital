@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Accept Admin Invite</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      background: #0f0f0f;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .box {
+      background: #1c1c1c;
+      padding: 24px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 420px;
+    }
+    h2 {
+      margin-bottom: 12px;
+    }
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: none;
+    }
+    button {
+      background: #4caf50;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .error {
+      color: #ff6b6b;
+      margin-top: 10px;
+    }
+    .success {
+      color: #4caf50;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="box">
+    <h2>🔐 Accept Admin Invite</h2>
+    <p id="info"></p>
+
+    <form id="acceptForm" class="hidden">
+      <input
+        type="password"
+        id="password"
+        placeholder="Set password (min 6 chars)"
+        required
+      />
+      <button type="submit">Create Account</button>
+    </form>
+
+    <div id="msg"></div>
+  </div>
+
+  <script>
+    const info = document.getElementById("info");
+    const msg = document.getElementById("msg");
+    const form = document.getElementById("acceptForm");
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+
+    if (!token) {
+      msg.innerHTML = "<div class='error'>❌ Invalid invite link</div>";
+      throw new Error("No token");
+    }
+
+    const invites =
+      JSON.parse(localStorage.getItem("menuvaInvites")) || [];
+
+    const invite = invites.find(
+      (i) => i.token === token && i.isUsed === false
+    );
+
+    if (!invite) {
+      msg.innerHTML =
+        "<div class='error'>❌ Invite not found or already used</div>";
+      throw new Error("Invite invalid");
+    }
+
+    if (new Date() > new Date(invite.expireAt)) {
+      msg.innerHTML =
+        "<div class='error'>❌ Invite expired</div>";
+      throw new Error("Invite expired");
+    }
+
+    info.innerHTML = `
+      ✅ You are invited as <b>Admin</b><br>
+      Email: <b>${invite.email}</b>
+    `;
+
+    form.classList.remove("hidden");
+
+    function generateUserID() {
+      return "USR-" + crypto.randomUUID();
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      msg.textContent = "";
+
+      const password =
+        document.getElementById("password").value;
+
+      if (password.length < 6) {
+        msg.innerHTML =
+          "<div class='error'>❌ Password too short</div>";
+        return;
+      }
+
+      const users =
+        JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+
+      if (users.some(u => u.email === invite.email)) {
+        msg.innerHTML =
+          "<div class='error'>❌ User already exists</div>";
+        return;
+      }
+
+      const now = new Date().toISOString();
+
+      const newAdmin = {
+        userID: generateUserID(),
+        email: invite.email,
+        password,
+
+        role: "admin",
+        restoID: invite.restoID,
+
+        premiumPlan: "inherit",
+        premiumStart: null,
+        premiumExpire: null,
+
+        trialUsed: true,
+        isPaid: true,
+        isExpired: false,
+
+        createdAt: now
+      };
+
+      users.push(newAdmin);
+      localStorage.setItem("menuvaUsers", JSON.stringify(users));
+
+      // 🔒 Mark invite as used
+      invite.isUsed = true;
+      invite.usedAt = now;
+      localStorage.setItem("menuvaInvites", JSON.stringify(invites));
+
+      // 🔥 AUTO LOGIN
+      localStorage.setItem("activeUser", JSON.stringify(newAdmin));
+      localStorage.setItem("isLoggedIn", "true");
+
+      msg.innerHTML =
+        "<div class='success'>✅ Account created. Redirecting...</div>";
+
+      setTimeout(() => {
+        window.location.href = "admin.html";
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
