@@ -130,14 +130,17 @@
   const errorMsg = document.getElementById("errorMsg");
 
   // ================== Utility ==================
-  function isValidEmail(email) {
-    const regex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
-    return regex.test(email.trim());
-  }
-
   function generateUserID() {
-    return "KM-" + Math.random().toString(36).substr(2, 9).toUpperCase();
-  }
+  return "USR-" + crypto.randomUUID();
+}
+
+function generateRestoID() {
+  return "RST-" + crypto.randomUUID();
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
   function generateTrialCode(length = 8) {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -152,76 +155,104 @@
   const selectedPlan = localStorage.getItem("selectedPlan") || "trial";
 
   // ================== REGISTER ==================
-  registerForm.addEventListener("submit", function (e) {
-    e.preventDefault();
+registerForm.addEventListener("submit", function (e) {
+  e.preventDefault();
 
-    // 🔥 RESET STATE (ANTI KEJEBIT)
-    localStorage.removeItem("activeUser");
+  const email = document.getElementById("email").value.trim().toLowerCase();
+  const password = document.getElementById("password").value;
 
-    const email = document.getElementById("email").value.trim().toLowerCase();
-    const password = document.getElementById("password").value;
+  errorMsg.textContent = "";
 
-    // ========== Validasi dasar ==========
-    if (!isValidEmail(email)) {
-      errorMsg.textContent = "❌ Invalid email format!";
-      return;
-    }
+  // ========== VALIDASI ==========
+  if (!isValidEmail(email)) {
+    errorMsg.textContent = "❌ Invalid email format!";
+    return;
+  }
 
-    if (password.length < 6) {
-      errorMsg.textContent = "❌ Password must be at least 6 characters!";
-      return;
-    }
+  if (password.length < 6) {
+    errorMsg.textContent = "❌ Password must be at least 6 characters!";
+    return;
+  }
 
-    // ========== Ambil data user ==========
-    let users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+  // ========== LOAD USER ==========
+  const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-    // 🔥 DEMO MODE: HAPUS USER LAMA JIKA ADA
-    users = users.filter((u) => u.email !== email);
+  // 🔒 PRODUKSI RULE: EMAIL UNIK
+  if (users.some(u => u.email === email)) {
+    errorMsg.textContent =
+      "❌ Email already registered. Please login.";
+    return;
+  }
 
-    // ========== Tentukan durasi ==========
-    let durationDays = 7;
-    if (selectedPlan === "monthly") durationDays = 30;
-    if (selectedPlan === "6month") durationDays = 180;
-    if (selectedPlan === "yearly") durationDays = 365;
+  // ========== PLAN & DURASI ==========
+  const plan = selectedPlan || "trial";
 
-    const startDate = new Date().toISOString();
-    const expireDate = new Date(
-      Date.now() + durationDays * 24 * 60 * 60 * 1000
-    ).toISOString();
+  let durationDays = 7;
+  if (plan === "monthly") durationDays = 30;
+  if (plan === "6month") durationDays = 180;
+  if (plan === "yearly") durationDays = 365;
 
-    // ========== Buat user baru ==========
-    const newUser = {
-      email,
-      password,
-      userID: generateUserID(),
-      premiumPlan: selectedPlan,
-      premiumStart: startDate,
-      premiumExpire: expireDate,
-      trialUsed: selectedPlan === "trial",
-      isExpired: false,
-      isPaid: selectedPlan === "trial",
-      trialCode: selectedPlan === "trial" ? generateTrialCode() : null
-    };
+  const now = new Date();
+  const startDate = now.toISOString();
+  const expireDate = new Date(
+    now.getTime() + durationDays * 24 * 60 * 60 * 1000
+  ).toISOString();
 
-    // ========== Simpan ==========
-    users.push(newUser);
-    localStorage.setItem("menuvaUsers", JSON.stringify(users));
-    localStorage.setItem("activeUser", JSON.stringify(newUser));
-    localStorage.removeItem("selectedPlan");
+  const restoID = generateRestoID();
+  
+  // ========== CREATE USER ==========
+ const newUser = {
+  userID: generateUserID(),
+  email,
+  password,
 
-    // ========== Redirect ==========
-    if (selectedPlan === "trial") {
-      alert(
-        `✅ Registration successful!\n\nFREE TRIAL 7 DAYS\nTrial Code: ${newUser.trialCode}`
-      );
-      window.location.href = "login.html";
-    } else {
-      alert(
-        `✅ Registration successful!\nPlease complete payment for "${selectedPlan}" plan.`
-      );
-      window.location.href = "payment.html";
-    }
-  });
+  role: "owner",
+  restoID, // 🔑 RELASI
+
+  premiumPlan: plan,
+  premiumStart: startDate,
+  premiumExpire: expireDate,
+
+  trialUsed: plan === "trial",
+  isPaid: plan === "trial",
+  isExpired: false,
+
+  trialCode: plan === "trial"
+    ? generateTrialCode()
+    : null,
+
+  createdAt: startDate
+};
+
+  const restos = JSON.parse(localStorage.getItem("menuvaRestos")) || [];
+
+restos.push({
+  restoID,
+  ownerID: newUser.userID,
+  restoName: "My Restaurant",
+  createdAt: startDate
+});
+
+localStorage.setItem("menuvaRestos", JSON.stringify(restos));
+
+  // ========== SAVE ==========
+  users.push(newUser);
+  localStorage.setItem("menuvaUsers", JSON.stringify(users));
+  localStorage.removeItem("selectedPlan");
+
+  // ========== REDIRECT ==========
+  if (plan === "trial") {
+    alert(
+      `✅ Registration successful!\n\nFREE TRIAL 7 DAYS\nTrial Code: ${newUser.trialCode}\n\nPlease login to continue.`
+    );
+    window.location.href = "login.html";
+  } else {
+    alert(
+      `✅ Registration successful!\nPlease complete payment for "${plan}" plan.`
+    );
+    window.location.href = "payment.html";
+  }
+});
 
   // ================== 👁️ Toggle Password ==================
   const passwordInput = document.getElementById("password");
@@ -237,3 +268,4 @@
 
 </body>
 </html>
+
