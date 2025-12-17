@@ -785,6 +785,17 @@ button {
     <div class="label">Restore</div>
   </div>
 
+  <!-- 👥 INVITE ADMIN -->
+  <div
+    class="nav-item"
+    id="inviteAdminBtn"
+    onclick="openInviteAdmin()"
+    style="display:none"
+  >
+    <ion-icon name="person-add-outline" class="icon"></ion-icon>
+    <div class="label">Invite Admin</div>
+  </div>
+
   <div class="nav-item" onclick="window.location.href='index.html'">
     <ion-icon name="log-out-outline" class="icon"></ion-icon>
     <div class="label">Logout</div>
@@ -792,35 +803,6 @@ button {
 
 </div>
 
-  <div id="restoreModal" class="restore-modal hidden">
-  <div class="restore-box">
-    <h2>⚠️ PERINGATAN KERAS</h2>
-
-    <p>
-      Fitur ini akan <b>MENGHAPUS SEMUA DATA LOKAL</b><br>
-      dan menggantinya dengan data dari cloud.
-    </p>
-
-    <p class="danger-text">
-      Gunakan HANYA jika data admin benar-benar hilang.
-    </p>
-
-    <input
-      type="text"
-      id="restoreRestoId"
-      placeholder="Masukkan No Telp Resto"
-    />
-
-    <div class="restore-actions">
-      <button onclick="closeRestorePopup()">Cancel</button>
-      <button class="danger-btn" onclick="confirmRestore()">
-        Restore Sekarang
-      </button>
-    </div>
-  </div>
-</div>
-
-  
  <script>
 console.log("Admin Script Version: 2025-11-07-STABLE");
 
@@ -2505,12 +2487,23 @@ function markViewedAndGo() {
 }
 
 </script>
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const activeUser = JSON.parse(
+      localStorage.getItem("activeUser") || "null"
+    );
+
+    if (activeUser?.role === "owner") {
+      const btn = document.getElementById("inviteAdminBtn");
+      if (btn) btn.style.display = "flex";
+    }
+  });
+
+  function openInviteAdmin() {
+    // versi simple dulu
+    window.location.href = "invite-admin.html";
+  }
+</script>
 
 </body>
 </html>
-
-
-
-
-
-
