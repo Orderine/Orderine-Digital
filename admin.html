@@ -779,29 +779,34 @@ button {
     <div class="label">Receives</div>
   </div>
 
-  <!-- 🔥 RESTORE CLOUD -->
   <div class="nav-item danger" onclick="openRestorePopup()">
-    <ion-icon name="cloud-download-outline" class="icon"></ion-icon>
+    <div class="icon-wrapper">
+      <ion-icon name="cloud-download-outline" class="icon"></ion-icon>
+    </div>
     <div class="label">Restore</div>
   </div>
 
-  <!-- 👥 INVITE ADMIN -->
   <div
     class="nav-item"
     id="inviteAdminBtn"
     onclick="openInviteAdmin()"
     style="display:none"
   >
-    <ion-icon name="person-add-outline" class="icon"></ion-icon>
+    <div class="icon-wrapper">
+      <ion-icon name="person-add-outline" class="icon"></ion-icon>
+    </div>
     <div class="label">Invite Admin</div>
   </div>
 
   <div class="nav-item" onclick="window.location.href='index.html'">
-    <ion-icon name="log-out-outline" class="icon"></ion-icon>
+    <div class="icon-wrapper">
+      <ion-icon name="log-out-outline" class="icon"></ion-icon>
+    </div>
     <div class="label">Logout</div>
   </div>
 
 </div>
+
 
  <script>
 console.log("Admin Script Version: 2025-11-07-STABLE");
@@ -2507,3 +2512,4 @@ function markViewedAndGo() {
 
 </body>
 </html>
+
