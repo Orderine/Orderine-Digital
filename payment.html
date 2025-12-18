@@ -51,12 +51,11 @@
   const pendingUser = JSON.parse(localStorage.getItem("pendingUser") || "null");
   const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-  // ❌ TIDAK ADA USER YANG SEDANG BAYAR
-  if (!pendingUser) {
-    planInfo.textContent = "⚠️ No active registration found.";
-    payBtn.style.display = "none";
-    return;
-  }
+// ❌ TIDAK ADA USER YANG SEDANG BAYAR
+if (!pendingUser) {
+  planInfo.textContent = "⚠️ No active registration found.";
+  payBtn.style.display = "none";
+} else {
 
   // ================== INFO PLAN ==================
   planInfo.textContent = `📦 Plan Selected: ${pendingUser.premiumPlan.toUpperCase()}
@@ -89,11 +88,9 @@ Status: Pending Payment ❌`;
       window.location.href = "admin.html";
     }, 800);
   });
+}
+
 </script>
 
 </body>
 </html>
-
-
-
-
