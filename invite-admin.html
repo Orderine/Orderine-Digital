@@ -111,6 +111,11 @@
       </button>
 
       <div id="qrBox"></div>
+
+      <button onclick="downloadQRCode()" class="secondary">
+     ⬇ Download QR Code
+     </button>
+
     </div>
 
     <button onclick="goBack()" class="secondary" style="margin-top:20px;">
@@ -210,6 +215,19 @@
       });
     }
 
+    function downloadQRCode() {
+  const canvas = document.querySelector("#qrBox canvas");
+  if (!canvas) {
+    alert("QR code belum tersedia");
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.href = canvas.toDataURL("image/png");
+  link.download = "invite-admin-qr.png";
+  link.click();
+}
+
     function goBack() {
       window.location.href = "admin.html";
     }
@@ -235,3 +253,4 @@
 
 </body>
 </html>
+
