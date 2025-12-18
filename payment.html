@@ -43,70 +43,57 @@
     <p id="planInfo">Checking your subscription...</p>
     <button id="payBtn">✅ Simulate Payment Success</button>
   </div>
+  
+<script>
+  const planInfo = document.getElementById("planInfo");
+  const payBtn = document.getElementById("payBtn");
 
-  <script>
-    const planInfo = document.getElementById("planInfo");
-    const payBtn = document.getElementById("payBtn");
+  const pendingUser = JSON.parse(localStorage.getItem("pendingUser") || "null");
+  const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-    let activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
-    let users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+  // ❌ TIDAK ADA USER YANG SEDANG BAYAR
+  if (!pendingUser) {
+    planInfo.textContent = "⚠️ No active registration found.";
+    payBtn.style.display = "none";
+    return;
+  }
 
-    if (!activeUser) {
-      planInfo.textContent = "⚠️ No active registration found.";
-      payBtn.style.display = "none";
-    } else {
-      let now = new Date();
-      let expireDate = new Date(activeUser.premiumExpire);
+  // ================== INFO PLAN ==================
+  planInfo.textContent = `📦 Plan Selected: ${pendingUser.premiumPlan.toUpperCase()}
+Status: Pending Payment ❌`;
 
-      if (expireDate < now) {
-        // Plan sudah expired
-        planInfo.textContent = `📦 Plan Selected: ${activeUser.premiumPlan.toUpperCase()} 
-        \nStatus: Expired ❌`;
-        payBtn.style.display = "none";
-      } else {
-        // Plan masih aktif
-        planInfo.textContent = `📦 Plan Selected: ${activeUser.premiumPlan.toUpperCase()} 
-        \nStatus: ${activeUser.isPaid ? "Paid ✅" : "Pending Payment ❌"}`;
+  // ================== PAY BUTTON ==================
+  payBtn.addEventListener("click", () => {
+    // 🔥 SIMULASI PAYMENT SUKSES
+    pendingUser.isPaid = true;
+    pendingUser.isExpired = false;
 
-        // Trial tidak ada tombol bayar
-        if (activeUser.premiumPlan === "trial") {
-          payBtn.style.display = "none";
-        }
-      }
+    // Update ke users list
+    const index = users.findIndex(u => u.email === pendingUser.email);
+    if (index !== -1) {
+      users[index] = pendingUser;
     }
 
-    payBtn.addEventListener("click", () => {
-      if (!activeUser) return;
+    // 🔑 SET USER AKTIF
+    localStorage.setItem("menuvaUsers", JSON.stringify(users));
+    localStorage.setItem("activeUser", JSON.stringify(pendingUser));
+    localStorage.setItem("isLoggedIn", "true");
 
-      // Simulasi pembayaran sukses
-      activeUser.isPaid = true;
+    // 🧹 BERSIHKAN STATE PAYMENT
+    localStorage.removeItem("pendingUser");
 
-      // Update juga ke list user
-      const index = users.findIndex(u => u.email === activeUser.email);
-      if (index !== -1) {
-        users[index].isPaid = true;
-      }
+    alert("✅ Payment successful! Your subscription is now active.");
 
-      localStorage.setItem("activeUser", JSON.stringify(activeUser));
-      localStorage.setItem("menuvaUsers", JSON.stringify(users));
+    // Redirect ke admin
+    setTimeout(() => {
+      window.location.href = "admin.html";
+    }, 800);
+  });
+</script>
 
-      alert("✅ Payment successful! Your subscription is now active.");
-
-      // Update info
-      planInfo.textContent = `📦 Plan Selected: ${activeUser.premiumPlan.toUpperCase()} 
-      \nStatus: Paid ✅`;
-
-      // Sembunyikan tombol setelah bayar
-      payBtn.style.display = "none";
-
-      // Redirect otomatis ke login
-      setTimeout(() => {
-        window.location.href = "login.html";
-      }, 1000);
-    });
-  </script>
 </body>
 </html>
+
 
 
 
