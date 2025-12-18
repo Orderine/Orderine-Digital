@@ -4,65 +4,118 @@
   <meta charset="UTF-8" />
   <title>Invite Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- QR CODE LIB -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
   <style>
     body {
-      font-family: sans-serif;
-      background: #111;
-      color: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      font-family: system-ui, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 20px;
     }
-    .box {
-      background: #1c1c1c;
-      padding: 24px;
-      width: 100%;
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .card {
+      background: #020617;
+      padding: 16px;
+      border-radius: 10px;
       max-width: 420px;
-      border-radius: 12px;
+      margin: auto;
+      box-shadow: 0 0 20px rgba(0,0,0,.4);
     }
-    h2 {
-      margin-bottom: 16px;
-    }
+
     input, button {
       width: 100%;
-      padding: 12px;
+      padding: 10px;
       margin-top: 10px;
       border-radius: 8px;
       border: none;
+      font-size: 14px;
     }
+
+    input {
+      background: #020617;
+      color: #e5e7eb;
+      border: 1px solid #1e293b;
+    }
+
     button {
-      background: #4caf50;
-      color: #fff;
-      font-weight: bold;
+      background: #22c55e;
+      color: #022c22;
       cursor: pointer;
     }
-    .error {
-      color: #ff6b6b;
+
+    button.secondary {
+      background: #334155;
+      color: #e5e7eb;
+    }
+
+    .success {
+      color: #22c55e;
       margin-top: 10px;
     }
-    .success {
-      color: #4caf50;
+
+    .error {
+      color: #ef4444;
       margin-top: 10px;
+    }
+
+    #inviteBox {
+      display: none;
+      margin-top: 20px;
+      border-top: 1px solid #1e293b;
+      padding-top: 15px;
+    }
+
+    #inviteLink {
+      font-size: 12px;
+    }
+
+    #qrBox {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
     }
   </style>
 </head>
 
 <body>
-  <div class="box">
-    <h2>👥 Invite Admin</h2>
+
+  <div class="card">
+    <h1>👤 Invite Admin</h1>
 
     <form id="inviteForm">
       <input
         type="email"
         id="email"
-        placeholder="Admin email"
+        placeholder="Email admin"
         required
       />
       <button type="submit">Generate Invite</button>
     </form>
 
     <div id="result"></div>
+
+    <!-- INVITE RESULT -->
+    <div id="inviteBox">
+      <label>Invite Link</label>
+      <input type="text" id="inviteLink" readonly />
+
+      <button onclick="copyInviteLink()" class="secondary">
+        📋 Copy Link
+      </button>
+
+      <div id="qrBox"></div>
+    </div>
+
+    <button onclick="goBack()" class="secondary" style="margin-top:20px;">
+      ⬅ Back to Admin
+    </button>
   </div>
 
   <script>
@@ -83,27 +136,27 @@
       e.preventDefault();
       result.textContent = "";
 
-      const email = document
-        .getElementById("email")
-        .value.trim()
-        .toLowerCase();
-
-      const activeUser = JSON.parse(
-        localStorage.getItem("activeUser") || "null"
-      );
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
 
       if (!activeUser || activeUser.role !== "owner") {
-        result.innerHTML =
-          "<div class='error'>❌ Unauthorized</div>";
+        result.innerHTML = "<div class='error'>❌ Unauthorized</div>";
         return;
       }
 
-      const invites =
-        JSON.parse(localStorage.getItem("menuvaInvites")) || [];
+      const invites = JSON.parse(localStorage.getItem("menuvaInvites")) || [];
 
-      if (invites.some(i => i.email === email && !i.isUsed)) {
+      const existingInvite = invites.find(
+        i =>
+          i.restoID === activeUser.restoID &&
+          !i.isUsed &&
+          new Date() < new Date(i.expireAt)
+      );
+
+      if (existingInvite) {
+        showInvite(existingInvite);
         result.innerHTML =
-          "<div class='error'>❌ Email already invited</div>";
+          "<div class='success'>ℹ️ Active invite already exists</div>";
         return;
       }
 
@@ -116,26 +169,69 @@
         token: generateToken(),
         isUsed: false,
         createdAt: new Date().toISOString(),
-        expireAt: new Date(
-          Date.now() + 24 * 60 * 60 * 1000
-        ).toISOString()
+        expireAt: new Date(Date.now() + 86400000).toISOString()
       };
 
       invites.push(invite);
       localStorage.setItem("menuvaInvites", JSON.stringify(invites));
 
-      result.innerHTML = `
-        <div class="success">
-          ✅ Invite created<br><br>
-          <b>Invite Link:</b><br>
-          <small>
-            ${location.origin}/accept-invite.html?token=${invite.token}
-          </small>
-        </div>
-      `;
-
+      showInvite(invite);
+      result.innerHTML = "<div class='success'>✅ Invite created</div>";
       form.reset();
     });
+
+    function showInvite(invite) {
+      const inviteURL =
+        location.origin +
+        location.pathname.replace("invite-admin.html", "") +
+        "accept-invite.html?token=" +
+        invite.token;
+
+      document.getElementById("inviteLink").value = inviteURL;
+      document.getElementById("inviteBox").style.display = "block";
+      generateQRCode(inviteURL);
+    }
+
+    function copyInviteLink() {
+      const input = document.getElementById("inviteLink");
+      input.select();
+      input.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(input.value);
+      alert("✅ Invite link copied");
+    }
+
+    function generateQRCode(url) {
+      const qrBox = document.getElementById("qrBox");
+      qrBox.innerHTML = "";
+      new QRCode(qrBox, {
+        text: url,
+        width: 180,
+        height: 180
+      });
+    }
+
+    function goBack() {
+      window.location.href = "admin.html";
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
+      if (!activeUser || !activeUser.restoID) return;
+
+      const invites = JSON.parse(localStorage.getItem("menuvaInvites")) || [];
+
+      const activeInvite = invites.find(
+        i =>
+          i.restoID === activeUser.restoID &&
+          !i.isUsed &&
+          new Date() < new Date(i.expireAt)
+      );
+
+      if (activeInvite) {
+        showInvite(activeInvite);
+      }
+    });
   </script>
+
 </body>
 </html>
