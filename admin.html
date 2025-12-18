@@ -584,6 +584,25 @@ button {
   font-size: 13px;
 }
 
+    /* KHUSUS INVITE ADMIN */
+.nav-item.vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.nav-item.vertical .icon {
+  font-size: 22px;
+}
+
+.nav-item.vertical .label {
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+}
+
   </style>
 </head>
 <body>
@@ -786,17 +805,17 @@ button {
     <div class="label">Restore</div>
   </div>
 
-  <div
-    class="nav-item"
-    id="inviteAdminBtn"
-    onclick="openInviteAdmin()"
-    style="display:none"
-  >
-    <div class="icon-wrapper">
-      <ion-icon name="person-add-outline" class="icon"></ion-icon>
-    </div>
-    <div class="label">Invite Admin</div>
+ <div
+  class="nav-item vertical"
+  id="inviteAdminBtn"
+  onclick="openInviteAdmin()"
+  style="display:none"
+>
+  <div class="icon-wrapper">
+    <ion-icon name="person-add-outline" class="icon"></ion-icon>
   </div>
+  <div class="label">Invite Admin</div>
+</div>
 
   <div class="nav-item" onclick="window.location.href='index.html'">
     <div class="icon-wrapper">
@@ -2512,4 +2531,5 @@ function markViewedAndGo() {
 
 </body>
 </html>
+
 
