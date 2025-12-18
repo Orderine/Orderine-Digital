@@ -240,6 +240,13 @@ localStorage.setItem("menuvaRestos", JSON.stringify(restos));
   localStorage.setItem("menuvaUsers", JSON.stringify(users));
   localStorage.removeItem("selectedPlan");
 
+  // 🔑 SIMPAN USER UNTUK PROSES PEMBAYARAN
+if (plan !== "trial") {
+  localStorage.setItem("pendingUser", JSON.stringify(newUser));
+  localStorage.removeItem("activeUser");
+  localStorage.removeItem("isLoggedIn");
+}
+
   // ========== REDIRECT ==========
   if (plan === "trial") {
     alert(
@@ -268,4 +275,5 @@ localStorage.setItem("menuvaRestos", JSON.stringify(restos));
 
 </body>
 </html>
+
 
