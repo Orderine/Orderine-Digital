@@ -138,10 +138,12 @@
       </div>
       <p id="errorMsg" class="error"></p>
       <!-- 🔄 UPDATE PLAN BUTTON -->
-<button
+      <button
   type="button"
+  id="renewBtn"
   class="renew-btn"
   onclick="goToPlans()"
+  hidden
 >
   🔄 Update / Renew Plan
 </button>
@@ -215,19 +217,20 @@ loginForm.addEventListener("submit", function (e) {
   const isExpired = now > expireDate;
 
   // ================== EXPIRED FLOW ==================
-  if (isExpired) {
-    user.isExpired = true;
-    users[userIndex] = user;
-    localStorage.setItem("menuvaUsers", JSON.stringify(users));
+if (isExpired) {
+  user.isExpired = true;
+  users[userIndex] = user;
+  localStorage.setItem("menuvaUsers", JSON.stringify(users));
 
-    errorMsg.textContent =
-      user.premiumPlan === "trial"
-        ? "❌ Free trial expired."
-        : "❌ Subscription expired.";
+  errorMsg.textContent =
+    user.premiumPlan === "trial"
+      ? "❌ Free trial expired."
+      : "❌ Subscription expired.";
 
-    if (renewBtn) renewBtn.style.display = "block";
-    return;
-  }
+  if (renewBtn) renewBtn.hidden = false; // 🔓 munculkan tombol
+  return;
+}
+
 
   // ================== CEK PEMBAYARAN ==================
   if (!user.isPaid && user.premiumPlan !== "trial") {
@@ -255,3 +258,4 @@ function goToPlans() {
 
 </body>
 </html>
+
