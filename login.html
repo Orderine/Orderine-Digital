@@ -145,6 +145,7 @@
 >
   🔄 Update / Renew Plan
 </button>
+    <p id="errorMsg" class="error"></p>
       <button type="submit">Login</button>
       <div class="link">Don't have an account? <a href="register.html">Register Here.!</a></div>
       <div class="link back-link"><a href="index.html">⬅️ Back to Home</a></div>
@@ -154,6 +155,7 @@
 <script>
 const loginForm = document.getElementById("loginForm");
 const errorMsg = document.getElementById("errorMsg");
+const renewBtn = document.getElementById("renewBtn");
 
 // ================== 👁️ Toggle Password ==================
 const passwordInput = document.getElementById("password");
@@ -173,12 +175,17 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("email").value =
       users[users.length - 1].email;
   }
+
+  // pastikan tombol renew tersembunyi saat load
+  if (renewBtn) renewBtn.style.display = "none";
 });
 
 // ================== LOGIN ==================
 loginForm.addEventListener("submit", function (e) {
   e.preventDefault();
   errorMsg.textContent = "";
+
+  if (renewBtn) renewBtn.style.display = "none";
 
   const email = document.getElementById("email").value.trim().toLowerCase();
   const password = document.getElementById("password").value;
@@ -207,36 +214,40 @@ loginForm.addEventListener("submit", function (e) {
   const expireDate = new Date(user.premiumExpire);
   const isExpired = now > expireDate;
 
-  // ================== SIMPAN STATUS SUBSCRIPTION ==================
-  user.isExpired = isExpired;
+  // ================== EXPIRED FLOW ==================
+  if (isExpired) {
+    user.isExpired = true;
+    users[userIndex] = user;
+    localStorage.setItem("menuvaUsers", JSON.stringify(users));
+
+    errorMsg.textContent =
+      user.premiumPlan === "trial"
+        ? "❌ Free trial expired."
+        : "❌ Subscription expired.";
+
+    if (renewBtn) renewBtn.style.display = "block";
+    return;
+  }
+
+  // ================== CEK PEMBAYARAN ==================
+  if (!user.isPaid && user.premiumPlan !== "trial") {
+    errorMsg.textContent = "❌ Payment not confirmed.";
+    return;
+  }
+
+  // ================== LOGIN SUCCESS ==================
+  user.isExpired = false;
   users[userIndex] = user;
 
   localStorage.setItem("menuvaUsers", JSON.stringify(users));
   localStorage.setItem("isLoggedIn", "true");
   localStorage.setItem("activeUser", JSON.stringify(user));
-  localStorage.setItem(
-    "subscription_status",
-    isExpired ? "expired" : "active"
-  );
+  localStorage.setItem("subscription_status", "active");
 
-  // ================== REDIRECT FLOW ==================
-  if (isExpired) {
-    // ✅ LOGIN BERHASIL TAPI LANGSUNG KE PLANS
-    window.location.href = "plans.html";
-    return;
-  }
-
-  // ================== CEK PEMBAYARAN (HANYA JIKA AKTIF) ==================
-  if (!user.isPaid && user.premiumPlan !== "trial") {
-    window.location.href = "payment.html";
-    return;
-  }
-
-  // ================== LOGIN SUCCESS ==================
   window.location.href = "admin.html";
 });
 
-// ================== BUTTON UPDATE PLAN ==================
+// ================== BUTTON UPDATE / RENEW PLAN ==================
 function goToPlans() {
   window.location.href = "plans.html";
 }
@@ -244,5 +255,3 @@ function goToPlans() {
 
 </body>
 </html>
-
-
