@@ -53,16 +53,54 @@
   </div>
 
 <script>
-  function selectPlan(plan) {
-    localStorage.setItem("selectedPlan", plan);
-    location.href = "payment.html";
+  // ================== GUARD PLANS PAGE ==================
+  const pendingUser = JSON.parse(
+    localStorage.getItem("pendingPlanUser")
+  );
+
+  if (!pendingUser) {
+    document.body.innerHTML = `
+      <div style="padding:40px;text-align:center">
+        <h2>⚠️ No active registration found</h2>
+        <p>Please login first.</p>
+        <a href="login.html">⬅️ Back to Login</a>
+      </div>
+    `;
+    throw new Error("No pending plan user");
   }
 
+  // ================== SELECT PLAN ==================
+  function selectPlan(plan) {
+    const planConfig = {
+      monthly: 1,
+      "6month": 6,
+      yearly: 12
+    };
+
+    localStorage.setItem(
+      "selectedPlan",
+      JSON.stringify({
+        email: pendingUser.email,
+        restoID: pendingUser.restoID,
+        role: pendingUser.role,
+        plan,
+        durationMonth: planConfig[plan],
+        selectedAt: new Date().toISOString()
+      })
+    );
+
+    window.location.href = "payment.html";
+  }
+
+  // ================== LOGOUT ==================
   function logout() {
-    localStorage.clear();
-    location.href = "login.html";
+    localStorage.removeItem("pendingPlanUser");
+    localStorage.removeItem("selectedPlan");
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("activeUser");
+    window.location.href = "login.html";
   }
 </script>
-
 </body>
 </html>
+
