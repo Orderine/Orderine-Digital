@@ -101,6 +101,22 @@
     font-size: 16px;
   }
 }
+    .renew-btn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 10px;
+  background: #1677ff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.renew-btn:hover {
+  background: #0958d9;
+}
+
   </style>
 </head>
 <body>
@@ -121,6 +137,14 @@
         <span id="togglePassword" class="toggle-eye">👁️</span>
       </div>
       <p id="errorMsg" class="error"></p>
+      <!-- 🔄 UPDATE PLAN BUTTON -->
+<button
+  type="button"
+  class="renew-btn"
+  onclick="goToPlans()"
+>
+  🔄 Update / Renew Plan
+</button>
       <button type="submit">Login</button>
       <div class="link">Don't have an account? <a href="register.html">Register Here.!</a></div>
       <div class="link back-link"><a href="index.html">⬅️ Back to Home</a></div>
@@ -146,7 +170,8 @@ togglePassword?.addEventListener("click", () => {
 window.addEventListener("DOMContentLoaded", () => {
   const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
   if (users.length > 0) {
-    document.getElementById("email").value = users[users.length - 1].email;
+    document.getElementById("email").value =
+      users[users.length - 1].email;
   }
 });
 
@@ -160,14 +185,16 @@ loginForm.addEventListener("submit", function (e) {
 
   const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-  const user = users.find(
+  const userIndex = users.findIndex(
     u => u.email === email && u.password === password
   );
 
-  if (!user) {
+  if (userIndex === -1) {
     errorMsg.textContent = "❌ Email or password incorrect.";
     return;
   }
+
+  const user = users[userIndex];
 
   // ================== VALIDASI STRUKTUR ==================
   if (!user.restoID) {
@@ -176,41 +203,46 @@ loginForm.addEventListener("submit", function (e) {
     return;
   }
 
-  // ================== CEK EXPIRED ==================
   const now = new Date();
   const expireDate = new Date(user.premiumExpire);
+  const isExpired = now > expireDate;
 
-  if (now > expireDate) {
-    user.isExpired = true;
+  // ================== SIMPAN STATUS SUBSCRIPTION ==================
+  user.isExpired = isExpired;
+  users[userIndex] = user;
 
-    localStorage.setItem("menuvaUsers", JSON.stringify(users));
+  localStorage.setItem("menuvaUsers", JSON.stringify(users));
+  localStorage.setItem("isLoggedIn", "true");
+  localStorage.setItem("activeUser", JSON.stringify(user));
+  localStorage.setItem(
+    "subscription_status",
+    isExpired ? "expired" : "active"
+  );
 
-    if (user.premiumPlan === "trial") {
-      errorMsg.innerHTML =
-        "❌ Free trial expired.<br><a href='plans.html'>Upgrade to continue</a>";
-    } else {
-      errorMsg.innerHTML =
-        "❌ Subscription expired.<br><a href='plans.html'>Renew your plan</a>";
-    }
+  // ================== REDIRECT FLOW ==================
+  if (isExpired) {
+    // ✅ LOGIN BERHASIL TAPI LANGSUNG KE PLANS
+    window.location.href = "plans.html";
     return;
   }
 
-  // ================== CEK PEMBAYARAN ==================
+  // ================== CEK PEMBAYARAN (HANYA JIKA AKTIF) ==================
   if (!user.isPaid && user.premiumPlan !== "trial") {
-    errorMsg.innerHTML =
-      "❌ Payment not confirmed.<br><a href='payment.html'>Complete payment</a>";
+    window.location.href = "payment.html";
     return;
   }
 
   // ================== LOGIN SUCCESS ==================
-  localStorage.setItem("isLoggedIn", "true");
-  localStorage.setItem("activeUser", JSON.stringify(user));
-
   window.location.href = "admin.html";
 });
-</script>
 
+// ================== BUTTON UPDATE PLAN ==================
+function goToPlans() {
+  window.location.href = "plans.html";
+}
+</script>
 
 </body>
 </html>
+
 
