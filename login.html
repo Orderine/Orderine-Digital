@@ -120,137 +120,160 @@
   </style>
 </head>
 <body>
-  <div class="menuva-logo">
-    <img src="menuva-logo.png" alt="Logo Menuva">
-    <br>
-    <p style="color: white;">Digital Solution For Restaurant, Hotel, & Cafe's</p>
-  </div>
+ <div class="menuva-logo">
+  <img src="menuva-logo.png" alt="Logo Menuva">
+  <br>
+  <p style="color: white;">
+    Digital Solution For Restaurant, Hotel, & Cafe's
+  </p>
+</div>
 
-  <div class="login-box">
-    <h2>Login Admin Orderine</h2>
-    <form id="loginForm">
-      <label for="email">Email:</label>
-      <input type="email" id="email" placeholder="admin@menuva.id" required />
-      <label for="password">Password:</label>
-      <div class="password-wrapper">
-        <input type="password" id="password" placeholder="Password" required />
-        <span id="togglePassword" class="toggle-eye">👁️</span>
-      </div>
-      <p id="errorMsg" class="error"></p>
-      <!-- 🔄 UPDATE PLAN BUTTON -->
-      <button
-  type="button"
-  id="renewBtn"
-  class="renew-btn"
-  onclick="goToPlans()"
-  hidden
->
-  🔄 Update / Renew Plan
-</button>
+<div class="login-box">
+  <h2>Login Admin Orderine</h2>
+
+  <form id="loginForm">
+    <label for="email">Email:</label>
+    <input
+      type="email"
+      id="email"
+      placeholder="admin@menuva.id"
+      required
+    />
+
+    <label for="password">Password:</label>
+    <div class="password-wrapper">
+      <input
+        type="password"
+        id="password"
+        placeholder="Password"
+        required
+      />
+      <span id="togglePassword" class="toggle-eye">👁️</span>
+    </div>
+
+    <!-- ❌ ERROR MESSAGE (SATU SAJA) -->
     <p id="errorMsg" class="error"></p>
-      <button type="submit">Login</button>
-      <div class="link">Don't have an account? <a href="register.html">Register Here.!</a></div>
-      <div class="link back-link"><a href="index.html">⬅️ Back to Home</a></div>
-    </form>
-  </div>
+
+    <!-- 🔄 UPDATE / RENEW PLAN (HIDDEN DEFAULT) -->
+    <button
+      type="button"
+      id="renewBtn"
+      class="renew-btn"
+      hidden
+      onclick="goToPlans()"
+    >
+      🔄 Update / Renew Plan
+    </button>
+
+    <button type="submit">Login</button>
+
+    <div class="link">
+      Don't have an account?
+      <a href="register.html">Register Here.!</a>
+    </div>
+
+    <div class="link back-link">
+      <a href="index.html">⬅️ Back to Home</a>
+    </div>
+  </form>
+</div>
 
 <script>
-const loginForm = document.getElementById("loginForm");
-const errorMsg = document.getElementById("errorMsg");
-const renewBtn = document.getElementById("renewBtn");
+let renewBtn = null;
 
-// ================== 👁️ Toggle Password ==================
-const passwordInput = document.getElementById("password");
-const togglePassword = document.getElementById("togglePassword");
+document.addEventListener("DOMContentLoaded", () => {
+  const loginForm = document.getElementById("loginForm");
+  const errorMsg = document.getElementById("errorMsg");
+  renewBtn = document.getElementById("renewBtn");
 
-togglePassword?.addEventListener("click", () => {
-  const type =
-    passwordInput.getAttribute("type") === "password" ? "text" : "password";
-  passwordInput.setAttribute("type", type);
-  togglePassword.textContent = type === "password" ? "👁️" : "🙈";
-});
+  // ================== 👁️ Toggle Password ==================
+  const passwordInput = document.getElementById("password");
+  const togglePassword = document.getElementById("togglePassword");
 
-// ================== Prefill Email (UX) ==================
-window.addEventListener("DOMContentLoaded", () => {
+  togglePassword?.addEventListener("click", () => {
+    const type =
+      passwordInput.getAttribute("type") === "password" ? "text" : "password";
+    passwordInput.setAttribute("type", type);
+    togglePassword.textContent = type === "password" ? "👁️" : "🙈";
+  });
+
+  // ================== Prefill Email ==================
   const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
   if (users.length > 0) {
     document.getElementById("email").value =
       users[users.length - 1].email;
   }
 
-  // pastikan tombol renew tersembunyi saat load
-  if (renewBtn) renewBtn.style.display = "none";
+  // pastikan renew hidden
+  if (renewBtn) renewBtn.hidden = true;
+
+  // ================== LOGIN ==================
+  loginForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    errorMsg.textContent = "";
+
+    if (renewBtn) renewBtn.hidden = true;
+
+    const email = document.getElementById("email").value.trim().toLowerCase();
+    const password = document.getElementById("password").value;
+
+    const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+    const userIndex = users.findIndex(
+      u => u.email === email && u.password === password
+    );
+
+    if (userIndex === -1) {
+      errorMsg.textContent = "❌ Email or password incorrect.";
+      return;
+    }
+
+    const user = users[userIndex];
+
+    if (!user.restoID) {
+      errorMsg.textContent =
+        "❌ Account data incomplete. Please contact support.";
+      return;
+    }
+
+    const now = new Date();
+    const expireDate = new Date(user.premiumExpire);
+    const isExpired = now > expireDate;
+
+    // ================== EXPIRED ==================
+    if (isExpired) {
+      user.isExpired = true;
+      users[userIndex] = user;
+      localStorage.setItem("menuvaUsers", JSON.stringify(users));
+
+      errorMsg.textContent =
+        user.premiumPlan === "trial"
+          ? "❌ Free trial expired."
+          : "❌ Subscription expired.";
+
+      if (renewBtn) renewBtn.hidden = false; // 🔥 INI YANG SEKARANG JALAN
+      return;
+    }
+
+    // ================== PAYMENT ==================
+    if (!user.isPaid && user.premiumPlan !== "trial") {
+      errorMsg.textContent = "❌ Payment not confirmed.";
+      return;
+    }
+
+    // ================== SUCCESS ==================
+    user.isExpired = false;
+    users[userIndex] = user;
+
+    localStorage.setItem("menuvaUsers", JSON.stringify(users));
+    localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("activeUser", JSON.stringify(user));
+    localStorage.setItem("subscription_status", "active");
+
+    window.location.href = "admin.html";
+  });
 });
 
-// ================== LOGIN ==================
-loginForm.addEventListener("submit", function (e) {
-  e.preventDefault();
-  errorMsg.textContent = "";
-
-  if (renewBtn) renewBtn.style.display = "none";
-
-  const email = document.getElementById("email").value.trim().toLowerCase();
-  const password = document.getElementById("password").value;
-
-  const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-
-  const userIndex = users.findIndex(
-    u => u.email === email && u.password === password
-  );
-
-  if (userIndex === -1) {
-    errorMsg.textContent = "❌ Email or password incorrect.";
-    return;
-  }
-
-  const user = users[userIndex];
-
-  // ================== VALIDASI STRUKTUR ==================
-  if (!user.restoID) {
-    errorMsg.textContent =
-      "❌ Account data incomplete. Please contact support.";
-    return;
-  }
-
-  const now = new Date();
-  const expireDate = new Date(user.premiumExpire);
-  const isExpired = now > expireDate;
-
-  // ================== EXPIRED FLOW ==================
-if (isExpired) {
-  user.isExpired = true;
-  users[userIndex] = user;
-  localStorage.setItem("menuvaUsers", JSON.stringify(users));
-
-  errorMsg.textContent =
-    user.premiumPlan === "trial"
-      ? "❌ Free trial expired."
-      : "❌ Subscription expired.";
-
-  if (renewBtn) renewBtn.hidden = false; // 🔓 munculkan tombol
-  return;
-}
-
-
-  // ================== CEK PEMBAYARAN ==================
-  if (!user.isPaid && user.premiumPlan !== "trial") {
-    errorMsg.textContent = "❌ Payment not confirmed.";
-    return;
-  }
-
-  // ================== LOGIN SUCCESS ==================
-  user.isExpired = false;
-  users[userIndex] = user;
-
-  localStorage.setItem("menuvaUsers", JSON.stringify(users));
-  localStorage.setItem("isLoggedIn", "true");
-  localStorage.setItem("activeUser", JSON.stringify(user));
-  localStorage.setItem("subscription_status", "active");
-
-  window.location.href = "admin.html";
-});
-
-// ================== BUTTON UPDATE / RENEW PLAN ==================
+// ================== BUTTON UPDATE PLAN ==================
 function goToPlans() {
   window.location.href = "plans.html";
 }
@@ -258,4 +281,3 @@ function goToPlans() {
 
 </body>
 </html>
-
