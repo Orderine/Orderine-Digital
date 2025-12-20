@@ -186,6 +186,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const errorMsg = document.getElementById("errorMsg");
   renewBtn = document.getElementById("renewBtn");
 
+  // ================== 🔒 HARD RESET RENEW BUTTON (ANTI BOCO R) ==================
+  if (renewBtn) {
+    renewBtn.hidden = true;
+    renewBtn.style.display = "none";
+  }
+
   // ================== 👁️ Toggle Password ==================
   const passwordInput = document.getElementById("password");
   const togglePassword = document.getElementById("togglePassword");
@@ -197,22 +203,23 @@ document.addEventListener("DOMContentLoaded", () => {
     togglePassword.textContent = type === "password" ? "👁️" : "🙈";
   });
 
-  // ================== Prefill Email ==================
+  // ================== Prefill Email (UX) ==================
   const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
   if (users.length > 0) {
     document.getElementById("email").value =
       users[users.length - 1].email;
   }
 
-  // pastikan renew hidden
-  if (renewBtn) renewBtn.hidden = true;
-
   // ================== LOGIN ==================
   loginForm.addEventListener("submit", function (e) {
     e.preventDefault();
     errorMsg.textContent = "";
 
-    if (renewBtn) renewBtn.hidden = true;
+    // 🔒 reset lagi tiap klik login
+    if (renewBtn) {
+      renewBtn.hidden = true;
+      renewBtn.style.display = "none";
+    }
 
     const email = document.getElementById("email").value.trim().toLowerCase();
     const password = document.getElementById("password").value;
@@ -229,6 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const user = users[userIndex];
 
+    // ================== VALIDASI STRUKTUR ==================
     if (!user.restoID) {
       errorMsg.textContent =
         "❌ Account data incomplete. Please contact support.";
@@ -239,7 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const expireDate = new Date(user.premiumExpire);
     const isExpired = now > expireDate;
 
-    // ================== EXPIRED ==================
+    // ================== EXPIRED FLOW ==================
     if (isExpired) {
       user.isExpired = true;
       users[userIndex] = user;
@@ -250,17 +258,21 @@ document.addEventListener("DOMContentLoaded", () => {
           ? "❌ Free trial expired."
           : "❌ Subscription expired.";
 
-      if (renewBtn) renewBtn.hidden = false; // 🔥 INI YANG SEKARANG JALAN
+      // 🔓 BUKA TOMBOL RENEW (SAAT INI SAJA)
+      if (renewBtn) {
+        renewBtn.hidden = false;
+        renewBtn.style.display = "block";
+      }
       return;
     }
 
-    // ================== PAYMENT ==================
+    // ================== PAYMENT CHECK ==================
     if (!user.isPaid && user.premiumPlan !== "trial") {
       errorMsg.textContent = "❌ Payment not confirmed.";
       return;
     }
 
-    // ================== SUCCESS ==================
+    // ================== LOGIN SUCCESS ==================
     user.isExpired = false;
     users[userIndex] = user;
 
@@ -273,7 +285,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// ================== BUTTON UPDATE PLAN ==================
+// ================== BUTTON UPDATE / RENEW PLAN ==================
 function goToPlans() {
   window.location.href = "plans.html";
 }
