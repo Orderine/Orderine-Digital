@@ -826,46 +826,50 @@ button {
 
 </div>
 
+
 <script>
-(function adminSubscriptionGuard() {
-  const activeUser = JSON.parse(localStorage.getItem("activeUser"));
-  const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+(function subscriptionWatcher() {
+  const CHECK_INTERVAL = 5000; // cek tiap 5 detik
 
-  // ===== BASIC GUARD =====
-  if (!isLoggedIn || !activeUser) {
-    location.href = "login.html";
-    return;
-  }
+  function forceLogout(reason) {
+    console.warn("🚨 Auto logout:", reason);
 
-  // ===== EXPIRY CHECK =====
-  const now = new Date();
-  const expireDate = new Date(activeUser.premiumExpire);
+    const activeUser = JSON.parse(localStorage.getItem("activeUser"));
+    if (activeUser) {
+      localStorage.setItem(
+        "pendingPlanUser",
+        JSON.stringify({
+          email: activeUser.email,
+          restoID: activeUser.restoID,
+          role: activeUser.role,
+          currentPlan: activeUser.premiumPlan
+        })
+      );
+    }
 
-  if (now > expireDate) {
-    console.warn("⏱ Subscription expired — auto logout");
-
-    // 🔒 SET EXPIRED
-    activeUser.isExpired = true;
-
-    // 🔑 SIMPAN UNTUK RENEW FLOW
-    localStorage.setItem(
-      "pendingPlanUser",
-      JSON.stringify({
-        email: activeUser.email,
-        restoID: activeUser.restoID,
-        role: activeUser.role,
-        currentPlan: activeUser.premiumPlan
-      })
-    );
-
-    // 🧹 LOGOUT CLEAN
     localStorage.removeItem("activeUser");
     localStorage.removeItem("isLoggedIn");
 
     alert("⏱ Subscription expired. Please renew to continue.");
-
     location.href = "login.html";
   }
+
+  setInterval(() => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    const activeUser = JSON.parse(localStorage.getItem("activeUser"));
+
+    if (!isLoggedIn || !activeUser) {
+      forceLogout("session invalid");
+      return;
+    }
+
+    const now = new Date();
+    const expireDate = new Date(activeUser.premiumExpire);
+
+    if (now > expireDate) {
+      forceLogout("subscription expired");
+    }
+  }, CHECK_INTERVAL);
 })();
 </script>
 
@@ -2573,6 +2577,7 @@ function markViewedAndGo() {
 
 </body>
 </html>
+
 
 
 
