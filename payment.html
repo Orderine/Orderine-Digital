@@ -48,24 +48,41 @@
   const planInfo = document.getElementById("planInfo");
   const payBtn = document.getElementById("payBtn");
 
-  const pendingUser = JSON.parse(localStorage.getItem("pendingUser") || "null");
+  // ================== LOAD DATA ==================
+  const pendingUser = JSON.parse(
+    localStorage.getItem("pendingPlanUser") || "null"
+  );
+  const selectedPlan = JSON.parse(
+    localStorage.getItem("selectedPlan") || "null"
+  );
   const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-// ❌ TIDAK ADA USER YANG SEDANG BAYAR
-if (!pendingUser) {
-  planInfo.textContent = "⚠️ No active registration found.";
-  payBtn.style.display = "none";
-} else {
+  // ================== GUARD ==================
+  if (!pendingUser || !selectedPlan) {
+    planInfo.textContent = "⚠️ No active registration found.";
+    payBtn.style.display = "none";
+    return;
+  }
 
   // ================== INFO PLAN ==================
-  planInfo.textContent = `📦 Plan Selected: ${pendingUser.premiumPlan.toUpperCase()}
-Status: Pending Payment ❌`;
+  planInfo.textContent = `
+📦 Plan Selected: ${selectedPlan.plan.toUpperCase()}
+⏱ Duration: ${selectedPlan.durationMonth} month(s)
+Status: Pending Payment ❌
+  `;
 
   // ================== PAY BUTTON ==================
   payBtn.addEventListener("click", () => {
     // 🔥 SIMULASI PAYMENT SUKSES
+    const now = new Date();
+    const expire = new Date();
+    expire.setMonth(expire.getMonth() + selectedPlan.durationMonth);
+
+    // Update user
+    pendingUser.premiumPlan = selectedPlan.plan;
     pendingUser.isPaid = true;
     pendingUser.isExpired = false;
+    pendingUser.premiumExpire = expire.toISOString();
 
     // Update ke users list
     const index = users.findIndex(u => u.email === pendingUser.email);
@@ -73,25 +90,25 @@ Status: Pending Payment ❌`;
       users[index] = pendingUser;
     }
 
-    // 🔑 SET USER AKTIF
+    // ================== SAVE STATE ==================
     localStorage.setItem("menuvaUsers", JSON.stringify(users));
     localStorage.setItem("activeUser", JSON.stringify(pendingUser));
     localStorage.setItem("isLoggedIn", "true");
 
-    // 🧹 BERSIHKAN STATE PAYMENT
-    localStorage.removeItem("pendingUser");
+    // 🧹 BERSIHKAN STATE SEMENTARA
+    localStorage.removeItem("pendingPlanUser");
+    localStorage.removeItem("selectedPlan");
 
-    alert("✅ Payment successful! Your subscription is now active.");
+    alert("✅ Payment successful! Subscription activated.");
 
-    // Redirect ke admin
+    // Redirect ke login / admin
     setTimeout(() => {
       window.location.href = "login.html";
-    }, 800);
+    }, 600);
   });
-}
-
 </script>
 
 </body>
 </html>
+
 
