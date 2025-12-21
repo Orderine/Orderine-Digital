@@ -53,13 +53,20 @@
   </div>
 
 <script>
-  // ================== LOAD PENDING USER ==================
-  const pendingUser = JSON.parse(
+  // ================== LOAD USER CONTEXT ==================
+  const pendingPlanUser = JSON.parse(
     localStorage.getItem("pendingPlanUser")
   );
 
-  // ================== GUARD (TANPA THROW) ==================
-  if (!pendingUser) {
+  const activeUser = JSON.parse(
+    localStorage.getItem("activeUser")
+  );
+
+  // 🔑 PRIORITY
+  const userContext = pendingPlanUser || activeUser;
+
+  // ================== GUARD ==================
+  if (!userContext) {
     document.body.innerHTML = `
       <div style="padding:40px;text-align:center">
         <h2>⚠️ No active registration found</h2>
@@ -73,7 +80,7 @@
 
   // ================== SELECT PLAN ==================
   function selectPlan(plan) {
-    if (!pendingUser) {
+    if (!userContext) {
       alert("Session expired. Please login again.");
       location.href = "login.html";
       return;
@@ -88,9 +95,9 @@
     localStorage.setItem(
       "selectedPlan",
       JSON.stringify({
-        email: pendingUser.email,
-        restoID: pendingUser.restoID,
-        role: pendingUser.role,
+        email: userContext.email,
+        restoID: userContext.restoID,
+        role: userContext.role,
         plan,
         durationMonth: durationMap[plan],
         selectedAt: new Date().toISOString()
@@ -110,8 +117,7 @@
   }
 </script>
 
+
 </body>
 </html>
-
-
 
