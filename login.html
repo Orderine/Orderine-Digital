@@ -120,7 +120,7 @@
   </style>
 </head>
 <body>
- <div class="menuva-logo">
+<div class="menuva-logo">
   <img src="menuva-logo.png" alt="Logo Menuva">
   <br>
   <p style="color: white;">
@@ -151,20 +151,10 @@
       <span id="togglePassword" class="toggle-eye">👁️</span>
     </div>
 
-    <!-- ❌ ERROR MESSAGE (SATU SAJA) -->
+    <!-- ❌ ERROR MESSAGE -->
     <p id="errorMsg" class="error"></p>
 
-    <!-- 🔄 UPDATE / RENEW PLAN (HIDDEN DEFAULT) -->
-    <button
-      type="button"
-      id="renewBtn"
-      class="renew-btn"
-      hidden
-      onclick="goToPlans()"
-    >
-      🔄 Update / Renew Plan
-    </button>
-
+    <!-- ✅ LOGIN SAJA DI DALAM FORM -->
     <button type="submit">Login</button>
 
     <div class="link">
@@ -176,6 +166,17 @@
       <a href="index.html">⬅️ Back to Home</a>
     </div>
   </form>
+
+  <!-- 🔄 UPDATE / RENEW PLAN (DI LUAR FORM) -->
+  <button
+    type="button"
+    id="renewBtn"
+    class="renew-btn"
+    hidden
+    onclick="goToPlans()"
+  >
+    🔄 Update / Renew Plan
+  </button>
 </div>
 
 <script>
@@ -303,3 +304,4 @@ function goToPlans() {
 
 </body>
 </html>
+
