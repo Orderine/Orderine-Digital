@@ -182,32 +182,82 @@
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("loginForm");
   const errorMsg = document.getElementById("errorMsg");
+  const renewBtn = document.getElementById("renewBtn");
+
+  // default: renew hidden
+  if (renewBtn) {
+    renewBtn.hidden = true;
+    renewBtn.style.display = "none";
+  }
 
   form.addEventListener("submit", e => {
     e.preventDefault();
+    errorMsg.textContent = "";
+
+    if (renewBtn) {
+      renewBtn.hidden = true;
+      renewBtn.style.display = "none";
+    }
 
     const email = document.getElementById("email").value.trim().toLowerCase();
     const password = document.getElementById("password").value;
 
     const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-    const user = users.find(u => u.email === email);
+    const userIndex = users.findIndex(u => u.email === email);
 
-    if (!user) {
+    // ===== EMAIL CHECK =====
+    if (userIndex === -1) {
       errorMsg.textContent = "❌ Email not registered.";
       return;
     }
 
+    const user = users[userIndex];
+
+    // ===== PASSWORD CHECK =====
     if (String(user.password) !== String(password)) {
       errorMsg.textContent = "❌ Email or password incorrect.";
       return;
     }
 
+    // ===== EXPIRED CHECK =====
+    const now = new Date();
+    const expireDate = new Date(user.premiumExpire || 0);
+
+    if (now > expireDate) {
+      user.isExpired = true;
+      users[userIndex] = user;
+
+      localStorage.setItem("menuvaUsers", JSON.stringify(users));
+      localStorage.setItem("renewEmail", user.email);
+
+      errorMsg.textContent =
+        user.premiumPlan === "trial"
+          ? "❌ Free trial expired. Please upgrade to continue."
+          : "❌ Subscription expired.";
+
+      if (renewBtn) {
+        renewBtn.hidden = false;
+        renewBtn.style.display = "block";
+      }
+      return;
+    }
+
+    // ===== LOGIN SUCCESS =====
+    user.isExpired = false;
+    users[userIndex] = user;
+
+    localStorage.setItem("menuvaUsers", JSON.stringify(users));
     localStorage.setItem("activeUser", JSON.stringify(user));
     localStorage.setItem("isLoggedIn", "true");
 
     window.location.href = "admin.html";
   });
 });
+
+// tombol renew
+function goToPlans() {
+  window.location.href = "plans.html";
+}
 </script>
 
 </body>
