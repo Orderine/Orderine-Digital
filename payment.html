@@ -43,12 +43,11 @@
     <p id="planInfo">Checking your subscription...</p>
     <button id="payBtn">✅ Simulate Payment Success</button>
   </div>
-  
-<script>
+
+  <script>
   const planInfo = document.getElementById("planInfo");
   const payBtn = document.getElementById("payBtn");
 
-  // ================== LOAD DATA ==================
   const pendingUser = JSON.parse(
     localStorage.getItem("pendingPlanUser") || "null"
   );
@@ -57,58 +56,49 @@
   );
   const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-  // ================== GUARD ==================
   if (!pendingUser || !selectedPlan) {
     planInfo.textContent = "⚠️ No active registration found.";
     payBtn.style.display = "none";
-    return;
-  }
+  } else {
 
-  // ================== INFO PLAN ==================
-  planInfo.textContent = `
+    // ================== INFO PLAN ==================
+    planInfo.textContent = `
 📦 Plan Selected: ${selectedPlan.plan.toUpperCase()}
 ⏱ Duration: ${selectedPlan.durationMonth} month(s)
 Status: Pending Payment ❌
-  `;
+    `;
 
-  // ================== PAY BUTTON ==================
-  payBtn.addEventListener("click", () => {
-    // 🔥 SIMULASI PAYMENT SUKSES
-    const now = new Date();
-    const expire = new Date();
-    expire.setMonth(expire.getMonth() + selectedPlan.durationMonth);
+    // ================== PAY BUTTON ==================
+    payBtn.addEventListener("click", () => {
+      const now = new Date();
+      const expire = new Date();
+      expire.setMonth(expire.getMonth() + selectedPlan.durationMonth);
 
-    // Update user
-    pendingUser.premiumPlan = selectedPlan.plan;
-    pendingUser.isPaid = true;
-    pendingUser.isExpired = false;
-    pendingUser.premiumExpire = expire.toISOString();
+      pendingUser.premiumPlan = selectedPlan.plan;
+      pendingUser.isPaid = true;
+      pendingUser.isExpired = false;
+      pendingUser.premiumExpire = expire.toISOString();
 
-    // Update ke users list
-    const index = users.findIndex(u => u.email === pendingUser.email);
-    if (index !== -1) {
-      users[index] = pendingUser;
-    }
+      const index = users.findIndex(u => u.email === pendingUser.email);
+      if (index !== -1) {
+        users[index] = pendingUser;
+      }
 
-    // ================== SAVE STATE ==================
-    localStorage.setItem("menuvaUsers", JSON.stringify(users));
-    localStorage.setItem("activeUser", JSON.stringify(pendingUser));
-    localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("menuvaUsers", JSON.stringify(users));
+      localStorage.setItem("activeUser", JSON.stringify(pendingUser));
+      localStorage.setItem("isLoggedIn", "true");
 
-    // 🧹 BERSIHKAN STATE SEMENTARA
-    localStorage.removeItem("pendingPlanUser");
-    localStorage.removeItem("selectedPlan");
+      localStorage.removeItem("pendingPlanUser");
+      localStorage.removeItem("selectedPlan");
 
-    alert("✅ Payment successful! Subscription activated.");
+      alert("✅ Payment successful! Subscription activated.");
 
-    // Redirect ke login / admin
-    setTimeout(() => {
-      window.location.href = "login.html";
-    }, 600);
-  });
+      setTimeout(() => {
+        window.location.href = "login.html";
+      }, 600);
+    });
+  }
 </script>
 
 </body>
 </html>
-
-
