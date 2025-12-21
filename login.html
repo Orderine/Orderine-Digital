@@ -225,16 +225,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const password = document.getElementById("password").value;
 
     const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-    const userIndex = users.findIndex(
-      u => u.email === email && u.password === password
-    );
+ 
+    // ================== FIND USER BY EMAIL ==================
+const userIndex = users.findIndex(
+  u => u.email === email
+);
 
-    if (userIndex === -1) {
-      errorMsg.textContent = "❌ Email or password incorrect.";
-      return;
-    }
+if (userIndex === -1) {
+  errorMsg.textContent = "❌ Email not registered.";
+  return;
+}
 
-    const user = users[userIndex];
+const user = users[userIndex];
+
+// ================== PASSWORD CHECK ==================
+if (String(user.password) !== String(password)) {
+  errorMsg.textContent = "❌ Email or password incorrect.";
+  return;
+}
+
 
     // ================== VALIDASI STRUKTUR ==================
     if (!user.restoID) {
@@ -293,3 +302,4 @@ function goToPlans() {
 
 </body>
 </html>
+
