@@ -80,8 +80,11 @@ Status: Pending Payment ❌
       pendingUser.premiumExpire = expire.toISOString();
 
       const index = users.findIndex(u => u.email === pendingUser.email);
-      if (index !== -1) {
-        users[index] = pendingUser;
+        if (index !== -1) {
+        users[index] = {
+       ...users[index],
+       ...pendingUser
+      };
       }
 
       localStorage.setItem("menuvaUsers", JSON.stringify(users));
@@ -102,3 +105,4 @@ Status: Pending Payment ❌
 
 </body>
 </html>
+
