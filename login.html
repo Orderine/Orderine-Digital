@@ -258,22 +258,34 @@ if (String(user.password) !== String(password)) {
 
     // ================== EXPIRED FLOW ==================
     if (isExpired) {
-      user.isExpired = true;
-      users[userIndex] = user;
-      localStorage.setItem("menuvaUsers", JSON.stringify(users));
+  user.isExpired = true;
+  users[userIndex] = user;
 
-      errorMsg.textContent =
-        user.premiumPlan === "trial"
-          ? "❌ Free trial expired."
-          : "❌ Subscription expired.";
+  localStorage.setItem("menuvaUsers", JSON.stringify(users));
 
-      // 🔓 BUKA TOMBOL RENEW (SAAT INI SAJA)
-      if (renewBtn) {
-        renewBtn.hidden = false;
-        renewBtn.style.display = "block";
-      }
-      return;
-    }
+  // 🔑 INI KUNCI SUPAYA PLANS TIDAK STUCK
+  localStorage.setItem(
+    "pendingPlanUser",
+    JSON.stringify({
+      email: user.email,
+      restoID: user.restoID,
+      role: user.role,
+      currentPlan: user.premiumPlan
+    })
+  );
+
+  errorMsg.textContent =
+    user.premiumPlan === "trial"
+      ? "❌ Free trial expired. Please upgrade to continue."
+      : "❌ Subscription expired.";
+
+  if (renewBtn) {
+    renewBtn.hidden = false;
+    renewBtn.style.display = "block";
+  }
+
+  return;
+}
 
     // ================== PAYMENT CHECK ==================
     if (!user.isPaid && user.premiumPlan !== "trial") {
@@ -302,4 +314,5 @@ function goToPlans() {
 
 </body>
 </html>
+
 
