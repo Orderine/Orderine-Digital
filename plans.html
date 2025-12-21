@@ -53,25 +53,33 @@
   </div>
 
 <script>
-  // ================== GUARD PLANS PAGE ==================
+  // ================== LOAD PENDING USER ==================
   const pendingUser = JSON.parse(
     localStorage.getItem("pendingPlanUser")
   );
 
+  // ================== GUARD (TANPA THROW) ==================
   if (!pendingUser) {
     document.body.innerHTML = `
       <div style="padding:40px;text-align:center">
         <h2>⚠️ No active registration found</h2>
-        <p>Please login first.</p>
-        <a href="login.html">⬅️ Back to Login</a>
+        <p>Please login again.</p>
+        <button onclick="location.href='login.html'">
+          ⬅️ Back to Login
+        </button>
       </div>
     `;
-    throw new Error("No pending plan user");
   }
 
   // ================== SELECT PLAN ==================
   function selectPlan(plan) {
-    const planConfig = {
+    if (!pendingUser) {
+      alert("Session expired. Please login again.");
+      location.href = "login.html";
+      return;
+    }
+
+    const durationMap = {
       monthly: 1,
       "6month": 6,
       yearly: 12
@@ -84,24 +92,26 @@
         restoID: pendingUser.restoID,
         role: pendingUser.role,
         plan,
-        durationMonth: planConfig[plan],
+        durationMonth: durationMap[plan],
         selectedAt: new Date().toISOString()
       })
     );
 
-    window.location.href = "payment.html";
+    location.href = "payment.html";
   }
 
   // ================== LOGOUT ==================
   function logout() {
     localStorage.removeItem("pendingPlanUser");
     localStorage.removeItem("selectedPlan");
-    localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("activeUser");
-    window.location.href = "login.html";
+    localStorage.removeItem("isLoggedIn");
+    location.href = "login.html";
   }
 </script>
+
 </body>
 </html>
+
 
 
