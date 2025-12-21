@@ -178,51 +178,13 @@
     🔄 Update / Renew Plan
   </button>
 </div>
-
 <script>
-let renewBtn = null;
-
 document.addEventListener("DOMContentLoaded", () => {
-  const loginForm = document.getElementById("loginForm");
+  const form = document.getElementById("loginForm");
   const errorMsg = document.getElementById("errorMsg");
-  renewBtn = document.getElementById("renewBtn");
 
-  // ================== INIT ==================
-  if (renewBtn) {
-    renewBtn.hidden = true;
-    renewBtn.style.display = "none";
-  }
-
-  // ================== 👁️ Toggle Password ==================
-  const passwordInput = document.getElementById("password");
-  const togglePassword = document.getElementById("togglePassword");
-
-  togglePassword?.addEventListener("click", () => {
-    const type =
-      passwordInput.type === "password" ? "text" : "password";
-    passwordInput.type = type;
-    togglePassword.textContent = type === "password" ? "👁️" : "🙈";
-  });
-
-  // ================== Prefill Email ==================
-  const savedUsers = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-  if (savedUsers.length > 0) {
-    document.getElementById("email").value =
-      savedUsers[savedUsers.length - 1].email;
-  }
-
-  // ================== LOGIN ==================
-  loginForm.addEventListener("submit", function (e) {
+  form.addEventListener("submit", e => {
     e.preventDefault();
-
-    errorMsg.textContent = "";
-    if (renewBtn) {
-      renewBtn.hidden = true;
-      renewBtn.style.display = "none";
-    }
-
-    let canLogin = true;
-    let redirectTo = null;
 
     const email = document.getElementById("email").value.trim().toLowerCase();
     const password = document.getElementById("password").value;
@@ -230,78 +192,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
     const user = users.find(u => u.email === email);
 
-    // ===== USER CHECK =====
     if (!user) {
       errorMsg.textContent = "❌ Email not registered.";
-      canLogin = false;
+      return;
     }
 
-    // ===== PASSWORD CHECK =====
-    if (canLogin && String(user.password) !== String(password)) {
+    if (String(user.password) !== String(password)) {
       errorMsg.textContent = "❌ Email or password incorrect.";
-      canLogin = false;
+      return;
     }
 
-    // ===== STRUCTURE CHECK =====
-    if (canLogin && !user.restoID) {
-      errorMsg.textContent =
-        "❌ Account data incomplete. Please contact support.";
-      canLogin = false;
-    }
+    localStorage.setItem("activeUser", JSON.stringify(user));
+    localStorage.setItem("isLoggedIn", "true");
 
-    // ===== EXPIRED CHECK =====
-    if (canLogin) {
-      const now = new Date();
-      const expireDate = new Date(user.premiumExpire);
-
-      if (now > expireDate) {
-        user.isExpired = true;
-
-        localStorage.setItem("menuvaUsers", JSON.stringify(users));
-        localStorage.setItem("activeUserEmail", user.email);
-
-        errorMsg.textContent =
-          user.premiumPlan === "trial"
-            ? "❌ Free trial expired. Please upgrade to continue."
-            : "❌ Subscription expired.";
-
-        if (renewBtn) {
-          renewBtn.hidden = false;
-          renewBtn.style.display = "block";
-        }
-
-        canLogin = false;
-      }
-    }
-
-    // ===== PAYMENT CHECK =====
-    if (canLogin && !user.isPaid && user.premiumPlan !== "trial") {
-      errorMsg.textContent = "❌ Payment not confirmed.";
-      canLogin = false;
-    }
-
-    // ===== LOGIN SUCCESS =====
-    if (canLogin) {
-      user.isExpired = false;
-      localStorage.setItem("menuvaUsers", JSON.stringify(users));
-      localStorage.setItem("activeUserEmail", user.email);
-
-      redirectTo = "admin.html";
-    }
-
-    // ===== REDIRECT (SATU PINTU) =====
-    if (redirectTo) {
-      window.location.href = redirectTo;
-    }
+    window.location.href = "admin.html";
   });
 });
-
-// ================== BUTTON UPDATE / RENEW PLAN ==================
-function goToPlans() {
-  window.location.href = "plans.html";
-}
 </script>
 
 </body>
 </html>
-
