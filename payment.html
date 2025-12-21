@@ -44,19 +44,30 @@
     <button id="payBtn">✅ Simulate Payment Success</button>
   </div>
 
-  <script>
+ <script>
   const planInfo = document.getElementById("planInfo");
   const payBtn = document.getElementById("payBtn");
 
-  const pendingUser = JSON.parse(
-    localStorage.getItem("pendingPlanUser") || "null"
+  // ================== LOAD STATE ==================
+  const pendingPlanUser = JSON.parse(
+    localStorage.getItem("pendingPlanUser")
   );
+
+  const activeUser = JSON.parse(
+    localStorage.getItem("activeUser")
+  );
+
   const selectedPlan = JSON.parse(
-    localStorage.getItem("selectedPlan") || "null"
+    localStorage.getItem("selectedPlan")
   );
+
   const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-  if (!pendingUser || !selectedPlan) {
+  // 🔑 PRIORITY USER
+  const userContext = pendingPlanUser || activeUser;
+
+  // ================== GUARD ==================
+  if (!userContext || !selectedPlan) {
     planInfo.textContent = "⚠️ No active registration found.";
     payBtn.style.display = "none";
   } else {
@@ -71,26 +82,30 @@ Status: Pending Payment ❌
     // ================== PAY BUTTON ==================
     payBtn.addEventListener("click", () => {
       const now = new Date();
-      const expire = new Date();
+      const expire = new Date(now);
       expire.setMonth(expire.getMonth() + selectedPlan.durationMonth);
 
-      pendingUser.premiumPlan = selectedPlan.plan;
-      pendingUser.isPaid = true;
-      pendingUser.isExpired = false;
-      pendingUser.premiumExpire = expire.toISOString();
+      // 🔄 UPDATE USER DATA
+      userContext.premiumPlan = selectedPlan.plan;
+      userContext.premiumStart = now.toISOString();
+      userContext.premiumExpire = expire.toISOString();
+      userContext.isPaid = true;
+      userContext.isExpired = false;
 
-      const index = users.findIndex(u => u.email === pendingUser.email);
-        if (index !== -1) {
+      const index = users.findIndex(u => u.email === userContext.email);
+      if (index !== -1) {
         users[index] = {
-       ...users[index],
-       ...pendingUser
-      };
+          ...users[index],
+          ...userContext
+        };
       }
 
+      // ================== SAVE ==================
       localStorage.setItem("menuvaUsers", JSON.stringify(users));
-      localStorage.setItem("activeUser", JSON.stringify(pendingUser));
+      localStorage.setItem("activeUser", JSON.stringify(userContext));
       localStorage.setItem("isLoggedIn", "true");
 
+      // 🧹 CLEAN PAYMENT STATE
       localStorage.removeItem("pendingPlanUser");
       localStorage.removeItem("selectedPlan");
 
@@ -105,4 +120,5 @@ Status: Pending Payment ❌
 
 </body>
 </html>
+
 
