@@ -826,6 +826,48 @@ button {
 
 </div>
 
+<script>
+(function adminSubscriptionGuard() {
+  const activeUser = JSON.parse(localStorage.getItem("activeUser"));
+  const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+
+  // ===== BASIC GUARD =====
+  if (!isLoggedIn || !activeUser) {
+    location.href = "login.html";
+    return;
+  }
+
+  // ===== EXPIRY CHECK =====
+  const now = new Date();
+  const expireDate = new Date(activeUser.premiumExpire);
+
+  if (now > expireDate) {
+    console.warn("⏱ Subscription expired — auto logout");
+
+    // 🔒 SET EXPIRED
+    activeUser.isExpired = true;
+
+    // 🔑 SIMPAN UNTUK RENEW FLOW
+    localStorage.setItem(
+      "pendingPlanUser",
+      JSON.stringify({
+        email: activeUser.email,
+        restoID: activeUser.restoID,
+        role: activeUser.role,
+        currentPlan: activeUser.premiumPlan
+      })
+    );
+
+    // 🧹 LOGOUT CLEAN
+    localStorage.removeItem("activeUser");
+    localStorage.removeItem("isLoggedIn");
+
+    alert("⏱ Subscription expired. Please renew to continue.");
+
+    location.href = "login.html";
+  }
+})();
+</script>
 
  <script>
 console.log("Admin Script Version: 2025-11-07-STABLE");
@@ -2531,5 +2573,6 @@ function markViewedAndGo() {
 
 </body>
 </html>
+
 
 
