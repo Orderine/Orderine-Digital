@@ -125,12 +125,12 @@
     </div>
   </div>
 
-  <script>
-  const registerForm = document.getElementById("registerForm");
-  const errorMsg = document.getElementById("errorMsg");
+<script>
+const registerForm = document.getElementById("registerForm");
+const errorMsg = document.getElementById("errorMsg");
 
-  // ================== Utility ==================
-  function generateUserID() {
+// ================== Utility ==================
+function generateUserID() {
   return "USR-" + crypto.randomUUID();
 }
 
@@ -142,19 +142,19 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-  function generateTrialCode(length = 8) {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let code = "";
-    for (let i = 0; i < length; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code;
+function generateTrialCode(length = 8) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
+  for (let i = 0; i < length; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
+  return code;
+}
 
-  // ================== Plan ==================
-  const selectedPlan = localStorage.getItem("selectedPlan") || "trial";
+// ================== Plan ==================
+const selectedPlan = localStorage.getItem("selectedPlan") || "trial";
 
-  // ================== REGISTER ==================
+// ================== REGISTER ==================
 registerForm.addEventListener("submit", function (e) {
   e.preventDefault();
 
@@ -177,80 +177,82 @@ registerForm.addEventListener("submit", function (e) {
   // ========== LOAD USER ==========
   const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-  // 🔒 PRODUKSI RULE: EMAIL UNIK
+  // 🔒 EMAIL HARUS UNIK
   if (users.some(u => u.email === email)) {
-    errorMsg.textContent =
-      "❌ Email already registered. Please login.";
+    errorMsg.textContent = "❌ Email already registered. Please login.";
     return;
   }
 
   // ========== PLAN & DURASI ==========
   const plan = selectedPlan || "trial";
 
-  let durationDays = 7;
-  if (plan === "monthly") durationDays = 30;
-  if (plan === "6month") durationDays = 180;
-  if (plan === "yearly") durationDays = 365;
+  let durationMs;
+
+  if (plan === "trial") {
+    durationMs = 5 * 60 * 1000; // ⏱️ 5 MENIT (TEST MODE)
+  } else if (plan === "monthly") {
+    durationMs = 30 * 24 * 60 * 60 * 1000;
+  } else if (plan === "6month") {
+    durationMs = 180 * 24 * 60 * 60 * 1000;
+  } else if (plan === "yearly") {
+    durationMs = 365 * 24 * 60 * 60 * 1000;
+  }
 
   const now = new Date();
   const startDate = now.toISOString();
-  const expireDate = new Date(
-    now.getTime() + durationDays * 24 * 60 * 60 * 1000
-  ).toISOString();
+  const expireDate = new Date(now.getTime() + durationMs).toISOString();
 
   const restoID = generateRestoID();
-  
+
   // ========== CREATE USER ==========
- const newUser = {
-  userID: generateUserID(),
-  email,
-  password,
+  const newUser = {
+    userID: generateUserID(),
+    email,
+    password,
 
-  role: "owner",
-  restoID, // 🔑 RELASI
+    role: "owner",
+    restoID,
 
-  premiumPlan: plan,
-  premiumStart: startDate,
-  premiumExpire: expireDate,
+    premiumPlan: plan,
+    premiumStart: startDate,
+    premiumExpire: expireDate,
 
-  trialUsed: plan === "trial",
-  isPaid: plan === "trial",
-  isExpired: false,
+    trialUsed: plan === "trial",
+    isPaid: plan === "trial",
+    isExpired: false,
 
-  trialCode: plan === "trial"
-    ? generateTrialCode()
-    : null,
+    trialCode: plan === "trial" ? generateTrialCode() : null,
 
-  createdAt: startDate
-};
+    createdAt: startDate
+  };
 
+  // ========== CREATE RESTO ==========
   const restos = JSON.parse(localStorage.getItem("menuvaRestos")) || [];
+  restos.push({
+    restoID,
+    ownerID: newUser.userID,
+    restoName: "My Restaurant",
+    createdAt: startDate
+  });
 
-restos.push({
-  restoID,
-  ownerID: newUser.userID,
-  restoName: "My Restaurant",
-  createdAt: startDate
-});
+  localStorage.setItem("menuvaRestos", JSON.stringify(restos));
 
-localStorage.setItem("menuvaRestos", JSON.stringify(restos));
-
-  // ========== SAVE ==========
+  // ========== SAVE USER ==========
   users.push(newUser);
   localStorage.setItem("menuvaUsers", JSON.stringify(users));
   localStorage.removeItem("selectedPlan");
 
-  // 🔑 SIMPAN USER UNTUK PROSES PEMBAYARAN
-if (plan !== "trial") {
-  localStorage.setItem("pendingUser", JSON.stringify(newUser));
-  localStorage.removeItem("activeUser");
-  localStorage.removeItem("isLoggedIn");
-}
+  // ========== PAYMENT FLOW ==========
+  if (plan !== "trial") {
+    localStorage.setItem("pendingUser", JSON.stringify(newUser));
+    localStorage.removeItem("activeUser");
+    localStorage.removeItem("isLoggedIn");
+  }
 
   // ========== REDIRECT ==========
   if (plan === "trial") {
     alert(
-      `✅ Registration successful!\n\nFREE TRIAL 7 DAYS\nTrial Code: ${newUser.trialCode}\n\nPlease login to continue.`
+      `✅ Registration successful!\n\nFREE TRIAL (5 MINUTES - TEST MODE)\nTrial Code: ${newUser.trialCode}\n\nPlease login to continue.`
     );
     window.location.href = "login.html";
   } else {
@@ -261,19 +263,19 @@ if (plan !== "trial") {
   }
 });
 
-  // ================== 👁️ Toggle Password ==================
-  const passwordInput = document.getElementById("password");
-  const togglePassword = document.getElementById("togglePassword");
+// ================== 👁️ Toggle Password ==================
+const passwordInput = document.getElementById("password");
+const togglePassword = document.getElementById("togglePassword");
 
-  togglePassword.addEventListener("click", () => {
-    const type =
-      passwordInput.getAttribute("type") === "password" ? "text" : "password";
-    passwordInput.setAttribute("type", type);
-    togglePassword.textContent = type === "password" ? "👁️" : "🙈";
-  });
+togglePassword.addEventListener("click", () => {
+  const type =
+    passwordInput.getAttribute("type") === "password" ? "text" : "password";
+  passwordInput.setAttribute("type", type);
+  togglePassword.textContent = type === "password" ? "👁️" : "🙈";
+});
 </script>
+
 
 </body>
 </html>
-
 
