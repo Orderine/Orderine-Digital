@@ -59,16 +59,14 @@
 
   const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-  // ================== GUARD ==================
   if (!pendingPlanUser || !selectedPlan) {
-    planInfo.textContent = "⚠️ No active registration found.";
-    payBtn.style.display = "none";
-    console.warn("Payment Guard blocked:", {
-      pendingPlanUser,
-      selectedPlan
-    });
-    return;
-  }
+  planInfo.textContent = "⚠️ No active registration found.";
+  payBtn.style.display = "none";
+  console.warn("Payment Guard blocked:", {
+    pendingPlanUser,
+    selectedPlan
+  });
+} else {
 
   // ================== INFO PLAN ==================
   planInfo.textContent = `
@@ -91,10 +89,9 @@ Status: Pending Payment ❌
       alert("❌ User not found. Please login again.");
       localStorage.clear();
       location.href = "login.html";
-      return;
+      return; // ✅ BOLEH (DI DALAM FUNCTION)
     }
 
-    // ================== UPDATE USER (SUMBER KEBENARAN) ==================
     users[index] = {
       ...users[index],
       premiumPlan: selectedPlan.plan,
@@ -106,18 +103,17 @@ Status: Pending Payment ❌
 
     localStorage.setItem("menuvaUsers", JSON.stringify(users));
 
-    // ================== RESET STATE ==================
     localStorage.removeItem("pendingPlanUser");
     localStorage.removeItem("selectedPlan");
     localStorage.removeItem("activeUser");
     localStorage.removeItem("isLoggedIn");
 
     alert("✅ Payment successful!\nPlease login again.");
-
     location.replace("login.html");
   });
+}
+
 </script>
 
 </body>
 </html>
-
