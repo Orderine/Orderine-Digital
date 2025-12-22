@@ -44,26 +44,26 @@
     <button id="payBtn">✅ Simulate Payment Success</button>
   </div>
 
- <script>
+<script>
   const planInfo = document.getElementById("planInfo");
   const payBtn = document.getElementById("payBtn");
 
   // ================== LOAD STATE ==================
   const pendingPlanUser = JSON.parse(
-    localStorage.getItem("pendingPlanUser")
+    localStorage.getItem("pendingPlanUser") || "null"
   );
 
   const activeUser = JSON.parse(
-    localStorage.getItem("activeUser")
+    localStorage.getItem("activeUser") || "null"
   );
 
   const selectedPlan = JSON.parse(
-    localStorage.getItem("selectedPlan")
+    localStorage.getItem("selectedPlan") || "null"
   );
 
   const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-  // 🔑 PRIORITY USER
+  // 🔑 PRIORITY USER (PAYMENT CONTEXT)
   const userContext = pendingPlanUser || activeUser;
 
   // ================== GUARD ==================
@@ -82,43 +82,43 @@ Status: Pending Payment ❌
     // ================== PAY BUTTON ==================
     payBtn.addEventListener("click", () => {
       const now = new Date();
-      const expire = new Date(now);
+      const expire = new Date();
       expire.setMonth(expire.getMonth() + selectedPlan.durationMonth);
 
-      // 🔄 UPDATE USER DATA
-      userContext.premiumPlan = selectedPlan.plan;
-      userContext.premiumStart = now.toISOString();
-      userContext.premiumExpire = expire.toISOString();
-      userContext.isPaid = true;
-      userContext.isExpired = false;
+      const index = users.findIndex(
+        u => u.email === userContext.email
+      );
 
-      const index = users.findIndex(u => u.email === userContext.email);
-      if (index !== -1) {
-        users[index] = {
-          ...users[index],
-          ...userContext
-        };
+      if (index === -1) {
+        alert("User not found. Please login again.");
+        location.href = "login.html";
+        return;
       }
 
-      // ================== SAVE ==================
-      localStorage.setItem("menuvaUsers", JSON.stringify(users));
-      localStorage.setItem("activeUser", JSON.stringify(userContext));
-      localStorage.setItem("isLoggedIn", "true");
+      // 🔥 UPDATE USER RESMI (SUMBER KEBENARAN)
+      users[index] = {
+        ...users[index],
+        premiumPlan: selectedPlan.plan,
+        premiumStart: now.toISOString(),
+        premiumExpire: expire.toISOString(),
+        isPaid: true,
+        isExpired: false
+      };
 
-      // 🧹 CLEAN PAYMENT STATE
+      localStorage.setItem("menuvaUsers", JSON.stringify(users));
+
+      // 🧹 BERSIHKAN STATE PAYMENT
       localStorage.removeItem("pendingPlanUser");
       localStorage.removeItem("selectedPlan");
+      localStorage.removeItem("activeUser");
+      localStorage.removeItem("isLoggedIn");
 
-      alert("✅ Payment successful! Subscription activated.");
+      alert("✅ Payment successful! Please login again.");
 
-      setTimeout(() => {
-        window.location.href = "login.html";
-      }, 600);
+      location.href = "login.html";
     });
   }
 </script>
 
 </body>
 </html>
-
-
