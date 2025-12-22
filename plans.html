@@ -55,6 +55,8 @@
   // ================== LOAD USER CONTEXT ==================
   let pendingPlanUser = null;
   let activeUser = null;
+  let userContext = null;
+  let isBlocked = false; // 🔑 FLAG, bukan return / throw
 
   try {
     pendingPlanUser = JSON.parse(localStorage.getItem("pendingPlanUser"));
@@ -65,34 +67,35 @@
 
   const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
 
+  // ================== PRIORITY ==================
+  userContext = pendingPlanUser || activeUser;
+
   // ================== RECOVERY MODE (OPSI C) ==================
-  let userContext = pendingPlanUser || activeUser;
-
-  // 🛠 AUTO RECOVER kalau login masih valid
   if (!userContext && isLoggedIn) {
-    const fallbackUser =
-      JSON.parse(localStorage.getItem("user")) ||   // kemungkinan key lama
-      JSON.parse(localStorage.getItem("currentUser"));
+    try {
+      const fallbackUser =
+        JSON.parse(localStorage.getItem("user")) ||
+        JSON.parse(localStorage.getItem("currentUser"));
 
-    if (fallbackUser && fallbackUser.email) {
-      userContext = {
-        email: fallbackUser.email,
-        restoID: fallbackUser.restoID || fallbackUser.uid || "unknown",
-        role: fallbackUser.role || "owner"
-      };
+      if (fallbackUser && fallbackUser.email) {
+        userContext = {
+          email: fallbackUser.email,
+          restoID: fallbackUser.restoID || fallbackUser.uid || "unknown",
+          role: fallbackUser.role || "owner"
+        };
 
-      // 🔐 sinkronkan ulang supaya konsisten
-      localStorage.setItem(
-        "activeUser",
-        JSON.stringify(userContext)
-      );
-
-      console.log("🛠 User context auto-recovered:", userContext);
+        localStorage.setItem("activeUser", JSON.stringify(userContext));
+        console.log("🛠 User context auto-recovered:", userContext);
+      }
+    } catch (e) {
+      console.warn("⚠️ Failed fallback recovery", e);
     }
   }
 
-  // ================== FINAL GUARD ==================
+  // ================== FINAL GUARD (STABLE) ==================
   if (!userContext) {
+    isBlocked = true;
+
     document.body.innerHTML = `
       <div style="padding:40px;text-align:center">
         <h2>⚠️ No active registration found</h2>
@@ -102,11 +105,18 @@
         </button>
       </div>
     `;
-    throw new Error("Plans Guard Blocked: no user context");
+
+    console.warn("⛔ Plans access blocked: no user context");
   }
 
   // ================== SELECT PLAN ==================
   function selectPlan(plan) {
+    if (isBlocked) {
+      alert("Session expired. Please login again.");
+      location.href = "login.html";
+      return;
+    }
+
     const durationMap = {
       monthly: 1,
       "6month": 6,
@@ -142,4 +152,3 @@
 
 </body>
 </html>
-
