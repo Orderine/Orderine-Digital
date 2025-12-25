@@ -71,12 +71,31 @@
       }
     }
 
-    // ❌ PAYMENT BELUM LUNAS (KECUALI TRIAL)
-    if (activeUser.premiumPlan !== "trial" && activeUser.isPaid !== true) {
-      alert("❌ Payment not confirmed.\nPlease complete your payment.");
-      location.replace("payment.html");
-      return;
-    }
+   // ==================== PAYMENT / SUBSCRIPTION CHECK ====================
+const now = new Date();
+const expireDate = new Date(activeUser.premiumExpire || 0);
+
+// ❌ TIDAK PUNYA PLAN / EXPIRED
+if (!activeUser.premiumPlan || now > expireDate) {
+  // simpan buat renew
+  localStorage.setItem(
+    "pendingPlanUser",
+    JSON.stringify({
+      email: activeUser.email,
+      restoID: activeUser.restoID,
+      role: activeUser.role,
+      currentPlan: activeUser.premiumPlan || null
+    })
+  );
+
+  alert("❌ Subscription inactive.\nPlease choose or renew your plan.");
+
+  localStorage.removeItem("isLoggedIn");
+  localStorage.removeItem("activeUser");
+
+  location.replace("plans.html");
+  return;
+}
 
     // ✅ ADMIN AMAN
     console.log(
@@ -93,3 +112,4 @@
     location.replace("login.html");
   }
 })();
+
