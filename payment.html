@@ -43,25 +43,29 @@
     <p id="planInfo">Checking your subscription...</p>
     <button id="payBtn">✅ Simulate Payment Success</button>
   </div>
-<script>
-  // ================== PAYMENT CONTEXT FIX ==================
-  let pendingPlanUser = JSON.parse(localStorage.getItem("pendingPlanUser"));
-  let selectedPlan = JSON.parse(localStorage.getItem("selectedPlan"));
 
-  // 🛠 fallback dari activeUser
+  <script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  const planInfo = document.getElementById("planInfo");
+  const payBtn = document.getElementById("payBtn");
+
+  // ================== LOAD CONTEXT ==================
+  let pendingPlanUser = JSON.parse(localStorage.getItem("pendingPlanUser"));
+  const selectedPlan = JSON.parse(localStorage.getItem("selectedPlan"));
+  const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+
+  // fallback dari activeUser
   if (!pendingPlanUser) {
     const activeUser = JSON.parse(localStorage.getItem("activeUser"));
     if (activeUser) {
       pendingPlanUser = activeUser;
-      localStorage.setItem(
-        "pendingPlanUser",
-        JSON.stringify(activeUser)
-      );
+      localStorage.setItem("pendingPlanUser", JSON.stringify(activeUser));
       console.warn("🛠 pendingPlanUser recovered from activeUser");
     }
   }
 
-  // ================== FINAL GUARD ==================
+  // ================== PAYMENT GUARD ==================
   if (!pendingPlanUser || !selectedPlan) {
     console.warn("⛔ Payment Guard blocked:", {
       pendingPlanUser,
@@ -77,41 +81,19 @@
         </button>
       </div>
     `;
+    return;
   }
-</script>
-<script>
-  const planInfo = document.getElementById("planInfo");
-  const payBtn = document.getElementById("payBtn");
 
-  // ================== LOAD STATE ==================
-  const pendingPlanUser = JSON.parse(
-    localStorage.getItem("pendingPlanUser") || "null"
-  );
-
-  const selectedPlan = JSON.parse(
-    localStorage.getItem("selectedPlan") || "null"
-  );
-
-  const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-
-  if (!pendingPlanUser || !selectedPlan) {
-  planInfo.textContent = "⚠️ No active registration found.";
-  payBtn.style.display = "none";
-  console.warn("Payment Guard blocked:", {
-    pendingPlanUser,
-    selectedPlan
-  });
-} else {
-
-  // ================== INFO PLAN ==================
+  // ================== DISPLAY PLAN ==================
   planInfo.textContent = `
 📦 Plan Selected: ${selectedPlan.plan.toUpperCase()}
 ⏱ Duration: ${selectedPlan.durationMonth} month(s)
 Status: Pending Payment ❌
   `;
 
-  // ================== PAY BUTTON ==================
+  // ================== PAYMENT ACTION ==================
   payBtn.addEventListener("click", () => {
+
     const now = new Date();
     const expire = new Date();
     expire.setMonth(expire.getMonth() + selectedPlan.durationMonth);
@@ -122,11 +104,11 @@ Status: Pending Payment ❌
 
     if (index === -1) {
       alert("❌ User not found. Please login again.");
-      localStorage.clear();
       location.href = "login.html";
-      return; // ✅ BOLEH (DI DALAM FUNCTION)
+      return;
     }
 
+    // update user
     users[index] = {
       ...users[index],
       premiumPlan: selectedPlan.plan,
@@ -138,18 +120,19 @@ Status: Pending Payment ❌
 
     localStorage.setItem("menuvaUsers", JSON.stringify(users));
 
+    // 🔑 PAYMENT CONFIRMATION FLAG (PENTING)
+    localStorage.setItem("paymentConfirmed", "true");
+
+    // cleanup flow
     localStorage.removeItem("pendingPlanUser");
     localStorage.removeItem("selectedPlan");
-    localStorage.removeItem("activeUser");
-    localStorage.removeItem("isLoggedIn");
 
-    alert("✅ Payment successful!\nPlease login again.");
-    location.replace("login.html");
+    alert("✅ Payment successful!");
+    location.href = "admin.html";
   });
-}
 
+});
 </script>
 
 </body>
 </html>
-
