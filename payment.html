@@ -43,7 +43,42 @@
     <p id="planInfo">Checking your subscription...</p>
     <button id="payBtn">✅ Simulate Payment Success</button>
   </div>
+<script>
+  // ================== PAYMENT CONTEXT FIX ==================
+  let pendingPlanUser = JSON.parse(localStorage.getItem("pendingPlanUser"));
+  let selectedPlan = JSON.parse(localStorage.getItem("selectedPlan"));
 
+  // 🛠 fallback dari activeUser
+  if (!pendingPlanUser) {
+    const activeUser = JSON.parse(localStorage.getItem("activeUser"));
+    if (activeUser) {
+      pendingPlanUser = activeUser;
+      localStorage.setItem(
+        "pendingPlanUser",
+        JSON.stringify(activeUser)
+      );
+      console.warn("🛠 pendingPlanUser recovered from activeUser");
+    }
+  }
+
+  // ================== FINAL GUARD ==================
+  if (!pendingPlanUser || !selectedPlan) {
+    console.warn("⛔ Payment Guard blocked:", {
+      pendingPlanUser,
+      selectedPlan
+    });
+
+    document.body.innerHTML = `
+      <div style="padding:40px;text-align:center">
+        <h2>⚠️ No active registration found</h2>
+        <p>Please choose a plan first.</p>
+        <button onclick="location.href='plans.html'">
+          ⬅️ Back to Plans
+        </button>
+      </div>
+    `;
+  }
+</script>
 <script>
   const planInfo = document.getElementById("planInfo");
   const payBtn = document.getElementById("payBtn");
@@ -117,3 +152,4 @@ Status: Pending Payment ❌
 
 </body>
 </html>
+
