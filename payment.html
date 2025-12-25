@@ -44,7 +44,7 @@
     <button id="payBtn">✅ Simulate Payment Success</button>
   </div>
 
-  <script>
+<script>
 document.addEventListener("DOMContentLoaded", () => {
 
   const planInfo = document.getElementById("planInfo");
@@ -118,10 +118,13 @@ Status: Pending Payment ❌
       isExpired: false
     };
 
-    localStorage.setItem("menuvaUsers", JSON.stringify(users));
+    // 🔑 update activeUser supaya konsisten
+    localStorage.setItem(
+      "activeUser",
+      JSON.stringify(users[index])
+    );
 
-    // 🔑 PAYMENT CONFIRMATION FLAG (PENTING)
-    localStorage.setItem("paymentConfirmed", "true");
+    localStorage.setItem("menuvaUsers", JSON.stringify(users));
 
     // cleanup flow
     localStorage.removeItem("pendingPlanUser");
