@@ -34,37 +34,50 @@
       return;
     }
 
-    // ==================== SUBSCRIPTION GUARD ====================
-    const now = new Date();
+   // ==================== SUBSCRIPTION GUARD ====================
+const now = new Date();
 
-    // ❌ TIDAK PUNYA PLAN SAMA SEKALI
-    if (!activeUser.premiumPlan) {
-      forceRenew(activeUser, "❌ Subscription inactive.\nPlease choose a plan.");
-      return;
-    }
+// ❌ BELUM PUNYA PLAN SAMA SEKALI
+if (!activeUser.premiumPlan) {
+  forceRenew(
+    activeUser,
+    "❌ Subscription inactive.\nPlease choose a plan."
+  );
+  return;
+}
 
-    // ❌ PLAN ADA TAPI EXPIRE TIDAK ADA (DATA RUSAK)
-    if (!activeUser.premiumExpire) {
-      console.warn("⚠️ premiumExpire missing");
-      forceRenew(activeUser, "❌ Subscription data invalid.\nPlease renew your plan.");
-      return;
-    }
+// ⚠️ TRIAL BOLEH TANPA EXPIRE (FIRST LOGIN)
+if (activeUser.premiumPlan === "trial" && !activeUser.premiumExpire) {
+  console.log("🧪 Trial mode active (no expire yet)");
+  return; // ✅ BOLEH MASUK ADMIN
+}
 
-    const expireDate = new Date(activeUser.premiumExpire);
+// ❌ PLAN ADA TAPI EXPIRE INVALID (NON-TRIAL)
+if (activeUser.premiumPlan !== "trial" && !activeUser.premiumExpire) {
+  forceRenew(
+    activeUser,
+    "❌ Subscription data invalid.\nPlease renew your plan."
+  );
+  return;
+}
 
-    // ❌ EXPIRED
-    if (now > expireDate) {
-      activeUser.isExpired = true;
-      localStorage.setItem("activeUser", JSON.stringify(activeUser));
+// ❌ EXPIRED CHECK
+if (activeUser.premiumExpire) {
+  const expireDate = new Date(activeUser.premiumExpire);
 
-      const msg =
-        activeUser.premiumPlan === "trial"
-          ? "❌ Free trial has expired.\nPlease upgrade to continue."
-          : "❌ Subscription expired.\nPlease renew your plan.";
+  if (now > expireDate) {
+    activeUser.isExpired = true;
+    localStorage.setItem("activeUser", JSON.stringify(activeUser));
 
-      forceRenew(activeUser, msg);
-      return;
-    }
+    const msg =
+      activeUser.premiumPlan === "trial"
+        ? "❌ Free trial has expired.\nPlease upgrade to continue."
+        : "❌ Subscription expired.\nPlease renew your plan.";
+
+    forceRenew(activeUser, msg);
+    return;
+  }
+}
 
     // ==================== ADMIN AMAN ====================
     console.log(
@@ -103,3 +116,4 @@
     location.replace("plans.html");
   }
 })();
+
