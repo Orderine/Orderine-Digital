@@ -72,7 +72,6 @@
     }
 
    // ==================== PAYMENT / SUBSCRIPTION CHECK ====================
-const now = new Date();
 const expireDate = new Date(activeUser.premiumExpire || 0);
 
 // ❌ TIDAK PUNYA PLAN / EXPIRED
@@ -112,4 +111,5 @@ if (!activeUser.premiumPlan || now > expireDate) {
     location.replace("login.html");
   }
 })();
+
 
