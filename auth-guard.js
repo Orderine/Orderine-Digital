@@ -72,10 +72,11 @@
     }
 
    // ==================== PAYMENT / SUBSCRIPTION CHECK ====================
+const currentTime = new Date();
 const expireDate = new Date(activeUser.premiumExpire || 0);
 
 // ❌ TIDAK PUNYA PLAN / EXPIRED
-if (!activeUser.premiumPlan || now > expireDate) {
+if (!activeUser.premiumPlan || currentTime > expireDate) {
   // simpan buat renew
   localStorage.setItem(
     "pendingPlanUser",
@@ -111,5 +112,6 @@ if (!activeUser.premiumPlan || now > expireDate) {
     location.replace("login.html");
   }
 })();
+
 
 
