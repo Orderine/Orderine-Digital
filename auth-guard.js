@@ -7,6 +7,7 @@
       return;
     }
 
+    // ==================== LOAD SESSION ====================
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
     const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
 
@@ -33,85 +34,72 @@
       return;
     }
 
+    // ==================== SUBSCRIPTION GUARD ====================
     const now = new Date();
 
-    // ❌ SUBSCRIPTION EXPIRED
-    if (activeUser.premiumExpire) {
-      const expireDate = new Date(activeUser.premiumExpire);
-
-      if (now > expireDate) {
-        activeUser.isExpired = true;
-
-        // update activeUser
-        localStorage.setItem("activeUser", JSON.stringify(activeUser));
-
-        // 🔑 SIMPAN USER UNTUK PROSES RENEW
-        localStorage.setItem(
-          "pendingPlanUser",
-          JSON.stringify({
-            email: activeUser.email,
-            restoID: activeUser.restoID,
-            role: activeUser.role,
-            currentPlan: activeUser.premiumPlan
-          })
-        );
-
-        alert(
-          activeUser.premiumPlan === "trial"
-            ? "❌ Free trial has expired.\nPlease upgrade to continue."
-            : "❌ Subscription expired.\nPlease renew your plan."
-        );
-
-        // ⛔ LOGOUT PAKSA
-        localStorage.removeItem("isLoggedIn");
-        localStorage.removeItem("activeUser");
-
-        location.replace("plans.html");
-        return;
-      }
+    // ❌ TIDAK PUNYA PLAN SAMA SEKALI
+    if (!activeUser.premiumPlan) {
+      forceRenew(activeUser, "❌ Subscription inactive.\nPlease choose a plan.");
+      return;
     }
 
-   // ==================== PAYMENT / SUBSCRIPTION CHECK ====================
-const currentTime = new Date();
-const expireDate = new Date(activeUser.premiumExpire || 0);
+    // ❌ PLAN ADA TAPI EXPIRE TIDAK ADA (DATA RUSAK)
+    if (!activeUser.premiumExpire) {
+      console.warn("⚠️ premiumExpire missing");
+      forceRenew(activeUser, "❌ Subscription data invalid.\nPlease renew your plan.");
+      return;
+    }
 
-// ❌ TIDAK PUNYA PLAN / EXPIRED
-if (!activeUser.premiumPlan || currentTime > expireDate) {
-  // simpan buat renew
-  localStorage.setItem(
-    "pendingPlanUser",
-    JSON.stringify({
-      email: activeUser.email,
-      restoID: activeUser.restoID,
-      role: activeUser.role,
-      currentPlan: activeUser.premiumPlan || null
-    })
-  );
+    const expireDate = new Date(activeUser.premiumExpire);
 
-  alert("❌ Subscription inactive.\nPlease choose or renew your plan.");
+    // ❌ EXPIRED
+    if (now > expireDate) {
+      activeUser.isExpired = true;
+      localStorage.setItem("activeUser", JSON.stringify(activeUser));
 
-  localStorage.removeItem("isLoggedIn");
-  localStorage.removeItem("activeUser");
+      const msg =
+        activeUser.premiumPlan === "trial"
+          ? "❌ Free trial has expired.\nPlease upgrade to continue."
+          : "❌ Subscription expired.\nPlease renew your plan.";
 
-  location.replace("plans.html");
-  return;
-}
+      forceRenew(activeUser, msg);
+      return;
+    }
 
-    // ✅ ADMIN AMAN
+    // ==================== ADMIN AMAN ====================
     console.log(
       "🛡️ Admin Guard OK:",
       activeUser.email,
       "| Role:",
       activeUser.role,
       "| Resto:",
-      activeUser.restoID
+      activeUser.restoID,
+      "| Plan:",
+      activeUser.premiumPlan
     );
   } catch (err) {
     console.error("🛑 Admin Guard Fatal Error:", err);
     localStorage.clear();
     location.replace("login.html");
   }
+
+  // ==================== FORCE RENEW HANDLER ====================
+  function forceRenew(user, message) {
+    localStorage.setItem(
+      "pendingPlanUser",
+      JSON.stringify({
+        email: user.email,
+        restoID: user.restoID,
+        role: user.role,
+        currentPlan: user.premiumPlan || null
+      })
+    );
+
+    alert(message);
+
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("activeUser");
+
+    location.replace("plans.html");
+  }
 })();
-
-
-
