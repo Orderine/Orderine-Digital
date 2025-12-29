@@ -179,15 +179,18 @@
   </button>
 </div>
 
-  <script>
+<script>
 document.addEventListener("DOMContentLoaded", () => {
-  // ================= ELEMENT =================
   const form = document.getElementById("loginForm");
   const errorMsg = document.getElementById("errorMsg");
+  const renewBtn = document.getElementById("renewBtn");
   const passwordInput = document.getElementById("password");
   const toggleBtn = document.getElementById("togglePassword");
 
-  // ================= PASSWORD TOGGLE =================
+  // ====== HIDE RENEW BY DEFAULT ======
+  if (renewBtn) renewBtn.style.display = "none";
+
+  // ====== PASSWORD TOGGLE ======
   if (passwordInput && toggleBtn) {
     toggleBtn.addEventListener("click", () => {
       const isHidden = passwordInput.type === "password";
@@ -196,10 +199,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ================= LOGIN HANDLER =================
+  // ====== LOGIN HANDLER ======
   form.addEventListener("submit", e => {
     e.preventDefault();
     errorMsg.textContent = "";
+    if (renewBtn) renewBtn.style.display = "none";
 
     const email = document.getElementById("email").value.trim().toLowerCase();
     const password = passwordInput.value;
@@ -219,10 +223,35 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // ================= LOGIN SUCCESS =================
+    // ====== EXPIRE CHECK (UI ONLY) ======
+    const now = new Date();
+    const expireDate = user.premiumExpire ? new Date(user.premiumExpire) : null;
+
+    if (expireDate && now > expireDate) {
+      errorMsg.textContent =
+        user.premiumPlan === "trial"
+          ? "❌ Free trial expired. Please upgrade to continue."
+          : "❌ Subscription expired. Please renew your plan.";
+
+      // 👉 SHOW RENEW BUTTON ONLY HERE
+      if (renewBtn) renewBtn.style.display = "block";
+
+      // simpan context untuk plans page
+      localStorage.setItem(
+        "pendingPlanUser",
+        JSON.stringify({
+          email: user.email,
+          restoID: user.restoID || user.uid || null,
+          role: user.role || "owner",
+          currentPlan: user.premiumPlan || null
+        })
+      );
+      return;
+    }
+
+    // ====== LOGIN SUCCESS ======
     localStorage.setItem("isLoggedIn", "true");
 
-    // 🔑 ACTIVE USER (LENGKAP & KONSISTEN)
     localStorage.setItem(
       "activeUser",
       JSON.stringify({
@@ -237,13 +266,16 @@ document.addEventListener("DOMContentLoaded", () => {
       })
     );
 
-    // bersih-bersih state lama
     localStorage.removeItem("pendingPlanUser");
 
-    // 🚀 MASUK ADMIN
     window.location.href = "admin.html";
   });
 });
+
+// ====== RENEW BUTTON ======
+function goToPlans() {
+  window.location.href = "plans.html";
+}
 </script>
 
 </body>
