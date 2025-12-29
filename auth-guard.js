@@ -2,10 +2,7 @@
 (function () {
   try {
     // 🔒 JALANKAN GUARD HANYA DI admin.html
-    if (!location.pathname.endsWith("admin.html")) {
-      console.log("⏭️ Admin Guard skipped on:", location.pathname);
-      return;
-    }
+    if (!location.pathname.endsWith("admin.html")) return;
 
     // ==================== LOAD SESSION ====================
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
@@ -13,14 +10,12 @@
 
     // ❌ BELUM LOGIN
     if (!isLoggedIn || !activeUser || !activeUser.email) {
-      console.warn("🚫 Admin Guard: Not logged in");
       location.replace("login.html");
       return;
     }
 
     // ❌ ROLE INVALID
     if (!["owner", "admin"].includes(activeUser.role)) {
-      alert("❌ Access denied.");
       localStorage.clear();
       location.replace("login.html");
       return;
@@ -28,67 +23,50 @@
 
     // ❌ TIDAK TERIKAT RESTO
     if (!activeUser.restoID) {
-      alert("❌ No restaurant assigned.");
       localStorage.clear();
       location.replace("login.html");
       return;
     }
 
-   // ==================== SUBSCRIPTION GUARD ====================
-const now = new Date();
+    // ==================== SUBSCRIPTION GUARD (FIXED) ====================
+    const now = new Date();
 
-// ❌ BELUM PUNYA PLAN SAMA SEKALI
-if (!activeUser.premiumPlan) {
-  forceRenew(
-    activeUser,
-    "❌ Subscription inactive.\nPlease choose a plan."
-  );
-  return;
-}
+    /*
+      👉 RULE BARU:
+      - Kalau user SUDAH LOGIN & ROLE VALID
+      - DAN pernah bayar (isPaid / paymentSuccess)
+      - MAKA JANGAN DIBLOK walau plan belum sinkron
+    */
 
-// ⚠️ TRIAL BOLEH TANPA EXPIRE (FIRST LOGIN)
-if (activeUser.premiumPlan === "trial" && !activeUser.premiumExpire) {
-  console.log("🧪 Trial mode active (no expire yet)");
-  return; // ✅ BOLEH MASUK ADMIN
-}
+    const isPaidUser =
+      activeUser.isPaid === true ||
+      activeUser.paymentStatus === "success" ||
+      activeUser.subscriptionStatus === "active";
 
-// ❌ PLAN ADA TAPI EXPIRE INVALID (NON-TRIAL)
-if (activeUser.premiumPlan !== "trial" && !activeUser.premiumExpire) {
-  forceRenew(
-    activeUser,
-    "❌ Subscription data invalid.\nPlease renew your plan."
-  );
-  return;
-}
+    // ✅ USER PAID → LEWATKAN SEMUA CEK PLAN
+    if (isPaidUser) {
+      console.log("💳 Paid user detected, skip subscription block");
+      return;
+    }
 
-// ❌ EXPIRED CHECK
-if (activeUser.premiumExpire) {
-  const expireDate = new Date(activeUser.premiumExpire);
+    // ⚠️ TRIAL MODE (BOLEH MASUK)
+    if (activeUser.premiumPlan === "trial") {
+      if (!activeUser.premiumExpire) return;
 
-  if (now > expireDate) {
-    activeUser.isExpired = true;
-    localStorage.setItem("activeUser", JSON.stringify(activeUser));
+      const expireDate = new Date(activeUser.premiumExpire);
+      if (now <= expireDate) return;
 
-    const msg =
-      activeUser.premiumPlan === "trial"
-        ? "❌ Free trial has expired.\nPlease upgrade to continue."
-        : "❌ Subscription expired.\nPlease renew your plan.";
+      forceRenew(
+        activeUser,
+        "❌ Free trial has expired.\nPlease upgrade to continue."
+      );
+      return;
+    }
 
-    forceRenew(activeUser, msg);
-    return;
-  }
-}
-
-    // ==================== ADMIN AMAN ====================
-    console.log(
-      "🛡️ Admin Guard OK:",
-      activeUser.email,
-      "| Role:",
-      activeUser.role,
-      "| Resto:",
-      activeUser.restoID,
-      "| Plan:",
-      activeUser.premiumPlan
+    // ❌ BELUM PAID & BUKAN TRIAL
+    forceRenew(
+      activeUser,
+      "❌ Subscription inactive.\nPlease choose a plan."
     );
   } catch (err) {
     console.error("🛑 Admin Guard Fatal Error:", err);
@@ -116,4 +94,3 @@ if (activeUser.premiumExpire) {
     location.replace("plans.html");
   }
 })();
-
