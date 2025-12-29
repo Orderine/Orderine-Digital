@@ -614,6 +614,19 @@ button {
 </div>
 
 <div class="section">
+  <div id="subscriptionCountdown" style="
+  background:#fff8e1;
+  color:#7a4f01;
+  padding:10px 14px;
+  border-radius:8px;
+  font-weight:600;
+  font-size:14px;
+  display:none;
+  margin-bottom:10px;
+">
+  ⏳ Subscription time left: <span id="countdownText"></span>
+</div>
+
   <h2>📇 Business Identity</h2>
   
   <label for="logoInput">Your Business Logo</label>
@@ -827,7 +840,54 @@ button {
 
 </div>
 
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const user = JSON.parse(localStorage.getItem("activeUser") || "null");
+  if (!user || !user.premiumExpire || !user.premiumPlan) return;
 
+  const box = document.getElementById("subscriptionCountdown");
+  if (!box) return;
+
+  // 🔥 PASANG LABEL PLAN + SLOT COUNTDOWN
+  box.innerHTML = `
+    ⏳ ${user.premiumPlan.toUpperCase()} plan expires in:
+    <span id="countdownText"></span>
+  `;
+
+  const text = document.getElementById("countdownText");
+  box.style.display = "block";
+
+  const expireTime = new Date(user.premiumExpire).getTime();
+
+  function formatTime(ms) {
+    if (ms <= 0) return "Expired";
+
+    const sec = Math.floor(ms / 1000);
+    const min = Math.floor(sec / 60);
+    const hr = Math.floor(min / 60);
+    const day = Math.floor(hr / 24);
+
+    if (day > 0) return `${day} day(s) ${hr % 24}h`;
+    if (hr > 0) return `${hr} hour(s) ${min % 60}m`;
+    if (min > 0) return `${min} minute(s) ${sec % 60}s`;
+    return `${sec} second(s)`;
+  }
+
+  function tick() {
+    const remaining = expireTime - Date.now();
+    text.textContent = formatTime(remaining);
+
+    // ⚠️ WARNING COLOR JIKA < 24 JAM
+    if (remaining < 24 * 60 * 60 * 1000) {
+      box.style.background = "#ffeaea";
+      box.style.color = "#a10000";
+    }
+  }
+
+  tick();                // ⏱️ update pertama
+  setInterval(tick, 1000);
+});
+</script>
 <script>
 (function subscriptionWatcher() {
   const CHECK_INTERVAL = 5000; // cek tiap 5 detik
@@ -2578,6 +2638,7 @@ function markViewedAndGo() {
 
 </body>
 </html>
+
 
 
 
