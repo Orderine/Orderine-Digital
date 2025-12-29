@@ -178,112 +178,73 @@
     🔄 Update / Renew Plan
   </button>
 </div>
-<script>
+
+  <script>
 document.addEventListener("DOMContentLoaded", () => {
+  // ================= ELEMENT =================
   const form = document.getElementById("loginForm");
   const errorMsg = document.getElementById("errorMsg");
-  const renewBtn = document.getElementById("renewBtn");
+  const passwordInput = document.getElementById("password");
+  const toggleBtn = document.getElementById("togglePassword");
 
-  if (renewBtn) {
-    renewBtn.style.display = "none";
+  // ================= PASSWORD TOGGLE =================
+  if (passwordInput && toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      const isHidden = passwordInput.type === "password";
+      passwordInput.type = isHidden ? "text" : "password";
+      toggleBtn.textContent = isHidden ? "🙈" : "👁️";
+    });
   }
 
+  // ================= LOGIN HANDLER =================
   form.addEventListener("submit", e => {
     e.preventDefault();
     errorMsg.textContent = "";
-    if (renewBtn) renewBtn.style.display = "none";
 
     const email = document.getElementById("email").value.trim().toLowerCase();
-    const password = document.getElementById("password").value;
+    const password = passwordInput.value;
 
     const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-    const userIndex = users.findIndex(u => u.email === email);
+    const user = users.find(u => u.email === email);
 
-    // ===== EMAIL CHECK =====
-    if (userIndex === -1) {
-      errorMsg.textContent = "❌ Email not registered,please register first.!";
+    // ❌ EMAIL NOT FOUND
+    if (!user) {
+      errorMsg.textContent = "❌ Email not registered. Please register first.";
       return;
     }
 
-    const user = users[userIndex];
-
-    // ===== PASSWORD CHECK =====
+    // ❌ PASSWORD WRONG
     if (String(user.password) !== String(password)) {
       errorMsg.textContent = "❌ Email or password incorrect.";
       return;
     }
 
-    const now = new Date();
-    const expireDate = new Date(user.premiumExpire || 0);
-
-    // ================= EXPIRED FLOW =================
-    if (now > expireDate) {
-      user.isExpired = true;
-      users[userIndex] = user;
-      localStorage.setItem("menuvaUsers", JSON.stringify(users));
-
-      // 🔑 INI YANG SEBELUMNYA HILANG
-      localStorage.setItem(
-        "pendingPlanUser",
-        JSON.stringify({
-          email: user.email,
-          restoID: user.restoID || user.uid || "unknown",
-          role: user.role || "owner"
-        })
-      );
-
-      errorMsg.textContent =
-        user.premiumPlan === "trial"
-          ? "❌ Free trial expired. Please upgrade to continue."
-          : "❌ Subscription expired.";
-
-      if (renewBtn) renewBtn.style.display = "block";
-      return;
-    }
-
     // ================= LOGIN SUCCESS =================
-    user.isExpired = false;
-    users[userIndex] = user;
-    localStorage.setItem("menuvaUsers", JSON.stringify(users));
+    localStorage.setItem("isLoggedIn", "true");
 
-    // 🔐 SIMPAN CONTEXT BERSIH
+    // 🔑 ACTIVE USER (LENGKAP & KONSISTEN)
     localStorage.setItem(
       "activeUser",
       JSON.stringify({
         email: user.email,
-        restoID: user.restoID || user.uid || "unknown",
-        role: user.role || "owner"
+        restoID: user.restoID || user.uid || null,
+        role: user.role || "owner",
+
+        premiumPlan: user.premiumPlan || null,
+        premiumExpire: user.premiumExpire || null,
+        subscriptionStatus: user.subscriptionStatus || null,
+        isPaid: user.isPaid === true
       })
     );
 
-    localStorage.setItem("isLoggedIn", "true");
+    // bersih-bersih state lama
     localStorage.removeItem("pendingPlanUser");
 
+    // 🚀 MASUK ADMIN
     window.location.href = "admin.html";
-  });
-});
-
-// tombol renew
-function goToPlans() {
-  window.location.href = "plans.html";
-}
-</script>
-  <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const passwordInput = document.getElementById("password");
-  const toggleBtn = document.getElementById("togglePassword");
-
-  if (!passwordInput || !toggleBtn) return;
-
-  toggleBtn.addEventListener("click", () => {
-    const isHidden = passwordInput.type === "password";
-
-    passwordInput.type = isHidden ? "text" : "password";
-    toggleBtn.textContent = isHidden ? "🙈" : "👁️";
   });
 });
 </script>
 
 </body>
 </html>
-
