@@ -1,55 +1,79 @@
-// ==================== ORDERINE ADMIN GUARD (ADMIN ONLY) ====================
+// ==================== ORDERINE AUTH GUARD PRO ====================
 (function () {
   try {
-    // 🔒 JALANKAN GUARD HANYA DI admin.html
-    if (!location.pathname.endsWith("admin.html")) return;
+    const page = location.pathname.split("/").pop();
 
-    // ==================== LOAD SESSION ====================
+    // ==================== LOAD SESSION (LEGACY SAFE) ====================
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
     const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
 
-    // ❌ BELUM LOGIN
+    // ==================== PUBLIC PAGES ====================
+    const publicPages = [
+      "login.html",
+      "admin-login.html",
+      "invite.html"
+    ];
+
+    if (publicPages.includes(page)) return;
+
+    // ==================== BASIC AUTH CHECK ====================
     if (!isLoggedIn || !activeUser || !activeUser.email) {
       location.replace("login.html");
       return;
     }
 
-    // ❌ ROLE INVALID
     if (!["owner", "admin"].includes(activeUser.role)) {
       localStorage.clear();
       location.replace("login.html");
       return;
     }
 
-    // ❌ TIDAK TERIKAT RESTO
     if (!activeUser.restoID) {
       localStorage.clear();
       location.replace("login.html");
       return;
     }
 
-    // ==================== SUBSCRIPTION GUARD (FIXED) ====================
-    const now = new Date();
+    // ==================== ROLE → PAGE RULE ====================
+    const staffAllowedPages = [
+      "recieves.html", // typo disengaja
+      "order.html",
+      "book.html",
+      "room.html"
+    ];
 
-    /*
-      👉 RULE BARU:
-      - Kalau user SUDAH LOGIN & ROLE VALID
-      - DAN pernah bayar (isPaid / paymentSuccess)
-      - MAKA JANGAN DIBLOK walau plan belum sinkron
-    */
+    // ❌ STAFF BLOK ADMIN DASHBOARD
+    if (
+      activeUser.role === "admin" &&
+      page === "admin.html"
+    ) {
+      location.replace("recieves.html");
+      return;
+    }
+
+    // ❌ STAFF BLOK PAGE LAIN
+    if (
+      activeUser.role === "admin" &&
+      !staffAllowedPages.includes(page)
+    ) {
+      location.replace("recieves.html");
+      return;
+    }
+
+    // ==================== SUBSCRIPTION GUARD (LEGACY, UNCHANGED) ====================
+    const now = new Date();
 
     const isPaidUser =
       activeUser.isPaid === true ||
       activeUser.paymentStatus === "success" ||
       activeUser.subscriptionStatus === "active";
 
-    // ✅ USER PAID → LEWATKAN SEMUA CEK PLAN
     if (isPaidUser) {
       console.log("💳 Paid user detected, skip subscription block");
       return;
     }
 
-    // ⚠️ TRIAL MODE (BOLEH MASUK)
+    // ⚠️ TRIAL MODE
     if (activeUser.premiumPlan === "trial") {
       if (!activeUser.premiumExpire) return;
 
@@ -68,13 +92,14 @@
       activeUser,
       "❌ Subscription inactive.\nPlease choose a plan."
     );
+
   } catch (err) {
-    console.error("🛑 Admin Guard Fatal Error:", err);
+    console.error("🛑 Auth Guard Pro Fatal Error:", err);
     localStorage.clear();
     location.replace("login.html");
   }
 
-  // ==================== FORCE RENEW HANDLER ====================
+  // ==================== FORCE RENEW HANDLER (LEGACY SAFE) ====================
   function forceRenew(user, message) {
     localStorage.setItem(
       "pendingPlanUser",
