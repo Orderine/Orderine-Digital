@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login Admin Orderine</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #003366, #003366);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+
+    .login-box {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 600px;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    input { border: 1px solid #ccc; }
+
+    button {
+      background: linear-gradient(135deg, #b8860b, #daa520);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .error {
+      color: red;
+      font-size: 14px;
+      text-align: center;
+      margin: 10px 0;
+      white-space: pre-line;
+    }
+
+    h2 { text-align: center; margin-bottom: 20px; }
+
+    .password-wrapper { position: relative; }
+    .toggle-eye {
+      position: absolute;
+      right: 10px;
+      top: 55%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      font-size: 18px;
+      user-select: none;
+    }
+
+    .menuva-logo {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .menuva-logo img {
+      width: 600px;
+      max-width: 90%;
+      height: auto;
+    }
+
+    .menuva-logo p {
+      color: white;
+      font-size: 13px;
+      margin: 4px 0 0;
+    }
+
+    @media (min-width: 769px) {
+      .menuva-logo img { max-width: 35%; }
+      .menuva-logo p { font-size: 16px; }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="login-box">
+  <h2>👤 Login Admin</h2>
+
+  <form id="loginForm">
+    <label>Email</label>
+    <input type="email" id="email" placeholder="admin@menuva.id" required />
+
+    <label>Password</label>
+    <div class="password-wrapper">
+      <input type="password" id="password" placeholder="Password" required />
+      <span class="toggle-eye" id="togglePassword">👁️</span>
+    </div>
+
+    <p id="errorMsg" class="error"></p>
+
+    <button type="submit">Login</button>
+  </form>
+</div>
+
+<!-- =================== LOGIC =================== -->
+<script>
+/* 👁️ Toggle Password */
+document.getElementById("togglePassword").onclick = () => {
+  const pwd = document.getElementById("password");
+  pwd.type = pwd.type === "password" ? "text" : "password";
+};
+
+/* 🔐 LOGIN ADMIN */
+document.getElementById("loginForm").addEventListener("submit", e => {
+  e.preventDefault();
+
+  const email = email.value.trim();
+  const password = password.value.trim();
+  const errorMsg = document.getElementById("errorMsg");
+
+  errorMsg.textContent = "";
+
+  const admins = JSON.parse(localStorage.getItem("orderine_admins")) || [];
+
+  const admin = admins.find(a =>
+    a.email === email &&
+    a.password === password &&
+    a.status === "active"
+  );
+
+  if (!admin) {
+    errorMsg.textContent = "Login gagal.\nEmail atau password salah.";
+    return;
+  }
+
+  /* 💾 Simpan session */
+  localStorage.setItem("orderine_session", JSON.stringify({
+    role: "admin",
+    email: admin.email,
+    loginAt: Date.now()
+  }));
+
+  /* 🚀 Masuk Admin Panel */
+  location.href = "admin.html";
+});
+</script>
+
+</body>
+</html>
