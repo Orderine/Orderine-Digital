@@ -110,7 +110,6 @@
   </form>
 </div>
 
-<!-- =================== LOGIC =================== -->
 <script>
 /* 👁️ Toggle Password */
 document.getElementById("togglePassword").onclick = () => {
@@ -122,9 +121,12 @@ document.getElementById("togglePassword").onclick = () => {
 document.getElementById("loginForm").addEventListener("submit", e => {
   e.preventDefault();
 
-  const email = email.value.trim();
-  const password = password.value.trim();
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
   const errorMsg = document.getElementById("errorMsg");
+
+  const email = emailInput.value.trim().toLowerCase();
+  const password = passwordInput.value.trim();
 
   errorMsg.textContent = "";
 
@@ -141,15 +143,20 @@ document.getElementById("loginForm").addEventListener("submit", e => {
     return;
   }
 
-  /* 💾 Simpan session */
-  localStorage.setItem("orderine_session", JSON.stringify({
+  /* 💾 SESSION STANDARD (KOMPATIBEL DENGAN auth-guard.js) */
+  const activeUser = {
     role: "admin",
     email: admin.email,
+    restoID: admin.restoID,
+    permissions: ["recieves", "order", "book", "room"],
     loginAt: Date.now()
-  }));
+  };
 
-  /* 🚀 Masuk Admin Panel */
-  location.href = "admin.html";
+  localStorage.setItem("isLoggedIn", "true");
+  localStorage.setItem("activeUser", JSON.stringify(activeUser));
+
+  /* 🚀 MASUK HALAMAN KERJA ADMIN */
+  location.replace("recieves.html");
 });
 </script>
 
