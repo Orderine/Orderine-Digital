@@ -66,111 +66,133 @@
     <div id="msg"></div>
   </div>
 
-  <script>
-    const info = document.getElementById("info");
-    const msg = document.getElementById("msg");
-    const form = document.getElementById("acceptForm");
+ <script>
+  const info = document.getElementById("info");
+  const msg = document.getElementById("msg");
+  const form = document.getElementById("acceptForm");
 
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
 
-    if (!token) {
-      msg.innerHTML = "<div class='error'>❌ Invalid invite link</div>";
-      throw new Error("No token");
-    }
+  if (!token) {
+    msg.innerHTML = "<div class='error'>❌ Invalid invite link</div>";
+    throw new Error("No token");
+  }
 
-    const invites =
-      JSON.parse(localStorage.getItem("menuvaInvites")) || [];
+  const invites =
+    JSON.parse(localStorage.getItem("menuvaInvites")) || [];
 
-    const invite = invites.find(
-      (i) => i.token === token && i.isUsed === false
-    );
+  const invite = invites.find(
+    (i) => i.token === token && i.isUsed === false
+  );
 
-    if (!invite) {
+  if (!invite) {
+    msg.innerHTML =
+      "<div class='error'>❌ Invite not found or already used</div>";
+    throw new Error("Invite invalid");
+  }
+
+  if (new Date() > new Date(invite.expireAt)) {
+    msg.innerHTML =
+      "<div class='error'>❌ Invite expired</div>";
+    throw new Error("Invite expired");
+  }
+
+  info.innerHTML = `
+    ✅ You are invited as <b>Admin</b><br>
+    Email: <b>${invite.email}</b>
+  `;
+
+  form.classList.remove("hidden");
+
+  function generateUserID() {
+    return "USR-" + crypto.randomUUID();
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    msg.textContent = "";
+
+    const password = document.getElementById("password").value;
+
+    if (password.length < 6) {
       msg.innerHTML =
-        "<div class='error'>❌ Invite not found or already used</div>";
-      throw new Error("Invite invalid");
+        "<div class='error'>❌ Password too short</div>";
+      return;
     }
 
-    if (new Date() > new Date(invite.expireAt)) {
+    /* ================= USER DB ================= */
+    const users =
+      JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+
+    if (users.some(u => u.email === invite.email)) {
       msg.innerHTML =
-        "<div class='error'>❌ Invite expired</div>";
-      throw new Error("Invite expired");
+        "<div class='error'>❌ User already exists</div>";
+      return;
     }
 
-    info.innerHTML = `
-      ✅ You are invited as <b>Admin</b><br>
-      Email: <b>${invite.email}</b>
-    `;
+    const now = new Date().toISOString();
 
-    form.classList.remove("hidden");
+    const newAdmin = {
+      userID: generateUserID(),
+      email: invite.email,
+      password,
 
-    function generateUserID() {
-      return "USR-" + crypto.randomUUID();
-    }
+      role: "admin",
+      restoID: invite.restoID,
 
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      msg.textContent = "";
+      premiumPlan: "inherit",
+      premiumStart: null,
+      premiumExpire: null,
 
-      const password =
-        document.getElementById("password").value;
+      trialUsed: true,
+      isPaid: true,
+      isExpired: false,
 
-      if (password.length < 6) {
-        msg.innerHTML =
-          "<div class='error'>❌ Password too short</div>";
-        return;
-      }
+      createdAt: now
+    };
 
-      const users =
-        JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+    users.push(newAdmin);
+    localStorage.setItem("menuvaUsers", JSON.stringify(users));
 
-      if (users.some(u => u.email === invite.email)) {
-        msg.innerHTML =
-          "<div class='error'>❌ User already exists</div>";
-        return;
-      }
+    /* ================= ADMIN LOGIN DB (🔥 FIX UTAMA) ================= */
+    const admins =
+      JSON.parse(localStorage.getItem("orderine_admins")) || [];
 
-      const now = new Date().toISOString();
-
-      const newAdmin = {
-        userID: generateUserID(),
-        email: invite.email,
-        password,
-
-        role: "admin",
-        restoID: invite.restoID,
-
-        premiumPlan: "inherit",
-        premiumStart: null,
-        premiumExpire: null,
-
-        trialUsed: true,
-        isPaid: true,
-        isExpired: false,
-
-        createdAt: now
-      };
-
-      users.push(newAdmin);
-      localStorage.setItem("menuvaUsers", JSON.stringify(users));
-
-      // 🔒 Mark invite as used
-      invite.isUsed = true;
-      invite.usedAt = now;
-      localStorage.setItem("menuvaInvites", JSON.stringify(invites));
-
-      // 🔥 AUTO LOGIN
-      localStorage.setItem("activeUser", JSON.stringify(newAdmin));
-      localStorage.setItem("isLoggedIn", "true");
-
-      msg.innerHTML =
-        "<div class='success'>✅ Account created. Redirecting...</div>";
-
-      setTimeout(() => {
-        window.location.href = "admin.html";
-      }, 1000);
+    admins.push({
+      email: newAdmin.email,
+      password: newAdmin.password,
+      restoID: newAdmin.restoID,
+      role: "admin",
+      status: "active",
+      createdAt: now
     });
-  </script>
+
+    localStorage.setItem("orderine_admins", JSON.stringify(admins));
+
+    /* ================= MARK INVITE USED ================= */
+    invite.isUsed = true;
+    invite.usedAt = now;
+    localStorage.setItem("menuvaInvites", JSON.stringify(invites));
+
+    /* ================= AUTO LOGIN ================= */
+    localStorage.setItem("activeUser", JSON.stringify({
+      role: "admin",
+      email: newAdmin.email,
+      restoID: newAdmin.restoID,
+      permissions: ["recieves", "order", "book", "room"],
+      loginAt: Date.now()
+    }));
+    localStorage.setItem("isLoggedIn", "true");
+
+    msg.innerHTML =
+      "<div class='success'>✅ Account created. Redirecting...</div>";
+
+    setTimeout(() => {
+      window.location.replace("recieves.html");
+    }, 1000);
+  });
+</script>
+
 </body>
 </html>
