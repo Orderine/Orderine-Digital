@@ -107,13 +107,18 @@
   }
 
   // ==================== HELPERS ====================
-  function safeRedirect(user) {
-    if (user.redirect) {
-      location.replace(user.redirect);
-    } else {
-      location.replace("recievers.html");
-    }
+ function safeRedirect(user) {
+  if (user.redirect) {
+    // 🚧 halaman belum tersedia
+    location.replace(
+      "coming-soon.html?role=" + (user.adminType || "admin")
+    );
+    return;
   }
+
+  // fallback paling aman
+  location.replace("recievers.html");
+}
 
   function redirectLogin() {
     localStorage.clear();
@@ -144,4 +149,5 @@
     location.replace("plans.html");
   }
 })();
+
 
