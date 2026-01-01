@@ -1,9 +1,9 @@
-// ==================== ORDERINE AUTH GUARD PRO ====================
+// ==================== ORDERINE AUTH GUARD (PRODUCTION READY) ====================
 (function () {
   try {
     const page = location.pathname.split("/").pop();
 
-    // ==================== LOAD SESSION (LEGACY SAFE) ====================
+    // ==================== LOAD SESSION ====================
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
     const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
 
@@ -11,56 +11,73 @@
     const publicPages = [
       "login.html",
       "admin-login.html",
-      "invite.html"
+      "accept-invite.html",
+      "plans.html"
     ];
 
     if (publicPages.includes(page)) return;
 
-    // ==================== BASIC AUTH CHECK ====================
+    // ==================== BASIC AUTH ====================
     if (!isLoggedIn || !activeUser || !activeUser.email) {
-      location.replace("login.html");
+      redirectLogin();
       return;
     }
 
     if (!["owner", "admin"].includes(activeUser.role)) {
-      localStorage.clear();
-      location.replace("login.html");
+      hardLogout();
       return;
     }
 
     if (!activeUser.restoID) {
-      localStorage.clear();
-      location.replace("login.html");
+      hardLogout();
       return;
     }
 
-    // ==================== ROLE → PAGE RULE ====================
-    const staffAllowedPages = [
-      "recieves.html", // typo disengaja
-      "order.html",
-      "book.html",
-      "room.html"
-    ];
-
-    // ❌ STAFF BLOK ADMIN DASHBOARD
-    if (
-      activeUser.role === "admin" &&
-      page === "admin.html"
-    ) {
-      location.replace("recieves.html");
+    // ==================== OWNER ACCESS ====================
+    if (activeUser.role === "owner") {
+      // owner bebas akses semua halaman internal
       return;
     }
 
-    // ❌ STAFF BLOK PAGE LAIN
-    if (
-      activeUser.role === "admin" &&
-      !staffAllowedPages.includes(page)
-    ) {
-      location.replace("recieves.html");
+    // ==================== ADMIN ACCESS ====================
+    const adminType = activeUser.adminType || "cashier";
+    const permissions = activeUser.permissions || [];
+
+    // ==================== PAGE → PERMISSION MAP ====================
+    const PAGE_RULES = {
+      "recievers.html": ["orders", "payments"],
+      "order.html": ["orders"],
+      "book.html": ["orders"],
+      "menu-manager.html": ["menu", "stock"],
+      "room-manager.html": ["room"]
+    };
+
+    // ❌ ADMIN BLOK DASHBOARD OWNER
+    if (page === "admin.html") {
+      safeRedirect(activeUser);
       return;
     }
 
-    // ==================== SUBSCRIPTION GUARD (LEGACY, UNCHANGED) ====================
+    // ❌ PAGE TIDAK TERDAFTAR
+    if (!PAGE_RULES[page]) {
+      safeRedirect(activeUser);
+      return;
+    }
+
+    // ❌ PERMISSION CHECK
+    const requiredPerms = PAGE_RULES[page];
+    const hasAccess = requiredPerms.some(p =>
+      permissions.includes(p)
+    );
+
+    if (!hasAccess) {
+      safeRedirect(activeUser);
+      return;
+    }
+
+    // ==================== SUBSCRIPTION CHECK (ADMIN & OWNER) ====================
+    if (activeUser.role === "owner") return;
+
     const now = new Date();
 
     const isPaidUser =
@@ -68,10 +85,7 @@
       activeUser.paymentStatus === "success" ||
       activeUser.subscriptionStatus === "active";
 
-    if (isPaidUser) {
-      console.log("💳 Paid user detected, skip subscription block");
-      return;
-    }
+    if (isPaidUser) return;
 
     // ⚠️ TRIAL MODE
     if (activeUser.premiumPlan === "trial") {
@@ -80,26 +94,37 @@
       const expireDate = new Date(activeUser.premiumExpire);
       if (now <= expireDate) return;
 
-      forceRenew(
-        activeUser,
-        "❌ Free trial has expired.\nPlease upgrade to continue."
-      );
+      forceRenew(activeUser, "❌ Free trial has expired.");
       return;
     }
 
-    // ❌ BELUM PAID & BUKAN TRIAL
-    forceRenew(
-      activeUser,
-      "❌ Subscription inactive.\nPlease choose a plan."
-    );
+    // ❌ BELUM BAYAR
+    forceRenew(activeUser, "❌ Subscription inactive.");
 
   } catch (err) {
-    console.error("🛑 Auth Guard Pro Fatal Error:", err);
+    console.error("🛑 Auth Guard Fatal Error:", err);
+    hardLogout();
+  }
+
+  // ==================== HELPERS ====================
+  function safeRedirect(user) {
+    if (user.redirect) {
+      location.replace(user.redirect);
+    } else {
+      location.replace("recievers.html");
+    }
+  }
+
+  function redirectLogin() {
     localStorage.clear();
     location.replace("login.html");
   }
 
-  // ==================== FORCE RENEW HANDLER (LEGACY SAFE) ====================
+  function hardLogout() {
+    localStorage.clear();
+    location.replace("login.html");
+  }
+
   function forceRenew(user, message) {
     localStorage.setItem(
       "pendingPlanUser",
@@ -119,3 +144,4 @@
     location.replace("plans.html");
   }
 })();
+
