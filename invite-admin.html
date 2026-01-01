@@ -123,134 +123,152 @@
     </button>
   </div>
 
-  <script>
-    const form = document.getElementById("inviteForm");
-    const result = document.getElementById("result");
+<script>
+  // ================== OWNER ONLY GUARD ==================
+  (function ownerGuard() {
+    const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
 
-    function generateToken(len = 24) {
-      const chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-      let token = "";
-      for (let i = 0; i < len; i++) {
-        token += chars[Math.floor(Math.random() * chars.length)];
-      }
-      return token;
+    // ❌ tidak login atau bukan owner
+    if (!activeUser || activeUser.role !== "owner") {
+      location.replace("login.html");
+      return;
     }
 
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      result.textContent = "";
+    // 🧷 tandai bahwa owner sedang di halaman invite
+    sessionStorage.setItem("fromInviteAdmin", "1");
+  })();
 
-      const email = document.getElementById("email").value.trim().toLowerCase();
-      const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
+  const form = document.getElementById("inviteForm");
+  const result = document.getElementById("result");
 
-      if (!activeUser || activeUser.role !== "owner") {
-        result.innerHTML = "<div class='error'>❌ Unauthorized</div>";
-        return;
-      }
-
-      const invites = JSON.parse(localStorage.getItem("menuvaInvites")) || [];
-
-      const existingInvite = invites.find(
-        i =>
-          i.restoID === activeUser.restoID &&
-          !i.isUsed &&
-          new Date() < new Date(i.expireAt)
-      );
-
-      if (existingInvite) {
-        showInvite(existingInvite);
-        result.innerHTML =
-          "<div class='success'>ℹ️ Active invite already exists</div>";
-        return;
-      }
-
-      const invite = {
-        inviteID: "INV-" + crypto.randomUUID(),
-        email,
-        restoID: activeUser.restoID,
-        ownerID: activeUser.userID,
-        role: "admin",
-        token: generateToken(),
-        isUsed: false,
-        createdAt: new Date().toISOString(),
-        expireAt: new Date(Date.now() + 86400000).toISOString()
-      };
-
-      invites.push(invite);
-      localStorage.setItem("menuvaInvites", JSON.stringify(invites));
-
-      showInvite(invite);
-      result.innerHTML = "<div class='success'>✅ Invite created</div>";
-      form.reset();
-    });
-
-    function showInvite(invite) {
-      const inviteURL =
-        location.origin +
-        location.pathname.replace("invite-admin.html", "") +
-        "accept-invite.html?token=" +
-        invite.token;
-
-      document.getElementById("inviteLink").value = inviteURL;
-      document.getElementById("inviteBox").style.display = "block";
-      generateQRCode(inviteURL);
+  function generateToken(len = 24) {
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let token = "";
+    for (let i = 0; i < len; i++) {
+      token += chars[Math.floor(Math.random() * chars.length)];
     }
-
-    function copyInviteLink() {
-      const input = document.getElementById("inviteLink");
-      input.select();
-      input.setSelectionRange(0, 99999);
-      navigator.clipboard.writeText(input.value);
-      alert("✅ Invite link copied");
-    }
-
-    function generateQRCode(url) {
-      const qrBox = document.getElementById("qrBox");
-      qrBox.innerHTML = "";
-      new QRCode(qrBox, {
-        text: url,
-        width: 180,
-        height: 180
-      });
-    }
-
-    function downloadQRCode() {
-  const canvas = document.querySelector("#qrBox canvas");
-  if (!canvas) {
-    alert("QR code belum tersedia");
-    return;
+    return token;
   }
 
-  const link = document.createElement("a");
-  link.href = canvas.toDataURL("image/png");
-  link.download = "invite-admin-qr.png";
-  link.click();
-}
+  // ================== SUBMIT INVITE ==================
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    result.textContent = "";
 
-    function goBack() {
-      window.location.href = "admin.html";
+    const email = document.getElementById("email").value.trim().toLowerCase();
+    const activeUser = JSON.parse(localStorage.getItem("activeUser"));
+
+    if (!email) {
+      result.innerHTML = "<div class='error'>❌ Email wajib diisi</div>";
+      return;
     }
 
-    window.addEventListener("DOMContentLoaded", () => {
-      const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
-      if (!activeUser || !activeUser.restoID) return;
+    const invites = JSON.parse(localStorage.getItem("menuvaInvites")) || [];
 
-      const invites = JSON.parse(localStorage.getItem("menuvaInvites")) || [];
+    const existingInvite = invites.find(
+      i =>
+        i.restoID === activeUser.restoID &&
+        !i.isUsed &&
+        new Date() < new Date(i.expireAt)
+    );
 
-      const activeInvite = invites.find(
-        i =>
-          i.restoID === activeUser.restoID &&
-          !i.isUsed &&
-          new Date() < new Date(i.expireAt)
-      );
+    if (existingInvite) {
+      showInvite(existingInvite);
+      result.innerHTML =
+        "<div class='success'>ℹ️ Active invite already exists</div>";
+      return;
+    }
 
-      if (activeInvite) {
-        showInvite(activeInvite);
-      }
+    const invite = {
+      inviteID: "INV-" + crypto.randomUUID(),
+      email,
+      restoID: activeUser.restoID,
+      ownerID: activeUser.userID,
+      role: "admin",
+      token: generateToken(),
+      isUsed: false,
+      createdAt: new Date().toISOString(),
+      expireAt: new Date(Date.now() + 86400000).toISOString()
+    };
+
+    invites.push(invite);
+    localStorage.setItem("menuvaInvites", JSON.stringify(invites));
+
+    showInvite(invite);
+    result.innerHTML = "<div class='success'>✅ Invite created</div>";
+    form.reset();
+  });
+
+  // ================== SHOW INVITE ==================
+  function showInvite(invite) {
+    const inviteURL =
+      location.origin +
+      location.pathname.replace("invite-admin.html", "") +
+      "accept-invite.html?token=" +
+      invite.token;
+
+    document.getElementById("inviteLink").value = inviteURL;
+    document.getElementById("inviteBox").style.display = "block";
+    generateQRCode(inviteURL);
+  }
+
+  function copyInviteLink() {
+    const input = document.getElementById("inviteLink");
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value);
+    alert("✅ Invite link copied");
+  }
+
+  function generateQRCode(url) {
+    const qrBox = document.getElementById("qrBox");
+    qrBox.innerHTML = "";
+    new QRCode(qrBox, {
+      text: url,
+      width: 180,
+      height: 180
     });
-  </script>
+  }
+
+  function downloadQRCode() {
+    const canvas = document.querySelector("#qrBox canvas");
+    if (!canvas) {
+      alert("QR code belum tersedia");
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = "invite-admin-qr.png";
+    link.click();
+  }
+
+  // ================== SAFE BACK TO ADMIN ==================
+  function goBack() {
+    // hapus flag agar tidak nyangkut
+    sessionStorage.removeItem("fromInviteAdmin");
+    location.replace("admin.html");
+  }
+
+  // ================== LOAD ACTIVE INVITE ==================
+  window.addEventListener("DOMContentLoaded", () => {
+    const activeUser = JSON.parse(localStorage.getItem("activeUser"));
+
+    const invites = JSON.parse(localStorage.getItem("menuvaInvites")) || [];
+
+    const activeInvite = invites.find(
+      i =>
+        i.restoID === activeUser.restoID &&
+        !i.isUsed &&
+        new Date() < new Date(i.expireAt)
+    );
+
+    if (activeInvite) {
+      showInvite(activeInvite);
+    }
+  });
+</script>
 
 </body>
 </html>
-
