@@ -96,6 +96,13 @@
         placeholder="Email admin"
         required
       />
+      <select id="adminType" required>
+  <option value="">-- Pilih Tipe Admin --</option>
+  <option value="cashier">🧾 Admin Cashier</option>
+  <option value="menu">🍽️ Admin Menu</option>
+  <option value="room">🏨 Admin Room</option>
+</select>
+
       <button type="submit">Generate Invite</button>
     </form>
 
@@ -127,16 +134,31 @@
   // ================== OWNER ONLY GUARD ==================
   (function ownerGuard() {
     const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
-
-    // ❌ tidak login atau bukan owner
     if (!activeUser || activeUser.role !== "owner") {
       location.replace("login.html");
       return;
     }
-
-    // 🧷 tandai bahwa owner sedang di halaman invite
     sessionStorage.setItem("fromInviteAdmin", "1");
   })();
+
+  // ================== ADMIN CONFIG ==================
+  const ADMIN_CONFIG = {
+    cashier: {
+      label: "Admin Cashier",
+      redirect: "recievers.html",
+      permissions: ["orders", "payments"]
+    },
+    menu: {
+      label: "Admin Menu",
+      redirect: "menu-manager.html",
+      permissions: ["menu", "stock"]
+    },
+    room: {
+      label: "Admin Room",
+      redirect: "room-manager.html",
+      permissions: ["room"]
+    }
+  };
 
   const form = document.getElementById("inviteForm");
   const result = document.getElementById("result");
@@ -154,13 +176,19 @@
   // ================== SUBMIT INVITE ==================
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    result.textContent = "";
+    result.innerHTML = "";
 
     const email = document.getElementById("email").value.trim().toLowerCase();
+    const adminType = document.getElementById("adminType").value;
     const activeUser = JSON.parse(localStorage.getItem("activeUser"));
 
     if (!email) {
       result.innerHTML = "<div class='error'>❌ Email wajib diisi</div>";
+      return;
+    }
+
+    if (!ADMIN_CONFIG[adminType]) {
+      result.innerHTML = "<div class='error'>❌ Pilih tipe admin</div>";
       return;
     }
 
@@ -169,14 +197,17 @@
     const existingInvite = invites.find(
       i =>
         i.restoID === activeUser.restoID &&
+        i.adminType === adminType &&
         !i.isUsed &&
         new Date() < new Date(i.expireAt)
     );
 
     if (existingInvite) {
       showInvite(existingInvite);
-      result.innerHTML =
-        "<div class='success'>ℹ️ Active invite already exists</div>";
+      result.innerHTML = `
+        <div class="success">
+          ℹ️ Invite aktif untuk <b>${ADMIN_CONFIG[adminType].label}</b> sudah ada
+        </div>`;
       return;
     }
 
@@ -186,6 +217,9 @@
       restoID: activeUser.restoID,
       ownerID: activeUser.userID,
       role: "admin",
+      adminType,
+      permissions: ADMIN_CONFIG[adminType].permissions,
+      redirect: ADMIN_CONFIG[adminType].redirect,
       token: generateToken(),
       isUsed: false,
       createdAt: new Date().toISOString(),
@@ -195,8 +229,15 @@
     invites.push(invite);
     localStorage.setItem("menuvaInvites", JSON.stringify(invites));
 
+    // simpan admin type terakhir
+    localStorage.setItem("lastInviteAdminType", adminType);
+
     showInvite(invite);
-    result.innerHTML = "<div class='success'>✅ Invite created</div>";
+    result.innerHTML = `
+      <div class="success">
+        ✅ Invite <b>${ADMIN_CONFIG[adminType].label}</b> berhasil dibuat
+      </div>`;
+
     form.reset();
   });
 
@@ -210,6 +251,12 @@
 
     document.getElementById("inviteLink").value = inviteURL;
     document.getElementById("inviteBox").style.display = "block";
+
+    result.innerHTML = `
+      <div class="success">
+        🔑 Invite aktif: <b>${ADMIN_CONFIG[invite.adminType].label}</b>
+      </div>`;
+
     generateQRCode(inviteURL);
   }
 
@@ -237,7 +284,6 @@
       alert("QR code belum tersedia");
       return;
     }
-
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/png");
     link.download = "invite-admin-qr.png";
@@ -246,7 +292,6 @@
 
   // ================== SAFE BACK TO ADMIN ==================
   function goBack() {
-    // hapus flag agar tidak nyangkut
     sessionStorage.removeItem("fromInviteAdmin");
     location.replace("admin.html");
   }
@@ -254,18 +299,40 @@
   // ================== LOAD ACTIVE INVITE ==================
   window.addEventListener("DOMContentLoaded", () => {
     const activeUser = JSON.parse(localStorage.getItem("activeUser"));
+    if (!activeUser) return;
 
     const invites = JSON.parse(localStorage.getItem("menuvaInvites")) || [];
+    const lastType = localStorage.getItem("lastInviteAdminType");
 
-    const activeInvite = invites.find(
-      i =>
-        i.restoID === activeUser.restoID &&
-        !i.isUsed &&
-        new Date() < new Date(i.expireAt)
-    );
+    let activeInvite = null;
+
+    // prioritas admin type terakhir
+    if (lastType) {
+      activeInvite = invites.find(
+        i =>
+          i.restoID === activeUser.restoID &&
+          i.adminType === lastType &&
+          !i.isUsed &&
+          new Date() < new Date(i.expireAt)
+      );
+    }
+
+    // fallback invite aktif lain
+    if (!activeInvite) {
+      activeInvite = invites.find(
+        i =>
+          i.restoID === activeUser.restoID &&
+          !i.isUsed &&
+          new Date() < new Date(i.expireAt)
+      );
+    }
 
     if (activeInvite) {
       showInvite(activeInvite);
+      const select = document.getElementById("adminType");
+      if (select && activeInvite.adminType) {
+        select.value = activeInvite.adminType;
+      }
     }
   });
 </script>
