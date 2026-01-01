@@ -86,11 +86,31 @@
     </div>
 </div>
  
- <script>
+<script>
   const info = document.getElementById("info");
   const msg = document.getElementById("msg");
   const form = document.getElementById("acceptForm");
 
+  // ================== ADMIN CONFIG (HARUS SAMA DENGAN INVITE) ==================
+  const ADMIN_CONFIG = {
+    cashier: {
+      label: "Admin Cashier",
+      redirect: "recievers.html",
+      permissions: ["orders", "payments"]
+    },
+    menu: {
+      label: "Admin Menu",
+      redirect: "menu-manager.html",
+      permissions: ["menu", "stock"]
+    },
+    room: {
+      label: "Admin Room",
+      redirect: "room-manager.html",
+      permissions: ["room"]
+    }
+  };
+
+  // ================== TOKEN ==================
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token");
 
@@ -103,7 +123,7 @@
     JSON.parse(localStorage.getItem("menuvaInvites")) || [];
 
   const invite = invites.find(
-    (i) => i.token === token && i.isUsed === false
+    i => i.token === token && i.isUsed === false
   );
 
   if (!invite) {
@@ -118,8 +138,18 @@
     throw new Error("Invite expired");
   }
 
+  // ================== RESOLVE ADMIN TYPE ==================
+  const adminType = invite.adminType || "cashier"; // fallback invite lama
+  const adminCfg = ADMIN_CONFIG[adminType];
+
+  if (!adminCfg) {
+    msg.innerHTML =
+      "<div class='error'>❌ Invalid admin role</div>";
+    throw new Error("Invalid adminType");
+  }
+
   info.innerHTML = `
-    ✅ You are invited as <b>Admin</b><br>
+    ✅ You are invited as <b>${adminCfg.label}</b><br>
     Email: <b>${invite.email}</b>
   `;
 
@@ -129,6 +159,7 @@
     return "USR-" + crypto.randomUUID();
   }
 
+  // ================== ACCEPT INVITE ==================
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     msg.textContent = "";
@@ -159,12 +190,11 @@
       password,
 
       role: "admin",
+      adminType,
       restoID: invite.restoID,
+      permissions: adminCfg.permissions,
 
       premiumPlan: "inherit",
-      premiumStart: null,
-      premiumExpire: null,
-
       trialUsed: true,
       isPaid: true,
       isExpired: false,
@@ -175,7 +205,7 @@
     users.push(newAdmin);
     localStorage.setItem("menuvaUsers", JSON.stringify(users));
 
-    /* ================= ADMIN LOGIN DB (🔥 FIX UTAMA) ================= */
+    /* ================= ADMIN LOGIN DB ================= */
     const admins =
       JSON.parse(localStorage.getItem("orderine_admins")) || [];
 
@@ -183,7 +213,8 @@
       email: newAdmin.email,
       password: newAdmin.password,
       restoID: newAdmin.restoID,
-      role: "admin",
+      adminType,
+      permissions: adminCfg.permissions,
       status: "active",
       createdAt: now
     });
@@ -198,24 +229,24 @@
     /* ================= AUTO LOGIN ================= */
     localStorage.setItem("activeUser", JSON.stringify({
       role: "admin",
+      adminType,
       email: newAdmin.email,
       restoID: newAdmin.restoID,
-      permissions: ["recieves", "order", "book", "room"],
+      permissions: adminCfg.permissions,
+      redirect: adminCfg.redirect,
       loginAt: Date.now()
     }));
     localStorage.setItem("isLoggedIn", "true");
 
     msg.innerHTML =
-      "<div class='success'>✅ Account created. Redirecting...</div>";
+      `<div class='success'>
+        ✅ Account created as <b>${adminCfg.label}</b>. Redirecting...
+      </div>`;
 
     setTimeout(() => {
-      window.location.replace("amin.html");
+      window.location.replace(adminCfg.redirect);
     }, 1000);
   });
 </script>
-
 </body>
 </html>
-
-
-
