@@ -242,23 +242,28 @@
   });
 
   // ================== SHOW INVITE ==================
-  function showInvite(invite) {
-    const inviteURL =
-      location.origin +
-      location.pathname.replace("invite-admin.html", "") +
-      "accept-invite.html?token=" +
-      invite.token;
+function showInvite(invite) {
+  const adminCfg = ADMIN_CONFIG[invite.adminType];
 
-    document.getElementById("inviteLink").value = inviteURL;
-    document.getElementById("inviteBox").style.display = "block";
+  const inviteURL =
+    location.origin +
+    location.pathname.replace("invite-admin.html", "") +
+    "accept-invite.html?token=" +
+    invite.token;
 
-    result.innerHTML = `
-      <div class="success">
-        🔑 Invite aktif: <b>${ADMIN_CONFIG[invite.adminType].label}</b>
-      </div>`;
+  document.getElementById("inviteLink").value = inviteURL;
+  document.getElementById("inviteBox").style.display = "block";
 
-    generateQRCode(inviteURL);
-  }
+  result.innerHTML = adminCfg
+    ? `<div class="success">
+         🔑 Invite aktif: <b>${adminCfg.label}</b>
+       </div>`
+    : `<div class="success">
+         🔑 Invite aktif (legacy admin)
+       </div>`;
+
+  generateQRCode(inviteURL);
+}
 
   function copyInviteLink() {
     const input = document.getElementById("inviteLink");
@@ -339,3 +344,4 @@
 
 </body>
 </html>
+
