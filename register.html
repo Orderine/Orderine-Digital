@@ -126,156 +126,145 @@
   </div>
 
 <script>
-const registerForm = document.getElementById("registerForm");
-const errorMsg = document.getElementById("errorMsg");
+  // =====================================================
+  // ORDERINE – REGISTER PAGE (FINAL & STABLE)
+  // =====================================================
 
-// ================== Utility ==================
-function generateUserID() {
-  return "USR-" + crypto.randomUUID();
-}
+  const registerForm = document.getElementById("registerForm");
+  const errorMsg = document.getElementById("errorMsg");
 
-function generateRestoID() {
-  return "RST-" + crypto.randomUUID();
-}
-
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function generateTrialCode(length = 8) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let code = "";
-  for (let i = 0; i < length; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}
-
-// ================== Plan ==================
-const selectedPlan = localStorage.getItem("selectedPlan") || "trial";
-
-// ================== REGISTER ==================
-registerForm.addEventListener("submit", function (e) {
-  e.preventDefault();
-
-  const email = document.getElementById("email").value.trim().toLowerCase();
-  const password = document.getElementById("password").value;
-
-  errorMsg.textContent = "";
-
-  // ========== VALIDASI ==========
-  if (!isValidEmail(email)) {
-    errorMsg.textContent = "❌ Invalid email format!";
-    return;
+  // ================== Utility ==================
+  function generateUserID() {
+    return "USR-" + crypto.randomUUID();
   }
 
-  if (password.length < 6) {
-    errorMsg.textContent = "❌ Password must be at least 6 characters!";
-    return;
+  function generateRestoID() {
+    return "RST-" + crypto.randomUUID();
   }
 
-  // ========== LOAD USER ==========
-  const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-
-  // 🔒 EMAIL HARUS UNIK
-  if (users.some(u => u.email === email)) {
-    errorMsg.textContent = "❌ Email already registered. Please login.";
-    return;
+  function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
-  // ========== PLAN & DURASI ==========
-  const plan = selectedPlan || "trial";
-
-  let durationMs;
-
-  if (plan === "trial") {
-    durationMs = 5 * 60 * 1000; // ⏱️ 5 MENIT (TEST MODE)
-  } else if (plan === "monthly") {
-    durationMs = 30 * 24 * 60 * 60 * 1000;
-  } else if (plan === "6month") {
-    durationMs = 180 * 24 * 60 * 60 * 1000;
-  } else if (plan === "yearly") {
-    durationMs = 365 * 24 * 60 * 60 * 1000;
+  function generateTrialCode(length = 8) {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let code = "";
+    for (let i = 0; i < length; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
   }
 
-  const now = new Date();
-  const startDate = now.toISOString();
-  const expireDate = new Date(now.getTime() + durationMs).toISOString();
+  // ================== REGISTER ==================
+  registerForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    errorMsg.textContent = "";
 
-  const restoID = generateRestoID();
+    const email = document.getElementById("email").value.trim().toLowerCase();
+    const password = document.getElementById("password").value;
 
-  // ========== CREATE USER ==========
-  const newUser = {
-    userID: generateUserID(),
-    email,
-    password,
+    // ========== VALIDATION ==========
+    if (!isValidEmail(email)) {
+      errorMsg.textContent = "❌ Invalid email format!";
+      return;
+    }
 
-    role: "owner",
-    restoID,
+    if (password.length < 6) {
+      errorMsg.textContent = "❌ Password must be at least 6 characters!";
+      return;
+    }
 
-    premiumPlan: plan,
-    premiumStart: startDate,
-    premiumExpire: expireDate,
+    // ========== LOAD USERS ==========
+    const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
 
-    trialUsed: plan === "trial",
-    isPaid: plan === "trial",
-    isExpired: false,
+    if (users.some(u => u.email === email)) {
+      errorMsg.textContent = "❌ Email already registered. Please login.";
+      return;
+    }
 
-    trialCode: plan === "trial" ? generateTrialCode() : null,
+    // ========== DEFAULT PLAN ==========
+    // REGISTER TIDAK MENENTUKAN PLAN FINAL
+    // PLAN DIPILIH DI plans.html
+    const plan = "trial";
 
-    createdAt: startDate
-  };
+    const now = new Date();
+    const startDate = now.toISOString();
+    const expireDate = new Date(now.getTime() + 5 * 60 * 1000).toISOString(); // 5 menit trial
 
-  // ========== CREATE RESTO ==========
-  const restos = JSON.parse(localStorage.getItem("menuvaRestos")) || [];
-  restos.push({
-    restoID,
-    ownerID: newUser.userID,
-    restoName: "My Restaurant",
-    createdAt: startDate
-  });
+    const restoID = generateRestoID();
 
-  localStorage.setItem("menuvaRestos", JSON.stringify(restos));
+    // ========== CREATE USER ==========
+    const newUser = {
+      userID: generateUserID(),
+      email,
+      password,
 
-  // ========== SAVE USER ==========
-  users.push(newUser);
-  localStorage.setItem("menuvaUsers", JSON.stringify(users));
-  localStorage.removeItem("selectedPlan");
+      role: "owner",
+      restoID,
 
-  // ========== PAYMENT FLOW ==========
-  if (plan !== "trial") {
-    localStorage.setItem("pendingUser", JSON.stringify(newUser));
+      premiumPlan: plan,
+      premiumStart: startDate,
+      premiumExpire: expireDate,
+
+      trialUsed: true,
+      isPaid: false,
+      isExpired: false,
+
+      trialCode: generateTrialCode(),
+      createdAt: startDate
+    };
+
+    // ========== CREATE RESTO ==========
+    const restos = JSON.parse(localStorage.getItem("menuvaRestos")) || [];
+    restos.push({
+      restoID,
+      ownerID: newUser.userID,
+      restoName: "My Restaurant",
+      createdAt: startDate
+    });
+
+    localStorage.setItem("menuvaRestos", JSON.stringify(restos));
+
+    // ========== SAVE USER ==========
+    users.push(newUser);
+    localStorage.setItem("menuvaUsers", JSON.stringify(users));
+
+    // ========== SET CONTEXT FOR PLANS ==========
+    localStorage.setItem(
+      "pendingPlanUser",
+      JSON.stringify({
+        email: newUser.email,
+        restoID: newUser.restoID,
+        role: "owner",
+        currentPlan: "trial"
+      })
+    );
+
     localStorage.removeItem("activeUser");
     localStorage.removeItem("isLoggedIn");
-  }
+    localStorage.removeItem("selectedPlan");
 
-  // ========== REDIRECT ==========
-  if (plan === "trial") {
+    // ========== REDIRECT ==========
     alert(
-      `✅ Registration successful!\n\nFREE TRIAL (5 MINUTES - TEST MODE)\nTrial Code: ${newUser.trialCode}\n\nPlease login to continue.`
+      "✅ Registration successful!\n\nYour free trial is active.\nPlease choose a subscription plan to continue."
     );
-    window.location.href = "login.html";
-  } else {
-    alert(
-      `✅ Registration successful!\nPlease complete payment for "${plan}" plan.`
-    );
-    window.location.href = "payment.html";
+
+    window.location.href = "plans.html";
+  });
+
+  // ================== 👁️ Toggle Password ==================
+  const passwordInput = document.getElementById("password");
+  const togglePassword = document.getElementById("togglePassword");
+
+  if (passwordInput && togglePassword) {
+    togglePassword.addEventListener("click", () => {
+      const type =
+        passwordInput.type === "password" ? "text" : "password";
+      passwordInput.type = type;
+      togglePassword.textContent = type === "password" ? "👁️" : "🙈";
+    });
   }
-});
-
-// ================== 👁️ Toggle Password ==================
-const passwordInput = document.getElementById("password");
-const togglePassword = document.getElementById("togglePassword");
-
-togglePassword.addEventListener("click", () => {
-  const type =
-    passwordInput.getAttribute("type") === "password" ? "text" : "password";
-  passwordInput.setAttribute("type", type);
-  togglePassword.textContent = type === "password" ? "👁️" : "🙈";
-});
 </script>
-
 
 </body>
 </html>
-
