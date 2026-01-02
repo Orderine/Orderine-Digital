@@ -183,13 +183,14 @@
     }
 
     // ========== DEFAULT PLAN ==========
-    // REGISTER TIDAK MENENTUKAN PLAN FINAL
-    // PLAN DIPILIH DI plans.html
+    // REGISTER = FREE TRIAL ONLY
     const plan = "trial";
 
     const now = new Date();
     const startDate = now.toISOString();
-    const expireDate = new Date(now.getTime() + 5 * 60 * 1000).toISOString(); // 5 menit trial
+    const expireDate = new Date(
+      now.getTime() + 5 * 60 * 1000 // 5 menit trial (test mode)
+    ).toISOString();
 
     const restoID = generateRestoID();
 
@@ -229,26 +230,23 @@
     users.push(newUser);
     localStorage.setItem("menuvaUsers", JSON.stringify(users));
 
-    // ========== SET CONTEXT FOR PLANS ==========
-    localStorage.setItem(
-      "pendingPlanUser",
-      JSON.stringify({
-        email: newUser.email,
-        restoID: newUser.restoID,
-        role: "owner",
-        currentPlan: "trial"
-      })
-    );
+    // ❗ IMPORTANT:
+    // TRIAL USER ❌ TIDAK BOLEH:
+    // - pendingPlanUser
+    // - masuk plans.html
+    // - kena payment guard
 
+    localStorage.removeItem("pendingPlanUser");
+    localStorage.removeItem("selectedPlan");
     localStorage.removeItem("activeUser");
     localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("selectedPlan");
 
     // ========== REDIRECT ==========
-      alert("✅ Registration successful!\n\nPlease choose a subscription plan to continue.");
+    alert(
+      "✅ Registration successful!\n\nYour free trial is now active.\nPlease login to continue."
     );
 
-    window.location.href = "plans.html";
+    window.location.href = "login.html";
   });
 
   // ================== 👁️ Toggle Password ==================
@@ -267,4 +265,3 @@
 
 </body>
 </html>
-
