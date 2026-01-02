@@ -87,140 +87,165 @@
 </div>
  
 <script>
-  const info = document.getElementById("info");
-  const msg = document.getElementById("msg");
-  const form = document.getElementById("acceptForm");
+/* ======================================================
+   DOM
+====================================================== */
+const info = document.getElementById("info");
+const msg = document.getElementById("msg");
+const form = document.getElementById("acceptForm");
 
-  // ================== ADMIN CONFIG ==================
-  const ADMIN_CONFIG = {
-    cashier: {
-      label: "Admin Cashier",
-      redirect: "admin-login.html",
-      permissions: ["orders", "payments"]
-    },
-    menu: {
-      label: "Admin Menu",
-      redirect: "admin-login.html",
-      permissions: ["menu", "stock"]
-    },
-    room: {
-      label: "Admin Room",
-      redirect: "admin-login.html",
-      permissions: ["room"]
-    }
+/* ======================================================
+   ADMIN CONFIG (LOGIN LEWAT admin-login.html)
+====================================================== */
+const ADMIN_CONFIG = {
+  cashier: {
+    label: "Admin Cashier",
+    redirect: "admin-login.html",
+    permissions: ["orders", "payments"]
+  },
+  menu: {
+    label: "Admin Menu",
+    redirect: "admin-login.html",
+    permissions: ["menu", "stock"]
+  },
+  room: {
+    label: "Admin Room",
+    redirect: "admin-login.html",
+    permissions: ["room"]
+  }
+};
+
+/* ======================================================
+   TOKEN
+====================================================== */
+const params = new URLSearchParams(window.location.search);
+const token = params.get("token");
+
+if (!token) {
+  msg.innerHTML = "<div class='error'>❌ Invalid invite link</div>";
+  throw new Error("Missing token");
+}
+
+const invites =
+  JSON.parse(localStorage.getItem("menuvaInvites")) || [];
+
+const invite = invites.find(
+  i => i.token === token && i.isUsed !== true
+);
+
+if (!invite) {
+  msg.innerHTML =
+    "<div class='error'>❌ Invite not found or already used</div>";
+  throw new Error("Invite invalid");
+}
+
+if (invite.expireAt && new Date() > new Date(invite.expireAt)) {
+  msg.innerHTML = "<div class='error'>❌ Invite expired</div>";
+  throw new Error("Invite expired");
+}
+
+/* ======================================================
+   ADMIN TYPE
+====================================================== */
+const adminType = invite.adminType || "cashier";
+const adminCfg = ADMIN_CONFIG[adminType];
+
+if (!adminCfg) {
+  msg.innerHTML = "<div class='error'>❌ Invalid admin role</div>";
+  throw new Error("Invalid adminType");
+}
+
+info.innerHTML = `
+  ✅ You are invited as <b>${adminCfg.label}</b><br>
+  Email: <b>${invite.email}</b>
+`;
+
+form.classList.remove("hidden");
+
+function generateUserID() {
+  return "USR-" + crypto.randomUUID();
+}
+
+/* ======================================================
+   ACCEPT INVITE
+====================================================== */
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  msg.textContent = "";
+
+  const password = document.getElementById("password").value;
+
+  if (password.length < 6) {
+    msg.innerHTML = "<div class='error'>❌ Password too short</div>";
+    return;
+  }
+
+  /* ================= USER DB ================= */
+  const users =
+    JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+
+  if (users.some(u => u.email === invite.email)) {
+    msg.innerHTML =
+      "<div class='error'>❌ Account already exists. Please login.</div>";
+    return;
+  }
+
+  const now = new Date().toISOString();
+
+  const newAdmin = {
+    userID: generateUserID(),
+    email: invite.email,
+    password,
+
+    role: "admin",
+    adminType,
+    restoID: invite.restoID,
+    permissions: adminCfg.permissions,
+
+    premiumPlan: "inherit",
+    trialUsed: true,
+    isPaid: true,
+    isExpired: false,
+
+    createdAt: now
   };
 
-  // ================== TOKEN ==================
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get("token");
+  users.push(newAdmin);
+  localStorage.setItem("menuvaUsers", JSON.stringify(users));
 
-  if (!token) {
-    msg.innerHTML = "<div class='error'>❌ Invalid invite link</div>";
-    throw new Error("Missing token");
-  }
+  /* ================= ADMIN LOGIN DB (INI WAJIB) ================= */
+  const admins =
+    JSON.parse(localStorage.getItem("orderine_admins")) || [];
 
-  const invites = JSON.parse(localStorage.getItem("menuvaInvites")) || [];
+  admins.push({
+    email: newAdmin.email,
+    password: newAdmin.password,
+    restoID: newAdmin.restoID,
+    adminType,
+    permissions: adminCfg.permissions,
+    status: "active",
+    createdAt: now
+  });
 
-  const invite = invites.find(
-    i => i.token === token && i.isUsed !== true
-  );
+  localStorage.setItem("orderine_admins", JSON.stringify(admins));
 
-  if (!invite) {
-    msg.innerHTML =
-      "<div class='error'>❌ Invite not found or already used</div>";
-    throw new Error("Invite invalid");
-  }
+  /* ================= MARK INVITE USED ================= */
+  invite.isUsed = true;
+  invite.usedAt = now;
+  localStorage.setItem("menuvaInvites", JSON.stringify(invites));
 
-  if (invite.expireAt && new Date() > new Date(invite.expireAt)) {
-    msg.innerHTML =
-      "<div class='error'>❌ Invite expired</div>";
-    throw new Error("Invite expired");
-  }
-
-  // ================== ADMIN TYPE ==================
-  const adminType = invite.adminType || "cashier";
-  const adminCfg = ADMIN_CONFIG[adminType];
-
-  if (!adminCfg) {
-    msg.innerHTML =
-      "<div class='error'>❌ Invalid admin role</div>";
-    throw new Error("Invalid adminType");
-  }
-
-  info.innerHTML = `
-    ✅ You are invited as <b>${adminCfg.label}</b><br>
-    Email: <b>${invite.email}</b>
+  msg.innerHTML = `
+    <div class="success">
+      ✅ Account created successfully.<br>
+      Please login to continue.
+    </div>
   `;
 
-  form.classList.remove("hidden");
-
-  function generateUserID() {
-    return "USR-" + crypto.randomUUID();
-  }
-
-  // ================== ACCEPT INVITE ==================
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    msg.textContent = "";
-
-    const password = document.getElementById("password").value;
-
-    if (password.length < 6) {
-      msg.innerHTML = "<div class='error'>❌ Password too short</div>";
-      return;
-    }
-
-    const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-
-    if (users.some(u => u.email === invite.email)) {
-      msg.innerHTML =
-        "<div class='error'>❌ Account already exists. Please login.</div>";
-      return;
-    }
-
-    const now = new Date().toISOString();
-
-    // ================== CREATE PERMANENT ADMIN USER ==================
-    const newAdmin = {
-      userID: generateUserID(),
-      email: invite.email,
-      password,
-
-      role: "admin",
-      adminType,
-      restoID: invite.restoID,
-      permissions: adminCfg.permissions,
-
-      premiumPlan: "inherit",
-      trialUsed: true,
-      isPaid: true,
-      isExpired: false,
-
-      createdAt: now
-    };
-
-    users.push(newAdmin);
-    localStorage.setItem("menuvaUsers", JSON.stringify(users));
-
-    // ================== MARK INVITE USED ==================
-    invite.isUsed = true;
-    invite.usedAt = now;
-    localStorage.setItem("menuvaInvites", JSON.stringify(invites));
-
-    // ================== REDIRECT TO LOGIN ==================
-    msg.innerHTML = `
-      <div class="success">
-        ✅ Account created successfully.<br>
-        Please login to continue.
-      </div>
-    `;
-
-    setTimeout(() => {
-      window.location.replace("admin-login.html");
-    }, 1200);
-  });
+  setTimeout(() => {
+    window.location.replace("admin-login.html");
+  }, 1200);
+});
 </script>
 
 </body>
 </html>
-
