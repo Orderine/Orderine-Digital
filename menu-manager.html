@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>🍽️ Menu Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: system-ui, sans-serif; background:#f5f6f8; margin:0; padding:20px; }
+    h1 { margin-bottom:10px; }
+    .sub { color:#666; margin-bottom:20px; }
+    .card { background:#fff; border-radius:12px; padding:16px; box-shadow:0 4px 12px rgba(0,0,0,.06); }
+    table { width:100%; border-collapse:collapse; margin-top:16px; }
+    th, td { padding:10px; border-bottom:1px solid #eee; text-align:left; }
+    th { background:#fafafa; font-size:14px; }
+    input[type="number"] { width:80px; padding:6px; }
+    button { padding:8px 14px; border:none; border-radius:8px; cursor:pointer; }
+    .save { background:#2563eb; color:#fff; }
+    .logout { background:#ef4444; color:#fff; float:right; }
+    .empty { text-align:center; color:#999; padding:30px; }
+  </style>
+</head>
+<body>
+
+  <button class="logout" onclick="logout()">Logout</button>
+
+  <h1>🍽️ Menu Manager</h1>
+  <div class="sub">Update stok makanan & minuman</div>
+
+  <div class="card">
+    <table id="menuTable">
+      <thead>
+        <tr>
+          <th>Nama Menu</th>
+          <th>Kategori</th>
+          <th>Harga</th>
+          <th>Stok</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+<script>
+// ================== AUTH BASIC ==================
+const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
+if (!activeUser || activeUser.role !== "admin") {
+  location.replace("login.html");
+}
+
+// ================== INDEXED DB CONFIG ==================
+const DB_NAME = "MenuvaDB";
+const STORE_NAME = "menuvaData";
+const DB_VERSION = 10;
+
+let db;
+
+// ================== OPEN DB ==================
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onerror = () => reject("Failed open DB");
+
+    request.onsuccess = () => {
+      db = request.result;
+      resolve(db);
+    };
+  });
+}
+
+// ================== LOAD MENU DATA ==================
+async function loadMenu() {
+  await openDB();
+
+  const tx = db.transaction(STORE_NAME, "readonly");
+  const store = tx.objectStore(STORE_NAME);
+  const req = store.getAll();
+
+  req.onsuccess = () => {
+    const rows = req.result || [];
+    const restoData = rows.find(r => r.restoId === activeUser.restoID);
+
+    const tbody = document.querySelector("#menuTable tbody");
+    tbody.innerHTML = "";
+
+    if (!restoData || !Array.isArray(restoData.menu) || restoData.menu.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="empty">❌ Menu belum tersedia</td></tr>`;
+      return;
+    }
+
+    restoData.menu.forEach((item, index) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${item.name || "-"}</td>
+        <td>${item.category || "-"}</td>
+        <td>Rp ${Number(item.price || 0).toLocaleString()}</td>
+        <td>
+          <input type="number" min="0" value="${item.stock ?? 0}" id="stock-${index}" />
+        </td>
+        <td>
+          <button class="save" onclick="saveStock(${index})">Save</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  };
+}
+
+// ================== SAVE STOCK ==================
+async function saveStock(index) {
+  await openDB();
+
+  const tx = db.transaction(STORE_NAME, "readwrite");
+  const store = tx.objectStore(STORE_NAME);
+  const req = store.getAll();
+
+  req.onsuccess = () => {
+    const rows = req.result || [];
+    const restoIndex = rows.findIndex(r => r.restoId === activeUser.restoID);
+
+    if (restoIndex === -1) return alert("Data resto tidak ditemukan");
+
+    const stockInput = document.getElementById(`stock-${index}`);
+    rows[restoIndex].menu[index].stock = Number(stockInput.value);
+    rows[restoIndex].menu[index].updatedAt = new Date().toISOString();
+
+    store.put(rows[restoIndex]);
+
+    alert("✅ Stok berhasil diupdate");
+  };
+}
+
+// ================== LOGOUT ==================
+function logout() {
+  localStorage.clear();
+  location.replace("admin-login.html");
+}
+
+// ================== INIT ==================
+loadMenu();
+</script>
+</body>
+</html>
