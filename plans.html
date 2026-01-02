@@ -61,12 +61,16 @@
   </div>
 
 <script>
-  // ================== LOAD USER CONTEXT ==================
+  // =====================================================
+  // ORDERINE – PLANS PAGE (STABLE & PRODUCTION SAFE)
+  // =====================================================
+
   let pendingPlanUser = null;
   let activeUser = null;
   let userContext = null;
-  let isBlocked = false; // 🔑 FLAG, bukan return / throw
+  let isBlocked = false;
 
+  // ================== LOAD USER CONTEXT ==================
   try {
     pendingPlanUser = JSON.parse(localStorage.getItem("pendingPlanUser"));
     activeUser = JSON.parse(localStorage.getItem("activeUser"));
@@ -74,48 +78,36 @@
     console.warn("⚠️ Failed to parse user context", e);
   }
 
-  const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-
   // ================== PRIORITY ==================
+  // expired / trial end > active login
   userContext = pendingPlanUser || activeUser;
 
-  // ================== RECOVERY MODE (OPSI C) ==================
-  if (!userContext && isLoggedIn) {
-    try {
-      const fallbackUser =
-        JSON.parse(localStorage.getItem("user")) ||
-        JSON.parse(localStorage.getItem("currentUser"));
-
-      if (fallbackUser && fallbackUser.email) {
-        userContext = {
-          email: fallbackUser.email,
-          restoID: fallbackUser.restoID || fallbackUser.uid || "unknown",
-          role: fallbackUser.role || "owner"
-        };
-
-        localStorage.setItem("activeUser", JSON.stringify(userContext));
-        console.log("🛠 User context auto-recovered:", userContext);
-      }
-    } catch (e) {
-      console.warn("⚠️ Failed fallback recovery", e);
-    }
-  }
-
-  // ================== FINAL GUARD (STABLE) ==================
+  // ================== FINAL GUARD ==================
   if (!userContext) {
     isBlocked = true;
 
+    console.warn("⛔ Plans access blocked: no user context");
+
     document.body.innerHTML = `
-      <div style="padding:40px;text-align:center">
-        <h2>⚠️ No active registration found</h2>
-        <p>Please login again.</p>
-        <button onclick="location.href='login.html'">
+      <div style="
+        padding:40px;
+        text-align:center;
+        font-family:system-ui, -apple-system, BlinkMacSystemFont;
+      ">
+        <h2>⚠️ Session not found</h2>
+        <p>Please login to continue.</p>
+        <button
+          style="
+            padding:10px 20px;
+            margin-top:16px;
+            cursor:pointer;
+          "
+          onclick="location.href='login.html'"
+        >
           ⬅️ Back to Login
         </button>
       </div>
     `;
-
-    console.warn("⛔ Plans access blocked: no user context");
   }
 
   // ================== SELECT PLAN ==================
@@ -137,17 +129,18 @@
       return;
     }
 
-    localStorage.setItem(
-      "selectedPlan",
-      JSON.stringify({
-        email: userContext.email,
-        restoID: userContext.restoID,
-        role: userContext.role,
-        plan,
-        durationMonth: durationMap[plan],
-        selectedAt: new Date().toISOString()
-      })
-    );
+    const selectedPlan = {
+      email: userContext.email,
+      restoID: userContext.restoID,
+      role: userContext.role,
+      plan,
+      durationMonth: durationMap[plan],
+      selectedAt: new Date().toISOString()
+    };
+
+    localStorage.setItem("selectedPlan", JSON.stringify(selectedPlan));
+
+    console.log("✅ Plan selected:", selectedPlan);
 
     location.href = "payment.html";
   }
@@ -158,8 +151,5 @@
     location.href = "login.html";
   }
 </script>
-
 </body>
 </html>
-
-
