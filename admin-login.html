@@ -117,7 +117,7 @@ document.getElementById("togglePassword").onclick = () => {
   pwd.type = pwd.type === "password" ? "text" : "password";
 };
 
-/* 🔐 LOGIN ADMIN */
+/* 🔐 LOGIN ADMIN (ROLE AWARE) */
 document.getElementById("loginForm").addEventListener("submit", e => {
   e.preventDefault();
 
@@ -143,20 +143,22 @@ document.getElementById("loginForm").addEventListener("submit", e => {
     return;
   }
 
-  /* 💾 SESSION STANDARD (KOMPATIBEL DENGAN auth-guard.js) */
+  /* 💾 SESSION ADMIN (WAJIB LENGKAP) */
   const activeUser = {
     role: "admin",
+    adminType: admin.adminType || "cashier",     // 🔥 DEFAULT CASHIER
     email: admin.email,
     restoID: admin.restoID,
-    permissions: ["recieves", "order", "book", "room"],
+    permissions: admin.permissions || [],
+    redirect: admin.redirect || "recieves.html", // 🔥 ROLE BASED
     loginAt: Date.now()
   };
 
   localStorage.setItem("isLoggedIn", "true");
   localStorage.setItem("activeUser", JSON.stringify(activeUser));
 
-  /* 🚀 MASUK HALAMAN KERJA ADMIN */
-  location.replace("recieves.html");
+  /* 🚀 ROLE BASED REDIRECT */
+  location.replace(activeUser.redirect);
 });
 </script>
 
