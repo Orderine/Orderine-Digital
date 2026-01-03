@@ -1,169 +1,57 @@
-// =====================================================
-// Menuva IndexedDB — SINGLE SOURCE OF TRUTH
-// =====================================================
-
+// db.js
 const DB_NAME = "MenuvaDB";
-const DB_VERSION = 1;
+const DB_VERSION = 11; // ⬅️ NAIKKAN
+let _db = null;
 
-let dbInstance = null;
-
-// =====================================================
-// OPEN DATABASE
-// =====================================================
-export function openDB() {
+function openDB() {
   return new Promise((resolve, reject) => {
-    if (dbInstance) return resolve(dbInstance);
+    if (_db) return resolve(_db);
 
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onupgradeneeded = (e) => {
+    request.onupgradeneeded = e => {
       const db = e.target.result;
 
-      if (!db.objectStoreNames.contains("users")) {
-        db.createObjectStore("users", { keyPath: "email" });
+      // ✅ STORE LAMA (JANGAN DIHAPUS)
+      if (!db.objectStoreNames.contains("menuvaData")) {
+        db.createObjectStore("menuvaData", { keyPath: "id" });
       }
 
-      if (!db.objectStoreNames.contains("invites")) {
-        db.createObjectStore("invites", { keyPath: "token" });
+      // ➕ STORE BARU UNTUK MULTI ADMIN
+      if (!db.objectStoreNames.contains("admins")) {
+        db.createObjectStore("admins", { keyPath: "id" });
       }
 
-      if (!db.objectStoreNames.contains("session")) {
-        db.createObjectStore("session", { keyPath: "id" });
-      }
-
-      if (!db.objectStoreNames.contains("restos")) {
-        db.createObjectStore("restos", { keyPath: "restoID" });
+      if (!db.objectStoreNames.contains("sessions")) {
+        db.createObjectStore("sessions", { keyPath: "id" });
       }
     };
 
     request.onsuccess = () => {
-      dbInstance = request.result;
-      resolve(dbInstance);
+      _db = request.result;
+      resolve(_db);
     };
 
     request.onerror = () => reject(request.error);
   });
 }
 
-// =====================================================
-// USERS
-// =====================================================
-export async function saveUser(user) {
-  const db = await openDB();
-  return new Promise((res) => {
-    const tx = db.transaction("users", "readwrite");
-    tx.objectStore("users").put(user);
-    tx.oncomplete = () => res(true);
+function withStore(store, mode, cb) {
+  return openDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(store, mode);
+      const st = tx.objectStore(store);
+      const req = cb(st);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
   });
 }
 
-export async function getUserByEmail(email) {
-  const db = await openDB();
-  return new Promise((res) => {
-    const tx = db.transaction("users", "readonly");
-    const req = tx.objectStore("users").get(email);
-    req.onsuccess = () => res(req.result || null);
-  });
-}
-
-export async function getAllUsers() {
-  const db = await openDB();
-  return new Promise((res) => {
-    const tx = db.transaction("users", "readonly");
-    const req = tx.objectStore("users").getAll();
-    req.onsuccess = () => res(req.result || []);
-  });
-}
-
-// =====================================================
-// SESSION (LOGIN STATE)
-// =====================================================
-export async function setSession(user) {
-  const db = await openDB();
-  const tx = db.transaction("session", "readwrite");
-  tx.objectStore("session").put({
-    id: "active",
-    user,
-    loginAt: Date.now()
-  });
-}
-
-export async function getSession() {
-  const db = await openDB();
-  return new Promise((res) => {
-    const tx = db.transaction("session", "readonly");
-    const req = tx.objectStore("session").get("active");
-    req.onsuccess = () => res(req.result?.user || null);
-  });
-}
-
-export async function clearSession() {
-  const db = await openDB();
-  const tx = db.transaction("session", "readwrite");
-  tx.objectStore("session").delete("active");
-}
-
-// =====================================================
-// INVITES (ADMIN)
-// =====================================================
-export async function saveInvite(invite) {
-  const db = await openDB();
-  return new Promise((res) => {
-    const tx = db.transaction("invites", "readwrite");
-    tx.objectStore("invites").put(invite);
-    tx.oncomplete = () => res(true);
-  });
-}
-
-export async function getInviteByToken(token) {
-  const db = await openDB();
-  return new Promise((res) => {
-    const tx = db.transaction("invites", "readonly");
-    const req = tx.objectStore("invites").get(token);
-    req.onsuccess = () => res(req.result || null);
-  });
-}
-
-export async function markInviteUsed(token) {
-  const db = await openDB();
-  const tx = db.transaction("invites", "readwrite");
-  const store = tx.objectStore("invites");
-
-  const req = store.get(token);
-  req.onsuccess = () => {
-    const invite = req.result;
-    if (invite) {
-      invite.isUsed = true;
-      invite.usedAt = new Date().toISOString();
-      store.put(invite);
-    }
-  };
-}
-
-// =====================================================
-// RESTO
-// =====================================================
-export async function saveResto(resto) {
-  const db = await openDB();
-  return new Promise((res) => {
-    const tx = db.transaction("restos", "readwrite");
-    tx.objectStore("restos").put(resto);
-    tx.oncomplete = () => res(true);
-  });
-}
-
-export async function getResto(restoID) {
-  const db = await openDB();
-  return new Promise((res) => {
-    const tx = db.transaction("restos", "readonly");
-    const req = tx.objectStore("restos").get(restoID);
-    req.onsuccess = () => res(req.result || null);
-  });
-}
-
-// =====================================================
-// UTIL
-// =====================================================
-export function generateID(prefix = "ID") {
-  return `${prefix}-${crypto.randomUUID()}`;
-}
+export const db = {
+  add: (store, data) => withStore(store, "readwrite", s => s.add(data)),
+  get: (store, key) => withStore(store, "readonly", s => s.get(key)),
+  getAll: store => withStore(store, "readonly", s => s.getAll()),
+  update: (store, data) => withStore(store, "readwrite", s => s.put(data)),
+  delete: (store, key) => withStore(store, "readwrite", s => s.delete(key))
+};
