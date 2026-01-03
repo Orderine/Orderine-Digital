@@ -1,11 +1,9 @@
-// ==================== ORDERINE AUTH GUARD (PRODUCTION READY) ====================
-(function () {
+// ==================== ORDERINE AUTH GUARD (INDEXEDDB VERSION) ====================
+import { getSession, clearSession } from "./db.js";
+
+(async function authGuard() {
   try {
     const page = location.pathname.split("/").pop();
-
-    // ==================== LOAD SESSION ====================
-    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-    const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
 
     // ==================== PUBLIC PAGES ====================
     const publicPages = [
@@ -17,12 +15,15 @@
 
     if (publicPages.includes(page)) return;
 
-    // ==================== BASIC AUTH ====================
-    if (!isLoggedIn || !activeUser || !activeUser.email) {
+    // ==================== LOAD SESSION (INDEXEDDB) ====================
+    const activeUser = await getSession();
+
+    if (!activeUser || !activeUser.email) {
       redirectLogin();
       return;
     }
 
+    // ==================== ROLE BASIC CHECK ====================
     if (!["owner", "admin"].includes(activeUser.role)) {
       hardLogout();
       return;
@@ -75,9 +76,7 @@
       return;
     }
 
-    // ==================== SUBSCRIPTION CHECK (ADMIN & OWNER) ====================
-    if (activeUser.role === "owner") return;
-
+    // ==================== SUBSCRIPTION CHECK (ADMIN ONLY) ====================
     const now = new Date();
 
     const isPaidUser =
@@ -103,34 +102,36 @@
 
   } catch (err) {
     console.error("🛑 Auth Guard Fatal Error:", err);
-    hardLogout();
+    await clearSession();
+    location.replace("login.html");
   }
 
   // ==================== HELPERS ====================
- function safeRedirect(user) {
-  if (user.redirect) {
-    // 🚧 halaman belum tersedia
-    location.replace(
-      "coming-soon.html?role=" + (user.adminType || "admin")
-    );
-    return;
+  function safeRedirect(user) {
+    if (user.redirect) {
+      location.replace(
+        "coming-soon.html?role=" + (user.adminType || "admin")
+      );
+      return;
+    }
+
+    // fallback paling aman
+    location.replace("recievers.html");
   }
 
-  // fallback paling aman
-  location.replace("recievers.html");
-}
-
   function redirectLogin() {
-    localStorage.clear();
+    clearSession();
     location.replace("login.html");
   }
 
   function hardLogout() {
-    localStorage.clear();
+    clearSession();
     location.replace("login.html");
   }
 
   function forceRenew(user, message) {
+    // ⚠️ masih pakai localStorage sementara
+    // nanti gampang dipindah ke IndexedDB / Supabase
     localStorage.setItem(
       "pendingPlanUser",
       JSON.stringify({
@@ -142,12 +143,7 @@
     );
 
     alert(message);
-
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("activeUser");
-
+    clearSession();
     location.replace("plans.html");
   }
 })();
-
-
