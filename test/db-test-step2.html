@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>STEP 2 TEST — ADMIN ROLE</title>
+</head>
+<body>
+<script type="module">
+import {
+  saveUser,
+  getUserByEmail,
+  getAllUsers
+} from "../db.js"; // FIX: path ke root
+
+(async () => {
+  console.log("STEP 2 START");
+
+  // ADD ADMIN
+  await saveUser({
+    email: "admin1@mail.com",
+    name: "Admin Satu",
+    role: "admin",
+    restoID: "RESTO-001",
+    createdAt: Date.now(),
+    active: true
+  });
+
+  // ADD STAFF
+  await saveUser({
+    email: "staff1@mail.com",
+    name: "Staff Satu",
+    role: "staff",
+    restoID: "RESTO-001",
+    createdAt: Date.now(),
+    active: true
+  });
+
+  console.log("USERS SAVED");
+
+  // GET ADMIN
+  const admin = await getUserByEmail("admin1@mail.com");
+  console.log("GET ADMIN:", admin);
+
+  // GET ALL USERS
+  const all = await getAllUsers();
+  console.log("ALL USERS:", all);
+
+  // FILTER ADMIN
+  const admins = all.filter(u => u.role === "admin");
+  console.log("ONLY ADMINS:", admins);
+
+  console.log("STEP 2 DONE");
+})();
+</script>
+</body>
+</html>

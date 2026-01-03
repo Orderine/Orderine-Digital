@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>STEP 1 TEST</title>
+</head>
+<body>
+<script type="module">
+import { db } from "../db.js";
+
+(async () => {
+  console.log("STEP 1 START");
+
+  const email = "test@menuva.app";
+
+  // ADD
+  await db.add("users", {
+    email,
+    name: "TEST USER"
+  });
+  console.log("ADD OK");
+
+  // GET
+  const one = await db.get("users", email);
+  console.log("GET:", one);
+
+  // GET ALL
+  const all = await db.getAll("users");
+  console.log("GET ALL:", all);
+
+  // UPDATE
+  await db.update("users", {
+    email,
+    name: "UPDATED USER"
+  });
+  console.log("UPDATE:", await db.get("users", email));
+
+  // DELETE
+  await db.delete("users", email);
+  console.log("AFTER DELETE:", await db.getAll("users"));
+
+  console.log("STEP 1 DONE");
+})();
+</script>
+</body>
+</html>
