@@ -161,6 +161,37 @@ document.getElementById("loginForm").addEventListener("submit", e => {
   location.replace(activeUser.redirect);
 });
 </script>
+<script type="module">
+import { getUserByEmail, setSession } from "./db.js";
+
+const form = document.getElementById("loginForm");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  const user = await getUserByEmail(email);
+
+  if (!user) {
+    alert("❌ Admin tidak ditemukan");
+    return;
+  }
+
+  if (user.role !== "admin") {
+    alert("⛔ Bukan akun admin");
+    return;
+  }
+
+  // sementara password belum dipakai (offline mode)
+  await setSession(user);
+
+  alert("✅ Login admin berhasil");
+  location.href = "admin.html";
+});
+</script>
 
 </body>
 </html>
+
