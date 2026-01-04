@@ -937,14 +937,6 @@ document.addEventListener("DOMContentLoaded", () => {
  <script>
 console.log("Admin Script Version: 2025-11-07-STABLE");
 
-// ====================== GLOBAL DB HANDLER ======================
-let dbReady = null;
-const DB_NAME = "MenuvaDB";
-const STORE_NAME = "menuvaData";
-const DB_VERSION = 10;
-
-let dbInstance = null;
-
   // Tes sederhana: apakah IndexedDB berfungsi di HP?
 if (!window.indexedDB) {
   alert("⚠️ Browser ini tidak mendukung IndexedDB!");
@@ -2665,6 +2657,7 @@ function markViewedAndGo() {
 
 </body>
 </html>
+
 
 
 
