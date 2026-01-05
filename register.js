@@ -23,12 +23,30 @@ document.addEventListener("DOMContentLoaded", () => {
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const addDays = (date, days) =>
-    new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+    new Date(date.getTime() + days * 86400000);
 
   const addMonths = (date, months) => {
     const d = new Date(date);
     d.setMonth(d.getMonth() + months);
     return d;
+  };
+
+  const safeGetSelectedPlan = () => {
+    const raw = localStorage.getItem("selectedPlan");
+    if (!raw) return null;
+
+    // JSON
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.type) return parsed;
+    } catch {}
+
+    // string fallback
+    if (typeof raw === "string") {
+      return { type: raw };
+    }
+
+    return null;
   };
 
   /* ================== REGISTER ================== */
@@ -55,37 +73,29 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    /* ================== ID ================== */
+    /* ================== IDS ================== */
     const userID = generateID("USER");
     const restoID = generateID("RESTO");
 
-   let selectedPlan = null;
-
-try {
-  const rawPlan = localStorage.getItem("selectedPlan");
-  selectedPlan = rawPlan ? JSON.parse(rawPlan) : null;
-} catch {
-  selectedPlan = { type: localStorage.getItem("selectedPlan") };
-}
-
-
+    /* ================== PLAN ================== */
+    const selectedPlan = safeGetSelectedPlan();
     const now = new Date();
 
     let premiumPlan = "trial";
     let subscriptionStatus = "trial";
     let isPaid = false;
-    let premiumExpire = addDays(now, 14); // default TRIAL 14 hari
+    let premiumExpire = addDays(now, 14); // TRIAL 14 HARI
 
     if (selectedPlan?.type) {
       premiumPlan = selectedPlan.type;
       subscriptionStatus = "pending";
       isPaid = false;
 
-      if (selectedPlan.type === "monthly") {
+      if (premiumPlan === "monthly") {
         premiumExpire = addMonths(now, 1);
-      } else if (selectedPlan.type === "6month") {
+      } else if (premiumPlan === "6month") {
         premiumExpire = addMonths(now, 6);
-      } else if (selectedPlan.type === "yearly") {
+      } else if (premiumPlan === "yearly") {
         premiumExpire = addMonths(now, 12);
       }
     }
@@ -94,7 +104,7 @@ try {
     const newUser = {
       userID,
       email,
-      password, // NOTE: plain text (hash later)
+      password, // NOTE: plaintext (hash later)
 
       role: "owner",
       restoID,
@@ -121,23 +131,20 @@ try {
       await saveUser(newUser);
       await saveResto(resto);
 
-      // bersihkan state session lama
+      // bersihkan session lama (WAJIB)
       localStorage.removeItem("activeUser");
       localStorage.removeItem("isLoggedIn");
-
-      // ⚠️ JANGAN hapus selectedPlan di sini
-      // (dipakai di plans/payment flow)
 
       if (premiumPlan === "trial") {
         alert("✅ Trial 14 hari aktif.\nSilakan login.");
         location.href = "login.html";
       } else {
-        alert("🧾 Akun dibuat.\nSilakan lanjutkan pembayaran.");
+        alert("🧾 Akun berhasil dibuat.\nSilakan lanjutkan pembayaran.");
         location.href = "plans.html";
       }
     } catch (err) {
       console.error("❌ Register error:", err);
-      errorMsg.textContent = "❌ Gagal registrasi";
+      errorMsg.textContent = "❌ Gagal registrasi. Coba lagi.";
     }
   });
 
@@ -150,4 +157,3 @@ try {
     });
   }
 });
-
