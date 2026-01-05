@@ -135,13 +135,27 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.removeItem("activeUser");
       localStorage.removeItem("isLoggedIn");
 
-      if (premiumPlan === "trial") {
-        alert("✅ Trial 14 hari aktif.\nSilakan login.");
-        location.href = "login.html";
-      } else {
-        alert("🧾 Akun berhasil dibuat.\nSilakan lanjutkan pembayaran.");
-        location.href = "plans.html";
-      }
+     if (premiumPlan === "trial") {
+  alert("✅ Trial 14 hari aktif.\nSilakan login.");
+  location.href = "login.html";
+} else {
+  // ⬇️ INI KUNCI UTAMANYA
+  localStorage.setItem(
+    "pendingPlanUser",
+    JSON.stringify({
+      userID,
+      email,
+      restoID,
+      role: "owner",
+      selectedPlan: premiumPlan,
+      createdAt: now.toISOString()
+    })
+  );
+
+  alert("🧾 Akun berhasil dibuat.\nSilakan lanjutkan pembayaran.");
+  location.href = "plans.html";
+}
+
     } catch (err) {
       console.error("❌ Register error:", err);
       errorMsg.textContent = "❌ Gagal registrasi. Coba lagi.";
@@ -157,3 +171,4 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
