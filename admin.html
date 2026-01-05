@@ -2164,45 +2164,45 @@ async function clearDataDB() {
 }
 </script>
 <script>
-let isLoadingFromDB = false;
-let voucherLoaded = false;
+/* ======================================================
+   PATCH 5 – ADMIN INIT + TOGGLE + VOUCHER
+   FINAL – SYNC WITH db.js & PATCH 1–4
+====================================================== */
 
+let isLoadingFromDB = false;
+
+/* ===================== INIT ADMIN ===================== */
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 Init mulai...");
+  console.log("🚀 Admin Init (Patch 5)");
   showLoader();
 
   const timeout = setTimeout(() => {
-    console.warn("⚠️ Init terlalu lama, sembunyikan loader paksa.");
+    console.warn("⚠️ Init timeout, force hide loader");
     hideLoader();
   }, 8000);
 
   try {
-    // ===================== INIT DB =====================
-    const db = await initDB();
-    console.log("✅ IndexedDB siap");
-
-    // ===================== LOAD DATA UTAMA =====================
-    const data = await safeLoadDataFromDB();
+    /* ===== LOAD DATA UTAMA (DB.JS) ===== */
+    const data = await safeLoadDataFromDB(1);
     if (data) {
       await safeLoadData(data);
-      console.log("📦 Data diambil:", data);
+      console.log("📦 Data loaded:", data);
     } else {
-      console.warn("⚠️ Tidak ada data ditemukan di DB");
+      console.warn("⚠️ DB kosong / belum ada data");
     }
 
-    // ===================== TOGGLE SECTION =====================
+    /* ===== INIT TOGGLES ===== */
     await initAllToggles();
 
-    // ===================== FIXED BAR =====================
+    /* ===== FIXED BAR ===== */
     const fixbar = document.querySelector(".fixed-bar");
     if (fixbar) {
-      const fixbarHeight = fixbar.offsetHeight;
-      document.body.style.paddingBottom = fixbarHeight + "px";
+      document.body.style.paddingBottom = fixbar.offsetHeight + "px";
     }
 
     console.log("✅ Admin siap digunakan");
   } catch (err) {
-    console.error("❌ Error saat init:", err);
+    console.error("❌ Init admin error:", err);
     alert("Terjadi kesalahan saat memuat data. Coba refresh halaman.");
   } finally {
     clearTimeout(timeout);
@@ -2210,256 +2210,200 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-
-// ===================== SAFE LOAD WRAPPER =====================
+/* ===================== SAFE LOAD ===================== */
 async function safeLoadDataFromDB(id = 1) {
   if (isLoadingFromDB) {
-    console.warn("⚠️ loadDataFromDB() di-skip, masih jalan");
+    console.warn("⚠️ loadDataFromDB masih berjalan, skip");
     return null;
   }
   isLoadingFromDB = true;
-  const data = await loadDataFromDB(id);
-  isLoadingFromDB = false;
-  return data;
+  try {
+    return await loadDataFromDB(id);
+  } finally {
+    isLoadingFromDB = false;
+  }
 }
 
 async function safeLoadData(data) {
   if (window.sudahLoadData) {
-    console.warn("⚠️ loadData() sudah pernah jalan, skip render ulang");
+    console.warn("⚠️ loadData sudah pernah dijalankan");
     return;
   }
   window.sudahLoadData = true;
   await loadData(data);
 }
 
-
-// ===================== TOGGLES MASTER =====================
+/* ===================== TOGGLES MASTER ===================== */
 async function initAllToggles() {
-  await new Promise((resolve) => {
-    if (document.readyState === "complete") return resolve();
-    document.addEventListener("readystatechange", () => {
-      if (document.readyState === "complete") resolve();
-    });
-  });
-
+  await domReady();
   initOrderToggle();
   initRoomToggle();
   await initVoucherToggle();
 }
 
+function domReady() {
+  return new Promise(resolve => {
+    if (document.readyState === "complete") return resolve();
+    document.addEventListener("readystatechange", () => {
+      if (document.readyState === "complete") resolve();
+    });
+  });
+}
 
-// ===================== ORDER TOGGLE =====================
+/* ===================== ORDER TOGGLE ===================== */
 function initOrderToggle() {
-  const toggleOrderPage = document.getElementById("toggleOrderPage");
-  // FIXED: disinkronkan dengan HTML (id="orderToggleBox")
-  const orderContainerBox =
+  const toggle = document.getElementById("toggleOrderPage");
+  const box =
     document.getElementById("orderContainerBox") ||
     document.getElementById("orderToggleBox");
 
-  if (!toggleOrderPage) {
-    console.warn("⚠️ Elemen toggleOrderPage tidak ditemukan.");
-    return;
-  }
-  if (!orderContainerBox) {
-    console.warn("⚠️ Elemen orderContainerBox/orderToggleBox belum ada, coba lagi 300ms...");
-    return setTimeout(initOrderToggle, 300);
-  }
+  if (!toggle || !box) return;
 
-  const saved = localStorage.getItem("page_order");
-  toggleOrderPage.checked = saved === "true";
-  orderContainerBox.style.display = toggleOrderPage.checked ? "block" : "none";
+  const saved = localStorage.getItem("page_order") === "true";
+  toggle.checked = saved;
+  box.style.display = saved ? "block" : "none";
 
-  toggleOrderPage.addEventListener("change", (e) => {
-    const enabled = e.target.checked;
-    localStorage.setItem("page_order", enabled);
-    orderContainerBox.style.display = enabled ? "block" : "none";
-  });
+  toggle.onchange = e => {
+    localStorage.setItem("page_order", e.target.checked);
+    box.style.display = e.target.checked ? "block" : "none";
+  };
 }
 
-
-// ===================== ROOM TOGGLE =====================
+/* ===================== ROOM TOGGLE ===================== */
 function initRoomToggle() {
-  const toggleRoomPage = document.getElementById("toggleRoomPage");
-  const roomContainerBox = document.getElementById("roomContainerBox");
+  const toggle = document.getElementById("toggleRoomPage");
+  const box = document.getElementById("roomContainerBox");
 
-  if (!toggleRoomPage || !roomContainerBox) {
-    console.warn("⚠️ Elemen toggleRoomPage atau roomContainerBox tidak ditemukan.");
-    return;
-  }
+  if (!toggle || !box) return;
 
-  const saved = localStorage.getItem("page_room");
-  toggleRoomPage.checked = saved === "true";
-  roomContainerBox.style.display = toggleRoomPage.checked ? "block" : "none";
+  const saved = localStorage.getItem("page_room") === "true";
+  toggle.checked = saved;
+  box.style.display = saved ? "block" : "none";
 
-  toggleRoomPage.addEventListener("change", (e) => {
-    const enabled = e.target.checked;
-    localStorage.setItem("page_room", enabled);
-    roomContainerBox.style.display = enabled ? "block" : "none";
-  });
+  toggle.onchange = e => {
+    localStorage.setItem("page_room", e.target.checked);
+    box.style.display = e.target.checked ? "block" : "none";
+  };
 }
 
+/* ===================== VOUCHER TOGGLE ===================== */
+async function initVoucherToggle() {
+  const toggle = document.getElementById("toggleVoucherPage");
+  const form = document.getElementById("voucherForm");
+  const box = document.getElementById("voucherContainerBox");
 
-// ===================== VOUCHER TOGGLE =====================
-
-  async function initVoucherToggle() {
-  const toggleVoucherPage = document.getElementById("toggleVoucherPage");
-  const voucherForm = document.getElementById("voucherForm");
-  const voucherContainerBox = document.getElementById("voucherContainerBox");
-
-  if (!toggleVoucherPage || !voucherForm || !voucherContainerBox) {
-    console.warn("⚠️ Elemen voucher toggle/form/container tidak lengkap");
-    return;
-  }
+  if (!toggle || !form || !box) return;
 
   const plan = localStorage.getItem("user_plan");
   if (plan === "monthly") {
-    voucherContainerBox.style.display = "none";
+    box.style.display = "none";
     return;
   }
 
   const enabled = localStorage.getItem("page_voucher") === "true";
-  toggleVoucherPage.checked = enabled;
-  voucherForm.style.display = enabled ? "block" : "none";
+  toggle.checked = enabled;
+  form.style.display = enabled ? "block" : "none";
 
-  toggleVoucherPage.addEventListener("change", async (e) => {
-    const enabled = e.target.checked;
-    localStorage.setItem("page_voucher", enabled);
-    voucherForm.style.display = enabled ? "block" : "none";
+  toggle.onchange = async e => {
+    localStorage.setItem("page_voucher", e.target.checked);
+    form.style.display = e.target.checked ? "block" : "none";
+    if (e.target.checked) await loadVouchers();
+  };
 
-    if (enabled) {
-      await loadVouchers(); // reload dari DB
-    }
-    // ❗ kalau dimatikan, JANGAN renderVoucher([])
-    // biar data tidak kehapus secara visual
-  });
-
-  // load awal
   await loadVouchers();
 }
 
-  async function loadVouchers() {
+/* ===================== VOUCHER CORE ===================== */
+async function loadVouchers() {
   console.groupCollapsed("📥 Load Vouchers");
 
   const data = await loadDataFromDB(1);
-
-  if (!Array.isArray(data.menuVoucher)) {
-    data.menuVoucher = [];
-  }
+  if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
 
   const today = new Date();
-  const cleaned = data.menuVoucher.filter(v => {
+  const active = data.menuVoucher.filter(v => {
     const exp = new Date(v.expiry);
     return isFinite(exp) && exp >= today;
   });
 
-  // 🔑 INI KUNCI
-  window.menuVoucher = cleaned;
+  window.menuVoucher = active;
 
-  if (cleaned.length !== data.menuVoucher.length) {
-    data.menuVoucher = cleaned;
+  if (active.length !== data.menuVoucher.length) {
+    data.menuVoucher = active;
     await saveDataToDB(1, data);
   }
 
-  console.log("📦 Voucher aktif:", cleaned);
+  renderVoucher(active);
   console.groupEnd();
-
-  renderVoucher(cleaned);
-  return cleaned;
+  return active;
 }
 
-  // Compatibility wrapper — biar onclick lama tetap work
+/* compatibility lama */
 function saveVoucher() {
-  // return promise in case caller expects it
-  return saveVoucherNew && typeof saveVoucherNew === 'function'
-    ? saveVoucherNew()
-    : (alert("Function saveVoucherNew() tidak ditemukan."), Promise.reject(new Error("saveVoucherNew not defined")));
+  return saveVoucherNew();
 }
 
-  async function saveVoucherNew() {
+async function saveVoucherNew() {
   const codeEl = document.getElementById("voucherCode");
-  const discountEl = document.getElementById("voucherDiscount");
-  const expiryEl = document.getElementById("voucherExpiry");
+  const discEl = document.getElementById("voucherDiscount");
+  const expEl = document.getElementById("voucherExpiry");
 
-  if (!codeEl || !discountEl || !expiryEl) {
+  if (!codeEl || !discEl || !expEl) {
     alert("❌ Form voucher tidak lengkap");
     return;
   }
 
   const code = codeEl.value.trim().toUpperCase();
-  const discount = parseFloat(discountEl.value);
-  const expiry = expiryEl.value;
+  const discount = parseFloat(discEl.value);
+  const expiry = expEl.value;
 
   if (!code || isNaN(discount) || !expiry) {
-    alert("⚠️ Harap isi semua form voucher!");
+    alert("⚠️ Lengkapi data voucher");
     return;
   }
 
-  // Validasi tanggal
   const expiryDate = new Date(expiry);
   if (!isFinite(expiryDate) || expiryDate < new Date()) {
     alert("⚠️ Tanggal kadaluarsa tidak valid");
     return;
   }
 
-  // 🔹 Load data resto
   const data = await loadDataFromDB(1);
+  if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
 
-  if (!Array.isArray(data.menuVoucher)) {
-    data.menuVoucher = [];
-  }
-
-  // 🔹 Cari voucher existing
   const existing = data.menuVoucher.find(v => v.code === code);
-
   if (existing) {
-    // ✏️ UPDATE
     existing.discount = discount;
     existing.expiry = expiry;
     existing.updatedAt = new Date().toISOString();
-
-    console.log("✏️ Voucher updated:", existing);
   } else {
-    // ➕ CREATE
-    const newVoucher = {
+    data.menuVoucher.push({
       id: crypto.randomUUID(),
       code,
       discount,
       expiry,
       createdAt: new Date().toISOString()
-    };
-
-    data.menuVoucher.push(newVoucher);
-    console.log("➕ Voucher ditambahkan:", newVoucher);
+    });
   }
 
-  // 🔹 Simpan ke DB
   await saveDataToDB(1, data);
-
-  // 🔑 SINKRON STATE GLOBAL (INI YANG SEBELUMNYA HILANG)
   window.menuVoucher = data.menuVoucher;
 
-  // 🔹 Render ulang UI
   renderVoucher(window.menuVoucher);
 
-  // 🔹 Optional UX reset
   codeEl.value = "";
-  discountEl.value = "";
-  expiryEl.value = "";
+  discEl.value = "";
+  expEl.value = "";
 
-  alert("✅ Voucher berhasil disimpan & disinkronkan!");
+  alert("✅ Voucher berhasil disimpan!");
 }
 
-
-  function renderVoucher(vouchers = []) {
+/* ===================== VOUCHER UI ===================== */
+function renderVoucher(vouchers = []) {
   const box = document.getElementById("voucherPreview");
   if (!box) return;
 
-  if (!Array.isArray(vouchers)) vouchers = [];
-
-  const today = new Date();
-  vouchers = vouchers.filter(v => new Date(v.expiry) >= today);
-
-  if (vouchers.length === 0) {
+  if (!Array.isArray(vouchers) || vouchers.length === 0) {
     box.innerHTML = "<em>Belum ada voucher aktif</em>";
     return;
   }
@@ -2467,82 +2411,91 @@ function saveVoucher() {
   box.innerHTML = `
     <h3>Voucher Aktif</h3>
     ${vouchers.map(v => `
-      <div class="voucher-item" style="border:1px solid #ccc; padding:8px; margin:8px 0; border-radius:8px;">
-        <p><strong>Kode Voucher:</strong>
-          <span class="voucher-code">${v.code}</span>
-          <button onclick="copyVoucherCode('${v.code}')">📋 Copy</button>
+      <div class="voucher-item">
+        <p><strong>Kode:</strong> ${v.code}
+          <button onclick="copyVoucherCode('${v.code}')">📋</button>
         </p>
-        <p><strong>Diskon:</strong> ${v.discount}%</p>
-        <p><strong>Berlaku sampai:</strong> ${v.expiry}</p>
+        <p>Diskon: ${v.discount}%</p>
+        <p>Berlaku sampai: ${v.expiry}</p>
       </div>
     `).join("")}
   `;
 }
 
-  function copyVoucherCode(code) {
+function copyVoucherCode(code) {
   if (!code) return;
-
-  // Method modern
-  if (navigator.clipboard && navigator.clipboard.writeText) {
+  if (navigator.clipboard) {
     navigator.clipboard.writeText(code)
-      .then(() => {
-        alert(`Kode voucher "${code}" berhasil disalin!`);
-      })
-      .catch(err => {
-        console.error("Clipboard error:", err);
-        fallbackCopy(code);
-      });
+      .then(() => alert(`Kode "${code}" disalin`))
+      .catch(() => fallbackCopy(code));
   } else {
-    // Fallback lama
     fallbackCopy(code);
   }
 }
 
 function fallbackCopy(text) {
-  const tempInput = document.createElement("input");
-  tempInput.value = text;
-  document.body.appendChild(tempInput);
-  tempInput.select();
+  const i = document.createElement("input");
+  i.value = text;
+  document.body.appendChild(i);
+  i.select();
   document.execCommand("copy");
-  tempInput.remove();
-  alert(`Kode voucher "${text}" berhasil disalin!`);
+  i.remove();
+  alert(`Kode "${text}" disalin`);
 }
-
 </script>
+
 <script>
 /* ============================================================
-   1. PRELOAD + UNLOCK AUDIO
+   ADMIN PART 6 — REALTIME ORDER + AUDIO + ROLE UI
+   Sinkron PART 1–5 + db.js (NON MODULE)
 ============================================================ */
-let notifAudio;
+
+/* ============================================================
+   1. PRELOAD + UNLOCK AUDIO (ANTI DOUBLE)
+============================================================ */
+let notifAudio = null;
+let audioUnlocked = false;
 
 document.addEventListener("DOMContentLoaded", () => {
-  initVoucherToggle(); // <<<<<<<<<< ini yang benar
-  notifAudio = new Audio("beep.mp3");
-  notifAudio.load();
+  // ❗ JANGAN panggil initVoucherToggle di sini
+  // karena sudah dipanggil di PART 5 (initAllToggles)
 
-  const unlock = () => {
-    notifAudio.play().then(() => {
-      notifAudio.pause();
-      notifAudio.currentTime = 0;
-    }).catch(()=>{});
-    document.body.removeEventListener("click", unlock);
+  if (!notifAudio) {
+    notifAudio = new Audio("beep.mp3");
+    notifAudio.load();
+  }
+
+  const unlockAudio = () => {
+    if (audioUnlocked) return;
+
+    notifAudio.play()
+      .then(() => {
+        notifAudio.pause();
+        notifAudio.currentTime = 0;
+        audioUnlocked = true;
+      })
+      .catch(() => {});
+
+    document.body.removeEventListener("click", unlockAudio);
   };
-  document.body.addEventListener("click", unlock);
+
+  document.body.addEventListener("click", unlockAudio);
 
   startRealtimeOrderChecker();
+  initOwnerUI();
 });
 
 /* ============================================================
-   2. MAIN SOUND
+   2. PLAY SOUND
 ============================================================ */
 function playNotifSound() {
-  if (!notifAudio) return;
+  if (!notifAudio || !audioUnlocked) return;
   notifAudio.currentTime = 0;
-  notifAudio.play().catch(()=>{});
+  notifAudio.play().catch(() => {});
 }
 
 /* ============================================================
-   3. Helpers
+   3. INDEXEDDB HELPERS
 ============================================================ */
 function idbGetAll(store) {
   return new Promise((resolve, reject) => {
@@ -2565,22 +2518,25 @@ function updateReceiveBadge(count) {
 }
 
 /* ============================================================
-   4. REALTIME CHECK ORDERS
+   4. REALTIME ORDER CHECKER
 ============================================================ */
 let lastCount = 0;
+let checkingOrder = false;
 
 async function cekOrderBaru() {
+  if (checkingOrder) return;
+  checkingOrder = true;
+
   try {
     const db = await initDB();
     const tx = db.transaction("ordersData", "readonly");
     const store = tx.objectStore("ordersData");
 
-    const all = await idbGetAll(store);
-    const newCount = all.filter(o => o.status === "new").length;
+    const allOrders = await idbGetAll(store);
+    const newCount = allOrders.filter(o => o.status === "new").length;
 
     updateReceiveBadge(newCount);
 
-    // Bunyi hanya ketika jumlah new bertambah
     if (newCount > lastCount) {
       playNotifSound();
     }
@@ -2589,25 +2545,26 @@ async function cekOrderBaru() {
 
   } catch (err) {
     console.error("❌ cekOrderBaru error:", err);
+  } finally {
+    checkingOrder = false;
   }
 }
 
 /* ============================================================
-   5. LOOP REALTIME (1 detik)
+   5. REALTIME LOOP (SAFE SINGLE INSTANCE)
 ============================================================ */
-let intervalStarted = false;
+let realtimeStarted = false;
 
 function startRealtimeOrderChecker() {
-  if (intervalStarted) return;  // jaga jangan double
-  intervalStarted = true;
+  if (realtimeStarted) return;
+  realtimeStarted = true;
 
-  // Jalan tiap 1 detik (super ringan)
-  cekOrderBaru(); 
+  cekOrderBaru();
   setInterval(cekOrderBaru, 1000);
 }
 
 /* ============================================================
-   6. Mark as read + go
+   6. MARK AS READ + NAVIGATION
 ============================================================ */
 async function markOrdersAsRead() {
   try {
@@ -2615,12 +2572,12 @@ async function markOrdersAsRead() {
     const tx = db.transaction("ordersData", "readwrite");
     const store = tx.objectStore("ordersData");
 
-    const all = await idbGetAll(store);
+    const allOrders = await idbGetAll(store);
 
-    for (const o of all) {
-      if (o.status === "new") {
-        o.status = "read";
-        store.put(o);
+    for (const order of allOrders) {
+      if (order.status === "new") {
+        order.status = "read";
+        store.put(order);
       }
     }
 
@@ -2637,30 +2594,22 @@ function markViewedAndGo() {
   window.location.href = "recieves.html";
 }
 
-</script>
-  <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const activeUser = JSON.parse(
-      localStorage.getItem("activeUser") || "null"
-    );
+/* ============================================================
+   7. OWNER UI (INVITE ADMIN)
+============================================================ */
+function initOwnerUI() {
+  const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
+  if (activeUser?.role !== "owner") return;
 
-    if (activeUser?.role === "owner") {
-      const btn = document.getElementById("inviteAdminBtn");
-      if (btn) btn.style.display = "flex";
-    }
-  });
+  const btn = document.getElementById("inviteAdminBtn");
+  if (btn) btn.style.display = "flex";
+}
 
-  function openInviteAdmin() {
-    // versi simple dulu
-    window.location.href = "invite-admin.html";
-  }
+function openInviteAdmin() {
+  window.location.href = "invite-admin.html";
+}
 </script>
 
 </body>
 </html>
-
-
-
-
-
 
