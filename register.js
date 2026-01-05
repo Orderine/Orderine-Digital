@@ -59,10 +59,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const userID = generateID("USER");
     const restoID = generateID("RESTO");
 
-    /* ================== PLAN LOGIC (CORE FIX) ================== */
-    const selectedPlan = JSON.parse(
-      localStorage.getItem("selectedPlan")
-    );
+   let selectedPlan = null;
+
+try {
+  const rawPlan = localStorage.getItem("selectedPlan");
+  selectedPlan = rawPlan ? JSON.parse(rawPlan) : null;
+} catch {
+  selectedPlan = { type: localStorage.getItem("selectedPlan") };
+}
+
 
     const now = new Date();
 
@@ -145,3 +150,4 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
