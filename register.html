@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Register</title>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -14,8 +15,27 @@
       justify-content: center;
       height: 100vh;
     }
-    .menuva-logo { text-align: center; margin-bottom: 50px; }
-    .menuva-logo img { height: auto; }
+
+    .menuva-logo {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 0 10px;
+    }
+
+    .menuva-logo img {
+      width: 600px;
+      max-width: 90vw;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .menuva-logo p {
+      color: white;
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
     .login-box {
       background: white;
       padding: 30px;
@@ -24,14 +44,20 @@
       width: 88%;
       max-width: 400px;
     }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
     input {
       width: 95%;
       padding: 10px;
-      margin-top: 10px;
-      margin-bottom: 10px;
+      margin: 10px 0;
       border: 1px solid #ccc;
       border-radius: 6px;
     }
+
     button {
       width: 103%;
       padding: 12px;
@@ -42,11 +68,29 @@
       font-size: 16px;
       cursor: pointer;
     }
-    .error { color: red; margin-top: 5px; margin-bottom: 10px; font-size: 14px; text-align: center; }
-    .link { text-align: center; margin-top: 15px; }
-    .link a { text-decoration: none; color: #3498db; }
-    h2 { text-align: center; margin-bottom: 20px; }
-    .password-wrapper { position: relative; width: 100%; }
+
+    .error {
+      color: red;
+      margin: 5px 0 10px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .link {
+      text-align: center;
+      margin-top: 15px;
+    }
+
+    .link a {
+      text-decoration: none;
+      color: #3498db;
+    }
+
+    .password-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
     .toggle-eye {
       position: absolute;
       right: 12px;
@@ -57,211 +101,70 @@
       user-select: none;
     }
 
-  .menuva-logo {
-  text-align: center;
-  margin-bottom: 40px;
-  padding: 0 10px;
-}
+    /* TABLET */
+    @media (min-width: 481px) {
+      .menuva-logo img {
+        max-width: 50%;
+        max-height: 90px;
+      }
+    }
 
-.menuva-logo img {
-  width: 600px;       /* 🔥 ukuran real */
-  max-width: 90vw;    /* responsive */
-  height: auto;
-  display: block;
-  margin: 0 auto;
-}
+    /* DESKTOP */
+    @media (min-width: 769px) {
+      .menuva-logo img {
+        max-width: 35%;
+        max-height: 100px;
+      }
 
-.menuva-logo p {
-  color: white;
-  font-size: 14px;
-  margin-top: 6px;
-}
-
-/* =====================
-   TABLET (min-width: 481px)
-   ===================== */
-  .menuva-logo img {
-    max-width: 50%;
-    max-height: 90px;
-  }
-  .menuva-logo p {
-    font-size: 14px;
-  }
-
-/* =====================
-   DESKTOP (min-width: 769px)
-   ===================== */
-  .menuva-logo img {
-    max-width: 35%;
-    max-height: 100px;
-  }
-  .menuva-logo p {
-    font-size: 16px;
-  }
-
+      .menuva-logo p {
+        font-size: 16px;
+      }
+    }
   </style>
 </head>
+
 <body>
 
   <div class="menuva-logo">
     <img src="menuva-logo.png" alt="Logo Menuva">
-    <br>
-    <p style="color: white;">Digital Solution For Restaurant, Hotel, & Cafe's</p>
+    <p>Digital Solution For Restaurant, Hotel, & Cafe's</p>
   </div>
 
-  <div class="login-box"> 
-    <h2>Register Admin</h2> 
-    <form id="registerForm"> 
-    <label for="email">Email:</label> 
-    <input type="email" id="email" placeholder="Email Admin" required /> 
-    <label for="password">Password:</label> 
-    <div class="password-wrapper"> 
-    <input type="password" id="password" placeholder="Password" required /> 
-    <span id="togglePassword" class="toggle-eye">👁️</span> 
-    </div> <div id="errorMsg" class="error"></div> 
-    <button type="submit">Register</button> </form>
+  <div class="login-box">
+    <h2>Register Admin</h2>
+
+    <form id="registerForm">
+      <label>Email</label>
+      <input
+        type="email"
+        id="email"
+        placeholder="Email Admin"
+        required
+      />
+
+      <label>Password</label>
+      <div class="password-wrapper">
+        <input
+          type="password"
+          id="password"
+          placeholder="Password"
+          required
+        />
+        <span id="togglePassword" class="toggle-eye">👁️</span>
+      </div>
+
+      <div id="errorMsg" class="error"></div>
+
+      <button type="submit">Register</button>
+    </form>
+
     <div class="link">
-      Already have an account? <a href="login.html">Login Here.!</a>
+      Already have an account?
+      <a href="login.html">Login Here!</a>
     </div>
   </div>
 
-<script>
-  // =====================================================
-  // ORDERINE – REGISTER PAGE (FINAL & STABLE)
-  // =====================================================
-
-  const registerForm = document.getElementById("registerForm");
-  const errorMsg = document.getElementById("errorMsg");
-
-  // ================== Utility ==================
-  function generateUserID() {
-    return "USR-" + crypto.randomUUID();
-  }
-
-  function generateRestoID() {
-    return "RST-" + crypto.randomUUID();
-  }
-
-  function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  }
-
-  function generateTrialCode(length = 8) {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let code = "";
-    for (let i = 0; i < length; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code;
-  }
-
-  // ================== REGISTER ==================
-  registerForm.addEventListener("submit", function (e) {
-    e.preventDefault();
-    errorMsg.textContent = "";
-
-    const email = document.getElementById("email").value.trim().toLowerCase();
-    const password = document.getElementById("password").value;
-
-    // ========== VALIDATION ==========
-    if (!isValidEmail(email)) {
-      errorMsg.textContent = "❌ Invalid email format!";
-      return;
-    }
-
-    if (password.length < 6) {
-      errorMsg.textContent = "❌ Password must be at least 6 characters!";
-      return;
-    }
-
-    // ========== LOAD USERS ==========
-    const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-
-    if (users.some(u => u.email === email)) {
-      errorMsg.textContent = "❌ Email already registered. Please login.";
-      return;
-    }
-
-    // ========== DEFAULT PLAN ==========
-    // REGISTER = FREE TRIAL ONLY
-    const plan = "trial";
-
-    const now = new Date();
-    const startDate = now.toISOString();
-    const expireDate = new Date(
-      now.getTime() + 5 * 60 * 1000 // 5 menit trial (test mode)
-    ).toISOString();
-
-    const restoID = generateRestoID();
-
-    // ========== CREATE USER ==========
-    const newUser = {
-      userID: generateUserID(),
-      email,
-      password,
-
-      role: "owner",
-      restoID,
-
-      premiumPlan: plan,
-      premiumStart: startDate,
-      premiumExpire: expireDate,
-
-      trialUsed: true,
-      isPaid: false,
-      isExpired: false,
-
-      trialCode: generateTrialCode(),
-      createdAt: startDate
-    };
-
-    // ========== CREATE RESTO ==========
-    const restos = JSON.parse(localStorage.getItem("menuvaRestos")) || [];
-    restos.push({
-      restoID,
-      ownerID: newUser.userID,
-      restoName: "My Restaurant",
-      createdAt: startDate
-    });
-
-    localStorage.setItem("menuvaRestos", JSON.stringify(restos));
-
-    // ========== SAVE USER ==========
-    users.push(newUser);
-    localStorage.setItem("menuvaUsers", JSON.stringify(users));
-
-    // ❗ IMPORTANT:
-    // TRIAL USER ❌ TIDAK BOLEH:
-    // - pendingPlanUser
-    // - masuk plans.html
-    // - kena payment guard
-
-    localStorage.removeItem("pendingPlanUser");
-    localStorage.removeItem("selectedPlan");
-    localStorage.removeItem("activeUser");
-    localStorage.removeItem("isLoggedIn");
-
-    // ========== REDIRECT ==========
-    alert(
-      "✅ Registration successful!\n\nYour free trial is now active.\nPlease login to continue."
-    );
-
-    window.location.href = "login.html";
-  });
-
-  // ================== 👁️ Toggle Password ==================
-  const passwordInput = document.getElementById("password");
-  const togglePassword = document.getElementById("togglePassword");
-
-  if (passwordInput && togglePassword) {
-    togglePassword.addEventListener("click", () => {
-      const type =
-        passwordInput.type === "password" ? "text" : "password";
-      passwordInput.type = type;
-      togglePassword.textContent = type === "password" ? "👁️" : "🙈";
-    });
-  }
-</script>
-
+  <!-- ✅ SATU-SATUNYA SCRIPT -->
+  <script type="module" src="./register.js"></script>
 </body>
 </html>
