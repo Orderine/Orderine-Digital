@@ -61,37 +61,51 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    /* ===== TRIAL PLAN ===== */
-    const now = new Date();
-    const trialExpire = new Date(
-      now.getTime() + 5 * 60 * 1000 // 5 menit (TEST MODE)
-    );
+    /* ================== PLAN CONFIG ================== */
+const PLAN_DURATION = {
+  trial: 14,      // days
+  monthly: 30,
+  "6month": 180,
+  yearly: 365
+};
 
-    const restoID = generateID("RESTO");
-    const userID = generateID("USER");
+const selectedPlan =
+  localStorage.getItem("selectedPlan") || "trial";
 
-    /* ===== USER OBJECT ===== */
-    const newUser = {
-      userID,
-      email,
-      password, // NOTE: plain text (bisa di-hash nanti)
+if (!PLAN_DURATION[selectedPlan]) {
+  throw new Error("Invalid subscription plan");
+}
 
-      role: "owner",
-      restoID,
+const now = new Date();
+const expireDate = new Date(
+  now.getTime() +
+    PLAN_DURATION[selectedPlan] * 24 * 60 * 60 * 1000
+);
 
-      premiumPlan: "trial",
-      premiumStart: now.toISOString(),
-      premiumExpire: trialExpire.toISOString(),
+const isTrial = selectedPlan === "trial";
 
-      subscriptionStatus: "trial",
-      isPaid: false,
+/* ================== USER OBJECT ================== */
+const newUser = {
+  userID,
+  email,
+  password,
 
-      adminType: null,
-      permissions: [],
+  role: "owner",
+  restoID,
 
-      trialCode: generateTrialCode(),
-      createdAt: now.toISOString()
-    };
+  premiumPlan: selectedPlan,
+  premiumStart: now.toISOString(),
+  premiumExpire: expireDate.toISOString(),
+
+  subscriptionStatus: isTrial ? "trial" : "active",
+  isPaid: !isTrial,
+
+  adminType: null,
+  permissions: [],
+
+  trialCode: isTrial ? generateTrialCode() : null,
+  createdAt: now.toISOString()
+};
 
     /* ===== RESTO OBJECT ===== */
     const resto = {
@@ -132,3 +146,4 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
