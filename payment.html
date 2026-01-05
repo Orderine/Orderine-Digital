@@ -44,99 +44,115 @@
     <button id="payBtn">✅ Simulate Payment Success</button>
   </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
+<script type="module">
+/* =====================================================
+   ORDERINE – PAYMENT PAGE (FINAL & SYNC)
+   USE pendingPlanUser ONLY
+   ===================================================== */
 
+import { getUserByEmail, saveUser } from "./db.js";
+
+document.addEventListener("DOMContentLoaded", async () => {
   const planInfo = document.getElementById("planInfo");
   const payBtn = document.getElementById("payBtn");
 
-  // ================== LOAD CONTEXT ==================
-  let pendingPlanUser = JSON.parse(localStorage.getItem("pendingPlanUser"));
-  const selectedPlan = JSON.parse(localStorage.getItem("selectedPlan"));
-  const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
+  /* ================== LOAD CONTEXT ================== */
+  const pendingRaw = localStorage.getItem("pendingPlanUser");
 
-  // fallback dari activeUser
-  if (!pendingPlanUser) {
-    const activeUser = JSON.parse(localStorage.getItem("activeUser"));
-    if (activeUser) {
-      pendingPlanUser = activeUser;
-      localStorage.setItem("pendingPlanUser", JSON.stringify(activeUser));
-      console.warn("🛠 pendingPlanUser recovered from activeUser");
-    }
-  }
-
-  // ================== PAYMENT GUARD ==================
-  if (!pendingPlanUser || !selectedPlan) {
-    console.warn("⛔ Payment Guard blocked:", {
-      pendingPlanUser,
-      selectedPlan
-    });
-
-    document.body.innerHTML = `
-      <div style="padding:40px;text-align:center">
-        <h2>⚠️ No active registration found</h2>
-        <p>Please choose a plan first.</p>
-        <button onclick="location.href='plans.html'">
-          ⬅️ Back to Plans
-        </button>
-      </div>
-    `;
+  if (!pendingRaw) {
+    block("⚠️ Session not found", "Please register or choose a plan again.");
     return;
   }
 
-  // ================== DISPLAY PLAN ==================
+  let pendingUser;
+  try {
+    pendingUser = JSON.parse(pendingRaw);
+  } catch {
+    block("⚠️ Invalid session", "Please login again.");
+    return;
+  }
+
+  const { email, restoID, selectedPlan } = pendingUser;
+
+  if (!email || !selectedPlan) {
+    block("⚠️ Invalid payment context", "Please choose a plan again.");
+    return;
+  }
+
+  /* ================== LOAD USER FROM DB ================== */
+  const user = await getUserByEmail(email);
+
+  if (!user) {
+    alert("❌ User not found. Please login again.");
+    localStorage.removeItem("pendingPlanUser");
+    location.href = "login.html";
+    return;
+  }
+
+  /* ================== PLAN CONFIG ================== */
+  const now = new Date();
+  let expire = new Date(now);
+
+  if (selectedPlan === "monthly") {
+    expire.setMonth(expire.getMonth() + 1);
+  } else if (selectedPlan === "6month") {
+    expire.setMonth(expire.getMonth() + 6);
+  } else if (selectedPlan === "yearly") {
+    expire.setMonth(expire.getMonth() + 12);
+  } else {
+    block("⚠️ Unknown plan", "Please select a valid plan.");
+    return;
+  }
+
+  /* ================== DISPLAY ================== */
   planInfo.textContent = `
-📦 Plan Selected: ${selectedPlan.plan.toUpperCase()}
-⏱ Duration: ${selectedPlan.durationMonth} month(s)
+📦 Plan: ${selectedPlan.toUpperCase()}
+⏱ Expire: ${expire.toLocaleDateString()}
 Status: Pending Payment ❌
   `;
 
-  // ================== PAYMENT ACTION ==================
-  payBtn.addEventListener("click", () => {
+  /* ================== PAYMENT ACTION ================== */
+  payBtn.addEventListener("click", async () => {
+    try {
+      const updatedUser = {
+        ...user,
+        premiumPlan: selectedPlan,
+        premiumStart: now.toISOString(),
+        premiumExpire: expire.toISOString(),
+        subscriptionStatus: "active",
+        isPaid: true,
+        isExpired: false
+      };
 
-    const now = new Date();
-    const expire = new Date();
-    expire.setMonth(expire.getMonth() + selectedPlan.durationMonth);
+      await saveUser(updatedUser);
 
-    const index = users.findIndex(
-      u => u.email === pendingPlanUser.email
-    );
+      // cleanup payment state
+      localStorage.removeItem("pendingPlanUser");
+      localStorage.removeItem("selectedPlan");
 
-    if (index === -1) {
-      alert("❌ User not found. Please login again.");
+      alert("✅ Payment successful!\nPlease login to continue.");
       location.href = "login.html";
-      return;
+
+    } catch (err) {
+      console.error("❌ PAYMENT ERROR:", err);
+      alert("❌ Payment failed. Please try again.");
     }
-
-    // update user
-    users[index] = {
-      ...users[index],
-      premiumPlan: selectedPlan.plan,
-      premiumStart: now.toISOString(),
-      premiumExpire: expire.toISOString(),
-      isPaid: true,
-      isExpired: false
-    };
-
-    // 🔑 update activeUser supaya konsisten
-    localStorage.setItem(
-      "activeUser",
-      JSON.stringify(users[index])
-    );
-
-    localStorage.setItem("menuvaUsers", JSON.stringify(users));
-
-    // cleanup flow
-    localStorage.removeItem("pendingPlanUser");
-    localStorage.removeItem("selectedPlan");
-
-    alert("✅ Payment successful!");
-    location.href = "login.html";
   });
-
 });
+
+/* ================== BLOCK UI ================== */
+function block(title, message) {
+  document.body.innerHTML = `
+    <div style="padding:40px;text-align:center">
+      <h2>${title}</h2>
+      <p>${message}</p>
+      <button onclick="location.href='plans.html'">
+        ⬅️ Back to Plans
+      </button>
+    </div>
+  `;
+}
 </script>
 
 </body>
 </html>
-
