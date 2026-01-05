@@ -1,6 +1,6 @@
 // =====================================================
 // ORDERINE – REGISTER PAGE (ES MODULE)
-// FINAL – STABLE – READY FOR GITHUB PAGES
+// FINAL – CLEAR & SYNC WITH PLANS + AUTH-GUARD
 // =====================================================
 
 import {
@@ -22,13 +22,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const isValidEmail = (email) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  const generateTrialCode = (len = 8) => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let code = "";
-    for (let i = 0; i < len; i++) {
-      code += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return code;
+  const addDays = (date, days) =>
+    new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+
+  const addMonths = (date, months) => {
+    const d = new Date(date);
+    d.setMonth(d.getMonth() + months);
+    return d;
   };
 
   /* ================== REGISTER ================== */
@@ -50,44 +50,61 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    /* ===== DUPLICATE CHECK ===== */
-    const existingUser = await getUserByEmail(email);
-    if (existingUser) {
+    if (await getUserByEmail(email)) {
       errorMsg.textContent = "❌ Email sudah terdaftar";
       return;
     }
 
-    /* ===== ID GENERATION (❗ WAJIB ADA) ===== */
+    /* ================== ID ================== */
     const userID = generateID("USER");
     const restoID = generateID("RESTO");
 
-    /* ===== TRIAL 14 HARI ===== */
-    const now = new Date();
-    const trialExpire = new Date(
-      now.getTime() + 14 * 24 * 60 * 60 * 1000
+    /* ================== PLAN LOGIC (CORE FIX) ================== */
+    const selectedPlan = JSON.parse(
+      localStorage.getItem("selectedPlan")
     );
 
-    /* ===== USER OBJECT ===== */
+    const now = new Date();
+
+    let premiumPlan = "trial";
+    let subscriptionStatus = "trial";
+    let isPaid = false;
+    let premiumExpire = addDays(now, 14); // default TRIAL 14 hari
+
+    if (selectedPlan?.type) {
+      premiumPlan = selectedPlan.type;
+      subscriptionStatus = "pending";
+      isPaid = false;
+
+      if (selectedPlan.type === "monthly") {
+        premiumExpire = addMonths(now, 1);
+      } else if (selectedPlan.type === "6month") {
+        premiumExpire = addMonths(now, 6);
+      } else if (selectedPlan.type === "yearly") {
+        premiumExpire = addMonths(now, 12);
+      }
+    }
+
+    /* ================== USER OBJECT ================== */
     const newUser = {
       userID,
       email,
-      password,
+      password, // NOTE: plain text (hash later)
 
       role: "owner",
       restoID,
 
-      premiumPlan: "trial",
+      premiumPlan,
       premiumStart: now.toISOString(),
-      premiumExpire: trialExpire.toISOString(),
+      premiumExpire: premiumExpire.toISOString(),
 
-      subscriptionStatus: "trial",
-      isPaid: false,
+      subscriptionStatus,
+      isPaid,
 
-      trialCode: generateTrialCode(),
       createdAt: now.toISOString()
     };
 
-    /* ===== RESTO OBJECT ===== */
+    /* ================== RESTO OBJECT ================== */
     const resto = {
       restoID,
       ownerID: userID,
@@ -99,17 +116,20 @@ document.addEventListener("DOMContentLoaded", () => {
       await saveUser(newUser);
       await saveResto(resto);
 
-      // bersihkan state lama
-      localStorage.removeItem("pendingPlanUser");
-      localStorage.removeItem("selectedPlan");
+      // bersihkan state session lama
       localStorage.removeItem("activeUser");
       localStorage.removeItem("isLoggedIn");
 
-      alert(
-        "✅ Registrasi berhasil!\n\nTrial 14 hari aktif.\nSilakan login."
-      );
+      // ⚠️ JANGAN hapus selectedPlan di sini
+      // (dipakai di plans/payment flow)
 
-      location.href = "login.html";
+      if (premiumPlan === "trial") {
+        alert("✅ Trial 14 hari aktif.\nSilakan login.");
+        location.href = "login.html";
+      } else {
+        alert("🧾 Akun dibuat.\nSilakan lanjutkan pembayaran.");
+        location.href = "plans.html";
+      }
     } catch (err) {
       console.error("❌ Register error:", err);
       errorMsg.textContent = "❌ Gagal registrasi";
