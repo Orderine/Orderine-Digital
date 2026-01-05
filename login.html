@@ -184,7 +184,10 @@
   </button>
 </div>
 
-<script>
+<script type="module">
+// ==================== LOGIN SCRIPT (MODULE, INDEXEDDB) ====================
+import { getUserByEmail, setSession } from "./db.js";
+
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("loginForm");
   const errorMsg = document.getElementById("errorMsg");
@@ -192,99 +195,120 @@ document.addEventListener("DOMContentLoaded", () => {
   const passwordInput = document.getElementById("password");
   const toggleBtn = document.getElementById("togglePassword");
 
-  // ====== HIDE RENEW BY DEFAULT ======
+  // ==================== INIT UI ====================
   if (renewBtn) renewBtn.style.display = "none";
+  if (errorMsg) errorMsg.textContent = "";
 
-  // ====== PASSWORD TOGGLE ======
+  // ==================== TOGGLE PASSWORD ====================
   if (passwordInput && toggleBtn) {
     toggleBtn.addEventListener("click", () => {
-      const isHidden = passwordInput.type === "password";
-      passwordInput.type = isHidden ? "text" : "password";
-      toggleBtn.textContent = isHidden ? "🙈" : "👁️";
+      const hidden = passwordInput.type === "password";
+      passwordInput.type = hidden ? "text" : "password";
+      toggleBtn.textContent = hidden ? "🙈" : "👁️";
     });
   }
 
-  // ====== LOGIN HANDLER ======
-  form.addEventListener("submit", e => {
+  // ==================== LOGIN HANDLER ====================
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorMsg.textContent = "";
     if (renewBtn) renewBtn.style.display = "none";
 
-    const email = document.getElementById("email").value.trim().toLowerCase();
+    const email = document
+      .getElementById("email")
+      .value.trim()
+      .toLowerCase();
     const password = passwordInput.value;
 
-    const users = JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-    const user = users.find(u => u.email === email);
-
-    // ❌ EMAIL NOT FOUND
-    if (!user) {
-      errorMsg.textContent = "❌ Email not registered. Please register first.";
+    if (!email || !password) {
+      errorMsg.textContent = "❌ Email dan password wajib diisi.";
       return;
     }
 
-    // ❌ PASSWORD WRONG
-    if (String(user.password) !== String(password)) {
-      errorMsg.textContent = "❌ Email or password incorrect.";
-      return;
-    }
+    try {
+      // ==================== LOAD USER FROM INDEXEDDB ====================
+      const user = await getUserByEmail(email);
 
-    // ====== EXPIRE CHECK (UI ONLY) ======
-    const now = new Date();
-    const expireDate = user.premiumExpire ? new Date(user.premiumExpire) : null;
+      if (!user) {
+        errorMsg.textContent = "❌ Email tidak terdaftar.";
+        return;
+      }
 
-    if (expireDate && now > expireDate) {
-      errorMsg.textContent =
-        user.premiumPlan === "trial"
-          ? "❌ Free trial expired. Please upgrade to continue."
-          : "❌ Subscription expired. Please renew your plan.";
+      if (String(user.password) !== String(password)) {
+        errorMsg.textContent = "❌ Email atau password salah.";
+        return;
+      }
 
-      // 👉 SHOW RENEW BUTTON ONLY HERE
-      if (renewBtn) renewBtn.style.display = "block";
+      // ==================== SUBSCRIPTION CHECK (UI SIDE) ====================
+      const now = Date.now();
 
-      // simpan context untuk plans page
-      localStorage.setItem(
-        "pendingPlanUser",
-        JSON.stringify({
-          email: user.email,
-          restoID: user.restoID || user.uid || null,
-          role: user.role || "owner",
-          currentPlan: user.premiumPlan || null
-        })
-      );
-      return;
-    }
+      if (
+        user.premiumExpire &&
+        new Date(user.premiumExpire).getTime() < now
+      ) {
+        errorMsg.textContent =
+          user.premiumPlan === "trial"
+            ? "❌ Free trial telah berakhir."
+            : "❌ Subscription telah berakhir.";
 
-    // ====== LOGIN SUCCESS ======
-    localStorage.setItem("isLoggedIn", "true");
+        if (renewBtn) renewBtn.style.display = "block";
 
-    localStorage.setItem(
-      "activeUser",
-      JSON.stringify({
+        localStorage.setItem(
+          "pendingPlanUser",
+          JSON.stringify({
+            email: user.email,
+            restoID: user.restoID,
+            role: user.role,
+            currentPlan: user.premiumPlan || null
+          })
+        );
+
+        return;
+      }
+
+      // ==================== SET SESSION (SINGLE SOURCE) ====================
+      await setSession({
         email: user.email,
-        restoID: user.restoID || user.uid || null,
         role: user.role || "owner",
+        restoID: user.restoID,
 
+        // permissions / admin
+        adminType: user.adminType || null,
+        permissions: user.permissions || [],
+
+        // subscription
         premiumPlan: user.premiumPlan || null,
         premiumExpire: user.premiumExpire || null,
         subscriptionStatus: user.subscriptionStatus || null,
         isPaid: user.isPaid === true
-      })
-    );
+      });
 
-    localStorage.removeItem("pendingPlanUser");
+      localStorage.removeItem("pendingPlanUser");
 
-    window.location.href = "admin.html";
+      // ==================== REDIRECT ====================
+      if (user.role === "owner") {
+        location.replace("admin.html");
+      } else {
+        location.replace("recievers.html");
+      }
+
+    } catch (err) {
+      console.error("🛑 LOGIN ERROR:", err);
+      errorMsg.textContent =
+        "❌ Terjadi kesalahan saat login. Coba refresh halaman.";
+    }
   });
 });
 
-// ====== RENEW BUTTON ======
-function goToPlans() {
-  window.location.href = "plans.html";
-}
+// ==================== RENEW BUTTON ====================
+window.goToPlans = function () {
+  location.href = "plans.html";
+};
 </script>
 
 </body>
 </html>
+
 
 
 
