@@ -1,6 +1,6 @@
 // =====================================================
 // ORDERINE – REGISTER PAGE (ES MODULE)
-// FINAL VERSION – READY FOR GITHUB
+// FINAL – STABLE – READY FOR GITHUB PAGES
 // =====================================================
 
 import {
@@ -10,7 +10,6 @@ import {
   generateID
 } from "./db.js";
 
-/* ================== DOM READY ================== */
 document.addEventListener("DOMContentLoaded", () => {
   const registerForm = document.getElementById("registerForm");
   const errorMsg = document.getElementById("errorMsg");
@@ -25,9 +24,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const generateTrialCode = (len = 8) => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    return Array.from({ length: len }, () =>
-      chars[Math.floor(Math.random() * chars.length)]
-    ).join("");
+    let code = "";
+    for (let i = 0; i < len; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return code;
   };
 
   /* ================== REGISTER ================== */
@@ -35,11 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     errorMsg.textContent = "";
 
-    const email = document
-      .getElementById("email")
-      .value.trim()
-      .toLowerCase();
-
+    const email = document.getElementById("email").value.trim().toLowerCase();
     const password = passwordInput.value;
 
     /* ===== VALIDATION ===== */
@@ -56,50 +53,44 @@ document.addEventListener("DOMContentLoaded", () => {
     /* ===== DUPLICATE CHECK ===== */
     const existingUser = await getUserByEmail(email);
     if (existingUser) {
-      errorMsg.textContent =
-        "❌ Email sudah terdaftar. Silakan login.";
+      errorMsg.textContent = "❌ Email sudah terdaftar";
       return;
     }
 
-    /* ===== TRIAL / PLAN SETUP ===== */
-const now = new Date();
+    /* ===== ID GENERATION (❗ WAJIB ADA) ===== */
+    const userID = generateID("USER");
+    const restoID = generateID("RESTO");
 
-// ⏱ TRIAL 14 HARI
-const trialExpire = new Date(
-  now.getTime() + 14 * 24 * 60 * 60 * 1000
-);
+    /* ===== TRIAL 14 HARI ===== */
+    const now = new Date();
+    const trialExpire = new Date(
+      now.getTime() + 14 * 24 * 60 * 60 * 1000
+    );
 
-// ✅ WAJIB ADA (INI YANG TADI HILANG)
-const userID = generateID("USER");
-const restoID = generateID("RESTO");
+    /* ===== USER OBJECT ===== */
+    const newUser = {
+      userID,
+      email,
+      password,
 
-/* ===== USER OBJECT ===== */
-const newUser = {
-  userID,
-  email,
-  password,
+      role: "owner",
+      restoID,
 
-  role: "owner",
-  restoID,
+      premiumPlan: "trial",
+      premiumStart: now.toISOString(),
+      premiumExpire: trialExpire.toISOString(),
 
-  premiumPlan: "trial",
-  premiumStart: now.toISOString(),
-  premiumExpire: trialExpire.toISOString(),
+      subscriptionStatus: "trial",
+      isPaid: false,
 
-  subscriptionStatus: "trial",
-  isPaid: false,
-
-  adminType: null,
-  permissions: [],
-
-  trialCode: generateTrialCode(),
-  createdAt: now.toISOString()
-};
+      trialCode: generateTrialCode(),
+      createdAt: now.toISOString()
+    };
 
     /* ===== RESTO OBJECT ===== */
     const resto = {
       restoID,
-      ownerEmail: email,
+      ownerID: userID,
       restoName: "My Restaurant",
       createdAt: now.toISOString()
     };
@@ -108,26 +99,25 @@ const newUser = {
       await saveUser(newUser);
       await saveResto(resto);
 
-      // bersihkan state lama (penting)
+      // bersihkan state lama
       localStorage.removeItem("pendingPlanUser");
       localStorage.removeItem("selectedPlan");
       localStorage.removeItem("activeUser");
       localStorage.removeItem("isLoggedIn");
 
       alert(
-        "✅ Registrasi berhasil!\n\nFree trial aktif.\nSilakan login."
+        "✅ Registrasi berhasil!\n\nTrial 14 hari aktif.\nSilakan login."
       );
 
-      window.location.href = "login.html";
+      location.href = "login.html";
     } catch (err) {
       console.error("❌ Register error:", err);
-      errorMsg.textContent =
-        "❌ Gagal registrasi. Coba lagi.";
+      errorMsg.textContent = "❌ Gagal registrasi";
     }
   });
 
   /* ================== 👁️ TOGGLE PASSWORD ================== */
-  if (passwordInput && togglePassword) {
+  if (togglePassword) {
     togglePassword.addEventListener("click", () => {
       const show = passwordInput.type === "password";
       passwordInput.type = show ? "text" : "password";
@@ -135,5 +125,3 @@ const newUser = {
     });
   }
 });
-
-
