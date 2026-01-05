@@ -147,3 +147,4 @@ import { getSession, clearSession } from "./db.js";
     location.replace("plans.html");
   }
 })();
+
