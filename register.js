@@ -61,30 +61,19 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    /* ================== PLAN CONFIG ================== */
-const PLAN_DURATION = {
-  trial: 14,      // days
-  monthly: 30,
-  "6month": 180,
-  yearly: 365
-};
-
-const selectedPlan =
-  localStorage.getItem("selectedPlan") || "trial";
-
-if (!PLAN_DURATION[selectedPlan]) {
-  throw new Error("Invalid subscription plan");
-}
-
+    /* ===== TRIAL / PLAN SETUP ===== */
 const now = new Date();
-const expireDate = new Date(
-  now.getTime() +
-    PLAN_DURATION[selectedPlan] * 24 * 60 * 60 * 1000
+
+// ⏱ TRIAL 14 HARI
+const trialExpire = new Date(
+  now.getTime() + 14 * 24 * 60 * 60 * 1000
 );
 
-const isTrial = selectedPlan === "trial";
+// ✅ WAJIB ADA (INI YANG TADI HILANG)
+const userID = generateID("USER");
+const restoID = generateID("RESTO");
 
-/* ================== USER OBJECT ================== */
+/* ===== USER OBJECT ===== */
 const newUser = {
   userID,
   email,
@@ -93,17 +82,17 @@ const newUser = {
   role: "owner",
   restoID,
 
-  premiumPlan: selectedPlan,
+  premiumPlan: "trial",
   premiumStart: now.toISOString(),
-  premiumExpire: expireDate.toISOString(),
+  premiumExpire: trialExpire.toISOString(),
 
-  subscriptionStatus: isTrial ? "trial" : "active",
-  isPaid: !isTrial,
+  subscriptionStatus: "trial",
+  isPaid: false,
 
   adminType: null,
   permissions: [],
 
-  trialCode: isTrial ? generateTrialCode() : null,
+  trialCode: generateTrialCode(),
   createdAt: now.toISOString()
 };
 
@@ -146,4 +135,5 @@ const newUser = {
     });
   }
 });
+
 
