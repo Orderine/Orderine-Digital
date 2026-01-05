@@ -3,13 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="./db.js"></script>
-  <script src="./auth-guard.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  <script src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-sync.js"></script>
+  <!-- DB & AUTH -->
+<script type="module" src="./db.js"></script>
+<script type="module" src="./auth-guard.js"></script>
+
+<!-- IONICONS -->
+<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+<!-- CDN BIASA -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-sync.js"></script>
 
   <title>Admin Orderine</title>
   <style>
@@ -935,10 +940,25 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 </script>
 
- <script>
+<script type="module">
+/* ============================================================
+   ADMIN DB BRIDGE (MODULE)
+   Sinkron dengan db.js
+============================================================ */
+
+import {
+  DB_NAME,
+  DB_VERSION,
+  STORE_NAME,
+  dbInstance,
+  setDBInstance
+} from "./db.js";
+
 console.log("Admin Script Version: 2025-11-07-STABLE");
 
-  // Tes sederhana: apakah IndexedDB berfungsi di HP?
+/* ============================================================
+   1. TEST INDEXED DB SUPPORT
+============================================================ */
 if (!window.indexedDB) {
   alert("⚠️ Browser ini tidak mendukung IndexedDB!");
 } else {
@@ -954,9 +974,12 @@ if (!window.indexedDB) {
   };
 }
 
+/* ============================================================
+   2. INIT DB (SINGLE SOURCE OF TRUTH)
+============================================================ */
 let dbPromise = null;
 
-async function initDB() {
+export async function initDB() {
   if (dbInstance) return dbInstance;
   if (dbPromise) return dbPromise;
 
@@ -979,9 +1002,9 @@ async function initDB() {
     };
 
     request.onsuccess = (e) => {
-      dbInstance = e.target.result;
+      setDBInstance(e.target.result);
       dbPromise = null;
-      resolve(dbInstance);
+      resolve(e.target.result);
     };
 
     request.onerror = (e) => {
@@ -993,14 +1016,16 @@ async function initDB() {
   return dbPromise;
 }
 
-async function getDB() {
+export async function getDB() {
   if (dbInstance) return dbInstance;
   return await initDB();
 }
 
-   async function saveDataToDB(id, newData) {
+/* ============================================================
+   3. SAVE DATA
+============================================================ */
+export async function saveDataToDB(id, newData) {
   console.groupCollapsed("💾 [TRACE] saveDataToDB()");
-
   id = Number(id) || 1;
 
   const db = await getDB();
@@ -1013,19 +1038,16 @@ async function getDB() {
     req.onsuccess = () => {
       let oldData = req.result || buatDataDefault(id);
 
-    
-     // MERGE TANPA HILANG FIELD (VERSI FIX)
-const finalData = {
-  ...oldData,
-  ...newData,
-};
+      const finalData = {
+        ...oldData,
+        ...newData
+      };
 
-// Pastikan menuVoucher tidak corrupt
-if (!Array.isArray(finalData.menuVoucher)) {
-  finalData.menuVoucher = Array.isArray(oldData.menuVoucher)
-    ? oldData.menuVoucher
-    : [];
-}
+      if (!Array.isArray(finalData.menuVoucher)) {
+        finalData.menuVoucher = Array.isArray(oldData.menuVoucher)
+          ? oldData.menuVoucher
+          : [];
+      }
 
       const saveReq = store.put(finalData);
 
@@ -1050,7 +1072,10 @@ if (!Array.isArray(finalData.menuVoucher)) {
   });
 }
 
- async function loadDataFromDB(id = 1) {
+/* ============================================================
+   4. LOAD DATA
+============================================================ */
+export async function loadDataFromDB(id = 1) {
   console.groupCollapsed("📥 [TRACE] loadDataFromDB()");
   const db = await getDB();
   const tx = db.transaction(STORE_NAME, "readonly");
@@ -1062,22 +1087,9 @@ if (!Array.isArray(finalData.menuVoucher)) {
     req.onsuccess = () => {
       let r = req.result;
 
-      console.log("📦 Data dari DB (raw):", r);
+      if (r && !Array.isArray(r.rooms)) r.rooms = [];
+      if (!r) r = buatDataDefault(id);
 
-      // ======== DATA DEFAULT JIKA KOSONG ========
-      // Jika data ada tapi field rooms hilang → tambahkan
-if (r && !Array.isArray(r.rooms)) {
-  console.warn("⚠️ Field ROOMS hilang → tambahkan default");
-  r.rooms = [];
-}
-
-// Jika data sama sekali tidak ada → buat default penuh
-if (!r) {
-  console.warn("⚠️ DB kosong → create default");
-  r = buatDataDefault(id);
-}
-
-      // ======== FORCE STRUCTURE (ANTI HILANG) ========
       const safe = {
         id,
         restoId: r.restoId || "",
@@ -1107,7 +1119,9 @@ if (!r) {
   });
 }
 
-// ===== Helper internal: bikin struktur default =====
+/* ============================================================
+   5. DEFAULT DATA
+============================================================ */
 function buatDataDefault(id = 1) {
   return {
     id,
@@ -1116,15 +1130,16 @@ function buatDataDefault(id = 1) {
     restoAddress: "",
     restoPhone: "",
     menuData: [],
-    menuVoucher: [],   // 🔥 WAJIB ADA
+    menuVoucher: [],
     menuPromo: [],
     menu: [],
     rooms: [],
     nomorWaAdmin: [],
     flipbookRuanganImages: [],
-    flipbookMenuImages: [],
+    flipbookMenuImages: []
   };
 }
+
 
 // ====================== Variabel Global ======================
 let menuPromo = [];
@@ -2163,12 +2178,18 @@ async function clearDataDB() {
   });
 }
 </script>
-<script>
+<script type="module">
 /* ======================================================
    PATCH 5 – ADMIN INIT + TOGGLE + VOUCHER
    FINAL – SYNC WITH db.js & PATCH 1–4
 ====================================================== */
 
+/* 🔗 IMPORT DARI db.js */
+import {
+  loadDataFromDB,
+  saveDataToDB
+} from "./db.js";
+  
 let isLoadingFromDB = false;
 
 /* ===================== INIT ADMIN ===================== */
@@ -2612,5 +2633,6 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
