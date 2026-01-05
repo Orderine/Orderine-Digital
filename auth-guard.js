@@ -1,4 +1,4 @@
-// ==================== ORDERINE AUTH GUARD (MODULE VERSION) ====================
+// ==================== ORDERINE AUTH GUARD (FINAL) ====================
 import { getSession, clearSession } from "./db.js";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -27,18 +27,34 @@ async function runAuthGuard() {
 
     if (!activeUser || !activeUser.email) {
       console.warn("⛔ No active session");
-      return await redirectLogin();
+      return redirectLogin();
     }
 
     // ==================== BASIC VALIDATION ====================
     if (!["owner", "admin"].includes(activeUser.role)) {
       console.warn("⛔ Invalid role");
-      return await hardLogout();
+      return hardLogout();
     }
 
     if (!activeUser.restoID) {
       console.warn("⛔ Missing restoID");
-      return await hardLogout();
+      return hardLogout();
+    }
+
+    // ==================== SUBSCRIPTION CHECK (UNIVERSAL) ====================
+    if (!activeUser.premiumExpire) {
+      console.warn("⛔ Missing premiumExpire");
+      return forceRenew(activeUser, "❌ Subscription invalid.");
+    }
+
+    const now = Date.now();
+    const expire = new Date(activeUser.premiumExpire).getTime();
+
+    if (now > expire) {
+      return forceRenew(
+        activeUser,
+        "⏱ Subscription expired. Please renew to continue."
+      );
     }
 
     // ==================== OWNER ====================
@@ -72,34 +88,14 @@ async function runAuthGuard() {
 
     // ❌ Permission check
     const requiredPerms = PAGE_RULES[page];
-    const hasAccess = requiredPerms.some(p => permissions.includes(p));
+    const hasAccess = requiredPerms.some(p =>
+      permissions.includes(p)
+    );
 
     if (!hasAccess) {
       console.warn("⛔ Permission denied:", page);
       return safeRedirect();
     }
-
-    // ==================== SUBSCRIPTION CHECK ====================
-    const now = Date.now();
-
-    const isPaid =
-      activeUser.isPaid === true ||
-      activeUser.paymentStatus === "success" ||
-      activeUser.subscriptionStatus === "active";
-
-    if (isPaid) return;
-
-    // ===== TRIAL =====
-    if (
-      activeUser.premiumPlan === "trial" &&
-      activeUser.premiumExpire
-    ) {
-      const expire = new Date(activeUser.premiumExpire).getTime();
-      if (now <= expire) return;
-    }
-
-    // ❌ Expired / unpaid
-    return forceRenew(activeUser, "❌ Subscription inactive.");
 
   } catch (err) {
     console.error("🛑 AUTH GUARD CRASH:", err);
