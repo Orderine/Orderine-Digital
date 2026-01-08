@@ -931,7 +931,7 @@ const DB_VERSION = 11;
 let dbInstance = null;
 let dbPromise = null;
 
-/* ====================== INIT DB (SINGLE SOURCE) ====================== */
+/* ====================== INIT DB (AUTO UPGRADE SAFE) ====================== */
 async function initDB() {
   if (dbInstance) return dbInstance;
   if (dbPromise) return dbPromise;
@@ -941,22 +941,37 @@ async function initDB() {
 
     request.onupgradeneeded = (e) => {
       const db = e.target.result;
+      const oldVersion = e.oldVersion || 0;
 
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      console.log(`⬆️ DB upgrade: ${oldVersion} → ${DB_VERSION}`);
+
+      // versi awal
+      if (oldVersion < 1) {
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: "id" });
+        }
       }
 
-      if (!db.objectStoreNames.contains("ordersData")) {
-        db.createObjectStore("ordersData", {
-          keyPath: "id",
-          autoIncrement: true
-        });
+      // versi 11: ordersData
+      if (oldVersion < 11) {
+        if (!db.objectStoreNames.contains("ordersData")) {
+          db.createObjectStore("ordersData", {
+            keyPath: "id",
+            autoIncrement: true
+          });
+        }
       }
     };
 
     request.onsuccess = (e) => {
       dbInstance = e.target.result;
       dbPromise = null;
+
+      // 🔒 SAFETY NET: pastikan store ada
+      if (!dbInstance.objectStoreNames.contains("ordersData")) {
+        console.warn("⚠️ ordersData store missing after open");
+      }
+
       resolve(dbInstance);
     };
 
@@ -1005,15 +1020,28 @@ async function loadDataFromDB(id = 1) {
   });
 }
 
-/* ====================== SAVE DATA ====================== */
 async function saveDataToDB(id = 1, newData = {}) {
   const db = await initDB();
   id = Number(id) || 1;
 
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
+  // 🔒 Defensive: pastikan store ada
+  if (!db.objectStoreNames.contains(STORE_NAME)) {
+    console.error(`❌ ObjectStore "${STORE_NAME}" tidak ditemukan`);
+    return buatDataDefault(id);
+  }
 
+  return new Promise((resolve, reject) => {
+    let tx;
+
+    try {
+      tx = db.transaction(STORE_NAME, "readwrite");
+    } catch (err) {
+      console.error("❌ Gagal buat transaction:", err);
+      reject(err);
+      return;
+    }
+
+    const store = tx.objectStore(STORE_NAME);
     const getReq = store.get(id);
 
     getReq.onsuccess = () => {
@@ -1036,8 +1064,15 @@ async function saveDataToDB(id = 1, newData = {}) {
     };
 
     getReq.onerror = () => reject(getReq.error);
+
+    // 🔔 tangkap error transaction
+    tx.onerror = () => {
+      console.error("❌ Transaction error:", tx.error);
+      reject(tx.error);
+    };
   });
 }
+
 
 /* ====================== DEFAULT DATA ====================== */
 function buatDataDefault(id = 1) {
@@ -1834,18 +1869,43 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-/* ===================== SAFE LOAD ===================== */
+/* ===================== SAFE LOAD (ANTI-CRASH) ===================== */
+
 async function safeLoadDataFromDB(id = 1) {
   if (isLoadingFromDB) {
     console.warn("⚠️ loadDataFromDB masih berjalan, skip");
     return null;
   }
+
   isLoadingFromDB = true;
+
   try {
     if (typeof loadDataFromDB !== "function") {
       throw new Error("loadDataFromDB tidak tersedia");
     }
+
     return await loadDataFromDB(id);
+
+  } catch (err) {
+    console.error("❌ safeLoadDataFromDB fallback:", err);
+
+    // 🛟 fallback supaya admin tetap hidup
+    return {
+      id,
+      restoId: "",
+      namaRestoran: "",
+      restoAddress: "",
+      restoPhone: "",
+      logo: "",
+      menu: [],
+      menuPromo: [],
+      menuVoucher: [],
+      rooms: [],
+      nomorWaAdmin: [],
+      flipbookRuanganImages: [],
+      flipbookMenuImages: []
+    };
+
   } finally {
     isLoadingFromDB = false;
   }
@@ -2170,6 +2230,13 @@ async function cekOrderBaru() {
 
   try {
     const db = await initDB();
+
+    // 🔒 Defensive: cek store dulu
+    if (!db.objectStoreNames.contains("ordersData")) {
+      console.warn("⚠️ ordersData store belum ada, skip cekOrderBaru");
+      return;
+    }
+
     const tx = db.transaction("ordersData", "readonly");
     const store = tx.objectStore("ordersData");
 
@@ -2252,6 +2319,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
