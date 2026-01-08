@@ -1834,24 +1834,20 @@ window.addEventListener("error", e => {
   hideLoader();
 });
 </script>
-<script type="module">
+<script>
 /* ======================================================
    PATCH 11 – ADMIN INIT + TOGGLE + VOUCHER
-   FINAL – SYNC WITH db.js & PART 5–10
+   FINAL – NO MODULE / NO db.js
+   SYNC WITH PART 5–10 (IndexedDB INLINE)
 ====================================================== */
-
-import {
-  loadDataFromDB,
-  saveDataToDB
-} from "./db.js";
 
 /* ===================== STATE ===================== */
 let isLoadingFromDB = false;
 
 /* ===================== ADMIN INIT ===================== */
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 Admin Init (Patch 11)");
-  showLoader("Loading admin data...");
+  console.log("🚀 Admin Init (Patch 11 – NO MODULE)");
+  showLoader();
 
   const timeout = setTimeout(() => {
     console.warn("⚠️ Init timeout → force hide loader");
@@ -1895,6 +1891,9 @@ async function safeLoadDataFromDB(id = 1) {
   }
   isLoadingFromDB = true;
   try {
+    if (typeof loadDataFromDB !== "function") {
+      throw new Error("loadDataFromDB tidak tersedia");
+    }
     return await loadDataFromDB(id);
   } finally {
     isLoadingFromDB = false;
@@ -1907,6 +1906,11 @@ async function safeLoadData(data) {
     return;
   }
   window.sudahLoadData = true;
+
+  if (typeof loadData !== "function") {
+    throw new Error("loadData() tidak tersedia");
+  }
+
   await loadData(data);
 }
 
@@ -1999,6 +2003,8 @@ async function loadVouchers() {
   console.groupCollapsed("📥 Load Vouchers");
 
   const data = await loadDataFromDB(1);
+  if (!data) return [];
+
   if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
 
   const today = new Date();
@@ -2295,3 +2301,4 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
