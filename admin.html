@@ -915,94 +915,24 @@ function handleSubscriptionExpired() {
 </script>
 
 
-<script type="module">
-/* ============================================================
-   ADMIN DB BRIDGE (MODULE)
+<script>
+
+  /* ============================================================
+   ADMIN DB BRIDGE (NO MODULE – FINAL STABLE)
 ============================================================ */
 
-console.log("Admin Script Version: 2025-11-07-STABLE");
+console.log("🚀 Admin DB Bridge – FINAL NO MODULE");
 
-  /* ====================== GLOBAL DB HANDLER ===================== */
-let dbReady = null;
-
+/* ====================== GLOBAL DB ====================== */
 const DB_NAME = "MenuvaDB";
 const STORE_NAME = "menuvaData";
 const DB_VERSION = 10;
 
-/* ====================== INIT DB ===================== */
-function initDB() {
-  if (dbReady) return Promise.resolve(dbReady);
-
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onupgradeneeded = e => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id" });
-      }
-    };
-
-    request.onsuccess = () => {
-      dbReady = request.result;
-      resolve(dbReady);
-    };
-
-    request.onerror = () => reject(request.error);
-  });
-}
-
-/* ====================== LOAD ===================== */
-async function loadDataFromDB(id = 1) {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
-    const req = store.get(id);
-
-    req.onsuccess = () => resolve(req.result || {});
-    req.onerror = () => reject(req.error);
-  });
-}
-
-/* ====================== SAVE ===================== */
-async function saveDataToDB(id = 1, data = {}) {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    store.put({ id, ...data });
-
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-
-/* ============================================================
-   1. TEST INDEXED DB SUPPORT
-============================================================ */
-if (!window.indexedDB) {
-  alert("⚠️ Browser ini tidak mendukung IndexedDB!");
-} else {
-  const test = indexedDB.open("TestDB_Check");
-  test.onerror = (e) => {
-    console.error("❌ IndexedDB gagal dibuka:", e.target.error);
-    alert("IndexedDB gagal dibuka di HP! Kemungkinan masalah izin browser.");
-  };
-  test.onsuccess = () => {
-    console.log("✅ IndexedDB bisa dibuka di perangkat ini");
-    test.result.close();
-    indexedDB.deleteDatabase("TestDB_Check");
-  };
-}
-
-/* ============================================================
-   2. INIT DB (SINGLE SOURCE OF TRUTH)
-============================================================ */
+let dbInstance = null;
 let dbPromise = null;
 
-export async function initDB() {
+/* ====================== INIT DB (SINGLE SOURCE) ====================== */
+async function initDB() {
   if (dbInstance) return dbInstance;
   if (dbPromise) return dbPromise;
 
@@ -1025,12 +955,13 @@ export async function initDB() {
     };
 
     request.onsuccess = (e) => {
-      setDBInstance(e.target.result);
+      dbInstance = e.target.result;
       dbPromise = null;
-      resolve(e.target.result);
+      resolve(dbInstance);
     };
 
     request.onerror = (e) => {
+      console.error("❌ DB open error:", e.target.error);
       dbPromise = null;
       reject(e.target.error);
     };
@@ -1039,79 +970,17 @@ export async function initDB() {
   return dbPromise;
 }
 
-export async function getDB() {
-  if (dbInstance) return dbInstance;
-  return await initDB();
-}
-
-/* ============================================================
-   3. SAVE DATA
-============================================================ */
-export async function saveDataToDB(id, newData) {
-  console.groupCollapsed("💾 [TRACE] saveDataToDB()");
-  id = Number(id) || 1;
-
-  const db = await getDB();
-  const tx = db.transaction(STORE_NAME, "readwrite");
-  const store = tx.objectStore(STORE_NAME);
+/* ====================== LOAD DATA ====================== */
+async function loadDataFromDB(id = 1) {
+  const db = await initDB();
 
   return new Promise((resolve, reject) => {
-    const req = store.get(id);
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.get(Number(id) || 1);
 
     req.onsuccess = () => {
-      let oldData = req.result || buatDataDefault(id);
-
-      const finalData = {
-        ...oldData,
-        ...newData
-      };
-
-      if (!Array.isArray(finalData.menuVoucher)) {
-        finalData.menuVoucher = Array.isArray(oldData.menuVoucher)
-          ? oldData.menuVoucher
-          : [];
-      }
-
-      const saveReq = store.put(finalData);
-
-      saveReq.onsuccess = () => {
-        console.log("✅ Data tersimpan:", finalData);
-        console.groupEnd();
-        resolve(finalData);
-      };
-
-      saveReq.onerror = (e) => {
-        console.error("❌ Gagal simpan DB:", e.target.error);
-        console.groupEnd();
-        reject(e.target.error);
-      };
-    };
-
-    req.onerror = (e) => {
-      console.error("❌ Gagal membaca DB:", e.target.error);
-      console.groupEnd();
-      reject(e.target.error);
-    };
-  });
-}
-
-/* ============================================================
-   4. LOAD DATA
-============================================================ */
-export async function loadDataFromDB(id = 1) {
-  console.groupCollapsed("📥 [TRACE] loadDataFromDB()");
-  const db = await getDB();
-  const tx = db.transaction(STORE_NAME, "readonly");
-  const store = tx.objectStore(STORE_NAME);
-
-  return new Promise((resolve, reject) => {
-    const req = store.get(id);
-
-    req.onsuccess = () => {
-      let r = req.result;
-
-      if (r && !Array.isArray(r.rooms)) r.rooms = [];
-      if (!r) r = buatDataDefault(id);
+      let r = req.result || buatDataDefault(id);
 
       const safe = {
         id,
@@ -1129,22 +998,48 @@ export async function loadDataFromDB(id = 1) {
         flipbookMenuImages: Array.isArray(r.flipbookMenuImages) ? r.flipbookMenuImages : []
       };
 
-      console.log("📦 Data setelah SAFE-FIX:", safe);
-      console.groupEnd();
       resolve(safe);
     };
 
-    req.onerror = (e) => {
-      console.error("❌ Gagal load DB:", e.target.error);
-      console.groupEnd();
-      reject(e.target.error);
-    };
+    req.onerror = () => reject(req.error);
   });
 }
 
-/* ============================================================
-   5. DEFAULT DATA
-============================================================ */
+/* ====================== SAVE DATA ====================== */
+async function saveDataToDB(id = 1, newData = {}) {
+  const db = await initDB();
+  id = Number(id) || 1;
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+
+    const getReq = store.get(id);
+
+    getReq.onsuccess = () => {
+      const oldData = getReq.result || buatDataDefault(id);
+
+      const finalData = {
+        ...oldData,
+        ...newData,
+        id
+      };
+
+      if (!Array.isArray(finalData.menuVoucher)) {
+        finalData.menuVoucher = [];
+      }
+
+      const putReq = store.put(finalData);
+
+      putReq.onsuccess = () => resolve(finalData);
+      putReq.onerror = () => reject(putReq.error);
+    };
+
+    getReq.onerror = () => reject(getReq.error);
+  });
+}
+
+/* ====================== DEFAULT DATA ====================== */
 function buatDataDefault(id = 1) {
   return {
     id,
@@ -1152,16 +1047,24 @@ function buatDataDefault(id = 1) {
     namaRestoran: "",
     restoAddress: "",
     restoPhone: "",
-    menuData: [],
-    menuVoucher: [],
-    menuPromo: [],
+    logo: "",
     menu: [],
+    menuPromo: [],
+    menuVoucher: [],
     rooms: [],
     nomorWaAdmin: [],
     flipbookRuanganImages: [],
     flipbookMenuImages: []
   };
 }
+
+/* ====================== TEST SUPPORT ====================== */
+if (!window.indexedDB) {
+  alert("⚠️ Browser tidak mendukung IndexedDB");
+} else {
+  console.log("✅ IndexedDB supported");
+}
+
 
 /* ============================================================
    PART 7 – MENU & ROOM (MODULE SAFE VERSION)
@@ -2349,5 +2252,6 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
