@@ -2272,6 +2272,78 @@ function fallbackCopy(text) {
   i.remove();
   alert(`✅ Kode "${text}" disalin`);
 }
+
+  // ====================== CUSTOMER PAGE LINK ======================
+function openCustomerPage() {
+  try {
+    const restoId =
+      document.getElementById("restoId")?.value ||
+      localStorage.getItem("restoId");
+
+    if (!restoId) {
+      alert("❌ Resto ID tidak ditemukan");
+      return;
+    }
+
+    const customerUrl =
+      `${location.origin}/customer.html?resto=${encodeURIComponent(restoId)}`;
+
+    // 🔓 buka halaman customer
+    window.open(customerUrl, "_blank");
+
+    // ===== UI SHARE =====
+    const btnCopy = document.getElementById("btnSalinLink");
+    if (btnCopy) {
+      btnCopy.style.display = "inline-block";
+      btnCopy.onclick = () => {
+        navigator.clipboard.writeText(customerUrl);
+        alert("✅ Link customer berhasil disalin");
+      };
+    }
+
+    // ===== QR CODE =====
+    const qrBox = document.getElementById("qrcodePreview");
+    if (qrBox) {
+      qrBox.innerHTML = "";
+      new QRCode(qrBox, {
+        text: customerUrl,
+        width: 200,
+        height: 200
+      });
+    }
+
+    // ===== DOWNLOAD QR =====
+    const btnDownload = document.getElementById("btnDownloadQR");
+    if (btnDownload) {
+      btnDownload.style.display = "inline-block";
+      btnDownload.onclick = () => {
+        const img = qrBox.querySelector("img");
+        if (!img) return;
+        const a = document.createElement("a");
+        a.href = img.src;
+        a.download = `menuva-qr-${restoId}.png`;
+        a.click();
+      };
+    }
+
+    // ===== PRINT QR =====
+    const btnPrint = document.getElementById("btnPrintQR");
+    if (btnPrint) {
+      btnPrint.style.display = "inline-block";
+      btnPrint.onclick = () => {
+        const img = qrBox.querySelector("img");
+        if (!img) return;
+        const w = window.open("");
+        w.document.write(`<img src="${img.src}" style="width:300px"/>`);
+        w.print();
+        w.close();
+      };
+    }
+
+  } catch (err) {
+    console.error("❌ openCustomerPage error:", err);
+  }
+}
 </script>
 
 <script>
@@ -2448,18 +2520,5 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
