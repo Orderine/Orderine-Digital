@@ -1622,12 +1622,19 @@ async function resetData() {
 }
 
 async function backupData() {
-  if (!window.db) window.db = await initDB();
-  const tx = db.transaction(STORE_NAME, "readonly");
+  const db = await initDB();
+  const tx = db.transaction([STORE_NAME], "readonly");
   const store = tx.objectStore(STORE_NAME);
-  const req = store.getAll();
+
+  const req = store.get("app");
+
   req.onsuccess = () => {
-    const blob = new Blob([JSON.stringify(req.result || [], null, 2)], { type: "application/json" });
+    const data = req.result || {};
+    const blob = new Blob(
+      [JSON.stringify(data, null, 2)],
+      { type: "application/json" }
+    );
+
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `menuva-backup-${Date.now()}.json`;
@@ -1636,17 +1643,42 @@ async function backupData() {
   };
 }
 
-function restoreDataFromFile(e) {
+  function restoreDataFromFile(e) {
   const file = e.target.files[0];
   if (!file) return;
+
   const r = new FileReader();
   r.onload = async ev => {
-    let json = JSON.parse(ev.target.result);
-    if (Array.isArray(json)) json = json[0];
-    if (!json.restoId) json.restoId = json.restoPhone || `resto${Date.now()}`;
-    await saveDataToDB(Number(json.restoId) || 1, json);
-    location.reload();
+    try {
+      let json = JSON.parse(ev.target.result);
+
+      // backward compatibility (kalau file lama array)
+      if (Array.isArray(json)) json = json[0];
+
+      const db = await initDB();
+      const tx = db.transaction([STORE_NAME], "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+
+      store.put({
+        key: "app",   // ⬅️ WAJIB
+        ...json
+      });
+
+      tx.oncomplete = () => {
+        alert("✅ Restore berhasil");
+        location.reload();
+      };
+
+      tx.onerror = () => {
+        alert("❌ Restore gagal");
+      };
+
+    } catch (err) {
+      console.error("❌ Restore error:", err);
+      alert("❌ File backup tidak valid");
+    }
   };
+
   r.readAsText(file);
 }
 
@@ -2294,6 +2326,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
