@@ -923,66 +923,41 @@ function handleSubscriptionExpired() {
 
 console.log("🚀 Admin DB Bridge – FINAL NO MODULE");
 
-/* ====================== GLOBAL DB ====================== */
 const DB_NAME = "MenuvaDB";
 const STORE_NAME = "menuvaData";
-const DB_VERSION = 11;
+const DB_VERSION = 12; // ⬅️ NAIK (WAJIB LEBIH BESAR DARI SEBELUMNYA)
 
 let dbInstance = null;
 let dbPromise = null;
 
 /* ====================== INIT DB (AUTO UPGRADE SAFE) ====================== */
-async function initDB() {
-  if (dbInstance) return dbInstance;
-  if (dbPromise) return dbPromise;
+function initDB() {
+  if (dbReady) return dbReady;
 
-  dbPromise = new Promise((resolve, reject) => {
+  dbReady = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onupgradeneeded = (e) => {
+    request.onupgradeneeded = e => {
       const db = e.target.result;
-      const oldVersion = e.oldVersion || 0;
 
-      console.log(`⬆️ DB upgrade: ${oldVersion} → ${DB_VERSION}`);
+      console.log("⬆️ DB upgrade triggered");
 
-      // versi awal
-      if (oldVersion < 1) {
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, { keyPath: "id" });
-        }
-      }
-
-      // versi 11: ordersData
-      if (oldVersion < 11) {
-        if (!db.objectStoreNames.contains("ordersData")) {
-          db.createObjectStore("ordersData", {
-            keyPath: "id",
-            autoIncrement: true
-          });
-        }
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "key" });
+        console.log("✅ menuvaData store CREATED");
       }
     };
 
-    request.onsuccess = (e) => {
-      dbInstance = e.target.result;
-      dbPromise = null;
-
-     // 🔒 SAFETY NET: pastikan store ada
-if (!dbInstance.objectStoreNames.contains(STORE_NAME)) {
-  console.warn("⚠️ menuvaData store missing after open");
-}
-
-      resolve(dbInstance);
+    request.onsuccess = () => {
+      const db = request.result;
+      console.log("📂 DB stores:", [...db.objectStoreNames]);
+      resolve(db);
     };
 
-    request.onerror = (e) => {
-      console.error("❌ DB open error:", e.target.error);
-      dbPromise = null;
-      reject(e.target.error);
-    };
+    request.onerror = () => reject(request.error);
   });
 
-  return dbPromise;
+  return dbReady;
 }
 
 /* ====================== LOAD DATA ====================== */
@@ -2319,6 +2294,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
