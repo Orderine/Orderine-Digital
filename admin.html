@@ -923,12 +923,12 @@ function handleSubscriptionExpired() {
 
 console.log("🚀 Admin DB Bridge – FINAL NO MODULE");
 
+/* ====================== GLOBAL DB STATE ====================== */
+let dbReady = null;
+
 const DB_NAME = "MenuvaDB";
 const STORE_NAME = "menuvaData";
-const DB_VERSION = 12; // ⬅️ NAIK (WAJIB LEBIH BESAR DARI SEBELUMNYA)
-
-let dbInstance = null;
-let dbPromise = null;
+const DB_VERSION = 12;
 
 /* ====================== INIT DB (AUTO UPGRADE SAFE) ====================== */
 function initDB() {
@@ -959,7 +959,7 @@ function initDB() {
 
   return dbReady;
 }
-
+  
 /* ====================== LOAD DATA ====================== */
 async function loadDataFromDB(id = 1) {
   const db = await initDB();
@@ -2294,6 +2294,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
