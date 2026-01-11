@@ -2282,7 +2282,13 @@ function getCustomerUrl() {
 
   if (!restoId) return null;
 
-  return `${location.origin}/menu.html?resto=${encodeURIComponent(restoId)}`;
+  // ambil base path repo (aman untuk GitHub Pages & subfolder)
+  const base = location.pathname.substring(
+    0,
+    location.pathname.lastIndexOf("/")
+  );
+
+  return `${location.origin}${base}/menu.html?resto=${encodeURIComponent(restoId)}`;
 }
 
 function prepareCustomerShare() {
@@ -2527,6 +2533,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
