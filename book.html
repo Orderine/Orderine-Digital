@@ -67,7 +67,7 @@ img{max-width:100%;display:block}
    HEADER
    ===================== */
 header{
-  width:100%;
+  width:0%;
   background: linear-gradient(90deg,var(--brand-2),var(--brand-3));
   color:#fff;padding:16px;position:relative;box-shadow:var(--shadow);
 }
@@ -522,7 +522,7 @@ function initDB() {
   return new Promise((resolve, reject) => {
     if (db) return resolve(db);
 
-    const req = indexedDB.open(DB_NAME, 10);
+    const req = indexedDB.open(DB_NAME, 12);
     req.onerror = () => reject(req.error);
 
     req.onsuccess = (e) => {
@@ -1481,6 +1481,7 @@ window.addEventListener('DOMContentLoaded', initDarkMode);
 
 </body>
 </html>
+
 
 
 
