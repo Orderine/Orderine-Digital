@@ -1030,7 +1030,9 @@ async function saveDataToDB(id = 1, newData = {}) {
     }
 
     const store = tx.objectStore(STORE_NAME);
-    const getReq = store.get(id);
+
+    // 🔑 SELALU pakai key "app"
+    const getReq = store.get("app");
 
     getReq.onsuccess = () => {
       const oldData = getReq.result || buatDataDefault(id);
@@ -1038,9 +1040,13 @@ async function saveDataToDB(id = 1, newData = {}) {
       const finalData = {
         ...oldData,
         ...newData,
-        id
+        id,
+
+        // 🔥 PATCH KHUSUS VOUCHER
+        key: "app"
       };
 
+      // 🧼 Pastikan voucher valid
       if (!Array.isArray(finalData.menuVoucher)) {
         finalData.menuVoucher = [];
       }
@@ -1053,7 +1059,6 @@ async function saveDataToDB(id = 1, newData = {}) {
 
     getReq.onerror = () => reject(getReq.error);
 
-    // 🔔 tangkap error transaction
     tx.onerror = () => {
       console.error("❌ Transaction error:", tx.error);
       reject(tx.error);
@@ -2443,6 +2448,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
