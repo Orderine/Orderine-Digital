@@ -3,7 +3,7 @@
 // =====================================================
 
 const DB_NAME = "MenuvaDB";
-const DB_VERSION = 12;
+const DB_VERSION = 13;
 
 let dbInstance = null;
 let dbOpening = null; // prevent double open
@@ -247,4 +247,5 @@ export const db = {
     });
   }
 };
+
 
