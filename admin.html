@@ -2162,16 +2162,16 @@ function saveVoucher() {
 async function saveVoucherNew() {
   const codeEl = document.getElementById("voucherCode");
   const discEl = document.getElementById("voucherDiscount");
-  const expEl = document.getElementById("voucherExpiry");
+  const expEl  = document.getElementById("voucherExpiry");
 
   if (!codeEl || !discEl || !expEl) {
     alert("❌ Form voucher tidak lengkap");
     return;
   }
 
-  const code = codeEl.value.trim().toUpperCase();
+  const code     = codeEl.value.trim().toUpperCase();
   const discount = parseFloat(discEl.value);
-  const expiry = expEl.value;
+  const expiry   = expEl.value;
 
   if (!code || isNaN(discount) || !expiry) {
     alert("⚠️ Lengkapi data voucher");
@@ -2184,37 +2184,44 @@ async function saveVoucherNew() {
     return;
   }
 
+  // 🔹 ambil data app (TANPA key)
   const data = await loadDataFromDB(1);
-  if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
+  data.menuVoucher = Array.isArray(data.menuVoucher) ? data.menuVoucher : [];
 
+  const now = new Date().toISOString();
   const existing = data.menuVoucher.find(v => v.code === code);
+
   if (existing) {
-    existing.discount = discount;
-    existing.expiry = expiry;
-    existing.updatedAt = new Date().toISOString();
+    existing.discount  = discount;
+    existing.expiry    = expiry;
+    existing.updatedAt = now;
   } else {
     data.menuVoucher.push({
       id: crypto.randomUUID(),
       code,
       discount,
       expiry,
-      createdAt: new Date().toISOString()
+      createdAt: now
     });
   }
 
-  await saveDataToDB(1, data);
-  window.menuVoucher = data.menuVoucher;
+  // 🔥 SIMPAN DENGAN KEY
+  await saveDataToDB({
+    key: "app",
+    ...data
+  });
 
+  window.menuVoucher = [...data.menuVoucher];
   renderVoucher(window.menuVoucher);
 
   codeEl.value = "";
   discEl.value = "";
-  expEl.value = "";
+  expEl.value  = "";
 
   alert("✅ Voucher berhasil disimpan!");
 }
 
-/* ===================== VOUCHER UI ===================== */
+  /* ===================== VOUCHER UI ===================== */
 function renderVoucher(vouchers = []) {
   const box = document.getElementById("voucherPreview");
   if (!box) return;
@@ -2230,7 +2237,7 @@ function renderVoucher(vouchers = []) {
       <div class="voucher-item">
         <p>
           <strong>Kode:</strong> ${v.code}
-          <button onclick="copyVoucherCode('${v.code}')">📋</button>
+          <button type="button" onclick="copyVoucherCode('${v.code}')">📋</button>
         </p>
         <p>Diskon: ${v.discount}%</p>
         <p>Berlaku sampai: ${v.expiry}</p>
@@ -2436,6 +2443,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
