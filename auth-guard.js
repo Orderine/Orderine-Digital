@@ -133,3 +133,4 @@ async function forceRenew(user, message) {
   await clearSession();
   location.replace("plans.html");
 }
+
