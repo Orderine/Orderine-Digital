@@ -522,7 +522,7 @@ function initDB() {
   return new Promise((resolve, reject) => {
     if (db) return resolve(db);
 
-    const req = indexedDB.open(DB_NAME, 12);
+    const req = indexedDB.open(DB_NAME, 13);
     req.onerror = () => reject(req.error);
 
     req.onsuccess = (e) => {
@@ -1481,6 +1481,7 @@ window.addEventListener('DOMContentLoaded', initDarkMode);
 
 </body>
 </html>
+
 
 
 
