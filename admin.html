@@ -967,10 +967,10 @@ async function initDB() {
       dbInstance = e.target.result;
       dbPromise = null;
 
-      // 🔒 SAFETY NET: pastikan store ada
-      if (!dbInstance.objectStoreNames.contains("ordersData")) {
-        console.warn("⚠️ ordersData store missing after open");
-      }
+     // 🔒 SAFETY NET: pastikan store ada
+if (!dbInstance.objectStoreNames.contains(STORE_NAME)) {
+  console.warn("⚠️ menuvaData store missing after open");
+}
 
       resolve(dbInstance);
     };
@@ -2238,7 +2238,7 @@ async function cekOrderBaru() {
 }
 
     const tx = db.transaction([STORE_NAME], "readonly");
-    const store = tx.objectStore("STORE_NAME");
+    const store = tx.objectStore(STORE_NAME);
 
     const orders = await idbGetAll(store);
     const newCount = orders.filter(o => o.status === "new").length;
@@ -2319,6 +2319,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
