@@ -1541,7 +1541,7 @@ async function simpanData() {
   }
 }
 
-// ====================== LOAD DATA ======================
+// ====================== LOAD DATA (DEFENSIVE FIX) ======================
 let sudahLoadData = false;
 
 async function loadData(data) {
@@ -1557,28 +1557,54 @@ async function loadData(data) {
       if (el) el.value = val || "";
     };
 
+    // ===== BASIC INFO =====
     safeSet("namaRestoran", data.namaRestoran);
     safeSet("restoAddress", data.restoAddress);
     safeSet("restoPhone", data.restoPhone);
 
-    if (data.logo && document.getElementById("previewLogo")) {
-      document.getElementById("previewLogo").src = data.logo;
+    if (data.logo) {
+      const img = document.getElementById("previewLogo");
+      if (img) img.src = data.logo;
     }
 
-    // ===== WA =====
+    // ===== WA ADMIN =====
     const waContainer = document.getElementById("nomorWaContainer");
     if (waContainer) {
       waContainer.innerHTML = "";
-      (Array.isArray(data.nomorWaAdmin) ? data.nomorWaAdmin : []).forEach(num => tambahNomorWa(num));
+      const waList = Array.isArray(data.nomorWaAdmin) ? data.nomorWaAdmin : [];
+
+      waList.forEach(num => {
+        try {
+          if (typeof tambahNomorWa === "function") {
+            tambahNomorWa(num);
+          } else {
+            console.warn("⚠️ tambahNomorWa tidak tersedia, skip:", num);
+          }
+        } catch (e) {
+          console.warn("⚠️ gagal render WA:", e);
+        }
+      });
     }
 
     // ===== PROMO =====
     window.menuPromo = Array.isArray(data.menuPromo) ? [...data.menuPromo] : [];
-    if (typeof renderPromoUI === "function") renderPromoUI();
+    if (typeof renderPromoUI === "function") {
+      try {
+        renderPromoUI();
+      } catch (e) {
+        console.warn("⚠️ renderPromoUI error:", e);
+      }
+    }
 
     // ===== VOUCHER =====
     window.menuVoucher = Array.isArray(data.menuVoucher) ? [...data.menuVoucher] : [];
-    if (typeof renderVoucher === "function") renderVoucher(window.menuVoucher);
+    if (typeof renderVoucher === "function") {
+      try {
+        renderVoucher(window.menuVoucher);
+      } catch (e) {
+        console.warn("⚠️ renderVoucher error:", e);
+      }
+    }
 
     // ===== MENU =====
     const containers = {
@@ -1587,30 +1613,75 @@ async function loadData(data) {
       drink: "menuDrinkContainer",
       special: "menuSpecialContainer"
     };
+
     Object.values(containers).forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = "";
     });
 
     const menuList = Array.isArray(data.menu) ? data.menu : [];
-    menuList.forEach(m => tambahMenu(m.kategori || "food", m.nama || "", m.harga || "", m.image || ""));
+    menuList.forEach(m => {
+      try {
+        if (typeof tambahMenu === "function") {
+          tambahMenu(
+            m.kategori || "food",
+            m.nama || "",
+            m.harga || "",
+            m.image || ""
+          );
+        } else {
+          console.warn("⚠️ tambahMenu tidak tersedia, skip:", m);
+        }
+      } catch (e) {
+        console.warn("⚠️ gagal render menu:", e);
+      }
+    });
 
     // ===== FLIPBOOK =====
-    window.flipbookRuanganImages = Array.isArray(data.flipbookRuanganImages) ? [...data.flipbookRuanganImages] : [];
-    window.flipbookMenuImages = Array.isArray(data.flipbookMenuImages) ? [...data.flipbookMenuImages] : [];
+    window.flipbookRuanganImages = Array.isArray(data.flipbookRuanganImages)
+      ? [...data.flipbookRuanganImages]
+      : [];
+
+    window.flipbookMenuImages = Array.isArray(data.flipbookMenuImages)
+      ? [...data.flipbookMenuImages]
+      : [];
 
     if (typeof renderImagePreview === "function") {
       setTimeout(() => {
-        window.flipbookRuanganImages.forEach(src => src && renderImagePreview("ruangan", src));
-        window.flipbookMenuImages.forEach(src => src && renderImagePreview("menu", src));
+        window.flipbookRuanganImages.forEach(src => {
+          try {
+            src && renderImagePreview("ruangan", src);
+          } catch (e) {
+            console.warn("⚠️ flipbook ruangan error:", e);
+          }
+        });
+
+        window.flipbookMenuImages.forEach(src => {
+          try {
+            src && renderImagePreview("menu", src);
+          } catch (e) {
+            console.warn("⚠️ flipbook menu error:", e);
+          }
+        });
       }, 200);
+    } else {
+      console.warn("⚠️ renderImagePreview tidak tersedia");
     }
 
     // ===== ROOM =====
-    if (Array.isArray(data.rooms) && typeof restoreRoomFromData === "function") {
-      restoreRoomFromData(data.rooms);
+    if (Array.isArray(data.rooms)) {
+      if (typeof restoreRoomFromData === "function") {
+        try {
+          restoreRoomFromData(data.rooms);
+        } catch (e) {
+          console.warn("⚠️ restoreRoomFromData error:", e);
+        }
+      } else {
+        console.warn("⚠️ restoreRoomFromData tidak tersedia");
+      }
     }
 
+    // ===== RESTO ID =====
     let restoIdEl = document.getElementById("restoId");
     if (!restoIdEl) {
       restoIdEl = document.createElement("input");
@@ -1620,8 +1691,10 @@ async function loadData(data) {
     }
     restoIdEl.value = data.restoId || data.restoPhone || "";
 
+    console.log("✅ loadData selesai tanpa crash");
+
   } catch (err) {
-    console.error("❌ loadData gagal:", err);
+    console.error("❌ loadData gagal (fatal):", err);
   } finally {
     hideLoader();
   }
@@ -2339,6 +2412,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
