@@ -1541,6 +1541,30 @@ async function simpanData() {
   }
 }
 
+  // ====================== WA ADMIN HANDLER ======================
+function tambahNomorWa(value = "") {
+  const container = document.getElementById("nomorWaContainer");
+  if (!container) return;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "wa-item";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "wa-input";
+  input.placeholder = "Nomor WhatsApp Admin";
+  input.value = value;
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = "❌";
+  btn.onclick = () => wrapper.remove();
+
+  wrapper.appendChild(input);
+  wrapper.appendChild(btn);
+  container.appendChild(wrapper);
+}
+
 // ====================== LOAD DATA (DEFENSIVE FIX) ======================
 let sudahLoadData = false;
 
@@ -2412,6 +2436,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
