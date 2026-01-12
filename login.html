@@ -283,6 +283,29 @@ document.addEventListener("DOMContentLoaded", () => {
         isPaid: user.isPaid === true
       });
 
+            // ==================== MIRROR CURRENT USER (STEP 2 FIX) ====================
+      const sessionUser = {
+        email: user.email,
+        role: user.role || "owner",
+        restoID: user.restoID,
+
+        adminType: user.adminType || null,
+        permissions: user.permissions || [],
+
+        premiumPlan: user.premiumPlan || null,
+        premiumExpire: user.premiumExpire || null,
+        subscriptionStatus: user.subscriptionStatus || null,
+        isPaid: user.isPaid === true
+      };
+
+      // global runtime (auth-guard / admin.html)
+      window.currentUser = sessionUser;
+
+      // persistent fallback (reload / new tab)
+      localStorage.setItem("activeUser", JSON.stringify(sessionUser));
+      localStorage.setItem("isLoggedIn", "true");
+
+
       localStorage.removeItem("pendingPlanUser");
 
       // ==================== REDIRECT ====================
@@ -308,7 +331,3 @@ window.goToPlans = function () {
 
 </body>
 </html>
-
-
-
-
