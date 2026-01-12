@@ -103,6 +103,27 @@ async function runAuthGuard() {
   }
 }
 
+// ==================== MIRROR CURRENT USER (STEP 3 FIX) ====================
+window.currentUser = {
+  email: activeUser.email,
+  role: activeUser.role,
+  restoID: activeUser.restoID,
+
+  adminType: activeUser.adminType || null,
+  permissions: activeUser.permissions || [],
+
+  premiumPlan: activeUser.premiumPlan || null,
+  premiumExpire: activeUser.premiumExpire || null,
+  subscriptionStatus: activeUser.subscriptionStatus || null,
+  isPaid: activeUser.isPaid === true
+};
+
+// optional safety (new tab / reload)
+localStorage.setItem(
+  "activeUser",
+  JSON.stringify(window.currentUser)
+);
+
 // ==================== HELPERS ====================
 async function redirectLogin() {
   await clearSession();
@@ -133,4 +154,5 @@ async function forceRenew(user, message) {
   await clearSession();
   location.replace("plans.html");
 }
+
 
