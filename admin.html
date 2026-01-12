@@ -1057,130 +1057,27 @@ async function loadMenuvaData() {
   });
 }
 
-
-/* ====================== LOAD DATA (FIXED) ====================== */
-async function loadDataFromDB() {
-  const db = await initDB();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction([STORE_NAME], "readonly");
-    const store = tx.objectStore(STORE_NAME);
-
-    const req = store.get("app"); // ⬅️ KUNCI GLOBAL
-
-    req.onsuccess = () => {
-      let r = req.result;
-
-      if (!r) {
-        console.warn("⚠️ DB kosong, pakai data default");
-        r = buatDataDefault(1);
-      }
-
-      // 🧹 buang key internal IndexedDB
-      if (r.key) {
-        const { key, ...clean } = r;
-        r = clean;
-      }
-
-      const safe = {
-        id: r.id || 1,
-        restoId: r.restoId || "",
-        namaRestoran: r.namaRestoran || "",
-        restoAddress: r.restoAddress || "",
-        restoPhone: r.restoPhone || "",
-        logo: r.logo || "",
-        menu: Array.isArray(r.menu) ? r.menu : [],
-        menuPromo: Array.isArray(r.menuPromo) ? r.menuPromo : [],
-        menuVoucher: Array.isArray(r.menuVoucher) ? r.menuVoucher : [],
-        rooms: Array.isArray(r.rooms) ? r.rooms : [],
-        nomorWaAdmin: Array.isArray(r.nomorWaAdmin) ? r.nomorWaAdmin : [],
-        flipbookRuanganImages: Array.isArray(r.flipbookRuanganImages) ? r.flipbookRuanganImages : [],
-        flipbookMenuImages: Array.isArray(r.flipbookMenuImages) ? r.flipbookMenuImages : []
-      };
-
-      console.log("📦 DATA LOADED (SAFE):", safe);
-      resolve(safe);
-    };
-
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function saveDataToDB(id = 1, newData = {}) {
-  const db = await initDB();
-  id = Number(id) || 1;
-
-  // 🔒 Defensive: pastikan store ada
-  if (!db.objectStoreNames.contains(STORE_NAME)) {
-    console.error(`❌ ObjectStore "${STORE_NAME}" tidak ditemukan`);
-    return buatDataDefault(id);
-  }
-
-  return new Promise((resolve, reject) => {
-    let tx;
-
-    try {
-      tx = db.transaction(STORE_NAME, "readwrite");
-    } catch (err) {
-      console.error("❌ Gagal buat transaction:", err);
-      reject(err);
-      return;
-    }
-
-    const store = tx.objectStore(STORE_NAME);
-
-    // 🔑 SELALU pakai key "app"
-    const getReq = store.get("app");
-
-    getReq.onsuccess = () => {
-      const oldData = getReq.result || buatDataDefault(id);
-
-      const finalData = {
-        ...oldData,
-        ...newData,
-        id,
-
-        // 🔥 PATCH KHUSUS VOUCHER
-        key: "app"
-      };
-
-      // 🧼 Pastikan voucher valid
-      if (!Array.isArray(finalData.menuVoucher)) {
-        finalData.menuVoucher = [];
-      }
-
-      const putReq = store.put(finalData);
-
-      putReq.onsuccess = () => resolve(finalData);
-      putReq.onerror = () => reject(putReq.error);
-    };
-
-    getReq.onerror = () => reject(getReq.error);
-
-    tx.onerror = () => {
-      console.error("❌ Transaction error:", tx.error);
-      reject(tx.error);
-    };
-  });
-}
-
-
 /* ====================== DEFAULT DATA ====================== */
-function buatDataDefault(id = 1) {
+function buatDataDefault(restoId = "") {
   return {
-    id,
-    restoId: "",
+    id: restoId,
+    restoId,
+    ownerId: "",
+
     namaRestoran: "",
     restoAddress: "",
     restoPhone: "",
     logo: "",
+
     menu: [],
     menuPromo: [],
     menuVoucher: [],
     rooms: [],
     nomorWaAdmin: [],
     flipbookRuanganImages: [],
-    flipbookMenuImages: []
+    flipbookMenuImages: [],
+
+    updatedAt: Date.now()
   };
 }
 
@@ -1714,7 +1611,6 @@ function tambahNomorWa(value = "") {
 
 
 // ====================== LOAD DATA (DEFENSIVE FIX) ======================
-let sudahLoadData = false;
 
 async function loadData(data) {
   if (sudahLoadData) return;
@@ -1872,6 +1768,41 @@ async function loadData(data) {
   }
 }
 
+  // ====================== LOAD MENUVA DATA (FINAL) ======================
+async function loadMenuvaData() {
+  try {
+    if (!window.activeUser || !window.activeUser.restoID) {
+      console.warn("⚠️ activeUser belum siap, skip load");
+      return;
+    }
+
+    const restoId = window.activeUser.restoID;
+
+    const db = await initDB();
+    const tx = db.transaction("menuvaData", "readonly");
+    const store = tx.objectStore("menuvaData");
+
+    const req = store.get(restoId);
+
+    const data = await new Promise((resolve, reject) => {
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+
+    if (!data) {
+      console.warn("⚠️ menuvaData kosong → pakai default");
+      return;
+    }
+
+    console.log("📦 menuvaData LOADED:", data);
+
+    await loadData(data); // 🔥 reuse renderer lama
+
+  } catch (err) {
+    console.error("❌ loadMenuvaData fatal error:", err);
+  }
+}
+
 // ====================== RESET / BACKUP / RESTORE ======================
 async function resetData() {
   if (!confirm("Are you sure you want to delete all data?")) return;
@@ -1880,64 +1811,84 @@ async function resetData() {
 }
 
 async function backupData() {
-  const db = await initDB();
-  const tx = db.transaction([STORE_NAME], "readonly");
-  const store = tx.objectStore(STORE_NAME);
+  try {
+    if (!window.activeUser || !window.activeUser.restoID) {
+      alert("❌ Session tidak valid");
+      return;
+    }
 
-  const req = store.get("app");
+    const restoId = window.activeUser.restoID;
+    const db = await initDB();
 
-  req.onsuccess = () => {
-    const data = req.result || {};
-    const blob = new Blob(
-      [JSON.stringify(data, null, 2)],
-      { type: "application/json" }
-    );
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.get(restoId);
 
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `menuva-backup-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
+    req.onsuccess = () => {
+      const data = req.result;
+
+      if (!data) {
+        alert("⚠️ Tidak ada data untuk dibackup");
+        return;
+      }
+
+      const blob = new Blob(
+        [JSON.stringify(data, null, 2)],
+        { type: "application/json" }
+      );
+
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `menuva-backup-${restoId}-${Date.now()}.json`;
+      a.click();
+
+      URL.revokeObjectURL(a.href);
+      console.log("📦 Backup sukses:", data);
+    };
+
+    req.onerror = () => {
+      console.error("❌ Backup gagal:", req.error);
+      alert("❌ Backup gagal");
+    };
+
+  } catch (err) {
+    console.error("❌ backupData error:", err);
+    alert("❌ Backup error");
+  }
 }
 
-  function restoreDataFromFile(e) {
-  const file = e.target.files[0];
+async function restoreDataFromFile(event) {
+  const file = event.target.files[0];
   if (!file) return;
 
-  const r = new FileReader();
-  r.onload = async ev => {
-    try {
-      let json = JSON.parse(ev.target.result);
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
 
-      // backward compatibility (kalau file lama array)
-      if (Array.isArray(json)) json = json[0];
-
-      const db = await initDB();
-      const tx = db.transaction([STORE_NAME], "readwrite");
-      const store = tx.objectStore(STORE_NAME);
-
-      store.put({
-        key: "app",   // ⬅️ WAJIB
-        ...json
-      });
-
-      tx.oncomplete = () => {
-        alert("✅ Restore berhasil");
-        location.reload();
-      };
-
-      tx.onerror = () => {
-        alert("❌ Restore gagal");
-      };
-
-    } catch (err) {
-      console.error("❌ Restore error:", err);
-      alert("❌ File backup tidak valid");
+    if (!window.activeUser || data.restoId !== window.activeUser.restoID) {
+      alert("❌ Data backup tidak cocok dengan akun login");
+      return;
     }
-  };
 
-  r.readAsText(file);
+    const db = await initDB();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+
+    const req = store.put(data);
+
+    req.onsuccess = () => {
+      alert("✅ Data berhasil direstore");
+      location.reload();
+    };
+
+    req.onerror = () => {
+      alert("❌ Restore gagal");
+    };
+
+  } catch (err) {
+    console.error("❌ restore error:", err);
+    alert("❌ File backup tidak valid");
+  }
 }
 
 // ====================== SHARE & QR ======================
@@ -2086,109 +2037,45 @@ window.addEventListener("error", e => {
 });
 </script>
 <script>
-/* ======================================================
-   PATCH 11 – ADMIN INIT + TOGGLE + VOUCHER
-   FINAL – NO MODULE / NO db.js
-   SYNC WITH PART 5–10 (IndexedDB INLINE)
-====================================================== */
 
-/* ===================== STATE ===================== */
-let isLoadingFromDB = false;
-
-/* ===================== ADMIN INIT ===================== */
+/* ===================== ADMIN INIT (FINAL) ===================== */
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 Admin Init (Patch 11 – NO MODULE)");
+  console.log("🚀 Admin Init (FINAL)");
   showLoader();
 
-  const timeout = setTimeout(() => {
-    console.warn("⚠️ Init timeout → force hide loader");
-    hideLoader();
-  }, 10000);
-
   try {
-    /* ===== LOAD DATA UTAMA ===== */
-    const data = await safeLoadDataFromDB(1);
-    if (data) {
-      await safeLoadData(data);
-      console.log("📦 Data loaded:", data);
-    } else {
-      console.warn("⚠️ DB kosong / belum ada data");
+    // ================= WAIT AUTH =================
+    let wait = 0;
+    while (!window.activeUser && wait < 20) {
+      await new Promise(r => setTimeout(r, 100));
+      wait++;
     }
 
-    /* ===== INIT TOGGLES ===== */
-    await initAllToggles();
+    if (!window.activeUser) {
+      throw new Error("activeUser tidak tersedia");
+    }
 
-    /* ===== FIXED BAR OFFSET ===== */
+    // ================= LOAD DATA =================
+    await loadMenuvaData();   // 🔥 SATU-SATUNYA LOAD DATA
+
+    // ================= INIT UI =================
+    await initAllToggles?.();
+
+    // ================= FIXED BAR =================
     const fixbar = document.querySelector(".fixed-bar");
     if (fixbar) {
       document.body.style.paddingBottom = fixbar.offsetHeight + "px";
     }
 
     console.log("✅ Admin siap digunakan");
+
   } catch (err) {
-    console.error("❌ Init admin error:", err);
-    alert("❌ Gagal memuat admin panel. Silakan refresh.");
+    console.error("❌ Admin Init fatal:", err);
+    alert("❌ Gagal memuat admin panel. Silakan login ulang.");
   } finally {
-    clearTimeout(timeout);
     hideLoader();
   }
 });
-
-/* ===================== SAFE LOAD (ANTI-CRASH) ===================== */
-
-async function safeLoadDataFromDB(id = 1) {
-  if (isLoadingFromDB) {
-    console.warn("⚠️ loadDataFromDB masih berjalan, skip");
-    return null;
-  }
-
-  isLoadingFromDB = true;
-
-  try {
-    if (typeof loadDataFromDB !== "function") {
-      throw new Error("loadDataFromDB tidak tersedia");
-    }
-
-    return await loadDataFromDB(id);
-
-  } catch (err) {
-    console.error("❌ safeLoadDataFromDB fallback:", err);
-
-    // 🛟 fallback supaya admin tetap hidup
-    return {
-      id,
-      restoId: "",
-      namaRestoran: "",
-      restoAddress: "",
-      restoPhone: "",
-      logo: "",
-      menu: [],
-      menuPromo: [],
-      menuVoucher: [],
-      rooms: [],
-      nomorWaAdmin: [],
-      flipbookRuanganImages: [],
-      flipbookMenuImages: []
-    };
-
-  } finally {
-    isLoadingFromDB = false;
-  }
-}
-
-async function safeLoadData(data) {
-  if (window.sudahLoadData) {
-    console.warn("⚠️ loadData sudah pernah dijalankan");
-    return;
-  }
-  window.sudahLoadData = true;
-
-  if (typeof loadData !== "function") {
-    throw new Error("loadData() tidak tersedia");
-  }
-
-  await loadData(data);
-}
 
 /* ===================== TOGGLE MASTER ===================== */
 async function initAllToggles() {
@@ -2675,6 +2562,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
