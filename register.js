@@ -35,13 +35,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const raw = localStorage.getItem("selectedPlan");
     if (!raw) return null;
 
-    // JSON
     try {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.type) return parsed;
     } catch {}
 
-    // string fallback
     if (typeof raw === "string") {
       return { type: raw };
     }
@@ -84,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let premiumPlan = "trial";
     let subscriptionStatus = "trial";
     let isPaid = false;
-    let premiumExpire = addDays(now, 14); // TRIAL 14 HARI
+    let premiumExpire = addDays(now, 14);
 
     if (selectedPlan?.type) {
       premiumPlan = selectedPlan.type;
@@ -104,18 +102,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const newUser = {
       userID,
       email,
-      password, // NOTE: plaintext (hash later)
-
+      password,
       role: "owner",
       restoID,
-
       premiumPlan,
       premiumStart: now.toISOString(),
       premiumExpire: premiumExpire.toISOString(),
-
       subscriptionStatus,
       isPaid,
-
       createdAt: now.toISOString()
     };
 
@@ -131,30 +125,44 @@ document.addEventListener("DOMContentLoaded", () => {
       await saveUser(newUser);
       await saveResto(resto);
 
-      // bersihkan session lama (WAJIB)
+      /* =================================================
+         🔐 STEP 2 PATCH — LOCK EMAIL OWNER SESSION
+         ================================================= */
+      localStorage.setItem(
+        "currentUser",
+        JSON.stringify({
+          userID,
+          email,
+          role: "owner",
+          restoID,
+          from: "register",
+          createdAt: now.toISOString()
+        })
+      );
+
+      // bersihkan session lama
       localStorage.removeItem("activeUser");
       localStorage.removeItem("isLoggedIn");
 
-     if (premiumPlan === "trial") {
-  alert("✅ Trial 14 hari aktif.\nSilakan login.");
-  location.href = "login.html";
-} else {
-  // ⬇️ INI KUNCI UTAMANYA
-  localStorage.setItem(
-    "pendingPlanUser",
-    JSON.stringify({
-      userID,
-      email,
-      restoID,
-      role: "owner",
-      selectedPlan: premiumPlan,
-      createdAt: now.toISOString()
-    })
-  );
+      if (premiumPlan === "trial") {
+        alert("✅ Trial 14 hari aktif.\nSilakan login.");
+        location.href = "login.html";
+      } else {
+        localStorage.setItem(
+          "pendingPlanUser",
+          JSON.stringify({
+            userID,
+            email,
+            restoID,
+            role: "owner",
+            selectedPlan: premiumPlan,
+            createdAt: now.toISOString()
+          })
+        );
 
-  alert("🧾 Akun berhasil dibuat.\nSilakan lanjutkan pembayaran.");
-  location.href = "plans.html";
-}
+        alert("🧾 Akun berhasil dibuat.\nSilakan lanjutkan pembayaran.");
+        location.href = "plans.html";
+      }
 
     } catch (err) {
       console.error("❌ Register error:", err);
@@ -171,4 +179,3 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
-
