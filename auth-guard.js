@@ -1,4 +1,9 @@
 // ==================== ORDERINE AUTH GUARD (FINAL) ====================
+
+// GLOBAL AUTH STATE
+window.activeUser = null;
+window.currentUser = null;
+
 import { getSession, clearSession } from "./db.js";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -23,7 +28,8 @@ async function runAuthGuard() {
     }
 
     // ==================== LOAD SESSION ====================
-    const activeUser = await getSession();
+    window.activeUser = await getSession();
+    const activeUser = window.activeUser; // alias lokal (AMAN)
 
     if (!activeUser || !activeUser.email) {
       console.warn("⛔ No active session");
@@ -41,7 +47,7 @@ async function runAuthGuard() {
       return hardLogout();
     }
 
-    // ==================== SUBSCRIPTION CHECK (UNIVERSAL) ====================
+    // ==================== SUBSCRIPTION CHECK ====================
     if (!activeUser.premiumExpire) {
       console.warn("⛔ Missing premiumExpire");
       return forceRenew(activeUser, "❌ Subscription invalid.");
@@ -57,6 +63,29 @@ async function runAuthGuard() {
       );
     }
 
+    // ==================== MIRROR CURRENT USER (STEP 1 FIX) ====================
+    window.currentUser = {
+      email: activeUser.email,
+      role: activeUser.role,
+      restoID: activeUser.restoID,
+
+      adminType: activeUser.adminType || null,
+      permissions: Array.isArray(activeUser.permissions)
+        ? activeUser.permissions
+        : [],
+
+      premiumPlan: activeUser.premiumPlan || null,
+      premiumExpire: activeUser.premiumExpire || null,
+      subscriptionStatus: activeUser.subscriptionStatus || null,
+      isPaid: activeUser.isPaid === true
+    };
+
+    // optional safety (reload / new tab)
+    localStorage.setItem(
+      "activeUser",
+      JSON.stringify(window.currentUser)
+    );
+
     // ==================== OWNER ====================
     if (activeUser.role === "owner") {
       console.log("👑 Owner access granted");
@@ -64,9 +93,7 @@ async function runAuthGuard() {
     }
 
     // ==================== ADMIN ====================
-    const permissions = Array.isArray(activeUser.permissions)
-      ? activeUser.permissions
-      : [];
+    const permissions = window.currentUser.permissions;
 
     const PAGE_RULES = {
       "recievers.html": ["orders", "payments"],
@@ -103,27 +130,6 @@ async function runAuthGuard() {
   }
 }
 
-// ==================== MIRROR CURRENT USER (STEP 3 FIX) ====================
-window.currentUser = {
-  email: activeUser.email,
-  role: activeUser.role,
-  restoID: activeUser.restoID,
-
-  adminType: activeUser.adminType || null,
-  permissions: activeUser.permissions || [],
-
-  premiumPlan: activeUser.premiumPlan || null,
-  premiumExpire: activeUser.premiumExpire || null,
-  subscriptionStatus: activeUser.subscriptionStatus || null,
-  isPaid: activeUser.isPaid === true
-};
-
-// optional safety (new tab / reload)
-localStorage.setItem(
-  "activeUser",
-  JSON.stringify(window.currentUser)
-);
-
 // ==================== HELPERS ====================
 async function redirectLogin() {
   await clearSession();
@@ -154,5 +160,3 @@ async function forceRenew(user, message) {
   await clearSession();
   location.replace("plans.html");
 }
-
-
