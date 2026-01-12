@@ -1517,19 +1517,40 @@ async function simpanData() {
   try {
     showLoader();
 
-    const namaRestoran = document.getElementById("namaRestoran")?.value.trim() || "";
-    const restoAddress = document.getElementById("restoAddress")?.value.trim() || "";
-    const restoPhone = document.getElementById("restoPhone")?.value.trim() || "";
-    const logo = document.getElementById("previewLogo")?.src || "";
-    const nomorWaAdmin = Array.from(document.querySelectorAll(".nomor-wa")).map(i => i.value).filter(Boolean);
+    // ==================== AUTH SAFETY ====================
+    if (!window.activeUser || !window.activeUser.restoID) {
+      alert("❌ Session tidak valid. Silakan login ulang.");
+      console.error("❌ activeUser missing in simpanData");
+      return;
+    }
+
+    const ownerId = window.activeUser.email;
+    const restoId = window.activeUser.restoID;
+
+    // ==================== FORM DATA ====================
+    const namaRestoran =
+      document.getElementById("namaRestoran")?.value.trim() || "";
+
+    const restoAddress =
+      document.getElementById("restoAddress")?.value.trim() || "";
+
+    const restoPhone =
+      document.getElementById("restoPhone")?.value.trim() || "";
+
+    const logo =
+      document.getElementById("previewLogo")?.src || "";
+
+    const nomorWaAdmin = Array
+      .from(document.querySelectorAll(".nomor-wa"))
+      .map(i => i.value.trim())
+      .filter(Boolean);
 
     if (!restoPhone) {
       alert("❌ Please input the restaurant phone number before saving!");
       return;
     }
 
-    const restoId = document.getElementById("restoId")?.value || restoPhone;
-
+    // ==================== MENU & ROOM ====================
     const menuData = [
       ...(typeof ambilMenu === "function" ? ambilMenu("menuFoodContainer") : []),
       ...(typeof ambilMenu === "function" ? ambilMenu("menuSnackContainer") : []),
@@ -1537,24 +1558,38 @@ async function simpanData() {
       ...(typeof ambilMenu === "function" ? ambilMenu("menuSpecialContainer") : [])
     ];
 
+    // ==================== FINAL DATA ====================
     const data = {
+      id: restoId,                 // PRIMARY KEY
       restoId,
+      ownerId,                     // 🔥 IKAT KE USER LOGIN
       namaRestoran,
       restoAddress,
       restoPhone,
       logo,
       nomorWaAdmin,
+
       menuPromo: Array.isArray(window.menuPromo) ? window.menuPromo : [],
       menuVoucher: Array.isArray(window.menuVoucher) ? window.menuVoucher : [],
-      flipbookRuanganImages: Array.isArray(window.flipbookRuanganImages) ? window.flipbookRuanganImages : [],
-      flipbookMenuImages: Array.isArray(window.flipbookMenuImages) ? window.flipbookMenuImages : [],
+      flipbookRuanganImages: Array.isArray(window.flipbookRuanganImages)
+        ? window.flipbookRuanganImages
+        : [],
+      flipbookMenuImages: Array.isArray(window.flipbookMenuImages)
+        ? window.flipbookMenuImages
+        : [],
+
       menu: menuData,
-      rooms: typeof ambilSemuaRoom === "function" ? ambilSemuaRoom() : []
+      rooms: typeof ambilSemuaRoom === "function"
+        ? ambilSemuaRoom()
+        : [],
+
+      updatedAt: Date.now()
     };
 
-    const dbId = Number(restoId) || 1;
-    await saveDataToDB(dbId, data);
+    // ==================== SAVE ====================
+    await saveDataToDB(restoId, data);
 
+    // ==================== LOCAL UI STATE ====================
     let restoIdEl = document.getElementById("restoId");
     if (!restoIdEl) {
       restoIdEl = document.createElement("input");
@@ -1564,16 +1599,20 @@ async function simpanData() {
     }
     restoIdEl.value = restoId;
 
-    updateShareUI();
-    prepareCustomerShare();
+    updateShareUI?.();
+    prepareCustomerShare?.();
+
+    console.log("✅ Data berhasil disimpan:", data);
     alert("✅ All data saved successfully!");
+
   } catch (err) {
-    console.error(err);
+    console.error("❌ simpanData error:", err);
     alert("❌ Failed to save data.");
   } finally {
     hideLoader();
   }
 }
+
 
   // ====================== WA ADMIN HANDLER ======================
 function tambahNomorWa(value = "") {
@@ -2562,6 +2601,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
