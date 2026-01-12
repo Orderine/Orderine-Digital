@@ -1319,11 +1319,6 @@ window.uploadGambarRoom = uploadGambarRoom;
 window.hapusGambarRoom = hapusGambarRoom;
 window.hapusFormRoom = hapusFormRoom;
 
-
-/* ============================================================
-   PART 8 – IMAGE / FLIPBOOK / HELPER (MODULE SAFE)
-============================================================ */
-
 /* ============================================================
    IMAGE RESIZE HELPER
 ============================================================ */
@@ -1557,7 +1552,7 @@ function tambahNomorWa(value = "") {
 
   const input = document.createElement("input");
   input.type = "text";
-  input.className = "wa-input";
+  input.className = "nomor-wa"; // 🔥 FIX DISINI
   input.placeholder = "Nomor WhatsApp Admin";
   input.value = value;
 
@@ -1570,6 +1565,7 @@ function tambahNomorWa(value = "") {
   wrapper.appendChild(btn);
   container.appendChild(wrapper);
 }
+
 
 // ====================== LOAD DATA (DEFENSIVE FIX) ======================
 let sudahLoadData = false;
@@ -2533,6 +2529,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
