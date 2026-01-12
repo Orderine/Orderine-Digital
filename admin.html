@@ -1577,7 +1577,7 @@ window.flipbookRuanganImages = window.flipbookRuanganImages || [];
 window.flipbookMenuImages = window.flipbookMenuImages || [];
 window.menuVoucher = window.menuVoucher || [];
 
-// ====================== SIMPAN (form -> DB) ======================
+// ====================== SIMPAN (ADMIN → MENUVA DATA) ======================
 async function simpanData() {
   try {
     showLoader();
@@ -1590,7 +1590,7 @@ async function simpanData() {
     }
 
     const ownerId = window.activeUser.email;
-    const restoId = window.activeUser.restoID;
+    const restoId = window.activeUser.restoID; // 🔑 FINAL PRIMARY KEY
 
     // ==================== FORM DATA ====================
     const namaRestoran =
@@ -1611,7 +1611,7 @@ async function simpanData() {
       .filter(Boolean);
 
     if (!restoPhone) {
-      alert("❌ Please input the restaurant phone number before saving!");
+      alert("❌ Nomor telepon resto wajib diisi!");
       return;
     }
 
@@ -1623,11 +1623,12 @@ async function simpanData() {
       ...(typeof ambilMenu === "function" ? ambilMenu("menuSpecialContainer") : [])
     ];
 
-    // ==================== FINAL DATA ====================
-    const data = {
-      id: restoId,                 // PRIMARY KEY
+    // ==================== FINAL PAYLOAD ====================
+    const payload = {
+      id: restoId,           // 🔑 PRIMARY KEY (WAJIB ADA)
       restoId,
-      ownerId,                     // 🔥 IKAT KE USER LOGIN
+      ownerId,
+
       namaRestoran,
       restoAddress,
       restoPhone,
@@ -1651,8 +1652,17 @@ async function simpanData() {
       updatedAt: Date.now()
     };
 
-    // ==================== SAVE ====================
-    await saveDataToDB(restoId, data);
+    // ==================== SAVE TO menuvaData ====================
+    const db = await initDB();
+    const tx = db.transaction("menuvaData", "readwrite");
+    const store = tx.objectStore("menuvaData");
+
+    store.put(payload);
+
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
 
     // ==================== LOCAL UI STATE ====================
     let restoIdEl = document.getElementById("restoId");
@@ -1667,17 +1677,16 @@ async function simpanData() {
     updateShareUI?.();
     prepareCustomerShare?.();
 
-    console.log("✅ Data berhasil disimpan:", data);
-    alert("✅ All data saved successfully!");
+    console.log("💾 menuvaData SAVED:", payload);
+    alert("✅ Semua data berhasil disimpan!");
 
   } catch (err) {
     console.error("❌ simpanData error:", err);
-    alert("❌ Failed to save data.");
+    alert("❌ Gagal menyimpan data.");
   } finally {
     hideLoader();
   }
 }
-
 
   // ====================== WA ADMIN HANDLER ======================
 function tambahNomorWa(value = "") {
@@ -2666,6 +2675,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
