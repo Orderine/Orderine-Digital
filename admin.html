@@ -997,6 +997,67 @@ function initDB() {
   return dbReady;
 }
 
+  /* ====================== MENUVA DATA DB HELPERS ====================== */
+
+// 🔐 Ambil ID aktif (AMAN)
+function getActiveRestoId() {
+  if (window.activeUser?.restoId) return window.activeUser.restoId;
+  console.warn("⚠️ activeUser.restoId tidak ada, pakai id=1");
+  return 1;
+}
+
+/* ====================== SAVE ====================== */
+async function saveMenuvaData(data) {
+  const db = await initDB();
+  const id = getActiveRestoId();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+
+    const payload = {
+      ...data,
+      id,               // 🔑 KEY UTAMA
+      updatedAt: Date.now()
+    };
+
+    const req = store.put(payload);
+
+    req.onsuccess = () => {
+      console.log("💾 menuvaData SAVED:", payload);
+      resolve(payload);
+    };
+
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* ====================== LOAD ====================== */
+async function loadMenuvaData() {
+  const db = await initDB();
+  const id = getActiveRestoId();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+
+    const req = store.get(id);
+
+    req.onsuccess = () => {
+      if (!req.result) {
+        console.warn("⚠️ menuvaData kosong, pakai default");
+        resolve(null);
+      } else {
+        console.log("📦 menuvaData LOADED:", req.result);
+        resolve(req.result);
+      }
+    };
+
+    req.onerror = () => reject(req.error);
+  });
+}
+
+
 /* ====================== LOAD DATA (FIXED) ====================== */
 async function loadDataFromDB() {
   const db = await initDB();
@@ -2605,6 +2666,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
