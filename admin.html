@@ -2340,36 +2340,43 @@ async function initVoucherToggle() {
   }
 }
 
-/* ===================== VOUCHER CORE ===================== */
-async function loadVouchers() {
+/* ===================== VOUCHER CORE (FINAL & SYNC) ===================== */
+function loadVouchers() {
   console.groupCollapsed("📥 Load Vouchers");
 
-  const data = await loadDataFromDB(1);
-  if (!data) return [];
-
-  if (!Array.isArray(data.menuVoucher)) data.menuVoucher = [];
+  // ================= SOURCE OF TRUTH =================
+  let list = Array.isArray(window.menuVoucher)
+    ? [...window.menuVoucher]
+    : [];
 
   const today = new Date();
-  const active = data.menuVoucher.filter(v => {
+
+  // ================= FILTER EXPIRED =================
+  const active = list.filter(v => {
     const exp = new Date(v.expiry);
     return isFinite(exp) && exp >= today;
   });
 
-  // auto cleanup expired
-  if (active.length !== data.menuVoucher.length) {
-    data.menuVoucher = active;
-    await saveDataToDB(1, data);
+  // ================= AUTO CLEANUP (IN-MEMORY) =================
+  if (active.length !== list.length) {
+    console.log("🧹 Voucher expired dibersihkan:", list.length - active.length);
+    window.menuVoucher = active;
   }
 
-  window.menuVoucher = active;
-  renderVoucher(active);
+  // ================= RENDER =================
+  if (typeof renderVoucher === "function") {
+    renderVoucher(active);
+  } else {
+    console.warn("⚠️ renderVoucher tidak tersedia");
+  }
 
   console.groupEnd();
   return active;
 }
 
-/* ===================== SAVE VOUCHER (PATCHED) ===================== */
-window.saveVoucher = async function () {
+
+/* ===================== SAVE VOUCHER (FINAL - SYNC WITH simpanData) ===================== */
+window.saveVoucher = function () {
   try {
     console.log("💾 saveVoucher clicked");
 
@@ -2397,33 +2404,20 @@ window.saveVoucher = async function () {
       return;
     }
 
-    // ================= SAFE LOAD DATA =================
-    if (!window.activeUser?.restoID) {
-      alert("❌ Session tidak valid");
-      return;
-    }
-
-    const restoId = window.activeUser.restoID;
-
-    const data = await loadDataFromDB(restoId);
-    if (!data) {
-      alert("❌ Data resto tidak ditemukan");
-      return;
-    }
-
-    data.menuVoucher = Array.isArray(data.menuVoucher)
-      ? data.menuVoucher
+    // ==================== SOURCE OF TRUTH ====================
+    window.menuVoucher = Array.isArray(window.menuVoucher)
+      ? window.menuVoucher
       : [];
 
     const now = new Date().toISOString();
-    const existing = data.menuVoucher.find(v => v.code === code);
+    const existing = window.menuVoucher.find(v => v.code === code);
 
     if (existing) {
       existing.discount  = discount;
       existing.expiry    = expiry;
       existing.updatedAt = now;
     } else {
-      data.menuVoucher.push({
+      window.menuVoucher.push({
         id: crypto.randomUUID(),
         code,
         discount,
@@ -2432,23 +2426,17 @@ window.saveVoucher = async function () {
       });
     }
 
-    // ================= SAVE =================
-    await saveDataToDB({
-      key: restoId,
-      ...data
-    });
-
-    window.menuVoucher = [...data.menuVoucher];
-
+    // ==================== RENDER ONLY ====================
     if (typeof renderVoucher === "function") {
       renderVoucher(window.menuVoucher);
     }
 
+    // ==================== RESET FORM ====================
     codeEl.value = "";
     discEl.value = "";
     expEl.value  = "";
 
-    alert("✅ Voucher berhasil disimpan!");
+    alert("✅ Voucher disimpan (klik SAVE ALL untuk permanen)");
 
   } catch (err) {
     console.error("❌ saveVoucher fatal:", err);
@@ -2762,27 +2750,4 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
