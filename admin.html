@@ -1806,14 +1806,16 @@ if (Array.isArray(data.menuPromo)) {
 }
 
     // ===== VOUCHER =====
-    window.menuVoucher = Array.isArray(data.menuVoucher) ? [...data.menuVoucher] : [];
-    if (typeof renderVoucher === "function") {
-      try {
-        renderVoucher(window.menuVoucher);
-      } catch (e) {
-        console.warn("⚠️ renderVoucher error:", e);
-      }
-    }
+window.menuVoucher = Array.isArray(data.menuVoucher) ? [...data.menuVoucher] : [];
+
+const voucherBox = document.getElementById("voucherContainerBox");
+if (voucherBox && typeof renderVoucher === "function") {
+  try {
+    renderVoucher(window.menuVoucher);
+  } catch (e) {
+    console.warn("⚠️ renderVoucher error (di-skip):", e);
+  }
+}
 
     // ===== MENU =====
     const containers = {
@@ -2273,35 +2275,69 @@ function initRoomToggle() {
   };
 }
 
-/* ===================== VOUCHER TOGGLE ===================== */
+/* ===================== VOUCHER TOGGLE (PATCHED & SAFE) ===================== */
 async function initVoucherToggle() {
-  const toggle = document.getElementById("toggleVoucherPage");
-  const form = document.getElementById("voucherForm");
-  const box = document.getElementById("voucherContainerBox");
+  try {
+    const toggle = document.getElementById("toggleVoucherPage");
+    const form = document.getElementById("voucherForm");
+    const box = document.getElementById("voucherContainerBox");
 
-  if (!toggle || !form || !box) return;
+    if (!toggle || !form || !box) {
+      console.warn("⚠️ Voucher toggle element tidak lengkap, skip");
+      return;
+    }
 
-  const user = JSON.parse(localStorage.getItem("activeUser") || "null");
-  const plan = user?.premiumPlan || localStorage.getItem("user_plan");
+    const user = JSON.parse(localStorage.getItem("activeUser") || "null");
+    const plan = user?.premiumPlan || localStorage.getItem("user_plan");
 
-  // 🚫 Monthly plan tidak boleh voucher
-  if (plan === "monthly") {
-    box.style.display = "none";
-    toggle.checked = false;
-    return;
+    // 🚫 Monthly plan tidak boleh voucher
+    if (plan === "monthly") {
+      box.style.display = "none";
+      toggle.checked = false;
+      localStorage.setItem("page_voucher", "false");
+      return;
+    }
+
+    const enabled = localStorage.getItem("page_voucher") === "true";
+    toggle.checked = enabled;
+    form.style.display = enabled ? "block" : "none";
+
+    // ================= SAFE CHANGE HANDLER =================
+    toggle.onchange = async e => {
+      const isOn = !!e.target.checked;
+      localStorage.setItem("page_voucher", String(isOn));
+      form.style.display = isOn ? "block" : "none";
+
+      if (isOn) {
+        try {
+          if (typeof loadVouchers === "function") {
+            await loadVouchers();
+          } else {
+            console.warn("⚠️ loadVouchers tidak tersedia");
+          }
+        } catch (err) {
+          console.warn("⚠️ loadVouchers error (toggle):", err);
+        }
+      }
+    };
+
+    // ================= SAFE INIT LOAD =================
+    if (enabled) {
+      try {
+        if (typeof loadVouchers === "function") {
+          await loadVouchers();
+        } else {
+          console.warn("⚠️ loadVouchers tidak tersedia");
+        }
+      } catch (err) {
+        console.warn("⚠️ loadVouchers error (init):", err);
+      }
+    }
+
+  } catch (fatal) {
+    // 🔥 ABSOLUTE FIREWALL
+    console.error("❌ initVoucherToggle fatal error (DI-SHIELD):", fatal);
   }
-
-  const enabled = localStorage.getItem("page_voucher") === "true";
-  toggle.checked = enabled;
-  form.style.display = enabled ? "block" : "none";
-
-  toggle.onchange = async e => {
-    localStorage.setItem("page_voucher", e.target.checked);
-    form.style.display = e.target.checked ? "block" : "none";
-    if (e.target.checked) await loadVouchers();
-  };
-
-  if (enabled) await loadVouchers();
 }
 
 /* ===================== VOUCHER CORE ===================== */
@@ -2705,6 +2741,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
