@@ -1483,34 +1483,38 @@ function renderImagePreview(tipe, url) {
   if (container) container.appendChild(wrapper);
 }
 
-function tambahGambar(tipe) {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.style.display = "none";
+function tambahGambar(type) {
+  const inputId =
+    type === "ruangan" ? "flipbookRuanganUpload" : "flipbookMenuUpload";
 
-  input.onchange = async e => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const input = document.getElementById(inputId);
+  if (!input) return;
 
-    try {
-      const url = await resizeIfNeeded(file);
-      renderImagePreview(tipe, url);
+  // reset value supaya bisa upload file yg sama lagi
+  input.value = "";
 
-      if (tipe === "ruangan") {
-        flipbookRuanganImages.push(url);
-      } else {
-        flipbookMenuImages.push(url);
+  input.onchange = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    for (const file of files) {
+      try {
+        const resized = await resizeIfNeeded(file);
+
+        if (type === "ruangan") {
+          window.flipbookRuanganImages.push(resized);
+          renderImagePreview("ruangan", resized);
+        } else {
+          window.flipbookMenuImages.push(resized);
+          renderImagePreview("menu", resized);
+        }
+      } catch (err) {
+        console.error("❌ resize image gagal:", err);
       }
-    } catch (err) {
-      console.error("Flipbook image error:", err);
-      alert("❌ Gagal memproses gambar.");
     }
   };
 
-  document.body.appendChild(input);
   input.click();
-  document.body.removeChild(input);
 }
 
 /* ============================================================
@@ -2699,6 +2703,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
