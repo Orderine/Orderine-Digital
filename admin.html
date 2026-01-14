@@ -1098,6 +1098,31 @@ let menuPromo = [];
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
+  /* ================= PROMO HANDLER ================= */
+
+function tambahPromo() {
+  console.log("🔥 tambahPromo dipanggil");
+
+  const promoContainer = document.getElementById("promoContainer");
+
+  if (!promoContainer) {
+    console.error("❌ promoContainer tidak ditemukan");
+    return;
+  }
+
+  const promoId = "promo-" + Date.now();
+
+  const promoDiv = document.createElement("div");
+  promoDiv.className = "promo-item";
+  promoDiv.innerHTML = `
+    <input type="text" placeholder="Nama Menu Promo">
+    <input type="number" placeholder="Harga Promo">
+    <button onclick="this.parentElement.remove()">❌</button>
+  `;
+
+  promoContainer.appendChild(promoDiv);
+}
+
 /* ============================================================
    MENU
 ============================================================ */
@@ -2563,6 +2588,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
