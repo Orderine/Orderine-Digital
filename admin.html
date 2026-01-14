@@ -1598,7 +1598,7 @@ async function simpanData() {
       logo,
       nomorWaAdmin,
 
-      menuPromo: Array.isArray(window.menuPromo) ? window.menuPromo : [],
+      menuPromo: typeof ambilPromo === "function" ? ambilPromo() : [],
       menuVoucher: Array.isArray(window.menuVoucher) ? window.menuVoucher : [],
       flipbookRuanganImages: Array.isArray(window.flipbookRuanganImages)
         ? window.flipbookRuanganImages
@@ -1721,15 +1721,27 @@ async function loadData(data) {
       });
     }
 
-    // ===== PROMO =====
-    window.menuPromo = Array.isArray(data.menuPromo) ? [...data.menuPromo] : [];
-    if (typeof renderPromoUI === "function") {
-      try {
-        renderPromoUI();
-      } catch (e) {
-        console.warn("⚠️ renderPromoUI error:", e);
+   // ===== PROMO =====
+const promoContainer = document.getElementById("promoContainer");
+if (promoContainer) promoContainer.innerHTML = "";
+
+if (Array.isArray(data.menuPromo)) {
+  data.menuPromo.forEach(p => {
+    try {
+      if (typeof tambahPromo === "function") {
+        tambahPromo(
+          p.nama || "",
+          p.harga || "",
+          p.image || ""
+        );
+      } else {
+        console.warn("⚠️ tambahPromo tidak tersedia, skip:", p);
       }
+    } catch (e) {
+      console.warn("⚠️ gagal render promo:", e);
     }
+  });
+}
 
     // ===== VOUCHER =====
     window.menuVoucher = Array.isArray(data.menuVoucher) ? [...data.menuVoucher] : [];
@@ -2629,6 +2641,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
