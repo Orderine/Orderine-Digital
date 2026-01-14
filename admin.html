@@ -2368,72 +2368,93 @@ async function loadVouchers() {
   return active;
 }
 
-/* ===================== SAVE VOUCHER ===================== */
-function saveVoucher() {
-  return saveVoucherNew();
-}
+/* ===================== SAVE VOUCHER (PATCHED) ===================== */
+window.saveVoucher = async function () {
+  try {
+    console.log("💾 saveVoucher clicked");
 
-async function saveVoucherNew() {
-  const codeEl = document.getElementById("voucherCode");
-  const discEl = document.getElementById("voucherDiscount");
-  const expEl  = document.getElementById("voucherExpiry");
+    const codeEl = document.getElementById("voucherCode");
+    const discEl = document.getElementById("voucherDiscount");
+    const expEl  = document.getElementById("voucherExpiry");
 
-  if (!codeEl || !discEl || !expEl) {
-    alert("❌ Form voucher tidak lengkap");
-    return;
-  }
+    if (!codeEl || !discEl || !expEl) {
+      alert("❌ Form voucher tidak lengkap");
+      return;
+    }
 
-  const code     = codeEl.value.trim().toUpperCase();
-  const discount = parseFloat(discEl.value);
-  const expiry   = expEl.value;
+    const code     = codeEl.value.trim().toUpperCase();
+    const discount = parseFloat(discEl.value);
+    const expiry   = expEl.value;
 
-  if (!code || isNaN(discount) || !expiry) {
-    alert("⚠️ Lengkapi data voucher");
-    return;
-  }
+    if (!code || isNaN(discount) || !expiry) {
+      alert("⚠️ Lengkapi data voucher");
+      return;
+    }
 
-  const expiryDate = new Date(expiry);
-  if (!isFinite(expiryDate) || expiryDate < new Date()) {
-    alert("⚠️ Tanggal kadaluarsa tidak valid");
-    return;
-  }
+    const expiryDate = new Date(expiry);
+    if (!isFinite(expiryDate) || expiryDate < new Date()) {
+      alert("⚠️ Tanggal kadaluarsa tidak valid");
+      return;
+    }
 
-  // 🔹 ambil data app (TANPA key)
-  const data = await loadDataFromDB(1);
-  data.menuVoucher = Array.isArray(data.menuVoucher) ? data.menuVoucher : [];
+    // ================= SAFE LOAD DATA =================
+    if (!window.activeUser?.restoID) {
+      alert("❌ Session tidak valid");
+      return;
+    }
 
-  const now = new Date().toISOString();
-  const existing = data.menuVoucher.find(v => v.code === code);
+    const restoId = window.activeUser.restoID;
 
-  if (existing) {
-    existing.discount  = discount;
-    existing.expiry    = expiry;
-    existing.updatedAt = now;
-  } else {
-    data.menuVoucher.push({
-      id: crypto.randomUUID(),
-      code,
-      discount,
-      expiry,
-      createdAt: now
+    const data = await loadDataFromDB(restoId);
+    if (!data) {
+      alert("❌ Data resto tidak ditemukan");
+      return;
+    }
+
+    data.menuVoucher = Array.isArray(data.menuVoucher)
+      ? data.menuVoucher
+      : [];
+
+    const now = new Date().toISOString();
+    const existing = data.menuVoucher.find(v => v.code === code);
+
+    if (existing) {
+      existing.discount  = discount;
+      existing.expiry    = expiry;
+      existing.updatedAt = now;
+    } else {
+      data.menuVoucher.push({
+        id: crypto.randomUUID(),
+        code,
+        discount,
+        expiry,
+        createdAt: now
+      });
+    }
+
+    // ================= SAVE =================
+    await saveDataToDB({
+      key: restoId,
+      ...data
     });
+
+    window.menuVoucher = [...data.menuVoucher];
+
+    if (typeof renderVoucher === "function") {
+      renderVoucher(window.menuVoucher);
+    }
+
+    codeEl.value = "";
+    discEl.value = "";
+    expEl.value  = "";
+
+    alert("✅ Voucher berhasil disimpan!");
+
+  } catch (err) {
+    console.error("❌ saveVoucher fatal:", err);
+    alert("❌ Gagal menyimpan voucher");
   }
-
-  // 🔥 SIMPAN DENGAN KEY
-  await saveDataToDB({
-    key: "app",
-    ...data
-  });
-
-  window.menuVoucher = [...data.menuVoucher];
-  renderVoucher(window.menuVoucher);
-
-  codeEl.value = "";
-  discEl.value = "";
-  expEl.value  = "";
-
-  alert("✅ Voucher berhasil disimpan!");
-}
+};
 
   /* ===================== VOUCHER UI ===================== */
 function renderVoucher(vouchers = []) {
@@ -2741,6 +2762,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
