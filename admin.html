@@ -1098,29 +1098,70 @@ let menuPromo = [];
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
-  /* ================= PROMO HANDLER ================= */
-
-function tambahPromo() {
-  console.log("🔥 tambahPromo dipanggil");
-
-  const promoContainer = document.getElementById("promoContainer");
-
-  if (!promoContainer) {
+  function tambahPromo(nama = "", harga = "", image = "") {
+  const container = document.getElementById("promoContainer");
+  if (!container) {
     console.error("❌ promoContainer tidak ditemukan");
     return;
   }
 
-  const promoId = "promo-" + Date.now();
+  const uid = "promo_" + Date.now();
 
-  const promoDiv = document.createElement("div");
-  promoDiv.className = "promo-item";
-  promoDiv.innerHTML = `
-    <input type="text" placeholder="Nama Menu Promo">
-    <input type="number" placeholder="Harga Promo">
-    <button onclick="this.parentElement.remove()">❌</button>
+  const div = document.createElement("div");
+  div.className = "menu-item promo-item";
+  div.innerHTML = `
+    <input type="text" id="${uid}_name" placeholder="Promo Menu Name" value="${nama}">
+    <input type="number" id="${uid}_price" placeholder="Promo Price" value="${harga}">
+
+    <input type="file" accept="image/*"
+      onchange="uploadPromoImage(event, this)"
+      data-image="${image}">
+
+    <img class="menuPreview"
+      src="${image}"
+      style="max-height:80px; margin:5px 0; ${image ? "" : "display:none"}">
+
+    <button class="btn-danger" onclick="this.parentElement.remove()">Delete</button>
   `;
 
-  promoContainer.appendChild(promoDiv);
+  container.appendChild(div);
+}
+
+  function uploadPromoImage(event, inputEl) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  resizeIfNeeded(file)
+    .then(resized => {
+      const preview = inputEl.parentElement.querySelector(".menuPreview");
+      preview.src = resized;
+      preview.style.display = "block";
+      inputEl.setAttribute("data-image", resized);
+    })
+    .catch(err => console.error("Upload promo image failed:", err));
+}
+
+  function ambilPromo() {
+  const container = document.getElementById("promoContainer");
+  if (!container) return [];
+
+  const result = [];
+
+  container.querySelectorAll(".promo-item").forEach(item => {
+    const nama = item.querySelector("input[type=text]")?.value || "";
+    const harga = parseInt(item.querySelector("input[type=number]")?.value || "0");
+    const image = item.querySelector("input[type=file]")?.getAttribute("data-image") || "";
+
+    if (nama && harga > 0) {
+      result.push({
+        nama,
+        harga,
+        image
+      });
+    }
+  });
+
+  return result;
 }
 
 /* ============================================================
@@ -2588,6 +2629,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
