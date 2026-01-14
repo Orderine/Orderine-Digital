@@ -1588,11 +1588,17 @@ async function simpanData() {
 
     // ===== VALIDASI PROMO =====
 if (highlightInvalidPromo()) {
-  alert("⚠️ Ada menu promo yang belum diisi harga.\nLengkapi dulu sebelum Save.");
+  alert("⚠️ Please complete the data promo.\nLengkapi dulu sebelum Save.");
   hideLoader();
   return;
 }
 
+    // ===== VALIDASI MENU UTAMA =====
+if (highlightInvalidMenu()) {
+  alert("⚠️ Please complete the data menu(nama / harga).");
+  hideLoader();
+  return;
+}
 
     // ==================== FINAL PAYLOAD ====================
     const payload = {
@@ -1675,6 +1681,33 @@ if (highlightInvalidPromo()) {
   return invalid;
 }
 
+  function highlightInvalidMenu() {
+  let invalid = false;
+
+  document.querySelectorAll(".menu-item").forEach(item => {
+    // skip promo
+    if (item.classList.contains("promo-item")) return;
+
+    const nama = item.querySelector("input[type=text]");
+    const harga = item.querySelector("input[type=number]");
+
+    // reset style
+    if (nama) nama.style.border = "";
+    if (harga) harga.style.border = "";
+
+    if (!nama || !nama.value.trim()) {
+      if (nama) nama.style.border = "2px solid red";
+      invalid = true;
+    }
+
+    if (!harga || !harga.value || harga.value <= 0) {
+      if (harga) harga.style.border = "2px solid red";
+      invalid = true;
+    }
+  });
+
+  return invalid;
+}
 
   // ====================== WA ADMIN HANDLER ======================
 function tambahNomorWa(value = "") {
@@ -2666,6 +2699,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
