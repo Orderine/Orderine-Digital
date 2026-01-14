@@ -2239,22 +2239,21 @@ function domReady() {
   });
 }
 
-/* ===================== ORDER TOGGLE ===================== */
+/* ===================== ORDER TOGGLE (PATCHED) ===================== */
 function initOrderToggle() {
   const toggle = document.getElementById("toggleOrderPage");
-  const box =
-    document.getElementById("orderContainerBox") ||
-    document.getElementById("orderToggleBox");
+  const box = document.getElementById("orderToggleBox");
 
   if (!toggle || !box) return;
 
-  const saved = localStorage.getItem("page_order") === "true";
-  toggle.checked = saved;
-  box.style.display = saved ? "block" : "none";
+  // 🔥 ADMIN SETTING HARUS SELALU TAMPIL
+  box.style.display = "block";
+
+  const enabled = localStorage.getItem("page_order") === "true";
+  toggle.checked = enabled;
 
   toggle.onchange = e => {
     localStorage.setItem("page_order", e.target.checked);
-    box.style.display = e.target.checked ? "block" : "none";
   };
 }
 
@@ -2750,4 +2749,5 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
