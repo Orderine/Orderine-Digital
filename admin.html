@@ -1586,6 +1586,14 @@ async function simpanData() {
       ...(typeof ambilMenu === "function" ? ambilMenu("menuSpecialContainer") : [])
     ];
 
+    // ===== VALIDASI PROMO =====
+if (highlightInvalidPromo()) {
+  alert("⚠️ Ada menu promo yang belum diisi harga.\nLengkapi dulu sebelum Save.");
+  hideLoader();
+  return;
+}
+
+
     // ==================== FINAL PAYLOAD ====================
     const payload = {
       id: restoId,           // 🔑 PRIMARY KEY (WAJIB ADA)
@@ -1650,6 +1658,23 @@ async function simpanData() {
     hideLoader();
   }
 }
+
+  function highlightInvalidPromo() {
+  let invalid = false;
+
+  document.querySelectorAll(".promo-item").forEach(item => {
+    const harga = item.querySelector("input[type=number]");
+    if (!harga || !harga.value || harga.value <= 0) {
+      harga.style.border = "2px solid red";
+      invalid = true;
+    } else {
+      harga.style.border = "";
+    }
+  });
+
+  return invalid;
+}
+
 
   // ====================== WA ADMIN HANDLER ======================
 function tambahNomorWa(value = "") {
@@ -2641,6 +2666,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
