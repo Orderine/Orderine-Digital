@@ -216,7 +216,7 @@ let db;
 
 function initDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 10);
+    const req = indexedDB.open(DB_NAME, 14);
 
     req.onupgradeneeded = (e) => {
       db = e.target.result;
@@ -613,5 +613,6 @@ localStorage.setItem("lastViewedOrderTime", Date.now());
 
 </body>
 </html>
+
 
 
