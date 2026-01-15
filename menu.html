@@ -395,9 +395,6 @@ function showNext(){
   document.getElementById("fullscreenImage").src = currentImages[currentFullscreenIndex];
 }
 
-/* =======================
-   PROMO RENDER
-======================= */
 function renderPromo(promoList) {
   const promoContainer = document.getElementById("promoContainer");
   promoContainer.innerHTML = "";
@@ -411,43 +408,79 @@ function renderPromo(promoList) {
   }
 
   promoList.forEach((promo, index) => {
+    // 🔥 NORMALISASI FIELD
+    const kategori =
+      promo.kategori ||
+      promo.kategoriPromo ||
+      promo.promoKategori ||
+      "";
+
+    const nama =
+      promo.namaPromo ||
+      promo.namaMenu ||
+      promo.menuName ||
+      "No Name";
+
+    const deskripsi =
+      promo.deskripsi ||
+      promo.desc ||
+      "-";
+
+    const image =
+      promo.image ||
+      promo.gambar ||
+      "";
+
+    const harga = promo.harga || promo.price || null;
+
+    const tanggalAkhir =
+      promo.tanggalAkhir ||
+      promo.endDate ||
+      null;
+
     const promoCard = document.createElement("div");
     promoCard.className = "promo-item";
 
-    if (promo.kategori) {
+    // BADGE
+    if (kategori) {
       const badge = document.createElement("div");
       badge.className = "promo-badge";
-      badge.textContent = promo.kategori.toUpperCase();
+      badge.textContent = kategori.toUpperCase();
       promoCard.appendChild(badge);
     }
 
+    // IMAGE
     const img = document.createElement("img");
-    img.src = promo.image || "";
-    img.alt = promo.namaPromo || "Promo Image";
+    img.src = image;
+    img.alt = nama;
     promoCard.appendChild(img);
 
+    // TITLE
     const title = document.createElement("h3");
-    title.textContent = promo.namaPromo || "No Name";
+    title.textContent = nama;
     promoCard.appendChild(title);
 
+    // DESC
     const desc = document.createElement("p");
-    desc.textContent = promo.deskripsi || "-";
+    desc.textContent = deskripsi;
     promoCard.appendChild(desc);
 
+    // PRICE
     const price = document.createElement("div");
     price.className = "promo-price";
-    price.textContent = promo.harga
-      ? `Rp ${parseInt(promo.harga).toLocaleString("id-ID")}`
+    price.textContent = harga
+      ? `Rp ${parseInt(harga).toLocaleString("id-ID")}`
       : "-";
     promoCard.appendChild(price);
 
+    // COUNTDOWN
     const countdown = document.createElement("div");
     countdown.className = "countdown";
     countdown.id = `countdown-${index}`;
     promoCard.appendChild(countdown);
 
-    if (promo.tanggalAkhir) {
-      startCountdown(promo.tanggalAkhir, countdown.id);
+    if (tanggalAkhir) {
+      startCountdown(tanggalAkhir, countdown.id);
     } else {
       countdown.textContent = "Tanpa batas waktu";
     }
@@ -455,6 +488,7 @@ function renderPromo(promoList) {
     promoContainer.appendChild(promoCard);
   });
 }
+
 
 function startCountdown(tanggalAkhir,elementId){
   function update(){
@@ -574,3 +608,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
