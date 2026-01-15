@@ -332,19 +332,20 @@ function getRestoId() {
   return restoId;
 }
   
-function loadDataFromDB(restoId) {
+async function loadDataFromDB(restoId) {
+  const database = await initDB();
+
   return new Promise((resolve, reject) => {
-    if (!db) return reject(new Error("DB belum siap"));
-    const tx = db.transaction("menuvaData", "readonly");
-    const store = tx.objectStore("menuvaData");
-    const req = store.getAll();
+    const tx = database.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+
+    const req = store.get(restoId); // 🔥 langsung by key
 
     req.onsuccess = () => {
-      const all = req.result;
-      const found = all.find(item => item.restoId === restoId);
-      resolve(found || null);
+      resolve(req.result || null);
     };
-    req.onerror = (e) => reject(e.target.error);
+
+    req.onerror = () => reject(req.error);
   });
 }
 
@@ -476,47 +477,59 @@ function startCountdown(tanggalAkhir,elementId){
 /* =======================
    WATCH DB CHANGES
 ======================= */
-async function watchDBChanges(restoId){
-  let lastDataStr="";
-  async function checkUpdates(){
-    const data = await loadDataFromDB(restoId);
-    if(!data) return;
-    const current = JSON.stringify(data);
-    if(current!==lastDataStr){
-      lastDataStr = current;
-      console.log("🔄 Data updated, refreshing view...");
-      renderPromo(data.menuPromo);
-      renderFlipbookGallery("flipbookRuanganGallery",data.flipbookRuanganImages,"ruanganWarning");
-      renderFlipbookGallery("flipbookMenuGallery",data.flipbookMenuImages,"menuWarning");
+async function watchDBChanges(restoId) {
+  let lastDataStr = "";
+
+  async function checkUpdates() {
+    try {
+      const data = await loadDataFromDB(restoId);
+      if (!data) return;
+
+      const current = JSON.stringify(data);
+      if (current !== lastDataStr) {
+        lastDataStr = current;
+        console.log("🔄 Data updated, refreshing view...");
+
+        renderPromo(data.menuPromo);
+        renderFlipbookGallery(
+          "flipbookRuanganGallery",
+          data.flipbookRuanganImages,
+          "ruanganWarning"
+        );
+        renderFlipbookGallery(
+          "flipbookMenuGallery",
+          data.flipbookMenuImages,
+          "menuWarning"
+        );
+      }
+    } catch (e) {
+      console.warn("watchDB error:", e);
     }
   }
+
   await checkUpdates();
-  setInterval(checkUpdates,5000);
+  setInterval(checkUpdates, 5000);
 }
+
+  
 /* =======================
    ONLOAD
 ======================= */
-window.onload = async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const restoId = getRestoId();
-  if (!restoId) {
-    alert("❌ Resto ID tidak ditemukan. Gunakan ?resto=0877xxxx");
-    return;
-  }
+  if (!restoId) return;
 
   try {
-    // pastikan DB ready
-    await initDB();
-
-    // load data
     const data = await loadDataFromDB(restoId);
+
     if (!data) {
-      console.warn("⚠️ Tidak ada data ditemukan untuk:", restoId);
+      console.warn("⚠️ Data resto tidak ditemukan:", restoId);
       return;
     }
 
     console.log("✅ Data berhasil di-load:", data);
 
-    // render logo
+    // LOGO
     const logoElem = document.getElementById("logoResto");
     if (data.logo) {
       logoElem.src = data.logo;
@@ -525,29 +538,39 @@ window.onload = async () => {
       logoElem.style.display = "none";
     }
 
-    // render detail resto
-    document.getElementById("namaRestoDisplay").textContent = data.namaRestoran || "Menu Restoran";
-    document.getElementById("alamatResto").innerText = `📍 Address: ${data.restoAddress || '-'}`;
-    document.getElementById("teleponResto").innerText = `📞 Telephone: ${data.restoPhone || '-'}`;
+    // INFO
+    document.getElementById("namaRestoDisplay").textContent =
+      data.namaRestoran || "Menu Restoran";
 
-    // render konten
+    document.getElementById("alamatResto").innerText =
+      `📍 Address: ${data.restoAddress || "-"}`;
+
+    document.getElementById("teleponResto").innerText =
+      `📞 Telephone: ${data.restoPhone || "-"}`;
+
+    // CONTENT
     renderPromo(data.menuPromo);
-    renderFlipbookGallery("flipbookRuanganGallery", data.flipbookRuanganImages, "ruanganWarning");
-    renderFlipbookGallery("flipbookMenuGallery", data.flipbookMenuImages, "menuWarning");
+    renderFlipbookGallery(
+      "flipbookRuanganGallery",
+      data.flipbookRuanganImages,
+      "ruanganWarning"
+    );
+    renderFlipbookGallery(
+      "flipbookMenuGallery",
+      data.flipbookMenuImages,
+      "menuWarning"
+    );
 
-    // monitor perubahan DB
+    // WATCH DB
     watchDBChanges(restoId);
 
   } catch (err) {
     console.error("❌ Gagal load data menu:", err);
   }
-};
+});
+
 
 </script>
 
 </body>
 </html>
-
-
-
-
