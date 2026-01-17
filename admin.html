@@ -946,16 +946,6 @@ function ensureRestoId() {
   console.log("✅ restoId generated:", restoId);
   return restoId;
 }
-
-  // ====================== PROMO DATA SYNC (FINAL) ======================
-window.menuPromo = Array.isArray(window.menuPromo) && window.menuPromo.length
-  ? window.menuPromo
-  : Array.isArray(window.promoList)
-    ? window.promoList
-    : [];
-
-window.promoList = window.menuPromo;
-
 </script>
 
 <script>
@@ -1563,7 +1553,6 @@ window.tambahGambar = tambahGambar;
 window.slugify = slugify;
 
 // ====================== GLOBAL SAFE INIT ======================
-window.menuPromo = window.menuPromo || [];
 window.flipbookRuanganImages = window.flipbookRuanganImages || [];
 window.flipbookMenuImages = window.flipbookMenuImages || [];
 window.menuVoucher = window.menuVoucher || [];
@@ -1840,24 +1829,18 @@ if (voucherBox && typeof renderVoucher === "function") {
   }
 }
    
-    // ===== PROMO (FINAL SYNC) =====
-window.menuPromo = Array.isArray(data.menuPromo)
-  ? data.menuPromo.map(p => ({
-      id: p.id || crypto.randomUUID(),
-      namaPromo: p.namaPromo || "",
-      deskripsi: p.deskripsi || "",
-      harga: p.harga || "",
-      kategori: p.kategori || "PROMO",
-      tanggalAkhir: p.tanggalAkhir || "",
-      image: p.image || ""
-    }))
-  : [];
+   // ===== PROMO (FINAL – SAFE SYNC) =====
+const promoFromDB = Array.isArray(data.menuPromo) ? data.menuPromo : [];
+
+window.menuPromo = promoFromDB;
+window.promoList = window.menuPromo;
 
 if (typeof renderPromoUI === "function") {
   renderPromoUI();
 } else {
   console.warn("⚠️ renderPromoUI belum siap");
 }
+
 
     // ===== MENU =====
     const containers = {
@@ -2826,6 +2809,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
