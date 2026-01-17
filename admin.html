@@ -1068,62 +1068,35 @@ let menuPromo = [];
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
-// ====================== PROMO UI RENDERER ======================
+
 // ====================== PROMO UI RENDERER (SAFE FINAL) ======================
 function renderPromoUI() {
   const container = document.getElementById("promoContainer");
   if (!container) return;
 
   container.innerHTML = "";
-  const promoCategories = ["PROMO", "DISKON", "SPECIAL", "EVENT"];
 
-  window.menuPromo = Array.isArray(window.menuPromo) ? window.menuPromo : [];
+  if (!Array.isArray(window.menuPromo)) return;
 
   window.menuPromo.forEach((promo, index) => {
     const div = document.createElement("div");
-
-    // 🔥 PENTING: class KHUSUS promo
-   div.className = "menu-item promo-item";
-
-    const optionsHTML = promoCategories
-      .map(
-        cat =>
-          `<option value="${cat}" ${
-            promo.kategori === cat ? "selected" : ""
-          }>${cat}</option>`
-      )
-      .join("");
+    div.className = "menu-item promo-item";
 
     div.innerHTML = `
-      <input type="text" placeholder="Promo Name"
-        value="${promo.namaPromo || ""}"
+      <input type="text" value="${promo.namaPromo || ""}"
         onchange="updatePromo(${index}, 'namaPromo', this.value)">
 
-      <input type="file" accept="image/*"
-        onchange="uploadPromoImage(event, ${index})">
+      <textarea
+        onchange="updatePromo(${index}, 'deskripsi', this.value)"
+      >${promo.deskripsi || ""}</textarea>
 
-      <img id="promoImgPreview${index}"
-        src="${promo.image || ""}"
-        style="max-height:80px;margin:5px 0">
-
-      <input type="text" placeholder="Description Promo"
-        value="${promo.deskripsi || ""}"
-        onchange="updatePromo(${index}, 'deskripsi', this.value)">
-
-      <input type="number" placeholder="Promo Price"
-        value="${promo.harga || ""}"
-        onchange="updatePromo(${index}, 'harga', this.value)">
-
-      <select onchange="updatePromo(${index}, 'kategori', this.value)">
-        ${optionsHTML}
-      </select>
-
-      <input type="date"
-        value="${promo.tanggalAkhir || ""}"
+      <input type="date" value="${promo.tanggalAkhir || ""}"
         onchange="updatePromo(${index}, 'tanggalAkhir', this.value)">
 
-      <button class="btn-danger"
-        onclick="hapusPromo(${index})">Delete Promo</button>
+      <input type="number" value="${promo.harga || ""}"
+        onchange="updatePromo(${index}, 'harga', this.value)">
+
+      <button onclick="hapusPromo(${index})">Delete</button>
     `;
 
     container.appendChild(div);
@@ -1383,6 +1356,9 @@ function hapusFormRoom(btn) {
 /* ============================================================
    EXPOSE TO WINDOW (WAJIB UNTUK MODULE)
 ============================================================ */
+window.menuPromo = window.menuPromo || [];
+window.promoList = window.menuPromo;
+
 window.tambahMenu = tambahMenu;
 window.uploadMenuImage = uploadMenuImage;
 window.ambilMenu = ambilMenu;
@@ -2809,6 +2785,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
