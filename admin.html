@@ -1083,7 +1083,7 @@ function renderPromoUI() {
     const div = document.createElement("div");
 
     // 🔥 PENTING: class KHUSUS promo
-    div.className = "promo-item";
+   div.className = "menu-item promo-item";
 
     const optionsHTML = promoCategories
       .map(
@@ -1150,8 +1150,16 @@ function updatePromo(index, key, value) {
 }
 
 function hapusPromo(index) {
-  menuPromo.splice(index, 1);
+  if (!window.menuPromo[index]) return;
+
+  window.menuPromo.splice(index, 1);
+
   renderPromoUI();
+
+  // 🧠 force sync
+  if (typeof savePromoToDB === "function") {
+    savePromoToDB();
+  }
 }
 
 // ====================== IMAGE UPLOAD ======================
@@ -1821,10 +1829,18 @@ if (voucherBox && typeof renderVoucher === "function") {
     console.warn("⚠️ renderVoucher error (di-skip):", e);
   }
 }
-    // ===== PROMO =====
+   
     // ===== PROMO (FINAL SYNC) =====
 window.menuPromo = Array.isArray(data.menuPromo)
-  ? [...data.menuPromo]
+  ? data.menuPromo.map(p => ({
+      id: p.id || crypto.randomUUID(),
+      namaPromo: p.namaPromo || "",
+      deskripsi: p.deskripsi || "",
+      harga: p.harga || "",
+      kategori: p.kategori || "PROMO",
+      tanggalAkhir: p.tanggalAkhir || "",
+      image: p.image || ""
+    }))
   : [];
 
 if (typeof renderPromoUI === "function") {
@@ -2800,4 +2816,5 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
