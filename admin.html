@@ -1100,7 +1100,7 @@ let flipbookMenuImages = [];
 
 function initPromoDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open("MenuvaDB", DB_VERSION);
+    let req = indexedDB.open("MenuvaDB");
 
     req.onupgradeneeded = e => {
       const db = e.target.result;
@@ -1109,8 +1109,32 @@ function initPromoDB() {
       }
     };
 
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject("Promo DB gagal dibuka");
+    req.onsuccess = e => {
+      const db = e.target.result;
+
+      // 🛡️ kalau store belum ada → paksa upgrade sekali
+      if (!db.objectStoreNames.contains("promoData")) {
+        db.close();
+
+        const v = db.version + 1;
+        const req2 = indexedDB.open("MenuvaDB", v);
+
+        req2.onupgradeneeded = ev => {
+          const upDB = ev.target.result;
+          if (!upDB.objectStoreNames.contains("promoData")) {
+            upDB.createObjectStore("promoData", { keyPath: "id" });
+          }
+        };
+
+        req2.onsuccess = () => resolve(req2.result);
+        req2.onerror = () => reject("Upgrade promo DB gagal");
+        return;
+      }
+
+      resolve(db);
+    };
+
+    req.onerror = () => reject("Gagal buka DB promo");
   });
 }
 
@@ -1200,8 +1224,9 @@ function uploadPromoImage(event, index) {
     .catch(err => console.error("Failed upload promo:", err));
 }
 
-  async function loadPromoFromDB() {
+ async function loadPromoFromDB() {
   const db = await initPromoDB();
+
   const tx = db.transaction("promoData", "readonly");
   const store = tx.objectStore("promoData");
 
@@ -2810,6 +2835,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
