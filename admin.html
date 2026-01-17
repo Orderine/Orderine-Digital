@@ -1960,17 +1960,33 @@ if (voucherBox && typeof renderVoucher === "function") {
   }
 }
 
-  // ====================== LOAD MENUVA DATA (FINAL) ======================
+// ====================== LOAD MENUVA DATA (SAFE FINAL) ======================
 async function loadMenuvaData() {
+  let restoId = null;
+
   try {
-    if (!window.activeUser || !window.activeUser.restoID) {
-      console.warn("⚠️ activeUser belum siap, skip load");
+    showLoader();
+
+    // ===== AMBIL RESTO ID DENGAN AMAN =====
+    const active = window.activeUser || {};
+    restoId = active.restoID || active.restoId || null;
+
+    if (!restoId) {
+      console.warn("⚠️ restoId belum tersedia → render default");
+      await loadData(buatDataDefault(1));
       return;
     }
 
-    const restoId = window.activeUser.restoID;
+    // ===== INIT DB =====
     const db = await initDB();
 
+    if (!db.objectStoreNames.contains("menuvaData")) {
+      console.error("❌ objectStore menuvaData tidak ada");
+      await loadData(buatDataDefault(1));
+      return;
+    }
+
+    // ===== LOAD DATA =====
     const tx = db.transaction("menuvaData", "readonly");
     const store = tx.objectStore("menuvaData");
 
@@ -1981,21 +1997,35 @@ async function loadMenuvaData() {
       req.onerror = () => reject(req.error);
     });
 
+    // ===== DATA KOSONG =====
     if (!record) {
-      console.warn("⚠️ menuvaData kosong → pakai default");
-      loadData(buatDataDefault(1));
+      console.warn("⚠️ menuvaData kosong → render default");
+      await loadData(buatDataDefault(1));
       return;
     }
 
-    console.log("📦 menuvaData LOADED:", record);
+    // ===== NORMALISASI PAYLOAD =====
+    const payload =
+      record.data && typeof record.data === "object"
+        ? record.data
+        : record;
 
-    // ⬇️ PENTING: SESUAI STRUKTUR DB
-    const payload = record.data ?? record;
+    console.log("📦 menuvaData LOADED:", payload);
 
     await loadData(payload);
 
   } catch (err) {
     console.error("❌ loadMenuvaData fatal error:", err);
+
+    // 🚑 LAST RESCUE — ADMIN TETAP HIDUP
+    try {
+      await loadData(buatDataDefault(1));
+    } catch (e) {
+      console.error("❌ fallback loadData gagal:", e);
+    }
+
+  } finally {
+    hideLoader();
   }
 }
 
@@ -2804,6 +2834,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
