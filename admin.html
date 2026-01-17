@@ -947,15 +947,14 @@ function ensureRestoId() {
   return restoId;
 }
 
-  // 🔁 BACKWARD COMPAT PROMO
-Object.defineProperty(window, "promoList", {
-  get() {
-    return window.menuPromo;
-  },
-  set(val) {
-    window.menuPromo = Array.isArray(val) ? val : [];
-  }
-});
+  // ====================== PROMO DATA SYNC (FINAL) ======================
+window.menuPromo = Array.isArray(window.menuPromo) && window.menuPromo.length
+  ? window.menuPromo
+  : Array.isArray(window.promoList)
+    ? window.promoList
+    : [];
+
+window.promoList = window.menuPromo;
 
 </script>
 
@@ -2827,6 +2826,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
