@@ -946,6 +946,17 @@ function ensureRestoId() {
   console.log("✅ restoId generated:", restoId);
   return restoId;
 }
+
+  // 🔁 BACKWARD COMPAT PROMO
+Object.defineProperty(window, "promoList", {
+  get() {
+    return window.menuPromo;
+  },
+  set(val) {
+    window.menuPromo = Array.isArray(val) ? val : [];
+  }
+});
+
 </script>
 
 <script>
@@ -2816,5 +2827,6 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
