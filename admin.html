@@ -1224,16 +1224,16 @@ function uploadPromoImage(event, index) {
     .catch(err => console.error("Failed upload promo:", err));
 }
 
- async function loadPromoFromDB() {
+async function loadPromoFromDB() {
   const db = await initPromoDB();
-
   const tx = db.transaction("promoData", "readonly");
   const store = tx.objectStore("promoData");
 
   const req = store.getAll();
   req.onsuccess = () => {
-    menuPromo = req.result || [];
+    window.menuPromo = Array.isArray(req.result) ? req.result : [];
     renderPromoUI();
+    console.log("✅ Promo loaded:", window.menuPromo.length);
   };
 }
 
@@ -1689,33 +1689,36 @@ if (highlightInvalidMenu()) {
   return;
 }
 
-    // ==================== FINAL PAYLOAD ====================
-    const payload = {
-      id: restoId,           // 🔑 PRIMARY KEY (WAJIB ADA)
-      restoId,
-      ownerId,
+  // ==================== FINAL PAYLOAD ====================
+const payload = {
+  id: restoId,
+  restoId,
+  ownerId,
 
-      namaRestoran,
-      restoAddress,
-      restoPhone,
-      logo,
-      nomorWaAdmin,
+  namaRestoran,
+  restoAddress,
+  restoPhone,
+  logo,
+  nomorWaAdmin,
 
-      menuVoucher: Array.isArray(window.menuVoucher) ? window.menuVoucher : [],
-      flipbookRuanganImages: Array.isArray(window.flipbookRuanganImages)
-        ? window.flipbookRuanganImages
-        : [],
-      flipbookMenuImages: Array.isArray(window.flipbookMenuImages)
-        ? window.flipbookMenuImages
-        : [],
+  // 🔒 BACKWARD COMPAT ONLY (JANGAN DIPAKAI RENDER)
+  menuPromo: Array.isArray(window.menuPromo) ? window.menuPromo : [],
 
-      menu: menuData,
-      rooms: typeof ambilSemuaRoom === "function"
-        ? ambilSemuaRoom()
-        : [],
+  menuVoucher: Array.isArray(window.menuVoucher) ? window.menuVoucher : [],
+  flipbookRuanganImages: Array.isArray(window.flipbookRuanganImages)
+    ? window.flipbookRuanganImages
+    : [],
+  flipbookMenuImages: Array.isArray(window.flipbookMenuImages)
+    ? window.flipbookMenuImages
+    : [],
 
-      updatedAt: Date.now()
-    };
+  menu: menuData,
+  rooms: typeof ambilSemuaRoom === "function"
+    ? ambilSemuaRoom()
+    : [],
+
+  updatedAt: Date.now()
+};
 
     // ==================== SAVE TO menuvaData ====================
     const db = await initDB();
@@ -2813,6 +2816,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
