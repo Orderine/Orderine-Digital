@@ -1098,6 +1098,21 @@ let menuPromo = [];
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
+function initPromoDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("MenuvaDB", DB_VERSION);
+
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains("promoData")) {
+        db.createObjectStore("promoData", { keyPath: "id" });
+      }
+    };
+
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject("Promo DB gagal dibuka");
+  });
+}
 
 // ====================== PROMO UI RENDERER ======================
 function renderPromoUI() {
@@ -1142,9 +1157,9 @@ function renderPromoUI() {
   });
 }
 
-// ====================== ADD PROMO ======================
 function tambahPromo(promo = {}) {
   menuPromo.push({
+    id: crypto.randomUUID(),
     namaPromo: promo.namaPromo || "",
     image: promo.image || "",
     deskripsi: promo.deskripsi || "",
@@ -1154,18 +1169,19 @@ function tambahPromo(promo = {}) {
   });
 
   renderPromoUI();
+  savePromoToDB();
 }
 
-// ====================== UPDATE PROMO ======================
 function updatePromo(index, key, value) {
   if (!menuPromo[index]) return;
   menuPromo[index][key] = value;
+  savePromoToDB();
 }
 
-// ====================== DELETE PROMO ======================
 function hapusPromo(index) {
   menuPromo.splice(index, 1);
   renderPromoUI();
+  savePromoToDB();
 }
 
 // ====================== IMAGE UPLOAD ======================
@@ -1179,9 +1195,34 @@ function uploadPromoImage(event, index) {
       if (el) el.src = resized;
 
       updatePromo(index, "image", resized);
+      savePromoToDB();
     })
     .catch(err => console.error("Failed upload promo:", err));
 }
+
+  async function loadPromoFromDB() {
+  const db = await initPromoDB();
+  const tx = db.transaction("promoData", "readonly");
+  const store = tx.objectStore("promoData");
+
+  const req = store.getAll();
+  req.onsuccess = () => {
+    menuPromo = req.result || [];
+    renderPromoUI();
+  };
+}
+
+  async function savePromoToDB() {
+  const db = await initPromoDB();
+  const tx = db.transaction("promoData", "readwrite");
+  const store = tx.objectStore("promoData");
+
+  store.clear();
+  menuPromo.forEach(promo => {
+    store.put(promo);
+  });
+}
+
   
 /* ============================================================
    MENU
@@ -2204,6 +2245,7 @@ window.addEventListener("error", e => {
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Admin Init (FINAL)");
   showLoader();
+  loadPromoFromDB();
 
   try {
     // ================= WAIT AUTH =================
@@ -2768,6 +2810,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
