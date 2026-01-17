@@ -1701,7 +1701,6 @@ if (highlightInvalidMenu()) {
       logo,
       nomorWaAdmin,
 
-      menuPromo: typeof ambilPromo === "function" ? ambilPromo() : [],
       menuVoucher: Array.isArray(window.menuVoucher) ? window.menuVoucher : [],
       flipbookRuanganImages: Array.isArray(window.flipbookRuanganImages)
         ? window.flipbookRuanganImages
@@ -2247,8 +2246,9 @@ window.addEventListener("error", e => {
 /* ===================== ADMIN INIT (FINAL) ===================== */
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Admin Init (FINAL)");
+  await loadPromoFromDB(); // ⬅️ PERTAMA
   showLoader();
-  loadPromoFromDB();
+  
 
   try {
     // ================= WAIT AUTH =================
@@ -2813,6 +2813,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
