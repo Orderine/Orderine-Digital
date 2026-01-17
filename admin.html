@@ -1098,72 +1098,91 @@ let menuPromo = [];
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
-  function tambahPromo(nama = "", harga = "", image = "") {
+
+// ====================== PROMO UI RENDERER ======================
+function renderPromoUI() {
   const container = document.getElementById("promoContainer");
-  if (!container) {
-    console.error("❌ promoContainer tidak ditemukan");
-    return;
-  }
+  if (!container) return;
 
-  const uid = "promo_" + Date.now();
+  container.innerHTML = "";
+  const promoCategories = ["PROMO", "DISKON", "SPECIAL", "EVENT"];
 
-  const div = document.createElement("div");
-  div.className = "menu-item promo-item";
-  div.innerHTML = `
-    <input type="text" id="${uid}_name" placeholder="Promo Menu Name" value="${nama}">
-    <input type="number" id="${uid}_price" placeholder="Promo Price" value="${harga}">
+  menuPromo.forEach((promo, index) => {
+    const div = document.createElement("div");
+    div.className = "menu-item";
 
-    <input type="file" accept="image/*"
-      onchange="uploadPromoImage(event, this)"
-      data-image="${image}">
+    const optionsHTML = promoCategories
+      .map(cat => `<option value="${cat}" ${promo.kategori === cat ? "selected" : ""}>${cat}</option>`)
+      .join("");
 
-    <img class="menuPreview"
-      src="${image}"
-      style="max-height:80px; margin:5px 0; ${image ? "" : "display:none"}">
+    div.innerHTML = `
+      <input type="text" id="promoName_${index}" value="${promo.namaPromo || ""}"
+        onchange="updatePromo(${index}, 'namaPromo', this.value)">
+      
+      <input type="file" accept="image/*" onchange="uploadPromoImage(event, ${index})">
+      <img id="promoImgPreview${index}" src="${promo.image || ""}" style="max-height:80px;margin:5px 0">
+      
+      <input type="text" placeholder="Description Promo"
+        value="${promo.deskripsi || ""}" onchange="updatePromo(${index}, 'deskripsi', this.value)">
+      
+      <input type="number" placeholder="Promo Price"
+        value="${promo.harga || ""}" onchange="updatePromo(${index}, 'harga', this.value)">
+      
+      <select onchange="updatePromo(${index}, 'kategori', this.value)">
+        ${optionsHTML}
+      </select>
+      
+      <input type="date" value="${promo.tanggalAkhir || ""}"
+        onchange="updatePromo(${index}, 'tanggalAkhir', this.value)">
+      
+      <button class="btn-danger" onclick="hapusPromo(${index})">Delete Promo List</button>
+    `;
 
-    <button class="btn-danger" onclick="this.parentElement.remove()">Delete</button>
-  `;
-
-  container.appendChild(div);
+    container.appendChild(div);
+  });
 }
 
-  function uploadPromoImage(event, inputEl) {
+// ====================== ADD PROMO ======================
+function tambahPromo(promo = {}) {
+  menuPromo.push({
+    namaPromo: promo.namaPromo || "",
+    image: promo.image || "",
+    deskripsi: promo.deskripsi || "",
+    harga: promo.harga || "",
+    kategori: promo.kategori || "PROMO",
+    tanggalAkhir: promo.tanggalAkhir || ""
+  });
+
+  renderPromoUI();
+}
+
+// ====================== UPDATE PROMO ======================
+function updatePromo(index, key, value) {
+  if (!menuPromo[index]) return;
+  menuPromo[index][key] = value;
+}
+
+// ====================== DELETE PROMO ======================
+function hapusPromo(index) {
+  menuPromo.splice(index, 1);
+  renderPromoUI();
+}
+
+// ====================== IMAGE UPLOAD ======================
+function uploadPromoImage(event, index) {
   const file = event.target.files[0];
   if (!file) return;
 
   resizeIfNeeded(file)
-    .then(resized => {
-      const preview = inputEl.parentElement.querySelector(".menuPreview");
-      preview.src = resized;
-      preview.style.display = "block";
-      inputEl.setAttribute("data-image", resized);
+    .then((resized) => {
+      const el = document.getElementById(`promoImgPreview${index}`);
+      if (el) el.src = resized;
+
+      updatePromo(index, "image", resized);
     })
-    .catch(err => console.error("Upload promo image failed:", err));
+    .catch(err => console.error("Failed upload promo:", err));
 }
-
-  function ambilPromo() {
-  const container = document.getElementById("promoContainer");
-  if (!container) return [];
-
-  const result = [];
-
-  container.querySelectorAll(".promo-item").forEach(item => {
-    const nama = item.querySelector("input[type=text]")?.value || "";
-    const harga = parseInt(item.querySelector("input[type=number]")?.value || "0");
-    const image = item.querySelector("input[type=file]")?.getAttribute("data-image") || "";
-
-    if (nama && harga > 0) {
-      result.push({
-        nama,
-        harga,
-        image
-      });
-    }
-  });
-
-  return result;
-}
-
+  
 /* ============================================================
    MENU
 ============================================================ */
@@ -2749,5 +2768,6 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
