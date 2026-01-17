@@ -1063,57 +1063,13 @@ if (!window.indexedDB) {
   console.log("✅ IndexedDB supported");
 }
 
-
-/* ============================================================
-   PART 7 – MENU & ROOM (MODULE SAFE VERSION)
-============================================================ */
-
 /* ====================== GLOBAL STATE ====================== */
 let menuPromo = [];
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
-function initPromoDB() {
-  return new Promise((resolve, reject) => {
-    let req = indexedDB.open("MenuvaDB");
-
-    req.onupgradeneeded = e => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains("promoData")) {
-        db.createObjectStore("promoData", { keyPath: "id" });
-      }
-    };
-
-    req.onsuccess = e => {
-      const db = e.target.result;
-
-      // 🛡️ kalau store belum ada → paksa upgrade sekali
-      if (!db.objectStoreNames.contains("promoData")) {
-        db.close();
-
-        const v = db.version + 1;
-        const req2 = indexedDB.open("MenuvaDB", v);
-
-        req2.onupgradeneeded = ev => {
-          const upDB = ev.target.result;
-          if (!upDB.objectStoreNames.contains("promoData")) {
-            upDB.createObjectStore("promoData", { keyPath: "id" });
-          }
-        };
-
-        req2.onsuccess = () => resolve(req2.result);
-        req2.onerror = () => reject("Upgrade promo DB gagal");
-        return;
-      }
-
-      resolve(db);
-    };
-
-    req.onerror = () => reject("Gagal buka DB promo");
-  });
-}
-
 // ====================== PROMO UI RENDERER ======================
+// ====================== PROMO UI RENDERER (SAFE FINAL) ======================
 function renderPromoUI() {
   const container = document.getElementById("promoContainer");
   if (!container) return;
@@ -1121,35 +1077,53 @@ function renderPromoUI() {
   container.innerHTML = "";
   const promoCategories = ["PROMO", "DISKON", "SPECIAL", "EVENT"];
 
-  menuPromo.forEach((promo, index) => {
+  window.menuPromo = Array.isArray(window.menuPromo) ? window.menuPromo : [];
+
+  window.menuPromo.forEach((promo, index) => {
     const div = document.createElement("div");
-    div.className = "menu-item";
+
+    // 🔥 PENTING: class KHUSUS promo
+    div.className = "promo-item";
 
     const optionsHTML = promoCategories
-      .map(cat => `<option value="${cat}" ${promo.kategori === cat ? "selected" : ""}>${cat}</option>`)
+      .map(
+        cat =>
+          `<option value="${cat}" ${
+            promo.kategori === cat ? "selected" : ""
+          }>${cat}</option>`
+      )
       .join("");
 
     div.innerHTML = `
-      <input type="text" id="promoName_${index}" value="${promo.namaPromo || ""}"
+      <input type="text" placeholder="Promo Name"
+        value="${promo.namaPromo || ""}"
         onchange="updatePromo(${index}, 'namaPromo', this.value)">
-      
-      <input type="file" accept="image/*" onchange="uploadPromoImage(event, ${index})">
-      <img id="promoImgPreview${index}" src="${promo.image || ""}" style="max-height:80px;margin:5px 0">
-      
+
+      <input type="file" accept="image/*"
+        onchange="uploadPromoImage(event, ${index})">
+
+      <img id="promoImgPreview${index}"
+        src="${promo.image || ""}"
+        style="max-height:80px;margin:5px 0">
+
       <input type="text" placeholder="Description Promo"
-        value="${promo.deskripsi || ""}" onchange="updatePromo(${index}, 'deskripsi', this.value)">
-      
+        value="${promo.deskripsi || ""}"
+        onchange="updatePromo(${index}, 'deskripsi', this.value)">
+
       <input type="number" placeholder="Promo Price"
-        value="${promo.harga || ""}" onchange="updatePromo(${index}, 'harga', this.value)">
-      
+        value="${promo.harga || ""}"
+        onchange="updatePromo(${index}, 'harga', this.value)">
+
       <select onchange="updatePromo(${index}, 'kategori', this.value)">
         ${optionsHTML}
       </select>
-      
-      <input type="date" value="${promo.tanggalAkhir || ""}"
+
+      <input type="date"
+        value="${promo.tanggalAkhir || ""}"
         onchange="updatePromo(${index}, 'tanggalAkhir', this.value)">
-      
-      <button class="btn-danger" onclick="hapusPromo(${index})">Delete Promo List</button>
+
+      <button class="btn-danger"
+        onclick="hapusPromo(${index})">Delete Promo</button>
     `;
 
     container.appendChild(div);
@@ -1168,19 +1142,16 @@ function tambahPromo(promo = {}) {
   });
 
   renderPromoUI();
-  savePromoToDB();
 }
 
 function updatePromo(index, key, value) {
   if (!menuPromo[index]) return;
   menuPromo[index][key] = value;
-  savePromoToDB();
 }
 
 function hapusPromo(index) {
   menuPromo.splice(index, 1);
   renderPromoUI();
-  savePromoToDB();
 }
 
 // ====================== IMAGE UPLOAD ======================
@@ -1199,31 +1170,6 @@ function uploadPromoImage(event, index) {
     .catch(err => console.error("Failed upload promo:", err));
 }
 
-async function loadPromoFromDB() {
-  const db = await initPromoDB();
-  const tx = db.transaction("promoData", "readonly");
-  const store = tx.objectStore("promoData");
-
-  const req = store.getAll();
-  req.onsuccess = () => {
-    window.menuPromo = Array.isArray(req.result) ? req.result : [];
-    renderPromoUI();
-    console.log("✅ Promo loaded:", window.menuPromo.length);
-  };
-}
-
-  async function savePromoToDB() {
-  const db = await initPromoDB();
-  const tx = db.transaction("promoData", "readwrite");
-  const store = tx.objectStore("promoData");
-
-  store.clear();
-  menuPromo.forEach(promo => {
-    store.put(promo);
-  });
-}
-
-  
 /* ============================================================
    MENU
 ============================================================ */
@@ -1731,13 +1677,15 @@ const payload = {
   }
 }
 
-  function highlightInvalidPromo() {
+  // ====================== VALIDASI PROMO (FINAL) ======================
+function highlightInvalidPromo() {
   let invalid = false;
 
   document.querySelectorAll(".promo-item").forEach(item => {
     const harga = item.querySelector("input[type=number]");
-    if (!harga || !harga.value || harga.value <= 0) {
-      harga.style.border = "2px solid red";
+
+    if (!harga || !harga.value || Number(harga.value) <= 0) {
+      if (harga) harga.style.border = "2px solid red";
       invalid = true;
     } else {
       harga.style.border = "";
@@ -1746,6 +1694,7 @@ const payload = {
 
   return invalid;
 }
+
 
   function highlightInvalidMenu() {
   let invalid = false;
@@ -1804,10 +1753,17 @@ function tambahNomorWa(value = "") {
 let sudahLoadData = false;
 
 async function loadData(data) {
-  if (!data || Object.keys(data).length === 0) {
-    console.warn("⚠️ loadData dapat data kosong, skip flag");
-    return;
-  }
+ if (!data || typeof data !== "object") {
+  console.warn("⚠️ loadData invalid → pakai default");
+  data = buatDataDefault(1);
+}
+
+
+  // 🔁 RESET FLAG JIKA RESTO BERUBAH / FIRST LOAD
+if (window.__lastLoadedResto !== data?.restoId) {
+  sudahLoadData = false;
+}
+window.__lastLoadedResto = data?.restoId;
 
   if (sudahLoadData) {
     console.warn("⚠️ loadData sudah pernah jalan, skip");
@@ -1864,6 +1820,17 @@ if (voucherBox && typeof renderVoucher === "function") {
   } catch (e) {
     console.warn("⚠️ renderVoucher error (di-skip):", e);
   }
+}
+    // ===== PROMO =====
+    // ===== PROMO (FINAL SYNC) =====
+window.menuPromo = Array.isArray(data.menuPromo)
+  ? [...data.menuPromo]
+  : [];
+
+if (typeof renderPromoUI === "function") {
+  renderPromoUI();
+} else {
+  console.warn("⚠️ renderPromoUI belum siap");
 }
 
     // ===== MENU =====
@@ -2267,7 +2234,6 @@ window.addEventListener("error", e => {
 /* ===================== ADMIN INIT (FINAL) ===================== */
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Admin Init (FINAL)");
-  await loadPromoFromDB(); // ⬅️ PERTAMA
   showLoader();
   
 
@@ -2834,13 +2800,4 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
 
