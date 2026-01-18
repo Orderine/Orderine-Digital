@@ -2275,6 +2275,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderPromoUI();
     }
 
+      const btnCustomer = document.getElementById("btnOpenCustomer");
+      if (btnCustomer && !btnCustomer.dataset.bound) {
+      btnCustomer.onclick = openCustomerPage;
+      btnCustomer.dataset.bound = "1";
+      }
+  
     // ================= INIT UI =================
     await initAllToggles?.();
 
@@ -2835,6 +2841,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
