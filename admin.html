@@ -1669,7 +1669,13 @@ const payload = {
     prepareCustomerShare?.();
 
     console.log("💾 menuvaData SAVED:", payload);
-    alert("✅ Semua data berhasil disimpan!");
+    alert("✅ All Data Succesfully Saved!");
+
+    // 🔓 BUKA AKSES CUSTOMER
+    showCustomerShareUI();
+
+    // 🔐 TANDAI SUDAH DISAVE
+    localStorage.setItem("customerShareReady", "1");
 
   } catch (err) {
     console.error("❌ simpanData error:", err);
@@ -2643,9 +2649,18 @@ function prepareCustomerShare() {
   }
 }
 
+  function showCustomerShareUI() {
+  document.getElementById("btnOpenCustomer")?.style.setProperty("display", "inline-block");
+  document.getElementById("btnSalinLink")?.style.setProperty("display", "inline-block");
+  document.getElementById("qrcodePreview")?.style.setProperty("display", "block");
+  document.getElementById("btnDownloadQR")?.style.setProperty("display", "inline-block");
+  document.getElementById("btnPrintQR")?.style.setProperty("display", "inline-block");
+}
 
+  function markDirty() {
+  localStorage.removeItem("customerShareReady");
+}
 </script>
-
 <script>
 /* ============================================================
    ADMIN PART 12 — REALTIME ORDER + AUDIO + ROLE UI
@@ -2820,6 +2835,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
