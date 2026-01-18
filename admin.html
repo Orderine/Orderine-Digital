@@ -1121,7 +1121,7 @@ function renderPromoUI() {
 
 function tambahPromo(promo = {}) {
   menuPromo.push({
-    id: crypto.randomUUID(),
+    id: promo.id || crypto.randomUUID(),
     namaPromo: promo.namaPromo || "",
     image: promo.image || "",
     deskripsi: promo.deskripsi || "",
@@ -1134,13 +1134,12 @@ function tambahPromo(promo = {}) {
 }
 
 function updatePromo(index, key, value) {
-  if (!menuPromo[index]) return;
+  if (!window.menuPromo[index]) return;
 
-  menuPromo[index][key] = value;
+  window.menuPromo[index][key] = value;
 
-  if (typeof savePromoToDB === "function") {
-    savePromoToDB();
-  }
+  // ❌ jangan save di sini
+  // simpan via tombol Save All
 }
 
 function hapusPromo(index) {
@@ -1770,9 +1769,18 @@ if (window.__lastLoadedResto !== data?.restoId) {
 window.__lastLoadedResto = data?.restoId;
 
   if (sudahLoadData) {
-    console.warn("⚠️ loadData sudah pernah jalan, skip");
-    return;
+  console.warn("⚠️ loadData sudah pernah jalan, skip basic fields");
+
+  // 🔥 TETAP LOAD PROMO
+  if (Array.isArray(data.menuPromo)) {
+    window.menuPromo = data.menuPromo;
+    if (typeof renderPromoUI === "function") {
+      renderPromoUI();
+    }
   }
+
+  return;
+}
 
   sudahLoadData = true;
 
@@ -2817,6 +2825,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
