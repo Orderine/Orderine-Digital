@@ -12,7 +12,7 @@
 <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 
 <!-- CDN BIASA -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
   <title>Admin Orderine</title>
   <style>
@@ -1666,7 +1666,6 @@ const payload = {
     }
     restoIdEl.value = restoId;
 
-    updateShareUI?.();
     prepareCustomerShare?.();
 
     console.log("💾 menuvaData SAVED:", payload);
@@ -2104,14 +2103,6 @@ function getCustomerLink() {
   if (!id) return null;
   const base = location.pathname.substring(0, location.pathname.lastIndexOf("/"));
   return `${location.origin}${base}/menu.html?resto=${encodeURIComponent(id)}`;
-}
-
-function updateShareUI() {
-  const link = getCustomerLink();
-  if (!link) return;
-  const qr = document.getElementById("qrcodePreview");
-  qr.innerHTML = "";
-  QRCode.toCanvas(link, { width: 128 }, (_, canvas) => qr.appendChild(canvas));
 }
 
 // ====================== LOADER HANDLER (Modern, Safe, Single Instance) ======================
@@ -2566,15 +2557,13 @@ function fallbackCopy(text) {
   alert(`✅ Kode "${text}" disalin`);
 }
 
-  // ====================== CUSTOMER SHARE ======================
-function getCustomerUrl() {
+  function getCustomerUrl() {
   const restoId =
     document.getElementById("restoId")?.value ||
     localStorage.getItem("restoId");
 
   if (!restoId) return null;
 
-  // ambil base path repo (aman untuk GitHub Pages & subfolder)
   const base = location.pathname.substring(
     0,
     location.pathname.lastIndexOf("/")
@@ -2597,22 +2586,30 @@ function prepareCustomerShare() {
     };
   }
 
-  // ===== QR CODE (GENERATE ONCE) =====
+  // ===== QR CODE (ONE LIB ONLY) =====
   const qrBox = document.getElementById("qrcodePreview");
-  if (qrBox && qrBox.childElementCount === 0) {
-    new QRCode(qrBox, {
-      text: url,
-      width: 200,
-      height: 200
-    });
+  if (!qrBox) return;
+
+  qrBox.innerHTML = "";
+
+  if (typeof QRCode !== "function") {
+    console.error("❌ QRCode constructor not ready:", QRCode);
+    alert("QR Code library belum siap.");
+    return;
   }
 
-  // ===== DOWNLOAD QR =====
+  new QRCode(qrBox, {
+    text: url,
+    width: 200,
+    height: 200
+  });
+
+  // ===== DOWNLOAD =====
   const btnDownload = document.getElementById("btnDownloadQR");
   if (btnDownload) {
     btnDownload.style.display = "inline-block";
     btnDownload.onclick = () => {
-      const img = qrBox?.querySelector("img");
+      const img = qrBox.querySelector("img");
       if (!img) return alert("QR belum siap");
       const a = document.createElement("a");
       a.href = img.src;
@@ -2621,12 +2618,12 @@ function prepareCustomerShare() {
     };
   }
 
-  // ===== PRINT QR =====
+  // ===== PRINT =====
   const btnPrint = document.getElementById("btnPrintQR");
   if (btnPrint) {
     btnPrint.style.display = "inline-block";
     btnPrint.onclick = () => {
-      const img = qrBox?.querySelector("img");
+      const img = qrBox.querySelector("img");
       if (!img) return;
       const w = window.open("");
       w.document.write(`<img src="${img.src}" style="width:300px"/>`);
@@ -2636,18 +2633,16 @@ function prepareCustomerShare() {
   }
 }
 
-
-  // ====================== CUSTOMER PAGE LINK ======================
-function openCustomerPage() {
-  const url = getCustomerUrl();
-  if (!url) {
-    alert("❌ Resto ID belum tersedia");
-    return;
+ function openCustomerPage() {
+  try {
+    prepareCustomerShare();
+    window.open(getCustomerUrl(), "_blank");
+  } catch (e) {
+    console.error("❌ openCustomerPage error:", e);
+    alert("Gagal membuka customer page.");
   }
-
-  prepareCustomerShare(); // ⬅️ penting
-  window.open(url, "_blank");
 }
+
 
 </script>
 
@@ -2825,6 +2820,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
