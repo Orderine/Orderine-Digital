@@ -1082,22 +1082,35 @@ function renderPromoUI() {
     const div = document.createElement("div");
     div.className = "menu-item promo-item";
 
-    div.innerHTML = `
-      <input type="text" value="${promo.namaPromo || ""}"
-        onchange="updatePromo(${index}, 'namaPromo', this.value)">
+   div.innerHTML = `
+  <img
+    id="promoImgPreview${index}"
+    src="${promo.image || 'img/no-image.png'}"
+    style="width:100%;max-height:140px;object-fit:cover"
+  >
 
-      <textarea
-        onchange="updatePromo(${index}, 'deskripsi', this.value)"
-      >${promo.deskripsi || ""}</textarea>
+  <input type="file"
+    accept="image/*"
+    onchange="uploadPromoImage(event, ${index})">
 
-      <input type="date" value="${promo.tanggalAkhir || ""}"
-        onchange="updatePromo(${index}, 'tanggalAkhir', this.value)">
+  <input type="text"
+    value="${promo.namaPromo || ""}"
+    onchange="updatePromo(${index}, 'namaPromo', this.value)">
 
-      <input type="number" value="${promo.harga || ""}"
-        onchange="updatePromo(${index}, 'harga', this.value)">
+  <textarea
+    onchange="updatePromo(${index}, 'deskripsi', this.value)"
+  >${promo.deskripsi || ""}</textarea>
 
-      <button onclick="hapusPromo(${index})">Delete</button>
-    `;
+  <input type="date"
+    value="${promo.tanggalAkhir || ""}"
+    onchange="updatePromo(${index}, 'tanggalAkhir', this.value)">
+
+  <input type="number"
+    value="${promo.harga || ""}"
+    onchange="updatePromo(${index}, 'harga', this.value)">
+
+  <button onclick="hapusPromo(${index})">Delete</button>
+`;
 
     container.appendChild(div);
   });
@@ -1119,7 +1132,12 @@ function tambahPromo(promo = {}) {
 
 function updatePromo(index, key, value) {
   if (!menuPromo[index]) return;
+
   menuPromo[index][key] = value;
+
+  if (typeof savePromoToDB === "function") {
+    savePromoToDB();
+  }
 }
 
 function hapusPromo(index) {
@@ -2216,11 +2234,10 @@ window.addEventListener("error", e => {
 </script>
 <script>
 
-/* ===================== ADMIN INIT (FINAL) ===================== */
+/* ===================== ADMIN INIT (FINAL + PROMO PATCH) ===================== */
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Admin Init (FINAL)");
   showLoader();
-  
 
   try {
     // ================= WAIT AUTH =================
@@ -2230,14 +2247,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       wait++;
     }
 
-   if (!window.activeUser) {
-  console.warn("⚠️ activeUser not ready, init is pending");
-  hideLoader();
-  return;
-}
+    if (!window.activeUser) {
+      console.warn("⚠️ activeUser not ready, init is pending");
+      hideLoader();
+      return;
+    }
 
     // ================= LOAD DATA =================
-    await loadMenuvaData();   // 🔥 SATU-SATUNYA LOAD DATA
+    await loadMenuvaData();   // 🔥 master loader
+
+    // ================= PROMO SAFE GUARD =================
+    if (!Array.isArray(window.menuPromo)) {
+      console.warn("⚠️ menuPromo missing, init empty array");
+      window.menuPromo = [];
+    }
+
+    // 🔥 render promo UI after data ready
+    if (typeof renderPromoUI === "function") {
+      renderPromoUI();
+    }
 
     // ================= INIT UI =================
     await initAllToggles?.();
@@ -2257,6 +2285,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     hideLoader();
   }
 });
+
 
 /* ===================== TOGGLE MASTER ===================== */
 async function initAllToggles() {
@@ -2785,6 +2814,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
