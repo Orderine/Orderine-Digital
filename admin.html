@@ -1086,20 +1086,23 @@ function renderPromoUI() {
   <img
     id="promoImgPreview${index}"
     src="${promo.image || 'img/no-image.png'}"
-    style="width:100%;max-height:140px;object-fit:cover"
+    style="width:10%;max-height:80px;object-fit:cover"
   >
 
   <input type="file"
     accept="image/*"
     onchange="uploadPromoImage(event, ${index})">
 
-  <input type="text"
-    value="${promo.namaPromo || ""}"
-    onchange="updatePromo(${index}, 'namaPromo', this.value)">
+  <input
+  type="text"
+  placeholder="Menu Name"
+  value="${promo.namaPromo || ""}"
+  onchange="updatePromo(${index}, 'namaPromo', this.value)">
 
   <textarea
-    onchange="updatePromo(${index}, 'deskripsi', this.value)"
-  >${promo.deskripsi || ""}</textarea>
+  placeholder="Menu Description"
+  onchange="updatePromo(${index}, 'deskripsi', this.value)"
+>${promo.deskripsi || ""}</textarea>
 
   <input type="date"
     value="${promo.tanggalAkhir || ""}"
@@ -2814,6 +2817,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
