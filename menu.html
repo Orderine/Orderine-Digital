@@ -275,42 +275,26 @@
   <span class="label">Room & Package</span>
 </button>
 </div>
-
+  
+<script src="./db-core.js"></script>
 <script>
-/* =======================
-   CONFIG
-======================= */
-const DB_NAME    = "MenuvaDB";
-const STORE_NAME = "menuvaData";
-const DB_VERSION = 14; // HARUS SAMA DENGAN admin.html
-
-let db = null;
 let watcherStarted = false;
 
-/* =======================
-   DB INIT (READ ONLY)
-======================= */
-function initDB() {
-  return new Promise((resolve, reject) => {
-    if (db) return resolve(db);
+async function initDB() {
+  if (!window.MENUVA_DB) {
+    throw new Error("MENUVA_DB not loaded");
+  }
 
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+  const db = await window.MENUVA_DB.open();
 
-    req.onerror = () => reject(req.error);
+  // 🔥 auto reload jika admin upgrade DB
+  db.onversionchange = () => {
+    console.warn("🔁 DB version changed → reload menu");
+    db.close();
+    location.reload();
+  };
 
-    req.onsuccess = (e) => {
-      db = e.target.result;
-
-      // 🔥 JIKA ADMIN UPGRADE DB → MENU AUTO RELOAD
-      db.onversionchange = () => {
-        console.warn("🔁 DB version changed → reload menu");
-        db.close();
-        location.reload();
-      };
-
-      resolve(db);
-    };
-  });
+  return db;
 }
 
 /* =======================
@@ -334,15 +318,12 @@ function getRestoId() {
   return null;
 }
 
-/* =======================
-   LOAD DATA
-======================= */
 async function loadDataFromDB(restoId) {
   const database = await initDB();
 
   return new Promise((resolve, reject) => {
-    const tx = database.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
+    const tx = database.transaction("menuvaData", "readonly");
+    const store = tx.objectStore("menuvaData");
     const req = store.get(restoId);
 
     req.onsuccess = () => resolve(req.result || null);
@@ -506,7 +487,11 @@ async function initMenuPage() {
 /* =======================
    START
 ======================= */
-document.addEventListener("DOMContentLoaded", initMenuPage);
+document.addEventListener("DOMContentLoaded", async () => {
+  await window.MENUVA_DB.open(); // 🔥 pastikan schema ready
+  initMenuPage();
+});
+
 
 /* =======================
    UTIL
@@ -524,3 +509,4 @@ function goToPage(page) {
 
 </body>
 </html>
+
