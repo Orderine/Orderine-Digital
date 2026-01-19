@@ -4,11 +4,13 @@
 window.activeUser = null;
 window.currentUser = null;
 
-import { openMenuvaDB } from "./db-core.js";
+import { getSession, clearSession } from "./db.js";
 import { getSession, clearSession } from "./db.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await openMenuvaDB(); // 🔥 ensure schema up-to-date
+  if (window.MENUVA_DB?.open) {
+    await window.MENUVA_DB.open();
+  }
   runAuthGuard();
 });
 
@@ -162,5 +164,6 @@ async function forceRenew(user, message) {
   await clearSession();
   location.replace("plans.html");
 }
+
 
 
