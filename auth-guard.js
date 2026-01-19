@@ -5,7 +5,6 @@ window.activeUser = null;
 window.currentUser = null;
 
 import { getSession, clearSession } from "./db.js";
-import { getSession, clearSession } from "./db.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   if (window.MENUVA_DB?.open) {
@@ -164,6 +163,7 @@ async function forceRenew(user, message) {
   await clearSession();
   location.replace("plans.html");
 }
+
 
 
 
