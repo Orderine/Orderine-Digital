@@ -277,30 +277,35 @@
 </div>
 
 <script>
-const DB_NAME     = "MenuvaDB";
-const STORE_NAME  = "menuvaData";
-const DB_VERSION  = 14; // harus sama dengan admin.html
+/* =======================
+   CONFIG
+======================= */
+const DB_NAME    = "MenuvaDB";
+const STORE_NAME = "menuvaData";
+const DB_VERSION = 14; // HARUS SAMA DENGAN admin.html
 
-  let db;
-  let menuInitRunning = false;
-  let menuInitDone = false;
+let db = null;
+let watcherStarted = false;
 
-  function initDB() {
+/* =======================
+   DB INIT (READ ONLY)
+======================= */
+function initDB() {
   return new Promise((resolve, reject) => {
     if (db) return resolve(db);
 
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onerror = () => reject(request.error);
+    req.onerror = () => reject(req.error);
 
-    request.onsuccess = (e) => {
+    req.onsuccess = (e) => {
       db = e.target.result;
 
-      // 🔥 INI KUNCI TERAKHIR
+      // 🔥 JIKA ADMIN UPGRADE DB → MENU AUTO RELOAD
       db.onversionchange = () => {
-        console.warn("🔁 DB version changed → reload menu.html");
+        console.warn("🔁 DB version changed → reload menu");
         db.close();
-        location.reload(); // ⬅️ PAKSA REHYDRATE TOTAL
+        location.reload();
       };
 
       resolve(db);
@@ -308,428 +313,214 @@ const DB_VERSION  = 14; // harus sama dengan admin.html
   });
 }
 
-
 /* =======================
-   RESTO ID HANDLER
+   RESTO ID
 ======================= */
 function getRestoId() {
-  let restoId = localStorage.getItem("restoId");
+  const params = new URLSearchParams(location.search);
+  const urlId = params.get("resto");
 
-  const params = new URLSearchParams(window.location.search);
-  const urlRestoId = params.get("resto");
-
-  if (urlRestoId) {
-    restoId = urlRestoId;
-    localStorage.setItem("restoId", restoId);
-    console.log("🔑 Resto ID from URL:", restoId);
+  if (urlId) {
+    localStorage.setItem("restoId", urlId);
+    console.log("🔑 Resto ID from URL:", urlId);
+    return urlId;
   }
 
-  if (!restoId) {
-    console.error("❌ Resto ID missing");
-    document.body.innerHTML =
-      "<h2 style='text-align:center'>Resto tidak ditemukan</h2>";
-    return null;
-  }
+  const stored = localStorage.getItem("restoId");
+  if (stored) return stored;
 
-  return restoId;
+  document.body.innerHTML =
+    "<h2 style='text-align:center'>Resto tidak ditemukan</h2>";
+  return null;
 }
 
-  
+/* =======================
+   LOAD DATA
+======================= */
 async function loadDataFromDB(restoId) {
   const database = await initDB();
 
   return new Promise((resolve, reject) => {
     const tx = database.transaction(STORE_NAME, "readonly");
     const store = tx.objectStore(STORE_NAME);
+    const req = store.get(restoId);
 
-    const req = store.get(restoId); // 🔥 langsung by key
-
-    req.onsuccess = () => {
-      resolve(req.result || null);
-    };
-
+    req.onsuccess = () => resolve(req.result || null);
     req.onerror = () => reject(req.error);
   });
 }
 
 /* =======================
-   FLIPBOOK GALLERY
+   RENDER
 ======================= */
-let currentFullscreenIndex = 0;
-let currentImages = [];
-function renderFlipbookGallery(containerId, images, warningId) {
-  const container = document.getElementById(containerId);
-  const warning = document.getElementById(warningId);
-  container.innerHTML = "";
-  warning.textContent = "";
-
-  if (!images || images.length === 0) {
-    warning.textContent = "No pictures.";
-    return;
+function renderHeader(data) {
+  const logo = document.getElementById("logoResto");
+  if (logo) {
+    logo.style.display = data.logo ? "block" : "none";
+    if (data.logo) logo.src = data.logo;
   }
 
-  images.forEach((src,i) => {
-    const img = document.createElement("img");
-    img.src = src;
-    img.alt = "Flipbook Image";
-    img.onclick = () => openFullscreen(src,i,images);
-    container.appendChild(img);
-  });
-}
+  document.getElementById("namaRestoDisplay").textContent =
+    data.namaRestoran || "Menu Restoran";
 
-function openFullscreen(src,index,images){
-  currentFullscreenIndex = index;
-  currentImages = images;
-  document.getElementById("fullscreenOverlay").style.display = "flex";
-  document.getElementById("fullscreenImage").src = src;
-}
-function closeFullscreen(){ 
-  document.getElementById("fullscreenOverlay").style.display = "none";
-  document.getElementById("fullscreenImage").src = "";
-}
-function showPrev(){ 
-  if(currentImages.length===0) return;
-  currentFullscreenIndex = (currentFullscreenIndex-1+currentImages.length)%currentImages.length;
-  document.getElementById("fullscreenImage").src = currentImages[currentFullscreenIndex];
-}
-function showNext(){ 
-  if(currentImages.length===0) return;
-  currentFullscreenIndex = (currentFullscreenIndex+1)%currentImages.length;
-  document.getElementById("fullscreenImage").src = currentImages[currentFullscreenIndex];
-}
+  document.getElementById("alamatResto").innerText =
+    `📍 Address: ${data.restoAddress || "-"}`;
 
-function renderPromo(promoList) {
-  const promoContainer = document.getElementById("promoContainer");
-  promoContainer.innerHTML = "";
-
-  const promoWarning = document.getElementById("promoWarning");
-  promoWarning.textContent = "";
-
-  if (!promoList || promoList.length === 0) {
-    promoWarning.textContent = "❌ No promo data available.";
-    return;
-  }
-
-  promoList.forEach((promo, index) => {
-    // 🔥 NORMALISASI FIELD
-    const kategori =
-      promo.kategori ||
-      promo.kategoriPromo ||
-      promo.promoKategori ||
-      "";
-
-    const nama =
-      promo.namaPromo ||
-      promo.namaMenu ||
-      promo.menuName ||
-      "No Name";
-
-    const deskripsi =
-      promo.deskripsi ||
-      promo.desc ||
-      "-";
-
-    const image =
-      promo.image ||
-      promo.gambar ||
-      "";
-
-    const harga = promo.harga || promo.price || null;
-
-    const tanggalAkhir =
-      promo.tanggalAkhir ||
-      promo.endDate ||
-      null;
-
-    const promoCard = document.createElement("div");
-    promoCard.className = "promo-item";
-
-    // BADGE
-    if (kategori) {
-      const badge = document.createElement("div");
-      badge.className = "promo-badge";
-      badge.textContent = kategori.toUpperCase();
-      promoCard.appendChild(badge);
-    }
-
-    // IMAGE
-    const img = document.createElement("img");
-    img.src = image;
-    img.alt = nama;
-    promoCard.appendChild(img);
-
-    // TITLE
-    const title = document.createElement("h3");
-    title.textContent = nama;
-    promoCard.appendChild(title);
-
-    // DESC
-    const desc = document.createElement("p");
-    desc.textContent = deskripsi;
-    promoCard.appendChild(desc);
-
-    // PRICE
-    const price = document.createElement("div");
-    price.className = "promo-price";
-    price.textContent = harga
-      ? `Rp ${parseInt(harga).toLocaleString("id-ID")}`
-      : "-";
-    promoCard.appendChild(price);
-
-    // COUNTDOWN
-    const countdown = document.createElement("div");
-    countdown.className = "countdown";
-    countdown.id = `countdown-${index}`;
-    promoCard.appendChild(countdown);
-
-    if (tanggalAkhir) {
-      startCountdown(tanggalAkhir, countdown.id);
-    } else {
-      countdown.textContent = "Tanpa batas waktu";
-    }
-
-    promoContainer.appendChild(promoCard);
-  });
-}
-
-
-function startCountdown(tanggalAkhir,elementId){
-  function update(){
-    const deadline = new Date(tanggalAkhir).getTime();
-    const now = new Date().getTime();
-    const distance = deadline - now;
-    const el = document.getElementById(elementId);
-    if(!el) return;
-    if(distance<0){ el.textContent="Promotion has ended"; return; }
-    const d=Math.floor(distance/(1000*60*60*24));
-    const h=Math.floor((distance%(1000*60*60*24))/(1000*60*60));
-    const m=Math.floor((distance%(1000*60*60))/(1000*60));
-    const s=Math.floor((distance%(1000*60))/1000);
-    el.textContent=`Ends in : ${d}d ${h}h ${m}m ${s}s`;
-  }
-  update();
-  setInterval(update,1000);
+  document.getElementById("teleponResto").innerText =
+    `📞 Telephone: ${data.restoPhone || "-"}`;
 }
 
 /* =======================
-   WATCH DB CHANGES
+   PROMO
+======================= */
+function renderPromo(list = []) {
+  const box = document.getElementById("promoContainer");
+  const warn = document.getElementById("promoWarning");
+
+  box.innerHTML = "";
+  warn.textContent = "";
+
+  if (!list.length) {
+    warn.textContent = "❌ No promo available";
+    return;
+  }
+
+  list.forEach((p, i) => {
+    const card = document.createElement("div");
+    card.className = "promo-item";
+
+    if (p.kategori) {
+      const badge = document.createElement("div");
+      badge.className = "promo-badge";
+      badge.textContent = p.kategori;
+      card.appendChild(badge);
+    }
+
+    if (p.image) {
+      const img = document.createElement("img");
+      img.src = p.image;
+      card.appendChild(img);
+    }
+
+    card.innerHTML += `
+      <h3>${p.namaPromo || "-"}</h3>
+      <p>${p.deskripsi || "-"}</p>
+      <div class="promo-price">
+        ${p.harga ? "Rp " + Number(p.harga).toLocaleString("id-ID") : "-"}
+      </div>
+    `;
+
+    box.appendChild(card);
+  });
+}
+
+/* =======================
+   FLIPBOOK
+======================= */
+function renderFlipbookGallery(id, images = [], warnId) {
+  const box = document.getElementById(id);
+  const warn = document.getElementById(warnId);
+  box.innerHTML = "";
+  warn.textContent = "";
+
+  if (!images.length) {
+    warn.textContent = "No pictures.";
+    return;
+  }
+
+  images.forEach(src => {
+    const img = document.createElement("img");
+    img.src = src;
+    box.appendChild(img);
+  });
+}
+
+/* =======================
+   WATCHER (SAFE)
 ======================= */
 async function watchDBChanges(restoId) {
-  let lastDataStr = "";
+  let last = "";
 
-  async function checkUpdates() {
+  setInterval(async () => {
     try {
       const data = await loadDataFromDB(restoId);
       if (!data) return;
 
-      const current = JSON.stringify(data);
-      if (current !== lastDataStr) {
-        lastDataStr = current;
-        console.log("🔄 Data updated, refreshing view...");
+      const now = JSON.stringify(data);
+      if (now !== last) {
+        last = now;
+        console.log("🔄 Data updated");
 
-        renderPromo(data.menuPromo);
+        renderPromo(data.menuPromo || []);
         renderFlipbookGallery(
           "flipbookRuanganGallery",
-          data.flipbookRuanganImages,
+          data.flipbookRuanganImages || [],
           "ruanganWarning"
         );
         renderFlipbookGallery(
           "flipbookMenuGallery",
-          data.flipbookMenuImages,
+          data.flipbookMenuImages || [],
           "menuWarning"
         );
       }
-    } catch (e) {
-      console.warn("watchDB error:", e);
-    }
-  }
-
-  await checkUpdates();
-  setInterval(checkUpdates, 5000);
+    } catch {}
+  }, 5000);
 }
 
-  /* =======================
-   ONLOAD (FIXED)
+/* =======================
+   INIT MENU (SIMPLE)
 ======================= */
-
-let watcherStarted = false;
-
 async function initMenuPage() {
-  if (menuInitRunning) {
-    console.warn("⏸ initMenuPage skipped: still running");
-    return;
-  }
-
-  if (menuInitDone) {
-    console.warn("⏸ initMenuPage skipped: already done");
-    return;
-  }
-
-  menuInitRunning = true;
-  console.log("▶️ initMenuPage start");
+  console.log("▶️ initMenuPage");
 
   const restoId = getRestoId();
-  if (!restoId) {
-    menuInitRunning = false;
+  if (!restoId) return;
+
+  const data = await loadDataFromDB(restoId);
+  if (!data) {
+    showFallbackUI("Menu belum tersedia");
     return;
   }
 
-  try {
-    console.log("⏳ loading data from IndexedDB...");
-    const data = await loadDataFromDB(restoId);
+  renderHeader(data);
+  renderPromo(data.menuPromo || []);
+  renderFlipbookGallery(
+    "flipbookRuanganGallery",
+    data.flipbookRuanganImages || [],
+    "ruanganWarning"
+  );
+  renderFlipbookGallery(
+    "flipbookMenuGallery",
+    data.flipbookMenuImages || [],
+    "menuWarning"
+  );
 
-    console.log("📦 data loaded:", data);
-
-    if (!data) {
-      showFallbackUI("Data menu belum tersedia");
-      return;
-    }
-
-    // HEADER
-    const logoElem = document.getElementById("logoResto");
-    if (logoElem) {
-      logoElem.style.display = data.logo ? "block" : "none";
-      if (data.logo) logoElem.src = data.logo;
-    }
-
-    document.getElementById("namaRestoDisplay").textContent =
-      data.namaRestoran || "Menu Restoran";
-
-    document.getElementById("alamatResto").innerText =
-      `📍 Address: ${data.restoAddress || "-"}`;
-
-    document.getElementById("teleponResto").innerText =
-      `📞 Telephone: ${data.restoPhone || "-"}`;
-
-    // CONTENT
-    renderPromo(Array.isArray(data.menuPromo) ? data.menuPromo : []);
-
-    renderFlipbookGallery(
-      "flipbookRuanganGallery",
-      data.flipbookRuanganImages || [],
-      "ruanganWarning"
-    );
-
-    renderFlipbookGallery(
-      "flipbookMenuGallery",
-      data.flipbookMenuImages || [],
-      "menuWarning"
-    );
-
-    if (!watcherStarted) {
-      watchDBChanges(restoId);
-      watcherStarted = true;
-    }
-
-    menuInitDone = true;
-    console.log("✅ initMenuPage DONE");
-
-  } catch (err) {
-    console.error("❌ initMenuPage error:", err);
-    showFallbackUI("Gagal memuat menu");
-  } finally {
-    menuInitRunning = false;
+  if (!watcherStarted) {
+    watchDBChanges(restoId);
+    watcherStarted = true;
   }
+
+  console.log("✅ Menu ready");
 }
 
-    /* ========= CONTENT ========= */
-    renderPromo(Array.isArray(data.menuPromo) ? data.menuPromo : []);
-
-    renderFlipbookGallery(
-      "flipbookRuanganGallery",
-      Array.isArray(data.flipbookRuanganImages)
-        ? data.flipbookRuanganImages
-        : [],
-      "ruanganWarning"
-    );
-
-    renderFlipbookGallery(
-      "flipbookMenuGallery",
-      Array.isArray(data.flipbookMenuImages)
-        ? data.flipbookMenuImages
-        : [],
-      "menuWarning"
-    );
-
-    /* ========= WATCHER ========= */
-    if (!watcherStarted) {
-      console.log("👀 start DB watcher");
-      watchDBChanges(restoId);
-      watcherStarted = true;
-    }
-
-  } catch (err) {
-    console.error("❌ initMenuPage error:", err);
-
-    // 🔥 JIKA IndexedDB NGADAT → PAKSA RELOAD
-    if (err.message && err.message.includes("IndexedDB")) {
-      console.warn("🔁 IndexedDB unstable → reload page");
-      location.reload();
-    } else {
-      showFallbackUI("Terjadi kesalahan memuat menu");
-    }
-  }
-}
-
-/* LOAD NORMAL */
+/* =======================
+   START
+======================= */
 document.addEventListener("DOMContentLoaded", initMenuPage);
 
-window.addEventListener("pageshow", (e) => {
-  if (e.persisted) {
-    console.log("🔄 pageshow (bfcache) → refresh only");
-    location.reload();
-  }
-});
-
+/* =======================
+   UTIL
+======================= */
+function showFallbackUI(msg) {
+  document.querySelector(".container-section").innerHTML =
+    `<div style="text-align:center;padding:40px">${msg}</div>`;
+}
 
 function goToPage(page) {
-  const restoId = localStorage.getItem("restoId");
-  window.location.href = restoId
-    ? `${page}?resto=${restoId}`
-    : page;
+  const id = localStorage.getItem("restoId");
+  location.href = id ? `${page}?resto=${id}` : page;
 }
-
-  window.addEventListener("pageshow", async () => {
-  console.log("🔄 pageshow → reset DB & re-init");
-
-  // 🔥 reset koneksi IndexedDB lama
-  if (db) {
-    db.close();
-    db = null;
-  }
-
-  watcherStarted = false;
-
-  await initMenuPage();
-});
-
-  window.addEventListener("pagehide", () => {
-  console.log("🧹 pagehide → cleanup menu page");
-
-  if (db) {
-    db.close();
-    db = null;
-  }
-
-  watcherStarted = false;
-});
-
-  function showFallbackUI(message) {
-  const container = document.querySelector(".container-section");
-  if (!container) return;
-
-  container.innerHTML = `
-    <div style="text-align:center;padding:40px;color:#666">
-      <h3>${message}</h3>
-      <p>Silakan refresh halaman</p>
-    </div>
-  `;
-}
-
 </script>
+
 </body>
 </html>
-
-
-
-
