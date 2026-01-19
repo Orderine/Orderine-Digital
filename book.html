@@ -424,29 +424,6 @@ footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);paddin
   let activeVoucherData = null; // object voucher aktif (null jika none)
   let promoCountdownTimer = null;
 
- function initDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open("menuvaDB", 1); // FIX DI SINI
-
-    request.onerror = () => {
-      console.error("❌ Gagal membuka IndexedDB");
-      reject();
-    };
-
-    request.onsuccess = () => {
-      console.log("✅ IndexedDB dibuka (book.html)");
-      resolve(request.result);
-    };
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains("menuvaData")) {
-        db.createObjectStore("menuvaData", { keyPath: "id" });
-      }
-    };
-  });
-}
-
   /* ------------------ LOCALE / CURRENCY ---------------- */
   const localeToCurrencyFallback = {
     'id': 'IDR','en-US': 'USD','en': 'USD','en-GB': 'GBP','de': 'EUR','fr': 'EUR','ja': 'JPY','zh': 'CNY'
@@ -522,61 +499,44 @@ function initDB() {
   return new Promise((resolve, reject) => {
     if (db) return resolve(db);
 
-    const req = indexedDB.open(DB_NAME, 14);
-    req.onerror = () => reject(req.error);
+    const request = indexedDB.open(DB_NAME, 14); // WAJIB SAMA DENGAN admin.html
 
-    req.onsuccess = (e) => {
-      db = e.target.result;
-
-      // 🧩 Cek apakah store 'ordersData' sudah ada
-      if (!db.objectStoreNames.contains("ordersData")) {
-        console.warn("⚠️ Store 'ordersData' belum ada. Membuat ulang DB internal...");
-
-        // Buat ulang DB tanpa hapus data lain
-        const newVersion = db.version + 1;
-        db.close();
-        const recreateReq = indexedDB.open(DB_NAME, newVersion);
-
-        recreateReq.onupgradeneeded = (ev) => {
-          const upgradedDB = ev.target.result;
-          if (!upgradedDB.objectStoreNames.contains("ordersData")) {
-            const orders = upgradedDB.createObjectStore("ordersData", { keyPath: "id", autoIncrement: true });
-            orders.createIndex("status", "status", { unique: false });
-            orders.createIndex("orderTime", "orderTime", { unique: false });
-          }
-        };
-
-        recreateReq.onsuccess = (ev2) => {
-          db = ev2.target.result;
-          console.log("✅ Store 'ordersData' berhasil dibuat otomatis (runtime fix)");
-          resolve(db);
-        };
-
-        recreateReq.onerror = () => reject(recreateReq.error);
-        return;
-      }
-
-      resolve(db);
+    request.onerror = () => {
+      console.error("❌ IndexedDB open failed (book.html)");
+      reject(request.error);
     };
 
-    req.onblocked = () => {
-      console.warn("⚠️ DB upgrade blocked. Tutup tab lain yang masih pakai DB ini.");
-    };
+    request.onupgradeneeded = (e) => {
+      const upgradedDB = e.target.result;
 
-    req.onupgradeneeded = (e) => {
-      db = e.target.result;
-
-      // Store utama tetap
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+      // STORE DATA RESTO / MENU
+      if (!upgradedDB.objectStoreNames.contains(STORE_NAME)) {
+        upgradedDB.createObjectStore(STORE_NAME, { keyPath: "restoId" });
       }
 
-      // Store order baru
-      if (!db.objectStoreNames.contains("ordersData")) {
-        const orders = db.createObjectStore("ordersData", { keyPath: "id", autoIncrement: true });
+      // STORE ORDER CUSTOMER
+      if (!upgradedDB.objectStoreNames.contains("ordersData")) {
+        const orders = upgradedDB.createObjectStore("ordersData", {
+          keyPath: "id",
+          autoIncrement: true
+        });
         orders.createIndex("status", "status", { unique: false });
         orders.createIndex("orderTime", "orderTime", { unique: false });
       }
+    };
+
+    request.onsuccess = (e) => {
+      db = e.target.result;
+
+      // 🔥 AUTO HANDLE VERSION CHANGE
+      db.onversionchange = () => {
+        console.warn("🔁 DB version changed → reload book.html");
+        db.close();
+        location.reload();
+      };
+
+      console.log("✅ IndexedDB ready (book.html)");
+      resolve(db);
     };
   });
 }
@@ -584,35 +544,31 @@ function initDB() {
   /* ================== REALTIME BROADCAST CHANNEL ================== */
 const bc = new BroadcastChannel("menuvaOrders");
 
+  async function loadDataFromDB(restoId) {
+  if (!restoId) return null;
 
- function loadDataFromDB(restoId) {
+  const database = await initDB();
+
   return new Promise((resolve) => {
-    if (!db) return resolve(null);
-    if (!db.objectStoreNames.contains(STORE_NAME)) return resolve(null);
+    if (!database.objectStoreNames.contains(STORE_NAME)) {
+      console.warn("⚠️ Store menuvaData not found");
+      return resolve(null);
+    }
 
-    const tx = db.transaction(STORE_NAME, "readonly");
+    const tx = database.transaction(STORE_NAME, "readonly");
     const store = tx.objectStore(STORE_NAME);
-    const req = store.getAll();
+
+    // 🔥 ADMIN.html SIMPAN DATA DENGAN KEY restoId
+    const req = store.get(restoId);
 
     req.onsuccess = () => {
-      const all = req.result || [];
-      if (!all.length) return resolve(null);
-
-      // ✅ Jika ada restoId di URL, coba cari yang cocok
-      if (restoId) {
-        const found = all.find(r => 
-          r?.restoId === restoId || 
-          r?.restoPhone === restoId ||
-          r?.id === Number(restoId)
-        );
-        if (found) return resolve(found);
-      }
-
-      // ✅ Jika tidak ada, ambil record pertama saja
-      resolve(all[0]);
+      resolve(req.result || null);
     };
 
-    req.onerror = () => resolve(null);
+    req.onerror = () => {
+      console.error("❌ loadDataFromDB error");
+      resolve(null);
+    };
   });
 }
 
@@ -1141,16 +1097,6 @@ input.addEventListener("input", async () => {
 });
 }
 
-/* ==========================
-           INIT
-========================== */
-
-document.addEventListener("DOMContentLoaded", async () => {
-  initVoucherInput();
-  await ensureVoucherLoaded();
-  restoreVoucherFromStorage?.();
-});
-  
   /* ------------------ LOCALE UI ------------------------- */
   function initLocaleSelect(){
     const sel = document.getElementById('localeSelect');
@@ -1293,85 +1239,81 @@ function playSound(type) {
     if (activeTab) activeTab.classList.add('active');
   }
 
+  document.addEventListener("DOMContentLoaded", async () => {
+  console.log("▶️ book.html init start");
+
+  try {
+    // ===== INIT UI =====
+    initDarkMode();
+    initLocaleSelect();
+    initVoucherInput();
+
+    // ===== INIT DB & LOAD DATA =====
+    const restoId = getQueryRestoId();
+    if (!restoId) {
+      console.error("❌ restoId missing in URL");
+      return;
+    }
+
+    const data = await loadDataFromDB(restoId);
+    if (!data) {
+      console.warn("⚠️ Data resto belum tersedia");
+      return;
+    }
+
+    restoData = data;
+    menuData  = Array.isArray(data.menu) ? data.menu : [];
+    menuPromo = Array.isArray(data.menuPromo) ? data.menuPromo : [];
+
+    // ===== HEADER =====
+    const logoEl = document.getElementById("restoLogo");
+    if (logoEl) {
+      logoEl.src = data.logo || "";
+      logoEl.style.display = data.logo ? "block" : "none";
+    }
+
+    document.getElementById("restoName").innerText =
+      data.namaRestoran || "Nama Restoran";
+
+    document.getElementById("alamatRestoranDisplay").innerText =
+      data.restoAddress || "";
+
+    document.getElementById("teleponRestoranDisplay").innerText =
+      data.restoPhone || "";
+
+    // ===== DEFAULT DATE / TIME =====
+    const now = new Date();
+    const pad = n => String(n).padStart(2, "0");
+
+    document.getElementById("custDate").value =
+      `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+
+    document.getElementById("custTime").value =
+      `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    // ===== RENDER SETELAH DATA SIAP =====
+    renderMenu();
+    renderPromo(menuPromo);
+
+    // ===== RESTORE STATE =====
+    loadCartFromStorage();
+    loadCustomerForm();
+    renderCart();
+    restoreVoucherFromStorage();
+    applyVoucherAndUpdateSummary();
+
+    console.log("✅ book.html init DONE");
+
+  } catch (err) {
+    console.error("❌ book.html init error:", err);
+  }
+});
+
+
   /* expose to window */
   window.sendOrder = sendOrder;
   window.switchTab = switchTab;
 
-/* ------------------ INIT (on DOM ready) ---------------- */
-  window.addEventListener('DOMContentLoaded', async () => {
-    // ========== Inisialisasi Locale & Voucher ==========
-    initLocaleSelect();
-    initVoucherInput();
-
-    try {
-      // ========== Buka DB ==========
-      await initDB();
-      const restoId = getQueryRestoId();
-      const data = await loadDataFromDB(restoId);
-      restoData = data || {};
-      menuData = Array.isArray(data?.menu) ? data.menu : [];
-      menuPromo = Array.isArray(data?.menuPromo) ? data.menuPromo : [];
-    } catch (e) {
-      console.warn('⚠️ DB init error:', e);
-    }
-
-    // ========== Header Info ==========
-    const logoEl = document.getElementById('restoLogo');
-    if (logoEl) {
-      logoEl.src = restoData?.logo || '';
-      logoEl.style.display = restoData?.logo ? 'block' : 'none';
-    }
-
-    const nameEl = document.getElementById('restoName');
-    if (nameEl) nameEl.innerText = restoData?.namaRestoran || 'Nama Restoran';
-
-    const alamatEl = document.getElementById('alamatRestoranDisplay');
-    if (alamatEl) alamatEl.innerText = restoData?.restoAddress || '';
-
-    const telEl = document.getElementById('teleponRestoranDisplay');
-    if (telEl) telEl.innerText = restoData?.restoPhone || '';
-
-    // ========== Default Date/Time ==========
-    const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-    const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-
-    const dateInput = document.getElementById('custDate');
-    if (dateInput) dateInput.value = dateStr;
-    const timeInput = document.getElementById('custTime');
-    if (timeInput) timeInput.value = timeStr;
-
-    // ========== Render Awal ==========
-    renderMenu();
-    renderPromo(menuPromo);
-
-    // restore data dari localStorage
-    loadCartFromStorage();
-    loadCustomerForm();
-    renderCart();
-    applyVoucherAndUpdateSummary();
-    restoreVoucherFromStorage();
-
-    // ========== Auto Save Customer Form ==========
-    ['custName', 'custTable', 'custDate', 'custTime', 'custNote'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener('input', saveCustomerForm);
-    });
-
-    // ========== Locale Select ==========
-    const sel = document.getElementById('localeSelect');
-    if (sel) sel.value = localStorage.getItem(LOCALE_KEY) || 'auto';
-
-    console.log('✅ Menuva JS initialized');
-
-    // ========== 🔴 Broadcast Channel: Realtime Sync ke receives.html ==========
-    const bc = new BroadcastChannel('orders_channel');
-    window.notifyOrdersUpdated = () => {
-      bc.postMessage('update_orders');
-      console.log('📡 Orders broadcast dikirim ke receives.html');
-    };
-  });
 
  /* ------------------ CLEAR CUSTOMER DATA (replace old handler) ------------------ */
 async function clearCustomerData(confirmRequired = true) {
@@ -1446,7 +1388,6 @@ if (clearBtn) {
   const newBtn = document.getElementById('clearDataBtn');
   newBtn.addEventListener('click', () => clearCustomerData(true));
 }
-  
 })(); 
 </script>
 <script>
@@ -1475,32 +1416,6 @@ function initDarkMode() {
   });
 }
 
-// Jalankan setelah DOM siap
-window.addEventListener('DOMContentLoaded', initDarkMode);
 </script>
-
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
