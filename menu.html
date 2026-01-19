@@ -274,10 +274,8 @@
   <span class="icon">🏢</span>
   <span class="label">Room & Package</span>
 </button>
-
 </div>
 
-  
 <script>
 const DB_NAME     = "MenuvaDB";
 const STORE_NAME  = "menuvaData";
@@ -290,12 +288,16 @@ function initDB() {
 
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onerror = () => reject(request.error);
+    request.onerror = () => {
+      console.error("❌ IndexedDB open error");
+      reject(request.error);
+    };
 
-    request.onupgradeneeded = (e) => {
-      const database = e.target.result;
-      if (!database.objectStoreNames.contains(STORE_NAME)) {
-        database.createObjectStore(STORE_NAME, { keyPath: "restoId" });
+    request.onblocked = () => {
+      console.warn("⚠️ DB upgrade blocked, resetting connection");
+      if (db) {
+        db.close();
+        db = null;
       }
     };
 
@@ -305,7 +307,6 @@ function initDB() {
     };
   });
 }
-
 
 /* =======================
    RESTO ID HANDLER
@@ -628,8 +629,34 @@ function goToPage(page) {
     : page;
 }
 
+  window.addEventListener("pageshow", async () => {
+  console.log("🔄 pageshow → reset DB & re-init");
+
+  // 🔥 reset koneksi IndexedDB lama
+  if (db) {
+    db.close();
+    db = null;
+  }
+
+  watcherStarted = false;
+
+  await initMenuPage();
+});
+
+  window.addEventListener("pagehide", () => {
+  console.log("🧹 pagehide → cleanup menu page");
+
+  if (db) {
+    db.close();
+    db = null;
+  }
+
+  watcherStarted = false;
+});
+
 </script>
 
 </body>
 </html>
+
 
