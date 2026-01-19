@@ -1,12 +1,21 @@
-/* ================== MENUVA DB CORE (SINGLE SOURCE) ================== */
+/* ================== MENUVA DB CORE (SINGLE SOURCE + DUAL MODE) ================== */
 
-export const DB_NAME = "MenuvaDB";
-export const STORE_NAME = "menuvaData";
-export const DB_VERSION = 14; // 🔥 NAIK VERSION (WAJIB & SATU TEMPAT)
+/*
+  - Bisa dipakai oleh:
+    ✅ ES Module (import)
+    ✅ Legacy script (window.MENUVA_DB)
+  - Admin.html TIDAK perlu refactor
+  - Halaman lain pakai import
+*/
+
+const DB_NAME = "MenuvaDB";
+const STORE_NAME = "menuvaData";
+const DB_VERSION = 14; // 🔥 SATU-SATUNYA TEMPAT UBAH VERSION
 
 let dbInstance = null;
 
-export function openMenuvaDB() {
+/* ================== OPEN DB ================== */
+function openMenuvaDB() {
   return new Promise((resolve, reject) => {
     if (dbInstance) return resolve(dbInstance);
 
@@ -41,7 +50,7 @@ export function openMenuvaDB() {
         db.createObjectStore("users", { keyPath: "email" });
       }
 
-      // ================= PROMO (SAFE ADD) =================
+      // ================= PROMO =================
       if (!db.objectStoreNames.contains("promoData")) {
         db.createObjectStore("promoData", {
           keyPath: "id",
@@ -55,9 +64,9 @@ export function openMenuvaDB() {
     request.onsuccess = (e) => {
       dbInstance = e.target.result;
 
-      // 🔥 AUTO HANDLE VERSION CHANGE (ALL TABS)
+      // 🔥 HANDLE MULTI TAB / VERSION CHANGE
       dbInstance.onversionchange = () => {
-        console.warn("🔁 DB version changed → reload");
+        console.warn("🔁 DB version changed → reload page");
         dbInstance.close();
         location.reload();
       };
@@ -67,3 +76,21 @@ export function openMenuvaDB() {
     };
   });
 }
+
+/* ================== GLOBAL (LEGACY ADMIN SUPPORT) ================== */
+if (typeof window !== "undefined") {
+  window.MENUVA_DB = {
+    NAME: DB_NAME,
+    STORE: STORE_NAME,
+    VERSION: DB_VERSION,
+    open: openMenuvaDB
+  };
+}
+
+/* ================== MODULE EXPORT ================== */
+export {
+  DB_NAME,
+  STORE_NAME,
+  DB_VERSION,
+  openMenuvaDB
+};
