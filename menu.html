@@ -260,21 +260,21 @@
 
 <!-- Fixed Button Bar -->
 <div class="fixed-bar">
-  <!-- Tombol Dine-in -->
-  <button class="nav-btn" onclick="window.location.href='book.html'">
-    <span class="icon">📖</span>
-    <span class="label">Dine-in Book</span>
-  </button>
+ <button class="nav-btn" onclick="goToPage('book.html')">
+  <span class="icon">📖</span>
+  <span class="label">Dine-in Book</span>
+</button>
 
-  <button class="nav-btn" onclick="window.location.href='order.html'">
-    <span class="icon">🛒</span>
-    <span class="label">Reserve & Delivery</span>
-  </button>
+<button class="nav-btn" onclick="goToPage('order.html')">
+  <span class="icon">🛒</span>
+  <span class="label">Reserve & Delivery</span>
+</button>
 
-  <button class="nav-btn" onclick="window.location.href='room.html'">
-    <span class="icon">🏢</span>
-    <span class="label">Room & Package</span>
-  </button>
+<button class="nav-btn" onclick="goToPage('room.html')">
+  <span class="icon">🏢</span>
+  <span class="label">Room & Package</span>
+</button>
+
 </div>
 
   
@@ -311,26 +311,27 @@ function initDB() {
    RESTO ID HANDLER
 ======================= */
 function getRestoId() {
-  const params = new URLSearchParams(window.location.search);
-  let restoId = params.get("resto");
+  let restoId = localStorage.getItem("restoId");
 
-  if (restoId) {
-    // simpan ke localStorage
+  const params = new URLSearchParams(window.location.search);
+  const urlRestoId = params.get("resto");
+
+  if (urlRestoId) {
+    restoId = urlRestoId;
     localStorage.setItem("restoId", restoId);
     console.log("🔑 Resto ID from URL:", restoId);
-  } else {
-    restoId = localStorage.getItem("restoId");
-    if (restoId) {
-      console.log("📦 Resto ID from localStorage:", restoId);
-    }
   }
 
   if (!restoId) {
-    alert("❌ Resto ID tidak ditemukan. Gunakan link dari admin (contoh: menu.html?resto=0877xxxx)");
+    console.error("❌ Resto ID missing");
+    document.body.innerHTML =
+      "<h2 style='text-align:center'>Resto tidak ditemukan</h2>";
     return null;
   }
+
   return restoId;
 }
+
   
 async function loadDataFromDB(restoId) {
   const database = await initDB();
@@ -603,10 +604,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
+function goToPage(page) {
+  const restoId = localStorage.getItem("restoId");
+  window.location.href = restoId
+    ? `${page}?resto=${restoId}`
+    : page;
+}
 
 </script>
 
 </body>
 </html>
-
-
