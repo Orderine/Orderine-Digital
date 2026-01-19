@@ -576,7 +576,6 @@ async function initMenuPage() {
 
   try {
     console.log("⏳ loading data from IndexedDB...");
-
     const data = await loadDataFromDB(restoId);
 
     console.log("📦 data loaded:", data);
@@ -586,7 +585,7 @@ async function initMenuPage() {
       return;
     }
 
-    /* ========= HEADER ========= */
+    // HEADER
     const logoElem = document.getElementById("logoResto");
     if (logoElem) {
       logoElem.style.display = data.logo ? "block" : "none";
@@ -602,7 +601,7 @@ async function initMenuPage() {
     document.getElementById("teleponResto").innerText =
       `📞 Telephone: ${data.restoPhone || "-"}`;
 
-    /* ========= CONTENT ========= */
+    // CONTENT
     renderPromo(Array.isArray(data.menuPromo) ? data.menuPromo : []);
 
     renderFlipbookGallery(
@@ -632,15 +631,6 @@ async function initMenuPage() {
     menuInitRunning = false;
   }
 }
-
-    document.getElementById("namaRestoDisplay").textContent =
-      data.namaRestoran || "Menu Restoran";
-
-    document.getElementById("alamatResto").innerText =
-      `📍 Address: ${data.restoAddress || "-"}`;
-
-    document.getElementById("teleponResto").innerText =
-      `📞 Telephone: ${data.restoPhone || "-"}`;
 
     /* ========= CONTENT ========= */
     renderPromo(Array.isArray(data.menuPromo) ? data.menuPromo : []);
@@ -739,6 +729,7 @@ function goToPage(page) {
 </script>
 </body>
 </html>
+
 
 
 
