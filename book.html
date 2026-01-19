@@ -67,10 +67,14 @@ img{max-width:100%;display:block}
    HEADER
    ===================== */
 header{
-  width:0%;
+  width:100%;
   background: linear-gradient(90deg,var(--brand-2),var(--brand-3));
-  color:#fff;padding:16px;position:relative;box-shadow:var(--shadow);
+  color:#fff;
+  padding:16px;
+  position:relative;
+  box-shadow:var(--shadow);
 }
+
 .header-inner{display:flex;justify-content:space-between;align-items:stretch;gap:12px}
 .header-left{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
 #restoLogo{height:60px;width:60px;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.08);flex-shrink:0;margin-bottom:4px}
@@ -1261,25 +1265,11 @@ function playSound(type) {
       return;
     }
 
+    // ⬇️ TAMBAHKAN INI
+    renderBookHeader(data);
     restoData = data;
     menuData  = Array.isArray(data.menu) ? data.menu : [];
     menuPromo = Array.isArray(data.menuPromo) ? data.menuPromo : [];
-
-    // ===== HEADER =====
-    const logoEl = document.getElementById("restoLogo");
-    if (logoEl) {
-      logoEl.src = data.logo || "";
-      logoEl.style.display = data.logo ? "block" : "none";
-    }
-
-    document.getElementById("restoName").innerText =
-      data.namaRestoran || "Nama Restoran";
-
-    document.getElementById("alamatRestoranDisplay").innerText =
-      data.restoAddress || "";
-
-    document.getElementById("teleponRestoranDisplay").innerText =
-      data.restoPhone || "";
 
     // ===== DEFAULT DATE / TIME =====
     const now = new Date();
@@ -1309,6 +1299,38 @@ function playSound(type) {
   }
 });
 
+ function renderBookHeader(data) {
+  // LOGO
+  const logo = document.getElementById("restoLogo");
+  if (logo && data.logo) {
+    logo.src = data.logo;
+    logo.style.display = "block";
+  } else if (logo) {
+    logo.style.display = "none";
+  }
+
+  // NAMA
+  const nameEl = document.getElementById("restoName");
+  if (nameEl) {
+    nameEl.textContent = data.namaRestoran || "Menu Restoran";
+  }
+
+  // ALAMAT
+  const addrEl = document.getElementById("alamatRestoranDisplay");
+  if (addrEl) {
+    addrEl.textContent = data.restoAddress
+      ? `📍 ${data.restoAddress}`
+      : "";
+  }
+
+  // TELEPON
+  const phoneEl = document.getElementById("teleponRestoranDisplay");
+  if (phoneEl) {
+    phoneEl.textContent = data.restoPhone
+      ? `📞 ${data.restoPhone}`
+      : "";
+  }
+}
 
   /* expose to window */
   window.sendOrder = sendOrder;
@@ -1419,3 +1441,4 @@ function initDarkMode() {
 </script>
 </body>
 </html>
+
