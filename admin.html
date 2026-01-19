@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- DB & AUTH -->
+  <script src="./db-core.js"></script>
 <script type="module" src="./db.js"></script>
 <script type="module" src="./auth-guard.js"></script>
 
@@ -959,9 +960,9 @@ console.log("🚀 Admin DB Bridge – FINAL NO MODULE");
 /* ====================== GLOBAL DB STATE ====================== */
 let dbReady = null;
 
-const DB_NAME = "MenuvaDB";
-const STORE_NAME = "menuvaData";
-const DB_VERSION = 14; // 🔥 NAIK VERSION (WAJIB)
+const DB_NAME = window.MENUVA_DB.NAME;
+const STORE_NAME = window.MENUVA_DB.STORE;
+const DB_VERSION = window.MENUVA_DB.VERSION;
 
 /* ====================== INIT DB (AUTO UPGRADE SAFE) ====================== */
 function initDB() {
@@ -2841,6 +2842,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
