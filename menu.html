@@ -282,6 +282,8 @@ const STORE_NAME  = "menuvaData";
 const DB_VERSION  = 14; // harus sama dengan admin.html
 
   let db;
+  let menuInitRunning = false;
+  let menuInitDone = false;
 
   function initDB() {
   return new Promise((resolve, reject) => {
@@ -553,45 +555,83 @@ async function watchDBChanges(restoId) {
 let watcherStarted = false;
 
 async function initMenuPage() {
+  if (menuInitRunning) {
+    console.warn("⏸ initMenuPage skipped: still running");
+    return;
+  }
+
+  if (menuInitDone) {
+    console.warn("⏸ initMenuPage skipped: already done");
+    return;
+  }
+
+  menuInitRunning = true;
   console.log("▶️ initMenuPage start");
 
   const restoId = getRestoId();
   if (!restoId) {
-    console.warn("⛔ initMenuPage stop: restoId null");
+    menuInitRunning = false;
     return;
   }
 
   try {
     console.log("⏳ loading data from IndexedDB...");
 
-    // ⏱️ GUARD: cegah Promise IndexedDB ngegantung selamanya
-    const data = await Promise.race([
-      loadDataFromDB(restoId),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("IndexedDB timeout")), 3000)
-      )
-    ]);
+    const data = await loadDataFromDB(restoId);
 
-    console.log("📦 loadDataFromDB result:", data);
+    console.log("📦 data loaded:", data);
 
     if (!data) {
-      console.warn("⚠️ Data resto tidak ditemukan:", restoId);
       showFallbackUI("Data menu belum tersedia");
       return;
     }
 
-    console.log("✅ Init menu page:", restoId);
-
     /* ========= HEADER ========= */
     const logoElem = document.getElementById("logoResto");
     if (logoElem) {
-      if (data.logo) {
-        logoElem.src = data.logo;
-        logoElem.style.display = "block";
-      } else {
-        logoElem.style.display = "none";
-      }
+      logoElem.style.display = data.logo ? "block" : "none";
+      if (data.logo) logoElem.src = data.logo;
     }
+
+    document.getElementById("namaRestoDisplay").textContent =
+      data.namaRestoran || "Menu Restoran";
+
+    document.getElementById("alamatResto").innerText =
+      `📍 Address: ${data.restoAddress || "-"}`;
+
+    document.getElementById("teleponResto").innerText =
+      `📞 Telephone: ${data.restoPhone || "-"}`;
+
+    /* ========= CONTENT ========= */
+    renderPromo(Array.isArray(data.menuPromo) ? data.menuPromo : []);
+
+    renderFlipbookGallery(
+      "flipbookRuanganGallery",
+      data.flipbookRuanganImages || [],
+      "ruanganWarning"
+    );
+
+    renderFlipbookGallery(
+      "flipbookMenuGallery",
+      data.flipbookMenuImages || [],
+      "menuWarning"
+    );
+
+    if (!watcherStarted) {
+      watchDBChanges(restoId);
+      watcherStarted = true;
+    }
+
+    menuInitDone = true;
+    console.log("✅ initMenuPage DONE");
+
+  } catch (err) {
+    console.error("❌ initMenuPage error:", err);
+    showFallbackUI("Gagal memuat menu");
+  } finally {
+    menuInitRunning = false;
+  }
+}
 
     document.getElementById("namaRestoDisplay").textContent =
       data.namaRestoran || "Menu Restoran";
@@ -644,10 +684,13 @@ async function initMenuPage() {
 /* LOAD NORMAL */
 document.addEventListener("DOMContentLoaded", initMenuPage);
 
-window.addEventListener("pageshow", () => {
-  console.log("🔄 pageshow → initMenuPage");
-  initMenuPage();
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) {
+    console.log("🔄 pageshow (bfcache) → refresh only");
+    location.reload();
+  }
 });
+
 
 function goToPage(page) {
   const restoId = localStorage.getItem("restoId");
@@ -696,5 +739,6 @@ function goToPage(page) {
 </script>
 </body>
 </html>
+
 
 
