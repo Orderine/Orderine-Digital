@@ -413,11 +413,10 @@ footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);paddin
   </div> <!-- tutup container -->
 </footer>
   
+<script src="db-core.js"></script>
 <script>
 (() => {
   /* ------------------ CONFIG / STATE ------------------- */
-  const DB_NAME = 'MenuvaDB';
-  const STORE_NAME = 'menuvaData';
   const LOCALE_KEY = 'menuva_localeChoice';
 
   let db = null;
@@ -498,51 +497,8 @@ footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);paddin
     return p.get('resto') || null;
   }
 
-/* ------------------ IndexedDB (auto fix store) ------------------- */
-function initDB() {
-  return new Promise((resolve, reject) => {
-    if (db) return resolve(db);
-
-    const request = indexedDB.open(DB_NAME, 14); // WAJIB SAMA DENGAN admin.html
-
-    request.onerror = () => {
-      console.error("❌ IndexedDB open failed (book.html)");
-      reject(request.error);
-    };
-
-    request.onupgradeneeded = (e) => {
-      const upgradedDB = e.target.result;
-
-      // STORE DATA RESTO / MENU
-      if (!upgradedDB.objectStoreNames.contains(STORE_NAME)) {
-        upgradedDB.createObjectStore(STORE_NAME, { keyPath: "restoId" });
-      }
-
-      // STORE ORDER CUSTOMER
-      if (!upgradedDB.objectStoreNames.contains("ordersData")) {
-        const orders = upgradedDB.createObjectStore("ordersData", {
-          keyPath: "id",
-          autoIncrement: true
-        });
-        orders.createIndex("status", "status", { unique: false });
-        orders.createIndex("orderTime", "orderTime", { unique: false });
-      }
-    };
-
-    request.onsuccess = (e) => {
-      db = e.target.result;
-
-      // 🔥 AUTO HANDLE VERSION CHANGE
-      db.onversionchange = () => {
-        console.warn("🔁 DB version changed → reload book.html");
-        db.close();
-        location.reload();
-      };
-
-      console.log("✅ IndexedDB ready (book.html)");
-      resolve(db);
-    };
-  });
+async function getDB() {
+  return await MENUVA_DB.open();
 }
 
   /* ================== REALTIME BROADCAST CHANNEL ================== */
@@ -551,7 +507,7 @@ const bc = new BroadcastChannel("menuvaOrders");
   async function loadDataFromDB(restoId) {
   if (!restoId) return null;
 
-  const database = await initDB();
+  const database = await MENUVA_DB.open();
 
   return new Promise((resolve) => {
     if (!database.objectStoreNames.contains(STORE_NAME)) {
@@ -559,7 +515,7 @@ const bc = new BroadcastChannel("menuvaOrders");
       return resolve(null);
     }
 
-    const tx = database.transaction(STORE_NAME, "readonly");
+    const tx = database.transaction(MENUVA_DB.STORE, "readonly");
     const store = tx.objectStore(STORE_NAME);
 
     // 🔥 ADMIN.html SIMPAN DATA DENGAN KEY restoId
@@ -959,9 +915,9 @@ function restoreVoucherFromStorage() {
 
 async function loadVoucherList() {
   try {
-    const db = await initDB();
+    const db = await MENUVA_DB.open();
     return new Promise((resolve) => {
-      const tx = db.transaction("menuvaData", "readonly");
+      const tx = db.transaction(MENUVA_DB.STORE, "readonly");
       const store = tx.objectStore("menuvaData");
       const req = store.get(1);
 
@@ -1172,7 +1128,7 @@ async function sendOrder() {
   };
 
   try {
-    const db = await initDB();
+    const db = await MENUVA_DB.open();
     const tx = db.transaction("ordersData", "readwrite");
     const store = tx.objectStore("ordersData");
     const req = store.add(orderData);
@@ -1441,5 +1397,3 @@ function initDarkMode() {
 </script>
 </body>
 </html>
-
-
