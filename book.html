@@ -1080,19 +1080,19 @@ input.addEventListener("input", async () => {
     try { applyVoucherAndUpdateSummary(); } catch(e){}
   }
 
-/* ------------------ SAVE ORDER (NEW STORE + REALTIME BROADCAST) ------------- */
+/* ------------------ SAVE ORDER (DB CORE + REALTIME BROADCAST) ------------- */
 async function sendOrder() {
   const name = (document.getElementById('custName')?.value || '').trim();
   const table = (document.getElementById('custTable')?.value || '').trim();
   const date = document.getElementById('custDate')?.value || '';
   const time = document.getElementById('custTime')?.value || '';
-  const note = (document.getElementById('custNote')?.value || '').trim(); // ✅ ambil notes
+  const note = (document.getElementById('custNote')?.value || '').trim();
 
   if (!name) return showToast('⚠️ Please fill in customer name!', "error"), playSound("error");
   if (!table) return showToast('⚠️ Please fill in table number!', "error"), playSound("error");
   if (!cart || !cart.length) return showToast('⚠️ Please add items to cart before submitting!', "error"), playSound("error");
 
-  // ✅ Hitung subtotal, discount, total
+  // ✅ Hitung subtotal
   let subtotal = 0;
   cart.forEach(c => subtotal += (Number(c.harga) || 0) * (Number(c.qty) || 0));
 
@@ -1102,17 +1102,18 @@ async function sendOrder() {
     discount = subtotal * (discountPercent / 100);
     voucherCode = activeVoucherData.code;
   }
+
   const grandTotal = subtotal - discount;
   const now = new Date();
 
-  // ✅ Data lengkap termasuk note
+  // ✅ Order payload (clean & konsisten)
   const orderData = {
     resto: restoData?.namaRestoran || '',
     customer: name,
     table,
     date,
     time,
-    note: note || '-', // ✅ simpan note walau kosong
+    note: note || '-',
     items: cart.map(c => ({
       nama: c.nama,
       qty: c.qty,
@@ -1125,22 +1126,31 @@ async function sendOrder() {
     voucherCode,
     grandTotal,
     status: "new",
-    orderTime: now.toLocaleString("id-ID", { dateStyle: "short", timeStyle: "medium" })
+    orderTime: Date.now() // ⬅️ timestamp real (sorting & index friendly)
   };
 
   try {
     const db = await MENUVA_DB.open();
-    const tx = db.transaction("ordersData", "readwrite");
-    const store = tx.objectStore("ordersData");
+    const ORDER_STORE = "ordersData"; // ✅ sesuai db-core.js
+
+    if (!db.objectStoreNames.contains(ORDER_STORE)) {
+      console.error(`❌ ObjectStore "${ORDER_STORE}" not found`);
+      showToast("❌ Order store not found", "error");
+      return;
+    }
+
+    const tx = db.transaction(ORDER_STORE, "readwrite");
+    const store = tx.objectStore(ORDER_STORE);
     const req = store.add(orderData);
 
     req.onsuccess = (e) => {
       const newId = e.target.result;
       console.log("✅ Order stored:", { ...orderData, id: newId });
+
       showToast("✅ Order submitted successfully!", "success", "top");
       playSound("success");
 
-      // ✅ Kirim sinyal real-time ke receives.html
+      // ✅ REALTIME → recieves.html
       try {
         const bc = new BroadcastChannel("menuvaOrders");
         bc.postMessage({
@@ -1149,18 +1159,14 @@ async function sendOrder() {
         });
         bc.close();
       } catch (err) {
-        console.warn("⚠️ Broadcast gagal:", err);
+        console.warn("⚠️ BroadcastChannel failed:", err);
       }
-
-      // 🚫 Jangan hapus data di sini!
-      // Biarkan customer tetap lihat pesanan & datanya walau sudah dikirim
-      // Semua data akan tetap tersimpan di localStorage
 
       showToast("🧾 Order is being processed", "info", "bottom");
     };
 
-    req.onerror = (e) => {
-      console.error("❌ Failed saving order:", e.target.error);
+    req.onerror = () => {
+      console.error("❌ Failed saving order:", req.error);
       showToast("❌ Failed to save order, please try again.", "error");
       playSound("error");
     };
@@ -1398,4 +1404,5 @@ function initDarkMode() {
 </script>
 </body>
 </html>
+
 
