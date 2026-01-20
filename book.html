@@ -504,21 +504,22 @@ async function getDB() {
   /* ================== REALTIME BROADCAST CHANNEL ================== */
 const bc = new BroadcastChannel("menuvaOrders");
 
-  async function loadDataFromDB(restoId) {
+ async function loadDataFromDB(restoId) {
   if (!restoId) return null;
 
-  const database = await MENUVA_DB.open();
+  const db = await MENUVA_DB.open();
+  const STORE = MENUVA_DB.STORE;
 
   return new Promise((resolve) => {
-    if (!database.objectStoreNames.contains(STORE_NAME)) {
-      console.warn("⚠️ Store menuvaData not found");
+    if (!db.objectStoreNames.contains(STORE)) {
+      console.warn(`⚠️ ObjectStore "${STORE}" not found`);
       return resolve(null);
     }
 
-    const tx = database.transaction(MENUVA_DB.STORE, "readonly");
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction(STORE, "readonly");
+    const store = tx.objectStore(STORE);
 
-    // 🔥 ADMIN.html SIMPAN DATA DENGAN KEY restoId
+    // 🔥 ADMIN.html simpan data pakai key = restoId
     const req = store.get(restoId);
 
     req.onsuccess = () => {
@@ -526,7 +527,7 @@ const bc = new BroadcastChannel("menuvaOrders");
     };
 
     req.onerror = () => {
-      console.error("❌ loadDataFromDB error");
+      console.error("❌ loadDataFromDB error", req.error);
       resolve(null);
     };
   });
@@ -1397,3 +1398,4 @@ function initDarkMode() {
 </script>
 </body>
 </html>
+
