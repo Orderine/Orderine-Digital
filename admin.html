@@ -778,7 +778,7 @@ button {
 
   <div class="section">
     <h2>🔁 Backup & Restore Data</h2>
-    <button id="btnBackup" class="btn-blue" onclick="backupData()">📦 Backup Data</button>
+    <button onclick="downloadBackupJSON()">📦 Backup Data</button>
     <div id="backupDownloadLink" style="margin-top:10px;"></div>
 
     <label for="restoreInput" style="margin-top: 20px; display: block;">📂 Select JSON File to Restore:</label>
@@ -2023,51 +2023,20 @@ async function resetData() {
   location.reload();
 }
 
-async function backupData() {
-  try {
-    if (!window.activeUser || !window.activeUser.restoID) {
-      alert("❌ Session tidak valid");
-      return;
-    }
+async function downloadBackupJSON() {
+  const data = await exportDBToJSON();
 
-    const restoId = window.activeUser.restoID;
-    const db = await initDB();
+  const blob = new Blob(
+    [JSON.stringify(data, null, 2)],
+    { type: "application/json" }
+  );
 
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
-    const req = store.get(restoId);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `orderine-backup-${Date.now()}.json`;
+  a.click();
 
-    req.onsuccess = () => {
-      const data = req.result;
-
-      if (!data) {
-        alert("⚠️ Tidak ada data untuk dibackup");
-        return;
-      }
-
-      const blob = new Blob(
-        [JSON.stringify(data, null, 2)],
-        { type: "application/json" }
-      );
-
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `menuva-backup-${restoId}-${Date.now()}.json`;
-      a.click();
-
-      URL.revokeObjectURL(a.href);
-      console.log("📦 Backup sukses:", data);
-    };
-
-    req.onerror = () => {
-      console.error("❌ Backup gagal:", req.error);
-      alert("❌ Backup gagal");
-    };
-
-  } catch (err) {
-    console.error("❌ backupData error:", err);
-    alert("❌ Backup error");
-  }
+  URL.revokeObjectURL(a.href);
 }
 
 async function restoreDataFromFile(event) {
@@ -2076,33 +2045,61 @@ async function restoreDataFromFile(event) {
 
   try {
     const text = await file.text();
-    const data = JSON.parse(text);
+    const json = JSON.parse(text);
 
-    if (!window.activeUser || data.restoId !== window.activeUser.restoID) {
-      alert("❌ Data backup tidak cocok dengan akun login");
+    const format = detectBackupFormat(json);
+
+    if (format === "UNKNOWN") {
+      alert("❌ Format backup tidak dikenali");
       return;
     }
 
     const db = await initDB();
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
 
-    const req = store.put(data);
+    if (format === "LEGACY") {
+      console.log("♻️ Restore legacy Menuva");
 
-    req.onsuccess = () => {
-      alert("✅ Data berhasil direstore");
-      location.reload();
-    };
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      await store.clear();
+      await store.put(json);
+      await tx.done;
+    }
 
-    req.onerror = () => {
-      alert("❌ Restore gagal");
-    };
+    if (format === "CORE") {
+      console.log("♻️ Restore core Orderine");
+
+      const tx = db.transaction(db.objectStoreNames, "readwrite");
+
+      for (const storeName of db.objectStoreNames) {
+        const store = tx.objectStore(storeName);
+        await store.clear();
+
+        const data = json.data[storeName] || [];
+        for (const item of data) {
+          await store.put(item);
+        }
+      }
+
+      await tx.done;
+    }
+
+    alert("✅ Restore berhasil");
+    location.reload();
 
   } catch (err) {
-    console.error("❌ restore error:", err);
-    alert("❌ File backup tidak valid");
+    console.error("❌ Restore error:", err);
+    alert("❌ File backup rusak / tidak valid");
   }
 }
+
+
+  function detectBackupFormat(json) {
+  if (json.meta && json.data) return "CORE";
+  if (json.restoId || json.menuList) return "LEGACY";
+  return "UNKNOWN";
+}
+
 
 // ====================== SHARE & QR ======================
 function getCustomerLink() {
@@ -2842,6 +2839,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
