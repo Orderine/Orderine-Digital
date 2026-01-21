@@ -1,23 +1,52 @@
-// ==================== ORDERINE AUTH GUARD (FINAL) ====================
+// ==================== ORDERINE AUTH GUARD (FINAL – DB CORE AWARE) ====================
 
 // GLOBAL AUTH STATE
 window.activeUser = null;
 window.currentUser = null;
 
-import { getSession, clearSession } from "./db.js";
-
-document.addEventListener("DOMContentLoaded", async () => {
-  if (window.MENUVA_DB?.open) {
-    await window.MENUVA_DB.open();
+/* ==================== DB CORE HANDSHAKE ==================== */
+async function ensureDBReady() {
+  if (!window.DB_NAME || !window.DB_VERSION) {
+    throw new Error("DB core not loaded (DB_NAME / DB_VERSION missing)");
   }
-  runAuthGuard();
+
+  if (!window.MENUVA_DB?.open) {
+    throw new Error("MENUVA_DB not available");
+  }
+
+  // DB akan terbuka dengan VERSION dari db-core.js
+  await window.MENUVA_DB.open();
+}
+
+/* ==================== SESSION HELPERS (NO LOCAL DB VERSION) ==================== */
+async function getSession() {
+  if (!window.MENUVA_DB?.get) return null;
+  return await window.MENUVA_DB.get("session", "activeUser");
+}
+
+async function clearSession() {
+  if (!window.MENUVA_DB?.delete) return;
+  await window.MENUVA_DB.delete("session", "activeUser");
+}
+
+/* ==================== BOOT ==================== */
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    await ensureDBReady();
+    await runAuthGuard();
+  } catch (err) {
+    console.error("🛑 AUTH GUARD BOOT FAILED:", err);
+    await clearSession();
+    location.replace("login.html");
+  }
 });
 
+/* ==================== CORE AUTH GUARD ==================== */
 async function runAuthGuard() {
   try {
     const page = location.pathname.split("/").pop();
 
-    // ==================== PUBLIC PAGES ====================
+    /* ==================== PUBLIC PAGES ==================== */
     const PUBLIC_PAGES = [
       "login.html",
       "admin-login.html",
@@ -30,16 +59,16 @@ async function runAuthGuard() {
       return;
     }
 
-    // ==================== LOAD SESSION ====================
+    /* ==================== LOAD SESSION ==================== */
     window.activeUser = await getSession();
-    const activeUser = window.activeUser; // alias lokal (AMAN)
+    const activeUser = window.activeUser;
 
     if (!activeUser || !activeUser.email) {
       console.warn("⛔ No active session");
       return redirectLogin();
     }
 
-    // ==================== BASIC VALIDATION ====================
+    /* ==================== BASIC VALIDATION ==================== */
     if (!["owner", "admin"].includes(activeUser.role)) {
       console.warn("⛔ Invalid role");
       return hardLogout();
@@ -50,9 +79,8 @@ async function runAuthGuard() {
       return hardLogout();
     }
 
-    // ==================== SUBSCRIPTION CHECK ====================
+    /* ==================== SUBSCRIPTION CHECK ==================== */
     if (!activeUser.premiumExpire) {
-      console.warn("⛔ Missing premiumExpire");
       return forceRenew(activeUser, "❌ Subscription invalid.");
     }
 
@@ -66,7 +94,7 @@ async function runAuthGuard() {
       );
     }
 
-    // ==================== MIRROR CURRENT USER (STEP 1 FIX) ====================
+    /* ==================== MIRROR CURRENT USER ==================== */
     window.currentUser = {
       email: activeUser.email,
       role: activeUser.role,
@@ -83,19 +111,19 @@ async function runAuthGuard() {
       isPaid: activeUser.isPaid === true
     };
 
-    // optional safety (reload / new tab)
+    // safety mirror (reload / new tab)
     localStorage.setItem(
       "activeUser",
       JSON.stringify(window.currentUser)
     );
 
-    // ==================== OWNER ====================
+    /* ==================== OWNER ==================== */
     if (activeUser.role === "owner") {
       console.log("👑 Owner access granted");
       return;
     }
 
-    // ==================== ADMIN ====================
+    /* ==================== ADMIN ==================== */
     const permissions = window.currentUser.permissions;
 
     const PAGE_RULES = {
@@ -106,17 +134,14 @@ async function runAuthGuard() {
       "room-manager.html": ["room"]
     };
 
-    // ❌ Admin tidak boleh ke admin.html
     if (page === "admin.html") {
       return safeRedirect();
     }
 
-    // ❌ Page tidak dikenal
     if (!PAGE_RULES[page]) {
       return safeRedirect();
     }
 
-    // ❌ Permission check
     const requiredPerms = PAGE_RULES[page];
     const hasAccess = requiredPerms.some(p =>
       permissions.includes(p)
@@ -133,7 +158,7 @@ async function runAuthGuard() {
   }
 }
 
-// ==================== HELPERS ====================
+/* ==================== HELPERS ==================== */
 async function redirectLogin() {
   await clearSession();
   location.replace("login.html");
@@ -163,7 +188,3 @@ async function forceRenew(user, message) {
   await clearSession();
   location.replace("plans.html");
 }
-
-
-
-
