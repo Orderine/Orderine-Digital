@@ -958,13 +958,13 @@ function ensureRestoId() {
 console.log("🚀 Admin DB Bridge – FINAL NO MODULE");
 
 /* ====================== GLOBAL DB STATE ====================== */
-let dbReady = null;
-
 const DB_NAME = window.MENUVA_DB.NAME;
 const STORE_NAME = window.MENUVA_DB.STORE;
 const DB_VERSION = window.MENUVA_DB.VERSION;
 
 /* ====================== INIT DB (AUTO UPGRADE SAFE) ====================== */
+let dbReady = null;
+
 function initDB() {
   if (dbReady) return dbReady;
 
@@ -975,37 +975,29 @@ function initDB() {
       const db = e.target.result;
       console.log("⬆️ DB upgrade triggered");
 
-      // 🔥 CORE STORES
-      const coreStores = {
-        restos: { keyPath: "id" },
-        menus: { keyPath: "id" },
-        promos: { keyPath: "id" },
-        orders: { keyPath: "id" },
+      const stores = {
+        invites:  { keyPath: "id" },
+        restos:   { keyPath: "id" },
+        session:  { keyPath: "id" },
+        users:    { keyPath: "id" },
+        menus:    { keyPath: "id" },
+        promos:   { keyPath: "id" },
+        orders:   { keyPath: "id" },
         settings: { keyPath: "id" }
       };
 
-      for (const [name, option] of Object.entries(coreStores)) {
+      for (const [name, opt] of Object.entries(stores)) {
         if (!db.objectStoreNames.contains(name)) {
-          db.createObjectStore(name, option);
+          db.createObjectStore(name, opt);
           console.log(`✅ store CREATED: ${name}`);
         }
       }
-
-      console.log("📂 Stores after upgrade:", [...db.objectStoreNames]);
     };
 
     request.onsuccess = () => {
-      const db = request.result;
-      console.log("📂 DB stores:", [...db.objectStoreNames]);
-      resolve(db);
+      console.log("📂 DB stores:", [...request.result.objectStoreNames]);
+      resolve(request.result);
     };
-
-    const db = request.result;
-
-    if (!db.objectStoreNames.contains("orders")) {
-    console.warn("⚠️ orders store missing, please bump DB_VERSION");
-   }
-
 
     request.onerror = () => reject(request.error);
   });
@@ -1817,6 +1809,29 @@ window.__lastLoadedResto = data?.restoId;
       });
     }
 
+    async function loadCoreData() {
+  const db = await initDB();
+
+  const requiredStores = ["restos", "menus", "promos", "settings"];
+
+  for (const s of requiredStores) {
+    if (!db.objectStoreNames.contains(s)) {
+      console.warn(`⚠️ store ${s} belum ada`);
+    }
+  }
+
+  const tx = db.transaction(requiredStores, "readonly");
+
+  const restos   = await idbGetAll(tx.objectStore("restos"));
+  const menus    = await idbGetAll(tx.objectStore("menus"));
+  const promos   = await idbGetAll(tx.objectStore("promos"));
+  const settings = await idbGetAll(tx.objectStore("settings"));
+
+  await tx.done;
+
+  return { restos, menus, promos, settings };
+}
+
     // ===== VOUCHER =====
 window.menuVoucher = Array.isArray(data.menuVoucher) ? [...data.menuVoucher] : [];
 
@@ -2209,14 +2224,22 @@ window.addEventListener("error", e => {
 });
 </script>
 <script>
+  
+function startRealtimeOrderChecker() {
+  setInterval(async () => {
+    const db = await initDB();
+    if (!db.objectStoreNames.contains("orders")) return;
+    cekOrderBaru();
+  }, 5000);
+}
 
-/* ===================== ADMIN INIT (FINAL + PROMO PATCH) ===================== */
+/* ===================== ADMIN INIT (FINAL - STABLE) ===================== */
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Admin Init (FINAL)");
   showLoader();
 
   try {
-    // ================= WAIT AUTH =================
+    // ================= 1. WAIT AUTH =================
     let wait = 0;
     while (!window.activeUser && wait < 20) {
       await new Promise(r => setTimeout(r, 100));
@@ -2224,32 +2247,67 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (!window.activeUser) {
-      console.warn("⚠️ activeUser not ready, init is pending");
-      hideLoader();
-      return;
+      throw new Error("activeUser not ready");
     }
-    // ================= PROMO SAFE GUARD =================
+
+    // ================= 2. INIT DB CORE =================
+    await initDB(); // 🔒 pastikan DB siap sebelum apa pun
+
+    // ================= 3. SAFE GLOBAL INIT =================
     if (!Array.isArray(window.menuPromo)) {
-      console.warn("⚠️ menuPromo missing, init empty array");
       window.menuPromo = [];
     }
 
-    // 🔥 render promo UI after data ready
+    // ================= 4. LOAD & RENDER CORE =================
+    await loadCoreAndRender();   // 🔥 MASTER SOURCE (WAJIB SEBELUM CEK ORDER)
+
+    // ================= 4.1 AUDIO INIT & UNLOCK =================
+    if (!window.notifAudio) {
+      window.notifAudio = new Audio("beep.mp3");
+      notifAudio.preload = "auto";
+    }
+
+    document.body.addEventListener(
+      "click",
+      () => {
+        if (window.audioUnlocked) return;
+
+        notifAudio
+          .play()
+          .then(() => {
+            notifAudio.pause();
+            notifAudio.currentTime = 0;
+            window.audioUnlocked = true;
+            console.log("🔊 Audio unlocked");
+          })
+          .catch(() => {});
+
+      },
+      { once: true }
+    );
+
+    // ================= 4.2 OWNER UI =================
+    initOwnerUI?.();
+
+    // ================= 4.3 REALTIME ORDER CHECKER =================
+    startRealtimeOrderChecker(); // ❗ SATU-SATUNYA TEMPAT
+
+    // ================= 5. UI TOGGLES =================
+    await initAllToggles?.();
+
+    // ================= 6. PROMO UI (AFTER DATA READY) =================
     if (typeof renderPromoUI === "function") {
       renderPromoUI();
     }
 
-      const btnCustomer = document.getElementById("btnOpenCustomer");
-      if (btnCustomer && !btnCustomer.dataset.bound) {
+    // ================= 7. EVENT BINDING =================
+    const btnCustomer = document.getElementById("btnOpenCustomer");
+    if (btnCustomer && !btnCustomer.dataset.bound) {
       btnCustomer.onclick = openCustomerPage;
       btnCustomer.dataset.bound = "1";
-      }
-  
-    // ================= INIT UI =================
-    await loadCoreAndRender();   // ✅ CORE MASTER LOADER
-    await initAllToggles?.();
+    }
 
-    // ================= FIXED BAR =================
+    // ================= 8. FIXED BAR =================
     const fixbar = document.querySelector(".fixed-bar");
     if (fixbar) {
       document.body.style.paddingBottom = fixbar.offsetHeight + "px";
@@ -2264,6 +2322,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     hideLoader();
   }
 });
+
 
   async function loadCoreAndRender() {
   const coreData = await loadCoreData();
@@ -2656,35 +2715,6 @@ function prepareCustomerShare() {
 ============================================================ */
 let notifAudio;
 let audioUnlocked = false;
-
-document.addEventListener("DOMContentLoaded", () => {
-  /* ❗ Jangan init voucher / toggle di sini
-     Sudah ditangani PART 11 */
-
-  if (!notifAudio) {
-    notifAudio = new Audio("beep.mp3");
-    notifAudio.preload = "auto";
-  }
-
-  const unlockAudio = () => {
-    if (audioUnlocked) return;
-
-    notifAudio.play()
-      .then(() => {
-        notifAudio.pause();
-        notifAudio.currentTime = 0;
-        audioUnlocked = true;
-      })
-      .catch(() => {});
-
-    document.body.removeEventListener("click", unlockAudio);
-  };
-
-  document.body.addEventListener("click", unlockAudio, { once: true });
-
-  startRealtimeOrderChecker();
-  initOwnerUI();
-});
 
 /* ============================================================
    2. PLAY NOTIFICATION SOUND
