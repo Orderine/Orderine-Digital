@@ -2233,6 +2233,9 @@ function startRealtimeOrderChecker() {
   }, 5000);
 }
 
+  let notifAudio = null;
+  let audioUnlocked = false;
+  
 /* ===================== ADMIN INIT (FINAL - STABLE) ===================== */
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Admin Init (FINAL)");
@@ -2261,30 +2264,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     // ================= 4. LOAD & RENDER CORE =================
     await loadCoreAndRender();   // 🔥 MASTER SOURCE (WAJIB SEBELUM CEK ORDER)
 
-    // ================= 4.1 AUDIO INIT & UNLOCK =================
-    if (!window.notifAudio) {
-      window.notifAudio = new Audio("beep.mp3");
-      notifAudio.preload = "auto";
-    }
 
-    document.body.addEventListener(
-      "click",
-      () => {
-        if (window.audioUnlocked) return;
+// ================= AUDIO INIT & UNLOCK =================
+if (!notifAudio) {
+  notifAudio = new Audio("beep.mp3");
+  notifAudio.preload = "auto";
+}
+document.body.addEventListener(
+  "click",
+  () => {
+    if (audioUnlocked) return;
 
-        notifAudio
-          .play()
-          .then(() => {
-            notifAudio.pause();
-            notifAudio.currentTime = 0;
-            window.audioUnlocked = true;
-            console.log("🔊 Audio unlocked");
-          })
-          .catch(() => {});
+    notifAudio
+      .play()
+      .then(() => {
+        notifAudio.pause();
+        notifAudio.currentTime = 0;
+        audioUnlocked = true;
+        console.log("🔊 Audio unlocked");
+      })
+      .catch(() => {});
+  },
+  { once: true }
+);
 
-      },
-      { once: true }
-    );
 
     // ================= 4.2 OWNER UI =================
     initOwnerUI?.();
@@ -2852,6 +2855,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
