@@ -2324,18 +2324,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 
-  async function loadCoreAndRender() {
-  const coreData = await loadCoreData();
+ async function loadCoreAndRender() {
+  console.log("🔄 loadCoreAndRender()");
 
-  // Normalisasi biar UI lama tetap hidup
-  const payload = {
-    resto: coreData.resto?.[0] || null,
-    menus: coreData.menus || [],
-    promos: coreData.promos || [],
-    settings: coreData.settings?.[0] || {}
-  };
+  // ✅ GANTI legacy loadCoreData
+  if (typeof loadMenuvaData === "function") {
+    await loadMenuvaData();
+  } else {
+    console.warn("⚠️ loadMenuvaData not found, load default");
+    await loadData(buatDataDefault(1));
+  }
 
-  await loadData(payload); // 🔥 UI renderer lu
+  // promo render aman
+  if (typeof renderPromoUI === "function") {
+    renderPromoUI();
+  }
 }
 
 /* ===================== TOGGLE MASTER ===================== */
@@ -2849,5 +2852,6 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
