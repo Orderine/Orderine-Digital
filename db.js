@@ -3,34 +3,37 @@
 // SINGLE SOURCE OF TRUTH: db-core.js
 // =====================================================
 
-/* ==================== ENSURE CORE ==================== */
+/* ==================== ENSURE CORE READY ==================== */
 function ensureDB() {
-  if (!window.MENUVA_DB) {
+  const core = window.MENUVA_DB;
+
+  if (!core) {
     throw new Error("MENUVA_DB not ready (db-core.js missing)");
   }
-  return window.MENUVA_DB;
+
+  if (typeof core.add !== "function") {
+    throw new Error("MENUVA_DB invalid (adapter methods missing)");
+  }
+
+  return core;
 }
 
 /* ==================== USERS ==================== */
 export async function saveUser(user) {
-  const db = ensureDB();
-  return db.add("users", user);
+  return ensureDB().add("users", user);
 }
 
 export async function getUserByEmail(email) {
-  const db = ensureDB();
-  return db.get("users", email);
+  return ensureDB().get("users", email);
 }
 
 export async function getAllUsers() {
-  const db = ensureDB();
-  return db.getAll("users");
+  return ensureDB().getAll("users");
 }
 
 /* ==================== SESSION ==================== */
 export async function setSession(user) {
-  const db = ensureDB();
-  return db.add("session", {
+  return ensureDB().add("session", {
     id: "active",
     user,
     loginAt: Date.now()
@@ -38,33 +41,28 @@ export async function setSession(user) {
 }
 
 export async function getSession() {
-  const db = ensureDB();
-  const res = await db.get("session", "active");
+  const res = await ensureDB().get("session", "active");
   return res?.user || null;
 }
 
 export async function clearSession() {
-  const db = ensureDB();
-  return db.delete("session", "active");
+  return ensureDB().delete("session", "active");
 }
 
 /* ==================== INVITES ==================== */
 export async function saveInvite(invite) {
-  const db = ensureDB();
-  return db.add("invites", invite);
+  return ensureDB().add("invites", invite);
 }
 
 export async function getInviteByToken(token) {
-  const db = ensureDB();
-  return db.get("invites", token);
+  return ensureDB().get("invites", token);
 }
 
 export async function markInviteUsed(token) {
-  const db = ensureDB();
-  const invite = await db.get("invites", token);
+  const invite = await ensureDB().get("invites", token);
   if (!invite) return false;
 
-  return db.update("invites", {
+  return ensureDB().update("invites", {
     ...invite,
     isUsed: true,
     usedAt: new Date().toISOString()
@@ -73,13 +71,11 @@ export async function markInviteUsed(token) {
 
 /* ==================== RESTO ==================== */
 export async function saveResto(resto) {
-  const db = ensureDB();
-  return db.add("restos", resto);
+  return ensureDB().add("restos", resto);
 }
 
 export async function getResto(restoID) {
-  const db = ensureDB();
-  return db.get("restos", restoID);
+  return ensureDB().get("restos", restoID);
 }
 
 /* ==================== UTIL ==================== */
@@ -87,7 +83,12 @@ export function generateID(prefix = "ID") {
   return `${prefix}-${crypto.randomUUID()}`;
 }
 
-/* ==================== GENERIC DB ==================== */
+/* ==================== GENERIC DB ADAPTER ==================== */
+/**
+ * NOTE:
+ * Ini SATU-SATUNYA "db" yang boleh diimport di layer atas.
+ * Jangan pernah shadow dengan: const db = await ...
+ */
 export const db = {
   add(store, data) {
     return ensureDB().add(store, data);
