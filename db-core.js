@@ -4,7 +4,7 @@
 
   const DB_NAME = "MenuvaDB";
   const STORE_NAME = "menuvaData";
-  const DB_VERSION = 14;
+  const DB_VERSION = 15;
 
   let dbInstance = null;
 
@@ -73,3 +73,4 @@
     open: openMenuvaDB
   };
 })();
+
