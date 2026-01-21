@@ -2235,7 +2235,14 @@ function startRealtimeOrderChecker() {
 
   let notifAudio = null;
   let audioUnlocked = false;
-  
+
+  // ================= OWNER UI SAFE PATCH =================
+if (typeof initOwnerUI !== "function") {
+  function initOwnerUI() {
+    console.warn("⚠️ initOwnerUI skipped (legacy / removed)");
+  }
+}
+
 /* ===================== ADMIN INIT (FINAL - STABLE) ===================== */
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Admin Init (FINAL)");
@@ -2855,6 +2862,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
