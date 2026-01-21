@@ -1000,6 +1000,13 @@ function initDB() {
       resolve(db);
     };
 
+    const db = request.result;
+
+    if (!db.objectStoreNames.contains("orders")) {
+    console.warn("⚠️ orders store missing, please bump DB_VERSION");
+   }
+
+
     request.onerror = () => reject(request.error);
   });
 
@@ -2221,10 +2228,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       hideLoader();
       return;
     }
-
-    // ================= LOAD DATA =================
-    await loadMenuvaData();   // 🔥 master loader
-
     // ================= PROMO SAFE GUARD =================
     if (!Array.isArray(window.menuPromo)) {
       console.warn("⚠️ menuPromo missing, init empty array");
@@ -2243,6 +2246,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
   
     // ================= INIT UI =================
+    await loadCoreAndRender();   // ✅ CORE MASTER LOADER
     await initAllToggles?.();
 
     // ================= FIXED BAR =================
@@ -2261,6 +2265,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
+  async function loadCoreAndRender() {
+  const coreData = await loadCoreData();
+
+  // Normalisasi biar UI lama tetap hidup
+  const payload = {
+    resto: coreData.resto?.[0] || null,
+    menus: coreData.menus || [],
+    promos: coreData.promos || [],
+    settings: coreData.settings?.[0] || {}
+  };
+
+  await loadData(payload); // 🔥 UI renderer lu
+}
 
 /* ===================== TOGGLE MASTER ===================== */
 async function initAllToggles() {
@@ -2802,4 +2819,5 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
