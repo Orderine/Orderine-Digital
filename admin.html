@@ -973,16 +973,24 @@ function initDB() {
 
     request.onupgradeneeded = e => {
       const db = e.target.result;
-
       console.log("⬆️ DB upgrade triggered");
 
-      // 🔥 STORE ADMIN CORE
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id" });
-        console.log("✅ menuvaData store CREATED (keyPath: id)");
+      // 🔥 CORE STORES
+      const coreStores = {
+        restos: { keyPath: "id" },
+        menus: { keyPath: "id" },
+        promos: { keyPath: "id" },
+        orders: { keyPath: "id" },
+        settings: { keyPath: "id" }
+      };
+
+      for (const [name, option] of Object.entries(coreStores)) {
+        if (!db.objectStoreNames.contains(name)) {
+          db.createObjectStore(name, option);
+          console.log(`✅ store CREATED: ${name}`);
+        }
       }
 
-      // (opsional, safety log)
       console.log("📂 Stores after upgrade:", [...db.objectStoreNames]);
     };
 
@@ -1005,32 +1013,6 @@ function getActiveRestoId() {
   if (window.activeUser?.restoId) return window.activeUser.restoId;
   console.warn("⚠️ activeUser.restoId tidak ada, pakai id=1");
   return 1;
-}
-
-/* ====================== SAVE ====================== */
-async function saveMenuvaData(data) {
-  const db = await initDB();
-  const id = getActiveRestoId();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-
-    const payload = {
-      ...data,
-      id,               // 🔑 KEY UTAMA
-      updatedAt: Date.now()
-    };
-
-    const req = store.put(payload);
-
-    req.onsuccess = () => {
-      console.log("💾 menuvaData SAVED:", payload);
-      resolve(payload);
-    };
-
-    req.onerror = () => reject(req.error);
-  });
 }
 
 /* ====================== DEFAULT DATA ====================== */
@@ -1947,75 +1929,6 @@ if (typeof renderPromoUI === "function") {
   }
 }
 
-// ====================== LOAD MENUVA DATA (SAFE FINAL) ======================
-async function loadMenuvaData() {
-  let restoId = null;
-
-  try {
-    showLoader();
-
-    // ===== AMBIL RESTO ID DENGAN AMAN =====
-    const active = window.activeUser || {};
-    restoId = active.restoID || active.restoId || null;
-
-    if (!restoId) {
-      console.warn("⚠️ restoId belum tersedia → render default");
-      await loadData(buatDataDefault(1));
-      return;
-    }
-
-    // ===== INIT DB =====
-    const db = await initDB();
-
-    if (!db.objectStoreNames.contains("menuvaData")) {
-      console.error("❌ objectStore menuvaData tidak ada");
-      await loadData(buatDataDefault(1));
-      return;
-    }
-
-    // ===== LOAD DATA =====
-    const tx = db.transaction("menuvaData", "readonly");
-    const store = tx.objectStore("menuvaData");
-
-    const req = store.get(restoId);
-
-    const record = await new Promise((resolve, reject) => {
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => reject(req.error);
-    });
-
-    // ===== DATA KOSONG =====
-    if (!record) {
-      console.warn("⚠️ menuvaData kosong → render default");
-      await loadData(buatDataDefault(1));
-      return;
-    }
-
-    // ===== NORMALISASI PAYLOAD =====
-    const payload =
-      record.data && typeof record.data === "object"
-        ? record.data
-        : record;
-
-    console.log("📦 menuvaData LOADED:", payload);
-
-    await loadData(payload);
-
-  } catch (err) {
-    console.error("❌ loadMenuvaData fatal error:", err);
-
-    // 🚑 LAST RESCUE — ADMIN TETAP HIDUP
-    try {
-      await loadData(buatDataDefault(1));
-    } catch (e) {
-      console.error("❌ fallback loadData gagal:", e);
-    }
-
-  } finally {
-    hideLoader();
-  }
-}
-
 // ====================== RESET / BACKUP / RESTORE ======================
 async function resetData() {
   if (!confirm("Are you sure you want to delete all data?")) return;
@@ -2054,50 +1967,100 @@ async function restoreDataFromFile(event) {
       return;
     }
 
-    const db = await initDB();
-
     if (format === "LEGACY") {
-      console.log("♻️ Restore legacy Menuva");
-
-      const tx = db.transaction(STORE_NAME, "readwrite");
-      const store = tx.objectStore(STORE_NAME);
-      await store.clear();
-      await store.put(json);
-      await tx.done;
+      console.log("♻️ Migrating legacy Menuva → CORE");
+      await migrateLegacyMenuva(json);
     }
 
     if (format === "CORE") {
-      console.log("♻️ Restore core Orderine");
-
+      console.log("♻️ Restoring CORE backup");
+      const db = await initDB();
       const tx = db.transaction(db.objectStoreNames, "readwrite");
 
       for (const storeName of db.objectStoreNames) {
         const store = tx.objectStore(storeName);
         await store.clear();
 
-        const data = json.data[storeName] || [];
-        for (const item of data) {
+        const records = json.data[storeName] || [];
+        for (const item of records) {
           await store.put(item);
         }
       }
-
       await tx.done;
     }
 
-    alert("✅ Restore berhasil");
+    alert("✅ Restore / Migrasi selesai");
     location.reload();
 
   } catch (err) {
     console.error("❌ Restore error:", err);
-    alert("❌ File backup rusak / tidak valid");
+    alert("❌ File backup rusak atau tidak valid");
   }
 }
-
 
   function detectBackupFormat(json) {
   if (json.meta && json.data) return "CORE";
   if (json.restoId || json.menuList) return "LEGACY";
   return "UNKNOWN";
+}
+
+  async function migrateLegacyMenuva(json) {
+  const db = await initDB();
+
+  const tx = db.transaction(
+    ["restos", "menus", "promos", "settings"],
+    "readwrite"
+  );
+
+  const restoId = json.restoId || crypto.randomUUID();
+
+  /* =====================
+     RESTO
+  ===================== */
+  tx.objectStore("restos").put({
+    id: restoId,
+    name: json.restoName || "Imported Menuva Resto",
+    source: "menuva-legacy",
+    importedAt: new Date().toISOString()
+  });
+
+  /* =====================
+     MENUS
+  ===================== */
+  if (Array.isArray(json.menuList)) {
+    for (const menu of json.menuList) {
+      tx.objectStore("menus").put({
+        ...menu,
+        restoId,
+        source: "menuva-legacy"
+      });
+    }
+  }
+
+  /* =====================
+     PROMOS
+  ===================== */
+  if (Array.isArray(json.promoList)) {
+    for (const promo of json.promoList) {
+      tx.objectStore("promos").put({
+        ...promo,
+        restoId,
+        source: "menuva-legacy"
+      });
+    }
+  }
+
+  /* =====================
+     SETTINGS
+  ===================== */
+  if (json.settings) {
+    tx.objectStore("settings").put({
+      id: restoId,
+      ...json.settings
+    });
+  }
+
+  await tx.done;
 }
 
 
@@ -2751,14 +2714,14 @@ async function cekOrderBaru() {
   try {
     const db = await initDB();
 
-    // 🔒 Defensive: cek store dulu
-   if (!db.objectStoreNames.contains(STORE_NAME)) {
-  console.warn("menuvaData store belum ada, skip cekOrderBaru");
-  return;
-}
+    // 🔒 Defensive: cek store CORE
+    if (!db.objectStoreNames.contains("orders")) {
+      console.warn("orders store belum ada, skip cekOrderBaru");
+      return;
+    }
 
-    const tx = db.transaction([STORE_NAME], "readonly");
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction("orders", "readonly");
+    const store = tx.objectStore("orders");
 
     const orders = await idbGetAll(store);
     const newCount = orders.filter(o => o.status === "new").length;
@@ -2839,19 +2802,4 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
