@@ -113,13 +113,12 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     /* ================== RESTO ================== */
-    const resto = {
-      restoID,
-      ownerID: userID,
-      restoName: "My Restaurant",
-      createdAt: now.toISOString()
-    };
-
+  const resto = {
+  id: restoID,        // 🔥 FIX UTAMA
+  ownerID: userID,
+  restoName: "My Restaurant",
+  createdAt: now.toISOString()
+};
     try {
       await saveUser(newUser);
       await saveResto(resto);
@@ -158,3 +157,4 @@ document.addEventListener("DOMContentLoaded", () => {
     togglePassword.textContent = show ? "🙈" : "👁️";
   });
 });
+
