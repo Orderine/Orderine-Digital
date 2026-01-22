@@ -5,77 +5,108 @@
 
 /* ==================== ENSURE CORE READY ==================== */
 function ensureDB() {
-  const core = window.MENUVA_DB;
-
-  if (!core) {
+  if (!window.MENUVA_DB?.openDB) {
     throw new Error("MENUVA_DB not ready (db-core.js missing)");
   }
+  return window.MENUVA_DB;
+}
 
-  if (typeof core.add !== "function") {
-    throw new Error("MENUVA_DB invalid (adapter methods missing)");
-  }
+async function withStore(storeName, mode, callback) {
+  const { openDB } = ensureDB();
+  const db = await openDB();
 
-  return core;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, mode);
+    const store = tx.objectStore(storeName);
+
+    const result = callback(store);
+
+    tx.oncomplete = () => resolve(result?.result ?? result);
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 /* ==================== USERS ==================== */
 export async function saveUser(user) {
-  return ensureDB().add("users", user);
+  return withStore("users", "readwrite", store =>
+    store.put(user)
+  );
 }
 
 export async function getUserByEmail(email) {
-  return ensureDB().get("users", email);
+  return withStore("users", "readonly", store =>
+    store.get(email)
+  );
 }
 
 export async function getAllUsers() {
-  return ensureDB().getAll("users");
+  return withStore("users", "readonly", store =>
+    store.getAll()
+  );
 }
+
+const SESSION_KEY = "active";
 
 /* ==================== SESSION ==================== */
 export async function setSession(user) {
-  return ensureDB().add("session", {
-    id: "active",
-    user,
-    loginAt: Date.now()
-  });
+  return withStore("session", "readwrite", store =>
+    store.put({
+      id: SESSION_KEY,
+      ...user,
+      loginAt: Date.now()
+    })
+  );
 }
 
 export async function getSession() {
-  const res = await ensureDB().get("session", "active");
-  return res?.user || null;
+  return withStore("session", "readonly", store =>
+    store.get(SESSION_KEY)
+  );
 }
 
 export async function clearSession() {
-  return ensureDB().delete("session", "active");
+  return withStore("session", "readwrite", store =>
+    store.delete(SESSION_KEY)
+  );
 }
 
 /* ==================== INVITES ==================== */
 export async function saveInvite(invite) {
-  return ensureDB().add("invites", invite);
+  return withStore("invites", "readwrite", store =>
+    store.put(invite)
+  );
 }
 
 export async function getInviteByToken(token) {
-  return ensureDB().get("invites", token);
+  return withStore("invites", "readonly", store =>
+    store.get(token)
+  );
 }
 
 export async function markInviteUsed(token) {
-  const invite = await ensureDB().get("invites", token);
+  const invite = await getInviteByToken(token);
   if (!invite) return false;
 
-  return ensureDB().update("invites", {
-    ...invite,
-    isUsed: true,
-    usedAt: new Date().toISOString()
-  });
+  return withStore("invites", "readwrite", store =>
+    store.put({
+      ...invite,
+      isUsed: true,
+      usedAt: new Date().toISOString()
+    })
+  );
 }
 
 /* ==================== RESTO ==================== */
 export async function saveResto(resto) {
-  return ensureDB().add("restos", resto);
+  return withStore("restos", "readwrite", store =>
+    store.put(resto)
+  );
 }
 
 export async function getResto(restoID) {
-  return ensureDB().get("restos", restoID);
+  return withStore("restos", "readonly", store =>
+    store.get(restoID)
+  );
 }
 
 /* ==================== UTIL ==================== */
@@ -91,18 +122,20 @@ export function generateID(prefix = "ID") {
  */
 export const db = {
   add(store, data) {
-    return ensureDB().add(store, data);
+    return withStore(store, "readwrite", s => s.put(data));
   },
   get(store, key) {
-    return ensureDB().get(store, key);
+    return withStore(store, "readonly", s => s.get(key));
   },
   getAll(store) {
-    return ensureDB().getAll(store);
+    return withStore(store, "readonly", s => s.getAll());
   },
   update(store, data) {
-    return ensureDB().update(store, data);
+    return withStore(store, "readwrite", s => s.put(data));
   },
   delete(store, key) {
-    return ensureDB().delete(store, key);
+    return withStore(store, "readwrite", s => s.delete(key));
   }
 };
+
+
