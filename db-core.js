@@ -82,25 +82,40 @@
   }
 
   window.MENUVA_DB = {
-    NAME: DB_NAME,
-    VERSION: DB_VERSION,
-    openDB: openDB,
+  NAME: DB_NAME,
+  VERSION: DB_VERSION,
+  openDB,
 
-    add(store, data) {
-      return withStore(store, "readwrite", s => s.put(data));
-    },
-    get(store, key) {
-      return withStore(store, "readonly", s => s.get(key));
-    },
-    getAll(store) {
-      return withStore(store, "readonly", s => s.getAll());
-    },
-    update(store, data) {
-      return withStore(store, "readwrite", s => s.put(data));
-    },
-    delete(store, key) {
-      return withStore(store, "readwrite", s => s.delete(key));
-    }
-  };
+  add(store, data) {
+    return withStore(store, "readwrite", s => s.put(data));
+  },
+  get(store, key) {
+    return withStore(store, "readonly", s => s.get(key));
+  },
+  getAll(store) {
+    return withStore(store, "readonly", s => s.getAll());
+  },
+  delete(store, key) {
+    return withStore(store, "readwrite", s => s.delete(key));
+  },
 
-})(); // ⬅️ 🔥 PENUTUP YANG HILANG
+  /* 🔐 SESSION API (GLOBAL) */
+  setSession(user) {
+    return withStore("session", "readwrite", s =>
+      s.put({ id: "active", ...user, loginAt: Date.now() })
+    );
+  },
+
+  getSession() {
+    return withStore("session", "readonly", s =>
+      s.get("active")
+    );
+  },
+
+  clearSession() {
+    return withStore("session", "readwrite", s =>
+      s.delete("active")
+    );
+  }
+};
+
