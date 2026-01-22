@@ -30,14 +30,28 @@ async function ensureDBReady() {
 /* ==================== BOOT ==================== */
 document.addEventListener("DOMContentLoaded", async () => {
   try {
-    await ensureDBReady();
-    await runAuthGuard();
+    if (!window.MENUVA_DB) {
+      throw new Error("MENUVA_DB not loaded");
+    }
+
+    const session = await MENUVA_DB.getSession();
+
+    if (!session || !session.email) {
+      console.warn("⛔ No active session");
+      await MENUVA_DB.clearSession();
+      location.href = "login.html";
+      return;
+    }
+
+    window.activeUser = session;
+    console.log("✅ AUTH OK:", session.email);
+
   } catch (err) {
     console.error("🛑 AUTH GUARD BOOT FAILED:", err);
-    await clearSession();
-    location.replace("login.html");
+    location.href = "login.html";
   }
 });
+
 
 /* ==================== CORE AUTH GUARD ==================== */
 async function runAuthGuard() {
@@ -186,4 +200,5 @@ async function forceRenew(user, message) {
   await clearSession();
   location.replace("plans.html");
 }
+
 
