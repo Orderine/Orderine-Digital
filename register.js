@@ -1,6 +1,6 @@
 // =====================================================
 // ORDERINE – REGISTER PAGE (ES MODULE)
-// FINAL – CLEAR & SYNC WITH PLANS + AUTH-GUARD
+// FINAL – SYNC WITH DB-CORE + AUTH-GUARD
 // =====================================================
 
 import {
@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.type) return parsed;
+      if (parsed?.type) return parsed;
     } catch {}
 
     if (typeof raw === "string") {
@@ -87,7 +87,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (selectedPlan?.type) {
       premiumPlan = selectedPlan.type;
       subscriptionStatus = "pending";
-      isPaid = false;
 
       if (premiumPlan === "monthly") {
         premiumExpire = addMonths(now, 1);
@@ -98,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    /* ================== USER OBJECT ================== */
+    /* ================== USER ================== */
     const newUser = {
       userID,
       email,
@@ -113,7 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
       createdAt: now.toISOString()
     };
 
-    /* ================== RESTO OBJECT ================== */
+    /* ================== RESTO ================== */
     const resto = {
       restoID,
       ownerID: userID,
@@ -125,24 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await saveUser(newUser);
       await saveResto(resto);
 
-      /* =================================================
-         🔐 STEP 2 PATCH — LOCK EMAIL OWNER SESSION
-         ================================================= */
-      localStorage.setItem(
-        "currentUser",
-        JSON.stringify({
-          userID,
-          email,
-          role: "owner",
-          restoID,
-          from: "register",
-          createdAt: now.toISOString()
-        })
-      );
-
-      // bersihkan session lama
-      localStorage.removeItem("activeUser");
-      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("selectedPlan");
 
       if (premiumPlan === "trial") {
         alert("✅ Trial 14 hari aktif.\nSilakan login.");
@@ -151,7 +133,6 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem(
           "pendingPlanUser",
           JSON.stringify({
-            userID,
             email,
             restoID,
             role: "owner",
@@ -171,11 +152,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /* ================== 👁️ TOGGLE PASSWORD ================== */
-  if (togglePassword) {
-    togglePassword.addEventListener("click", () => {
-      const show = passwordInput.type === "password";
-      passwordInput.type = show ? "text" : "password";
-      togglePassword.textContent = show ? "🙈" : "👁️";
-    });
-  }
+  togglePassword?.addEventListener("click", () => {
+    const show = passwordInput.type === "password";
+    passwordInput.type = show ? "text" : "password";
+    togglePassword.textContent = show ? "🙈" : "👁️";
+  });
 });
