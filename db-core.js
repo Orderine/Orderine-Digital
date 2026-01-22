@@ -75,10 +75,43 @@
     });
   }
 
+ async function withStore(storeName, mode, callback) {
+  const db = await openDB();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, mode);
+    const store = tx.objectStore(storeName);
+    const request = callback(store);
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+
   /* ===== GLOBAL SINGLE SOURCE ===== */
-  window.MENUVA_DB = {
-    openDB,
-    DB_NAME,
-    DB_VERSION
-  };
-})();
+window.MENUVA_DB = {
+  NAME: DB_NAME,
+  VERSION: DB_VERSION,
+  open: openDB,
+
+  add(store, data) {
+    return withStore(store, "readwrite", s => s.put(data));
+  },
+
+  get(store, key) {
+    return withStore(store, "readonly", s => s.get(key));
+  },
+
+  getAll(store) {
+    return withStore(store, "readonly", s => s.getAll());
+  },
+
+  update(store, data) {
+    return withStore(store, "readwrite", s => s.put(data));
+  },
+
+  delete(store, key) {
+    return withStore(store, "readwrite", s => s.delete(key));
+  }
+};
