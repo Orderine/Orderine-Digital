@@ -5,24 +5,26 @@
 
 /* ==================== ENSURE CORE READY ==================== */
 function ensureDB() {
-  if (!window.MENUVA_DB?.openDB) {
-    throw new Error("MENUVA_DB not ready (db-core.js missing)");
+  if (!window.MENUVA_DB || !window.MENUVA_DB.openDB) {
+    throw new Error("MENUVA_DB not ready");
   }
   return window.MENUVA_DB;
 }
 
-async function withStore(storeName, mode, callback) {
-  const { openDB } = ensureDB();
-  const db = await openDB();
+async function withStore(store, mode, callback) {
+  const DB = ensureDB();
+  await DB.openDB();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, mode);
-    const store = tx.objectStore(storeName);
+    const tx = DB._db
+      ? DB._db.transaction(store, mode)
+      : DB.openDB().then(db => db.transaction(store, mode));
 
-    const result = callback(store);
+    const objectStore = tx.objectStore(store);
+    const req = callback(objectStore);
 
-    tx.oncomplete = () => resolve(result?.result ?? result);
-    tx.onerror = () => reject(tx.error);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
   });
 }
 
@@ -137,5 +139,6 @@ export const db = {
     return withStore(store, "readwrite", s => s.delete(key));
   }
 };
+
 
 
