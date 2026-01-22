@@ -6,28 +6,26 @@ window.currentUser = null;
 
 /* ==================== DB CORE HANDSHAKE ==================== */
 async function ensureDBReady() {
-  if (!window.DB_NAME || !window.DB_VERSION) {
-    throw new Error("DB core not loaded (DB_NAME / DB_VERSION missing)");
+  if (!window.MENUVA_DB?.openDB) {
+    throw new Error("db-core.js not loaded");
   }
 
-  if (!window.MENUVA_DB?.open) {
-    throw new Error("MENUVA_DB not available");
+  if (
+    typeof getSession !== "function" ||
+    typeof clearSession !== "function"
+  ) {
+    throw new Error("db.js not loaded");
   }
 
-  // DB akan terbuka dengan VERSION dari db-core.js
-  await window.MENUVA_DB.open();
+  await window.MENUVA_DB.openDB();
 }
 
-/* ==================== SESSION HELPERS (NO LOCAL DB VERSION) ==================== */
-async function getSession() {
-  if (!window.MENUVA_DB?.get) return null;
-  return await window.MENUVA_DB.get("session", "activeUser");
-}
 
-async function clearSession() {
-  if (!window.MENUVA_DB?.delete) return;
-  await window.MENUVA_DB.delete("session", "activeUser");
-}
+// db.js HANDLE this
+// auth-guard hanya pakai
+// getSession()
+// clearSession()
+
 
 /* ==================== BOOT ==================== */
 document.addEventListener("DOMContentLoaded", async () => {
@@ -112,9 +110,9 @@ async function runAuthGuard() {
     };
 
     // safety mirror (reload / new tab)
-    localStorage.setItem(
+     localStorage.setItem(
       "activeUser",
-      JSON.stringify(window.currentUser)
+      JSON.stringify(window.currentUser) 
     );
 
     /* ==================== OWNER ==================== */
@@ -188,3 +186,4 @@ async function forceRenew(user, message) {
   await clearSession();
   location.replace("plans.html");
 }
+
