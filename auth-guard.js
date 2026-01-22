@@ -201,4 +201,3 @@ async function forceRenew(user, message) {
   location.replace("plans.html");
 }
 
-
