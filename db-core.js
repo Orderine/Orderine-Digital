@@ -19,27 +19,22 @@
         const db = e.target.result;
         console.warn(`🔁 MenuvaDB upgrade → v${DB_VERSION}`);
 
-        /* ===== USERS ===== */
         if (!db.objectStoreNames.contains("users")) {
           db.createObjectStore("users", { keyPath: "email" });
         }
 
-        /* ===== SESSION ===== */
         if (!db.objectStoreNames.contains("session")) {
           db.createObjectStore("session", { keyPath: "id" });
         }
 
-        /* ===== INVITES ===== */
         if (!db.objectStoreNames.contains("invites")) {
           db.createObjectStore("invites", { keyPath: "token" });
         }
 
-        /* ===== RESTOS ===== */
         if (!db.objectStoreNames.contains("restos")) {
           db.createObjectStore("restos", { keyPath: "id" });
         }
 
-        /* ===== ORDERS (LEGACY / EXISTING) ===== */
         if (!db.objectStoreNames.contains("ordersData")) {
           const orders = db.createObjectStore("ordersData", {
             keyPath: "id",
@@ -49,7 +44,6 @@
           orders.createIndex("orderTime", "orderTime", { unique: false });
         }
 
-        /* ===== PROMO ===== */
         if (!db.objectStoreNames.contains("promoData")) {
           db.createObjectStore("promoData", {
             keyPath: "id",
@@ -75,43 +69,38 @@
     });
   }
 
- async function withStore(storeName, mode, callback) {
-  const db = await openDB();
+  async function withStore(storeName, mode, callback) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, mode);
+      const store = tx.objectStore(storeName);
+      const request = callback(store);
 
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, mode);
-    const store = tx.objectStore(storeName);
-    const request = callback(store);
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-
-  /* ===== GLOBAL SINGLE SOURCE ===== */
-window.MENUVA_DB = {
-  NAME: DB_NAME,
-  VERSION: DB_VERSION,
-  open: openDB,
-
-  add(store, data) {
-    return withStore(store, "readwrite", s => s.put(data));
-  },
-
-  get(store, key) {
-    return withStore(store, "readonly", s => s.get(key));
-  },
-
-  getAll(store) {
-    return withStore(store, "readonly", s => s.getAll());
-  },
-
-  update(store, data) {
-    return withStore(store, "readwrite", s => s.put(data));
-  },
-
-  delete(store, key) {
-    return withStore(store, "readwrite", s => s.delete(key));
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
   }
-};
+
+  window.MENUVA_DB = {
+    NAME: DB_NAME,
+    VERSION: DB_VERSION,
+    openDB: openDB,
+
+    add(store, data) {
+      return withStore(store, "readwrite", s => s.put(data));
+    },
+    get(store, key) {
+      return withStore(store, "readonly", s => s.get(key));
+    },
+    getAll(store) {
+      return withStore(store, "readonly", s => s.getAll());
+    },
+    update(store, data) {
+      return withStore(store, "readwrite", s => s.put(data));
+    },
+    delete(store, key) {
+      return withStore(store, "readwrite", s => s.delete(key));
+    }
+  };
+
+})(); // ⬅️ 🔥 PENUTUP YANG HILANG
