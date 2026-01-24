@@ -1508,108 +1508,108 @@ async function simpanData() {
     }
 
     const ownerId = window.activeUser.email;
-    const restoId = window.activeUser.restoID; // 🔑 FINAL PRIMARY KEY
+    const restoId = window.activeUser.restoID;
 
     // ==================== FORM DATA ====================
-    const namaRestoran =
-      document.getElementById("namaRestoran")?.value.trim() || "";
+    const namaRestoran = getVal("namaRestoran");
+    const restoAddress = getVal("restoAddress");
+    const restoPhone = getVal("restoPhone");
+    const logo = document.getElementById("previewLogo")?.src || "";
 
-    const restoAddress =
-      document.getElementById("restoAddress")?.value.trim() || "";
-
-    const restoPhone =
-      document.getElementById("restoPhone")?.value.trim() || "";
-
-    const logo =
-      document.getElementById("previewLogo")?.src || "";
-
-    const nomorWaAdmin = Array
-      .from(document.querySelectorAll(".nomor-wa"))
-      .map(i => i.value.trim())
-      .filter(Boolean);
+    const nomorWaAdmin = getNomorWaAdmin();
 
     if (!restoPhone) {
       alert("❌ Nomor telepon resto wajib diisi!");
       return;
     }
 
-    // ==================== MENU & ROOM ====================
-    const menuData = [
-      ...(typeof ambilMenu === "function" ? ambilMenu("menuFoodContainer") : []),
-      ...(typeof ambilMenu === "function" ? ambilMenu("menuSnackContainer") : []),
-      ...(typeof ambilMenu === "function" ? ambilMenu("menuDrinkContainer") : []),
-      ...(typeof ambilMenu === "function" ? ambilMenu("menuSpecialContainer") : [])
-    ];
+    // ==================== MENU ====================
+    const menuData = ambilSemuaMenu();
 
-    // ===== VALIDASI PROMO =====
-if (highlightInvalidPromo()) {
-  alert("⚠️ Please complete the data promos.\nLengkapi dulu sebelum Save.");
-  hideLoader();
-  return;
+    // ==================== VALIDASI ====================
+    if (highlightInvalidPromo()) {
+      alert("⚠️ Please complete the data promos.\nLengkapi dulu sebelum Save.");
+      return;
+    }
+
+    if (highlightInvalidMenu()) {
+      alert("⚠️ Please complete the data menus.\nLengkapi dulu sebelum Save.");
+      return;
+    }
+
+    // ==================== PAYLOAD ====================
+    const payload = {
+      id: restoId,
+      restoId,
+      ownerId,
+
+      namaRestoran,
+      restoAddress,
+      restoPhone,
+      logo,
+      nomorWaAdmin,
+
+      // backward compat only
+      menuPromo: Array.isArray(window.menuPromo) ? window.menuPromo : [],
+      menuVoucher: Array.isArray(window.menuVoucher) ? window.menuVoucher : [],
+      flipbookRuanganImages: window.flipbookRuanganImages || [],
+      flipbookMenuImages: window.flipbookMenuImages || [],
+
+      menu: menuData,
+      rooms: typeof ambilSemuaRoom === "function" ? ambilSemuaRoom() : [],
+
+      updatedAt: Date.now()
+    };
+
+    // ==================== SAVE ====================
+    await window.MENUVA_DB.add("menuData", payload);
+
+    syncRestoIdHidden(restoId);
+    prepareCustomerShare?.();
+
+    console.log("💾 menuData SAVED:", payload);
+    alert("✅ All Data Successfully Saved!");
+
+    showCustomerShareUI();
+    localStorage.setItem("customerShareReady", "1");
+
+  } catch (err) {
+    console.error("❌ simpanData fatal:", err);
+    alert("❌ Failed to save data");
+  } finally {
+    hideLoader();
+  }
 }
 
-    // ===== VALIDASI MENU UTAMA =====
-if (highlightInvalidMenu()) {
-  alert("⚠️ Please complete the data menus.\nLengkapi dulu sebelum Save.");
-  hideLoader();
-  return;
+  function getVal(id) {
+  return document.getElementById(id)?.value.trim() || "";
 }
 
-  // ==================== FINAL PAYLOAD ====================
-const payload = {
-  id: restoId,
-  restoId,
-  ownerId,
-
-  namaRestoran,
-  restoAddress,
-  restoPhone,
-  logo,
-  nomorWaAdmin,
-
-  // 🔒 BACKWARD COMPAT ONLY (JANGAN DIPAKAI RENDER)
-  menuPromo: Array.isArray(window.menuPromo) ? window.menuPromo : [],
-
-  menuVoucher: Array.isArray(window.menuVoucher) ? window.menuVoucher : [],
-  flipbookRuanganImages: Array.isArray(window.flipbookRuanganImages)
-    ? window.flipbookRuanganImages
-    : [],
-  flipbookMenuImages: Array.isArray(window.flipbookMenuImages)
-    ? window.flipbookMenuImages
-    : [],
-
-  menu: menuData,
-  rooms: typeof ambilSemuaRoom === "function"
-    ? ambilSemuaRoom()
-    : [],
-
-  updatedAt: Date.now()
-};
-
-  // ==================== SAVE TO menuData ====================
-await window.MENUVA_DB.add("menuData", payload);
-
-// ==================== LOCAL UI STATE ====================
-let restoIdEl = document.getElementById("restoId");
-if (!restoIdEl) {
-  restoIdEl = document.createElement("input");
-  restoIdEl.type = "hidden";
-  restoIdEl.id = "restoId";
-  document.body.appendChild(restoIdEl);
+  function getNomorWaAdmin() {
+  return Array.from(document.querySelectorAll(".nomor-wa"))
+    .map(i => i.value.trim())
+    .filter(Boolean);
 }
-restoIdEl.value = restoId;
 
-prepareCustomerShare?.();
+  function ambilSemuaMenu() {
+  return [
+    ...(typeof ambilMenu === "function" ? ambilMenu("menuFoodContainer") : []),
+    ...(typeof ambilMenu === "function" ? ambilMenu("menuSnackContainer") : []),
+    ...(typeof ambilMenu === "function" ? ambilMenu("menuDrinkContainer") : []),
+    ...(typeof ambilMenu === "function" ? ambilMenu("menuSpecialContainer") : [])
+  ];
+}
 
-console.log("💾 menuData SAVED:", payload);
-alert("✅ All Data Successfully Saved!");
-
-// 🔓 BUKA AKSES CUSTOMER
-showCustomerShareUI();
-
-// 🔐 TANDAI SUDAH DISAVE
-localStorage.setItem("customerShareReady", "1");
-
+  function syncRestoIdHidden(restoId) {
+  let el = document.getElementById("restoId");
+  if (!el) {
+    el = document.createElement("input");
+    el.type = "hidden";
+    el.id = "restoId";
+    document.body.appendChild(el);
+  }
+  el.value = restoId;
+}
 
   // ====================== VALIDASI PROMO (FINAL) ======================
 function highlightInvalidPromo() {
@@ -2734,3 +2734,4 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
