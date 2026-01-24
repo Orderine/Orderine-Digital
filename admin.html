@@ -2339,24 +2339,33 @@ document.body.addEventListener(
 async function loadCoreAndRender() {
   console.log("🔄 loadCoreAndRender()");
 
-  // ✅ pastikan DB CORE sudah siap
+  // ✅ pastikan DB core ready
   if (typeof window.MENUVA_DB?.ready === "function") {
     await window.MENUVA_DB.ready();
   }
 
-  // ✅ cek apakah DB kosong (first run)
-  const menus = await window.MENUVA_DB.getAll("menus");
+  // ✅ ambil daftar store yg benar-benar ADA
+  const stores = window.MENUVA_DB.stores || [];
+  console.log("📂 DB stores:", stores);
 
-  if (!menus || menus.length === 0) {
-    console.info("ℹ️ DB kosong, inject data default sekali saja");
-    await loadData(buatDataDefault(1));
+  // ✅ gunakan store utama yang VALID
+  if (stores.includes("menuvaData")) {
+    const data = await window.MENUVA_DB.getAll("menuvaData");
+
+    if (!data || data.length === 0) {
+      console.info("ℹ️ menuvaData kosong, inject default data");
+      await loadData(buatDataDefault(1));
+    }
+  } else {
+    console.warn("⚠️ store menuvaData tidak ditemukan, skip inject default");
   }
 
-  // ✅ render promo aman (promo pakai DB juga)
+  // ✅ promo render (aman)
   if (typeof renderPromoUI === "function") {
     renderPromoUI();
   }
 }
+
 
 /* ===================== TOGGLE MASTER ===================== */
 async function initAllToggles() {
@@ -2854,6 +2863,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
