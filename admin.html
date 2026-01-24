@@ -965,49 +965,6 @@ const DB_NAME = window.MENUVA_DB.NAME;
 const STORE_NAME = window.MENUVA_DB.STORE;
 const DB_VERSION = window.MENUVA_DB.VERSION;
 
-/* ====================== INIT DB (AUTO UPGRADE SAFE) ====================== */
-let dbReady = null;
-
-function initDB() {
-  if (dbReady) return dbReady;
-
-  dbReady = new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onupgradeneeded = e => {
-      const db = e.target.result;
-      console.log("⬆️ DB upgrade triggered");
-
-      const stores = {
-        invites:  { keyPath: "id" },
-        restos:   { keyPath: "id" },
-        session:  { keyPath: "id" },
-        users:    { keyPath: "id" },
-        menus:    { keyPath: "id" },
-        promos:   { keyPath: "id" },
-        orders:   { keyPath: "id" },
-        settings: { keyPath: "id" }
-      };
-
-      for (const [name, opt] of Object.entries(stores)) {
-        if (!db.objectStoreNames.contains(name)) {
-          db.createObjectStore(name, opt);
-          console.log(`✅ store CREATED: ${name}`);
-        }
-      }
-    };
-
-    request.onsuccess = () => {
-      console.log("📂 DB stores:", [...request.result.objectStoreNames]);
-      resolve(request.result);
-    };
-
-    request.onerror = () => reject(request.error);
-  });
-
-  return dbReady;
-}
-
   /* ====================== MENUVA DATA DB HELPERS ====================== */
 
 // 🔐 Ambil ID aktif (AMAN)
@@ -1629,46 +1586,30 @@ const payload = {
   updatedAt: Date.now()
 };
 
-    // ==================== SAVE TO menuvaData ====================
-    const db = await initDB();
-    const tx = db.transaction("menuvaData", "readwrite");
-    const store = tx.objectStore("menuvaData");
+  // ==================== SAVE TO menuData ====================
+await window.MENUVA_DB.add("menuData", payload);
 
-    store.put(payload);
-
-    await new Promise((resolve, reject) => {
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-    });
-
-    // ==================== LOCAL UI STATE ====================
-    let restoIdEl = document.getElementById("restoId");
-    if (!restoIdEl) {
-      restoIdEl = document.createElement("input");
-      restoIdEl.type = "hidden";
-      restoIdEl.id = "restoId";
-      document.body.appendChild(restoIdEl);
-    }
-    restoIdEl.value = restoId;
-
-    prepareCustomerShare?.();
-
-    console.log("💾 menuvaData SAVED:", payload);
-    alert("✅ All Data Succesfully Saved!");
-
-    // 🔓 BUKA AKSES CUSTOMER
-    showCustomerShareUI();
-
-    // 🔐 TANDAI SUDAH DISAVE
-    localStorage.setItem("customerShareReady", "1");
-
-  } catch (err) {
-    console.error("❌ simpanData error:", err);
-    alert("❌ Gagal menyimpan data.");
-  } finally {
-    hideLoader();
-  }
+// ==================== LOCAL UI STATE ====================
+let restoIdEl = document.getElementById("restoId");
+if (!restoIdEl) {
+  restoIdEl = document.createElement("input");
+  restoIdEl.type = "hidden";
+  restoIdEl.id = "restoId";
+  document.body.appendChild(restoIdEl);
 }
+restoIdEl.value = restoId;
+
+prepareCustomerShare?.();
+
+console.log("💾 menuData SAVED:", payload);
+alert("✅ All Data Successfully Saved!");
+
+// 🔓 BUKA AKSES CUSTOMER
+showCustomerShareUI();
+
+// 🔐 TANDAI SUDAH DISAVE
+localStorage.setItem("customerShareReady", "1");
+
 
   // ====================== VALIDASI PROMO (FINAL) ======================
 function highlightInvalidPromo() {
@@ -1812,55 +1753,13 @@ window.__lastLoadedResto = data?.restoId;
       });
     }
 
-    async function loadCoreData() {
-  const db = await initDB();
-
-  const requiredStores = ["restos", "menus", "promos", "settings"];
-
-  for (const s of requiredStores) {
-    if (!db.objectStoreNames.contains(s)) {
-      console.warn(`⚠️ store ${s} belum ada`);
-    }
-  }
-
-  const tx = db.transaction(requiredStores, "readonly");
-
-  const restos   = await idbGetAll(tx.objectStore("restos"));
-  const menus    = await idbGetAll(tx.objectStore("menus"));
-  const promos   = await idbGetAll(tx.objectStore("promos"));
-  const settings = await idbGetAll(tx.objectStore("settings"));
-
-  await tx.done;
-
-  return { restos, menus, promos, settings };
-}
-
-    // ===== VOUCHER =====
-window.menuVoucher = Array.isArray(data.menuVoucher) ? [...data.menuVoucher] : [];
-
-const voucherBox = document.getElementById("voucherContainerBox");
-if (voucherBox && typeof renderVoucher === "function") {
+ async function loadMenuAndFlipbook() {
   try {
-    renderVoucher(window.menuVoucher);
-  } catch (e) {
-    console.warn("⚠️ renderVoucher error (di-skip):", e);
-  }
-}
-   
-   // ===== PROMO (FINAL – SAFE SYNC) =====
-const promoFromDB = Array.isArray(data.menuPromo) ? data.menuPromo : [];
+    console.log("🔄 loadMenuAndFlipbook()");
 
-window.menuPromo = promoFromDB;
-window.promoList = window.menuPromo;
+    // ================= MENU =================
+    const menuRows = await window.MENUVA_DB.getAll("menuData");
 
-if (typeof renderPromoUI === "function") {
-  renderPromoUI();
-} else {
-  console.warn("⚠️ renderPromoUI belum siap");
-}
-
-
-    // ===== MENU =====
     const containers = {
       food: "menuFoodContainer",
       snack: "menuSnackContainer",
@@ -1873,82 +1772,40 @@ if (typeof renderPromoUI === "function") {
       if (el) el.innerHTML = "";
     });
 
-    const menuList = Array.isArray(data.menu) ? data.menu : [];
-    menuList.forEach(m => {
+    menuRows.forEach(m => {
       try {
-        if (typeof tambahMenu === "function") {
-          tambahMenu(
-            m.kategori || "food",
-            m.nama || "",
-            m.harga || "",
-            m.image || ""
-          );
-        } else {
-          console.warn("⚠️ tambahMenu tidak tersedia, skip:", m);
-        }
+        tambahMenu?.(
+          m.kategori || "food",
+          m.nama || "",
+          m.harga || "",
+          m.image || ""
+        );
       } catch (e) {
-        console.warn("⚠️ gagal render menu:", e);
+        console.warn("⚠️ render menu gagal:", e);
       }
     });
 
-    // ===== FLIPBOOK =====
-    window.flipbookRuanganImages = Array.isArray(data.flipbookRuanganImages)
-      ? [...data.flipbookRuanganImages]
-      : [];
+    // ================= FLIPBOOK =================
+    const flipbookRows = await window.MENUVA_DB.getAll("flipbookData");
 
-    window.flipbookMenuImages = Array.isArray(data.flipbookMenuImages)
-      ? [...data.flipbookMenuImages]
-      : [];
+    const ruangan = flipbookRows.filter(f => f.type === "ruangan");
+    const menuImg = flipbookRows.filter(f => f.type === "menu");
 
     if (typeof renderImagePreview === "function") {
       setTimeout(() => {
-        window.flipbookRuanganImages.forEach(src => {
-          try {
-            src && renderImagePreview("ruangan", src);
-          } catch (e) {
-            console.warn("⚠️ flipbook ruangan error:", e);
-          }
-        });
-
-        window.flipbookMenuImages.forEach(src => {
-          try {
-            src && renderImagePreview("menu", src);
-          } catch (e) {
-            console.warn("⚠️ flipbook menu error:", e);
-          }
-        });
-      }, 200);
-    } else {
-      console.warn("⚠️ renderImagePreview tidak tersedia");
+        ruangan.forEach(f =>
+          f.src && renderImagePreview("ruangan", f.src)
+        );
+        menuImg.forEach(f =>
+          f.src && renderImagePreview("menu", f.src)
+        );
+      }, 150);
     }
 
-    // ===== ROOM =====
-    if (Array.isArray(data.rooms)) {
-      if (typeof restoreRoomFromData === "function") {
-        try {
-          restoreRoomFromData(data.rooms);
-        } catch (e) {
-          console.warn("⚠️ restoreRoomFromData error:", e);
-        }
-      } else {
-        console.warn("⚠️ restoreRoomFromData tidak tersedia");
-      }
-    }
-
-    // ===== RESTO ID =====
-    let restoIdEl = document.getElementById("restoId");
-    if (!restoIdEl) {
-      restoIdEl = document.createElement("input");
-      restoIdEl.type = "hidden";
-      restoIdEl.id = "restoId";
-      document.body.appendChild(restoIdEl);
-    }
-    restoIdEl.value = data.restoId || data.restoPhone || "";
-
-    console.log("✅ loadData selesai tanpa crash");
+    console.log("✅ Menu & Flipbook loaded");
 
   } catch (err) {
-    console.error("❌ loadData gagal (fatal):", err);
+    console.error("❌ loadMenuAndFlipbook fatal:", err);
   } finally {
     hideLoader();
   }
@@ -1984,7 +1841,6 @@ async function restoreDataFromFile(event) {
   try {
     const text = await file.text();
     const json = JSON.parse(text);
-
     const format = detectBackupFormat(json);
 
     if (format === "UNKNOWN") {
@@ -1999,19 +1855,33 @@ async function restoreDataFromFile(event) {
 
     if (format === "CORE") {
       console.log("♻️ Restoring CORE backup");
-      const db = await initDB();
-      const tx = db.transaction(db.objectStoreNames, "readwrite");
 
-      for (const storeName of db.objectStoreNames) {
-        const store = tx.objectStore(storeName);
-        await store.clear();
+      const stores = [
+        "users",
+        "session",
+        "invites",
+        "restos",
+        "menuData",
+        "flipbookData",
+        "promoData",
+        "ordersData"
+      ];
 
-        const records = json.data[storeName] || [];
-        for (const item of records) {
-          await store.put(item);
+      for (const store of stores) {
+        const rows = json.data?.[store];
+        if (!Array.isArray(rows)) continue;
+
+        // clear
+        const existing = await MENUVA_DB.getAll(store);
+        for (const item of existing) {
+          await MENUVA_DB.delete(store, item.id);
+        }
+
+        // restore
+        for (const item of rows) {
+          await MENUVA_DB.add(store, item);
         }
       }
-      await tx.done;
     }
 
     alert("✅ Restore / Migrasi selesai");
@@ -2029,65 +1899,79 @@ async function restoreDataFromFile(event) {
   return "UNKNOWN";
 }
 
-  async function migrateLegacyMenuva(json) {
-  const db = await initDB();
+ async function migrateLegacyMenuva(json) {
+  try {
+    console.log("🔁 Migrating legacy menuva data...");
 
-  const tx = db.transaction(
-    ["restos", "menus", "promos", "settings"],
-    "readwrite"
-  );
+    const restoId = json.restoId || crypto.randomUUID();
 
-  const restoId = json.restoId || crypto.randomUUID();
-
-  /* =====================
-     RESTO
-  ===================== */
-  tx.objectStore("restos").put({
-    id: restoId,
-    name: json.restoName || "Imported Menuva Resto",
-    source: "menuva-legacy",
-    importedAt: new Date().toISOString()
-  });
-
-  /* =====================
-     MENUS
-  ===================== */
-  if (Array.isArray(json.menuList)) {
-    for (const menu of json.menuList) {
-      tx.objectStore("menus").put({
-        ...menu,
-        restoId,
-        source: "menuva-legacy"
-      });
-    }
-  }
-
-  /* =====================
-     PROMOS
-  ===================== */
-  if (Array.isArray(json.promoList)) {
-    for (const promo of json.promoList) {
-      tx.objectStore("promos").put({
-        ...promo,
-        restoId,
-        source: "menuva-legacy"
-      });
-    }
-  }
-
-  /* =====================
-     SETTINGS
-  ===================== */
-  if (json.settings) {
-    tx.objectStore("settings").put({
+    /* =====================
+       RESTO
+    ===================== */
+    await window.MENUVA_DB.add("restos", {
       id: restoId,
-      ...json.settings
+      name: json.restoName || "Imported Menuva Resto",
+      source: "menuva-legacy",
+      importedAt: Date.now()
     });
+
+    /* =====================
+       MENUS → menuData
+    ===================== */
+    if (Array.isArray(json.menuList)) {
+      for (const m of json.menuList) {
+        await window.MENUVA_DB.add("menuData", {
+          ...m,
+          restoId,
+          source: "menuva-legacy"
+        });
+      }
+    }
+
+    /* =====================
+       PROMOS → promoData
+    ===================== */
+    if (Array.isArray(json.promoList)) {
+      for (const p of json.promoList) {
+        await window.MENUVA_DB.add("promoData", {
+          ...p,
+          restoId,
+          source: "menuva-legacy"
+        });
+      }
+    }
+
+    /* =====================
+       FLIPBOOK → flipbookData
+    ===================== */
+    if (Array.isArray(json.flipbookRuanganImages)) {
+      for (const src of json.flipbookRuanganImages) {
+        await window.MENUVA_DB.add("flipbookData", {
+          restoId,
+          type: "ruangan",
+          src,
+          source: "menuva-legacy"
+        });
+      }
+    }
+
+    if (Array.isArray(json.flipbookMenuImages)) {
+      for (const src of json.flipbookMenuImages) {
+        await window.MENUVA_DB.add("flipbookData", {
+          restoId,
+          type: "menu",
+          src,
+          source: "menuva-legacy"
+        });
+      }
+    }
+
+    console.log("✅ Legacy migration DONE");
+
+  } catch (err) {
+    console.error("❌ migrateLegacyMenuva fatal:", err);
   }
-
-  await tx.done;
 }
-
 
 // ====================== SHARE & QR ======================
 function getCustomerLink() {
@@ -2184,35 +2068,30 @@ function hideLoader() {
   }, 250);
 }
 
-// ====================== CLEAR DB (SAFE & CONSISTENT) ======================
 async function clearDataDB() {
-  const db = await initDB();
+  try {
+    const stores = [
+      "users",
+      "session",
+      "invites",
+      "restos",
+      "menuData",
+      "flipbookData",
+      "promoData",
+      "ordersData"
+    ];
 
-  return new Promise((resolve, reject) => {
-    try {
-      const tx = db.transaction(STORE_NAME, "readwrite");
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.clear();
-
-      req.onsuccess = () => {
-        console.log("🧹 IndexedDB cleared successfully");
-        resolve();
-      };
-
-      req.onerror = () => {
-        console.error("❌ Failed clear IndexedDB", req.error);
-        reject(req.error);
-      };
-
-      tx.onerror = () => {
-        console.error("❌ Transaction error", tx.error);
-        reject(tx.error);
-      };
-    } catch (err) {
-      console.error("❌ clearDataDB fatal error", err);
-      reject(err);
+    for (const store of stores) {
+      const rows = await MENUVA_DB.getAll(store);
+      for (const item of rows) {
+        await MENUVA_DB.delete(store, item.id);
+      }
     }
-  });
+
+    console.log("🧹 CORE DB cleared successfully");
+  } catch (err) {
+    console.error("❌ clearDataDB fatal:", err);
+  }
 }
 
 // ====================== GLOBAL SAFETY (OPTIONAL) ======================
@@ -2230,11 +2109,10 @@ window.addEventListener("error", e => {
   
 function startRealtimeOrderChecker() {
   setInterval(async () => {
-    const db = await initDB();
-    if (!db.objectStoreNames.contains("orders")) return;
     cekOrderBaru();
   }, 5000);
 }
+
 
   let notifAudio = null;
   let audioUnlocked = false;
@@ -2246,9 +2124,9 @@ if (typeof initOwnerUI !== "function") {
   }
 }
 
-/* ===================== ADMIN INIT (FINAL - STABLE) ===================== */
+/* ===================== ADMIN INIT (CORE AWARE) ===================== */
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 Admin Init (FINAL)");
+  console.log("🚀 Admin Init (CORE)");
   showLoader();
 
   try {
@@ -2263,8 +2141,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       throw new Error("activeUser not ready");
     }
 
-    // ================= 2. INIT DB CORE =================
-    await initDB(); // 🔒 pastikan DB siap sebelum apa pun
+    // ================= 2. WAIT DB CORE =================
+    let dbWait = 0;
+    while (!window.MENUVA_DB && dbWait < 20) {
+      await new Promise(r => setTimeout(r, 100));
+      dbWait++;
+    }
+
+    if (!window.MENUVA_DB) {
+      throw new Error("MENUVA_DB not ready (db-core.js missing)");
+    }
+
+    console.log("✅ DB CORE READY");
 
     // ================= 3. SAFE GLOBAL INIT =================
     if (!Array.isArray(window.menuPromo)) {
@@ -2272,65 +2160,62 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // ================= 4. LOAD & RENDER CORE =================
-    await loadCoreAndRender();   // 🔥 MASTER SOURCE (WAJIB SEBELUM CEK ORDER)
+    await loadCoreAndRender(); // 🔥 WAJIB sebelum cek order
 
-
-// ================= AUDIO INIT & UNLOCK =================
-if (!notifAudio) {
-  notifAudio = new Audio("beep.mp3");
-  notifAudio.preload = "auto";
-}
-document.body.addEventListener(
-  "click",
-  () => {
-    if (audioUnlocked) return;
-
-    notifAudio
-      .play()
-      .then(() => {
-        notifAudio.pause();
-        notifAudio.currentTime = 0;
-        audioUnlocked = true;
-        console.log("🔊 Audio unlocked");
-      })
-      .catch(() => {});
-  },
-  { once: true }
-);
-
-
-    // ================= 4.2 OWNER UI =================
-    initOwnerUI?.();
-
-    // ================= 4.3 REALTIME ORDER CHECKER =================
-    startRealtimeOrderChecker(); // ❗ SATU-SATUNYA TEMPAT
-
-    // ================= 5. UI TOGGLES =================
-    await initAllToggles?.();
-
-    // ================= 6. PROMO UI (AFTER DATA READY) =================
-    if (typeof renderPromoUI === "function") {
-      renderPromoUI();
+    // ================= AUDIO INIT & UNLOCK =================
+    if (!window.notifAudio) {
+      window.notifAudio = new Audio("beep.mp3");
+      notifAudio.preload = "auto";
     }
 
-    // ================= 7. EVENT BINDING =================
+    document.body.addEventListener(
+      "click",
+      () => {
+        if (window.audioUnlocked) return;
+
+        notifAudio
+          .play()
+          .then(() => {
+            notifAudio.pause();
+            notifAudio.currentTime = 0;
+            window.audioUnlocked = true;
+            console.log("🔊 Audio unlocked");
+          })
+          .catch(() => {});
+      },
+      { once: true }
+    );
+
+    // ================= 5. OWNER UI =================
+    initOwnerUI?.();
+
+    // ================= 6. REALTIME ORDER CHECKER =================
+    startRealtimeOrderChecker(); // ❗ hanya dipanggil di sini
+
+    // ================= 7. UI TOGGLES =================
+    await initAllToggles?.();
+
+    // ================= 8. PROMO UI =================
+    renderPromoUI?.();
+
+    // ================= 9. EVENT BINDING =================
     const btnCustomer = document.getElementById("btnOpenCustomer");
     if (btnCustomer && !btnCustomer.dataset.bound) {
       btnCustomer.onclick = openCustomerPage;
       btnCustomer.dataset.bound = "1";
     }
 
-    // ================= 8. FIXED BAR =================
+    // ================= 10. FIXED BAR =================
     const fixbar = document.querySelector(".fixed-bar");
     if (fixbar) {
       document.body.style.paddingBottom = fixbar.offsetHeight + "px";
     }
 
-    console.log("✅ Admin siap digunakan");
+    console.log("✅ Admin siap digunakan (CORE MODE)");
 
   } catch (err) {
     console.error("❌ Admin Init fatal:", err);
-    alert("❌ Failed Loading admin panel. Please Try login.");
+    alert("❌ Failed loading admin panel. Please re-login.");
   } finally {
     hideLoader();
   }
@@ -2339,33 +2224,24 @@ document.body.addEventListener(
 async function loadCoreAndRender() {
   console.log("🔄 loadCoreAndRender()");
 
-  // ✅ pastikan DB core ready
-  if (typeof window.MENUVA_DB?.ready === "function") {
-    await window.MENUVA_DB.ready();
-  }
+  try {
+    // ✅ ambil menu dari store resmi
+    const menuData = await window.MENUVA_DB.getAll("menuData");
 
-  // ✅ ambil daftar store yg benar-benar ADA
-  const stores = window.MENUVA_DB.stores || [];
-  console.log("📂 DB stores:", stores);
-
-  // ✅ gunakan store utama yang VALID
-  if (stores.includes("menuvaData")) {
-    const data = await window.MENUVA_DB.getAll("menuvaData");
-
-    if (!data || data.length === 0) {
-      console.info("ℹ️ menuvaData kosong, inject default data");
+    if (!menuData || menuData.length === 0) {
+      console.info("ℹ️ menuData kosong, inject default");
       await loadData(buatDataDefault(1));
     }
-  } else {
-    console.warn("⚠️ store menuvaData tidak ditemukan, skip inject default");
-  }
 
-  // ✅ promo render (aman)
-  if (typeof renderPromoUI === "function") {
-    renderPromoUI();
+    // ✅ promo render aman
+    if (typeof renderPromoUI === "function") {
+      renderPromoUI();
+    }
+
+  } catch (err) {
+    console.error("❌ loadCoreAndRender error:", err);
   }
 }
-
 
 /* ===================== TOGGLE MASTER ===================== */
 async function initAllToggles() {
@@ -2773,18 +2649,7 @@ async function cekOrderBaru() {
   checkingOrder = true;
 
   try {
-    const db = await initDB();
-
-    // 🔒 Defensive: cek store CORE
-    if (!db.objectStoreNames.contains("orders")) {
-      console.warn("orders store belum ada, skip cekOrderBaru");
-      return;
-    }
-
-    const tx = db.transaction("orders", "readonly");
-    const store = tx.objectStore("orders");
-
-    const orders = await idbGetAll(store);
+    const orders = await MENUVA_DB.getAll("ordersData");
     const newCount = orders.filter(o => o.status === "new").length;
 
     updateReceiveBadge(newCount);
@@ -2801,6 +2666,7 @@ async function cekOrderBaru() {
     checkingOrder = false;
   }
 }
+
 
 /* ============================================================
    5. REALTIME LOOP (SINGLE INSTANCE)
@@ -2819,16 +2685,12 @@ function startRealtimeOrderChecker() {
 ============================================================ */
 async function markOrdersAsRead() {
   try {
-    const db = await initDB();
-    const tx = db.transaction("ordersData", "readwrite");
-    const store = tx.objectStore("ordersData");
-
-    const orders = await idbGetAll(store);
+    const orders = await MENUVA_DB.getAll("ordersData");
 
     for (const order of orders) {
       if (order.status === "new") {
         order.status = "read";
-        store.put(order);
+        await MENUVA_DB.add("ordersData", order);
       }
     }
 
@@ -2839,6 +2701,7 @@ async function markOrdersAsRead() {
     console.error("❌ markOrdersAsRead error:", err);
   }
 }
+
 
 function markViewedAndGo() {
   markOrdersAsRead();
@@ -2863,6 +2726,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
