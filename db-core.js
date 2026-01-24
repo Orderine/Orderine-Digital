@@ -3,7 +3,7 @@
   if (window.MENUVA_DB) return;
 
   const DB_NAME = "MenuvaDB";
-  const DB_VERSION = 15;
+  const DB_VERSION = 16; // ⬅️ NAIK VERSION (WAJIB)
 
   let dbInstance = null;
 
@@ -19,22 +19,47 @@
         const db = e.target.result;
         console.warn(`🔁 MenuvaDB upgrade → v${DB_VERSION}`);
 
+        /* ================= USERS ================= */
         if (!db.objectStoreNames.contains("users")) {
           db.createObjectStore("users", { keyPath: "email" });
         }
 
+        /* ================= SESSION ================= */
         if (!db.objectStoreNames.contains("session")) {
           db.createObjectStore("session", { keyPath: "id" });
         }
 
+        /* ================= INVITES ================= */
         if (!db.objectStoreNames.contains("invites")) {
           db.createObjectStore("invites", { keyPath: "token" });
         }
 
+        /* ================= RESTOS ================= */
         if (!db.objectStoreNames.contains("restos")) {
           db.createObjectStore("restos", { keyPath: "id" });
         }
 
+        /* ================= MENU DATA (NEW) ================= */
+        if (!db.objectStoreNames.contains("menuData")) {
+          const menu = db.createObjectStore("menuData", {
+            keyPath: "id",
+            autoIncrement: true
+          });
+          menu.createIndex("category", "category", { unique: false });
+          menu.createIndex("active", "active", { unique: false });
+        }
+
+        /* ================= FLIPBOOK / GALLERY (NEW) ================= */
+        if (!db.objectStoreNames.contains("flipbookData")) {
+          const flipbook = db.createObjectStore("flipbookData", {
+            keyPath: "id",
+            autoIncrement: true
+          });
+          flipbook.createIndex("type", "type", { unique: false }); // room | menu
+          flipbook.createIndex("refId", "refId", { unique: false }); // menuId
+        }
+
+        /* ================= ORDERS ================= */
         if (!db.objectStoreNames.contains("ordersData")) {
           const orders = db.createObjectStore("ordersData", {
             keyPath: "id",
@@ -44,6 +69,7 @@
           orders.createIndex("orderTime", "orderTime", { unique: false });
         }
 
+        /* ================= PROMO ================= */
         if (!db.objectStoreNames.contains("promoData")) {
           db.createObjectStore("promoData", {
             keyPath: "id",
@@ -82,40 +108,56 @@
   }
 
   window.MENUVA_DB = {
-  NAME: DB_NAME,
-  VERSION: DB_VERSION,
-  openDB,
+    NAME: DB_NAME,
+    VERSION: DB_VERSION,
 
-  add(store, data) {
-    return withStore(store, "readwrite", s => s.put(data));
-  },
-  get(store, key) {
-    return withStore(store, "readonly", s => s.get(key));
-  },
-  getAll(store) {
-    return withStore(store, "readonly", s => s.getAll());
-  },
-  delete(store, key) {
-    return withStore(store, "readwrite", s => s.delete(key));
-  },
+    // 🔑 KONTRAK STORE (PEGANGAN SEMUA HALAMAN)
+    STORES: [
+      "users",
+      "session",
+      "invites",
+      "restos",
+      "menuData",
+      "flipbookData",
+      "ordersData",
+      "promoData"
+    ],
 
-  /* 🔐 SESSION API (GLOBAL) */
-  setSession(user) {
-    return withStore("session", "readwrite", s =>
-      s.put({ id: "active", ...user, loginAt: Date.now() })
-    );
-  },
+    openDB,
 
-  getSession() {
-    return withStore("session", "readonly", s =>
-      s.get("active")
-    );
-  },
+    add(store, data) {
+      return withStore(store, "readwrite", s => s.put(data));
+    },
 
-  clearSession() {
-    return withStore("session", "readwrite", s =>
-      s.delete("active")
-    );
-  }
-};
+    get(store, key) {
+      return withStore(store, "readonly", s => s.get(key));
+    },
+
+    getAll(store) {
+      return withStore(store, "readonly", s => s.getAll());
+    },
+
+    delete(store, key) {
+      return withStore(store, "readwrite", s => s.delete(key));
+    },
+
+    /* 🔐 SESSION API (GLOBAL) */
+    setSession(user) {
+      return withStore("session", "readwrite", s =>
+        s.put({ id: "active", ...user, loginAt: Date.now() })
+      );
+    },
+
+    getSession() {
+      return withStore("session", "readonly", s =>
+        s.get("active")
+      );
+    },
+
+    clearSession() {
+      return withStore("session", "readwrite", s =>
+        s.delete("active")
+      );
+    }
+  };
 })(); // ⬅️ INI WAJIB ADA
