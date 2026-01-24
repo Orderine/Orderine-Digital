@@ -2171,10 +2171,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadCoreAndRender(); // 🔥 WAJIB sebelum cek order
 
     // ================= AUDIO INIT & UNLOCK =================
-    if (!window.notifAudio) {
-      window.notifAudio = new Audio("beep.mp3");
-      notifAudio.preload = "auto";
-    }
+   if (!window.notifAudio) {
+  window.notifAudio = new Audio("beep.mp3");
+  window.notifAudio.preload = "auto";
+}
+
 
     document.body.addEventListener(
       "click",
@@ -2734,4 +2735,5 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
