@@ -12,6 +12,7 @@
 <!-- IONICONS -->
 <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
 <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+<link rel="icon" href="data:,">
 
 <!-- CDN BIASA -->
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
@@ -2335,19 +2336,23 @@ document.body.addEventListener(
   }
 });
 
-
- async function loadCoreAndRender() {
+async function loadCoreAndRender() {
   console.log("🔄 loadCoreAndRender()");
 
-  // ✅ GANTI legacy loadCoreData
-  if (typeof loadMenuvaData === "function") {
-    await loadMenuvaData();
-  } else {
-    console.warn("⚠️ loadMenuvaData not found, load default");
+  // ✅ pastikan DB CORE sudah siap
+  if (typeof window.MENUVA_DB?.ready === "function") {
+    await window.MENUVA_DB.ready();
+  }
+
+  // ✅ cek apakah DB kosong (first run)
+  const menus = await window.MENUVA_DB.getAll("menus");
+
+  if (!menus || menus.length === 0) {
+    console.info("ℹ️ DB kosong, inject data default sekali saja");
     await loadData(buatDataDefault(1));
   }
 
-  // promo render aman
+  // ✅ render promo aman (promo pakai DB juga)
   if (typeof renderPromoUI === "function") {
     renderPromoUI();
   }
@@ -2849,6 +2854,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
