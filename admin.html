@@ -1687,48 +1687,47 @@ function tambahNomorWa(value = "") {
 let sudahLoadData = false;
 
 async function loadData(data) {
- if (!data || typeof data !== "object") {
-  console.warn("⚠️ loadData invalid → pakai default");
-  data = buatDataDefault(1);
-}
-
-
-  // 🔁 RESET FLAG JIKA RESTO BERUBAH / FIRST LOAD
-if (window.__lastLoadedResto !== data?.restoId) {
-  sudahLoadData = false;
-}
-window.__lastLoadedResto = data?.restoId;
-
-  if (sudahLoadData) {
-  console.warn("⚠️ loadData sudah pernah jalan, skip basic fields");
-
-  // 🔥 TETAP LOAD PROMO
-  if (Array.isArray(data.menuPromo)) {
-    window.menuPromo = data.menuPromo;
-    if (typeof renderPromoUI === "function") {
-      renderPromoUI();
-    }
+  // ================= VALIDASI DATA =================
+  if (!data || typeof data !== "object") {
+    console.warn("⚠️ loadData invalid → pakai default");
+    data = buatDataDefault(1);
   }
 
-  return;
-}
+  // ================= RESET FLAG JIKA GANTI RESTO =================
+  if (window.__lastLoadedResto !== data?.restoId) {
+    sudahLoadData = false;
+  }
+  window.__lastLoadedResto = data?.restoId;
+
+  // ================= SKIP BASIC LOAD JIKA SUDAH =================
+  if (sudahLoadData) {
+    console.warn("⚠️ loadData sudah pernah jalan, skip basic fields");
+
+    // 🔥 PROMO TETAP BOLEH UPDATE
+    if (Array.isArray(data.menuPromo)) {
+      window.menuPromo = data.menuPromo;
+      renderPromoUI?.();
+    }
+    return;
+  }
 
   sudahLoadData = true;
 
+  // ================= MAIN PROCESS =================
   try {
     showLoader();
-    if (!data || typeof data !== "object") data = buatDataDefault(1);
 
+    // ===== BASIC INFO =====
     const safeSet = (id, val) => {
       const el = document.getElementById(id);
       if (el) el.value = val || "";
     };
 
-    // ===== BASIC INFO =====
     safeSet("namaRestoran", data.namaRestoran);
     safeSet("restoAddress", data.restoAddress);
     safeSet("restoPhone", data.restoPhone);
 
+    // ===== LOGO =====
     if (data.logo) {
       const img = document.getElementById("previewLogo");
       if (img) img.src = data.logo;
@@ -1738,22 +1737,32 @@ window.__lastLoadedResto = data?.restoId;
     const waContainer = document.getElementById("nomorWaContainer");
     if (waContainer) {
       waContainer.innerHTML = "";
-      const waList = Array.isArray(data.nomorWaAdmin) ? data.nomorWaAdmin : [];
+      const waList = Array.isArray(data.nomorWaAdmin)
+        ? data.nomorWaAdmin
+        : [];
 
       waList.forEach(num => {
         try {
-          if (typeof tambahNomorWa === "function") {
-            tambahNomorWa(num);
-          } else {
-            console.warn("⚠️ tambahNomorWa tidak tersedia, skip:", num);
-          }
+          tambahNomorWa?.(num);
         } catch (e) {
-          console.warn("⚠️ gagal render WA:", e);
+          console.warn("⚠️ render WA gagal:", e);
         }
       });
     }
 
- async function loadMenuAndFlipbook() {
+    // ===== MENU + FLIPBOOK =====
+    await loadMenuAndFlipbook();
+
+    console.log("✅ loadData selesai tanpa crash");
+
+  } catch (err) {
+    console.error("❌ loadData fatal:", err);
+  } finally {
+    hideLoader();
+  }
+}
+
+async function loadMenuAndFlipbook() {
   try {
     console.log("🔄 loadMenuAndFlipbook()");
 
@@ -1793,12 +1802,13 @@ window.__lastLoadedResto = data?.restoId;
 
     if (typeof renderImagePreview === "function") {
       setTimeout(() => {
-        ruangan.forEach(f =>
-          f.src && renderImagePreview("ruangan", f.src)
-        );
-        menuImg.forEach(f =>
-          f.src && renderImagePreview("menu", f.src)
-        );
+        ruangan.forEach(f => {
+          if (f.src) renderImagePreview("ruangan", f.src);
+        });
+
+        menuImg.forEach(f => {
+          if (f.src) renderImagePreview("menu", f.src);
+        });
       }, 150);
     }
 
@@ -1806,10 +1816,7 @@ window.__lastLoadedResto = data?.restoId;
 
   } catch (err) {
     console.error("❌ loadMenuAndFlipbook fatal:", err);
-  } finally {
-    hideLoader();
   }
-}
 }
 
 // ====================== RESET / BACKUP / RESTORE ======================
@@ -2727,14 +2734,3 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
