@@ -1565,8 +1565,8 @@ async function simpanData() {
     };
 
     // ==================== SAVE ====================
-    await window.MENUVA_DB.add("menuData", payload);
-
+    await window.MENUVA_DB.put("menuData", payload);
+    
     syncRestoIdHidden(restoId);
     prepareCustomerShare?.();
 
@@ -1715,7 +1715,8 @@ async function loadData(data) {
   }
 
   sudahLoadData = true;
-
+  window.__lastLoadedRestoData = data;
+  
   // ================= MAIN PROCESS =================
   try {
     showLoader();
@@ -1769,9 +1770,7 @@ async function loadMenuAndFlipbook() {
   try {
     console.log("🔄 loadMenuAndFlipbook()");
 
-    // ================= MENU =================
-    const menuRows = await window.MENUVA_DB.getAll("menuData");
-
+    // ================= RESET MENU CONTAINERS =================
     const containers = {
       food: "menuFoodContainer",
       snack: "menuSnackContainer",
@@ -1784,18 +1783,23 @@ async function loadMenuAndFlipbook() {
       if (el) el.innerHTML = "";
     });
 
-    menuRows.forEach(m => {
-      try {
-        tambahMenu?.(
-          m.kategori || "food",
-          m.nama || "",
-          m.harga || "",
-          m.image || ""
-        );
-      } catch (e) {
-        console.warn("⚠️ render menu gagal:", e);
-      }
-    });
+    // ================= MENU (FROM LOADED RESTO DATA) =================
+    if (window.__lastLoadedRestoData?.menu) {
+      window.__lastLoadedRestoData.menu.forEach(m => {
+        try {
+          tambahMenu?.(
+            m.kategori || "food",
+            m.nama || "",
+            m.harga || "",
+            m.image || ""
+          );
+        } catch (e) {
+          console.warn("⚠️ render menu gagal:", e);
+        }
+      });
+    } else {
+      console.warn("⚠️ Tidak ada menu di __lastLoadedRestoData");
+    }
 
     // ================= FLIPBOOK =================
     const flipbookRows = await window.MENUVA_DB.getAll("flipbookData");
@@ -1815,7 +1819,7 @@ async function loadMenuAndFlipbook() {
       }, 150);
     }
 
-    console.log("✅ Menu & Flipbook loaded");
+    console.log("✅ Menu & Flipbook loaded (from loaded data)");
 
   } catch (err) {
     console.error("❌ loadMenuAndFlipbook fatal:", err);
@@ -2169,6 +2173,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // ================= 4. LOAD & RENDER CORE =================
     await loadCoreAndRender(); // 🔥 WAJIB sebelum cek order
+
+    // ================= LOAD SAVED RESTO DATA =================
+const restoId = window.activeUser.restoID;
+const savedData = await window.MENUVA_DB.get("menuData", restoId);
+
+if (savedData) {
+  console.log("📦 Loaded resto data from DB");
+  await loadData(savedData);
+} else {
+  console.warn("⚠️ No saved resto data found");
+}
+
 
     // ================= AUDIO SYSTEM (FINAL CLEAN) =================
 if (!window.notifAudio) {
@@ -2747,6 +2763,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
