@@ -17,6 +17,8 @@
 <!-- CDN BIASA -->
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
+<audio id="notifAudio" src="assets/audio/beep.mp3" preload="auto"></audio>
+<audio id="clickAudio" src="assets/audio/click.mp3" preload="auto"></audio>
 
   <title>Admin Orderine</title>
   <style>
@@ -959,6 +961,9 @@ function ensureRestoId() {
 ============================================================ */
 
 console.log("🚀 Admin DB Bridge – FINAL NO MODULE");
+const notifAudio = document.getElementById("notifAudio");
+const clickAudio = document.getElementById("clickAudio");
+
 
 /* ====================== GLOBAL DB STATE ====================== */
 const DB_NAME = window.MENUVA_DB.NAME;
@@ -2112,6 +2117,7 @@ window.addEventListener("error", e => {
   console.error("❌ Global JS Error:", e.message);
   hideLoader();
 });
+
 </script>
 <script>
   
@@ -2176,24 +2182,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.notifAudio.preload = "auto";
 }
 
-
     document.body.addEventListener(
-      "click",
-      () => {
-        if (window.audioUnlocked) return;
+  "click",
+  () => {
+    if (window.audioUnlocked) return;
+    if (!notifAudio) return;
 
-        notifAudio
-          .play()
-          .then(() => {
-            notifAudio.pause();
-            notifAudio.currentTime = 0;
-            window.audioUnlocked = true;
-            console.log("🔊 Audio unlocked");
-          })
-          .catch(() => {});
-      },
-      { once: true }
-    );
+    notifAudio
+      .play()
+      .then(() => {
+        notifAudio.pause();
+        notifAudio.currentTime = 0;
+        window.audioUnlocked = true;
+        console.log("🔊 Audio unlocked");
+      })
+      .catch(() => {});
+  },
+  { once: true }
+);
+
 
     // ================= 5. OWNER UI =================
     initOwnerUI?.();
@@ -2735,5 +2742,6 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
