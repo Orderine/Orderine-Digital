@@ -1565,23 +1565,32 @@ async function simpanData() {
     };
 
     // ==================== SAVE ====================
-    await window.MENUVA_DB.put("menuData", payload);
-    
-    syncRestoIdHidden(restoId);
-    prepareCustomerShare?.();
-
-    console.log("💾 menuData SAVED:", payload);
-    alert("✅ All Data Successfully Saved!");
-
-    showCustomerShareUI();
-    localStorage.setItem("customerShareReady", "1");
-
-  } catch (err) {
-    console.error("❌ simpanData fatal:", err);
-    alert("❌ Failed to save data");
-  } finally {
-    hideLoader();
+try {
+  // cek apakah data resto sudah ada
+  const existing = await window.MENUVA_DB.get("menuData", restoId);
+  if (existing) {
+    await window.MENUVA_DB.delete("menuData", restoId);
   }
+
+  // simpan payload baru
+  await window.MENUVA_DB.add("menuData", payload);
+
+  syncRestoIdHidden(restoId);
+  prepareCustomerShare?.();
+
+  console.log("💾 menuData SAVED:", payload);
+  alert("✅ All Data Successfully Saved!");
+
+  showCustomerShareUI();
+  localStorage.setItem("customerShareReady", "1");
+
+} catch (err) {
+  console.error("❌ simpanData fatal:", err);
+  alert("❌ Failed to save data");
+} finally {
+  hideLoader();
+}
+}
 }
 
   function getVal(id) {
@@ -2781,6 +2790,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
