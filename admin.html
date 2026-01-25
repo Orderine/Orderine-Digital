@@ -1801,42 +1801,48 @@ async function loadMenuAndFlipbook() {
       console.warn("⚠️ Tidak ada menu di __lastLoadedRestoData");
     }
 
-   // ================= FLIPBOOK (ANTI DUPLICATE) =================
-const flipbookRows = await window.MENUVA_DB.getAll("flipbookData");
+    // ================= FLIPBOOK (ANTI DUPLICATE) =================
+    const flipbookRows = await window.MENUVA_DB.getAll("flipbookData");
 
-// 🔥 CLEAR CONTAINER (WAJIB)
-const ruanganContainer = document.getElementById("flipbookRuanganPreview");
-const menuContainer = document.getElementById("flipbookMenuPreview");
+    // 🔥 CLEAR CONTAINER (WAJIB)
+    const ruanganContainer = document.getElementById("flipbookRuanganPreview");
+    const menuContainer = document.getElementById("flipbookMenuPreview");
 
-if (ruanganContainer) ruanganContainer.innerHTML = "";
-if (menuContainer) menuContainer.innerHTML = "";
+    if (ruanganContainer) ruanganContainer.innerHTML = "";
+    if (menuContainer) menuContainer.innerHTML = "";
 
-// 🔥 RESET GLOBAL CACHE
-window.flipbookRuanganImages = [];
-window.flipbookMenuImages = [];
+    // 🔥 RESET GLOBAL CACHE
+    window.flipbookRuanganImages = [];
+    window.flipbookMenuImages = [];
 
-const ruangan = flipbookRows.filter(f => f.type === "ruangan");
-const menuImg = flipbookRows.filter(f => f.type === "menu");
+    const ruangan = flipbookRows.filter(f => f.type === "ruangan");
+    const menuImg = flipbookRows.filter(f => f.type === "menu");
 
-if (typeof renderImagePreview === "function") {
-  setTimeout(() => {
-    ruangan.forEach(f => {
-      if (f.src) {
-        window.flipbookRuanganImages.push(f.src);
-        renderImagePreview("ruangan", f.src);
-      }
-    });
+    if (typeof renderImagePreview === "function") {
+      setTimeout(() => {
+        ruangan.forEach(f => {
+          if (f.src) {
+            window.flipbookRuanganImages.push(f.src);
+            renderImagePreview("ruangan", f.src);
+          }
+        });
 
-    menuImg.forEach(f => {
-      if (f.src) {
-        window.flipbookMenuImages.push(f.src);
-        renderImagePreview("menu", f.src);
-      }
-    });
-  }, 100);
-}
+        menuImg.forEach(f => {
+          if (f.src) {
+            window.flipbookMenuImages.push(f.src);
+            renderImagePreview("menu", f.src);
+          }
+        });
+      }, 100);
+    }
 
-console.log("✅ Menu & Flipbook loaded (anti duplicate)");
+    console.log("✅ Menu & Flipbook loaded (anti duplicate)");
+
+  } catch (err) {
+    console.error("❌ loadMenuAndFlipbook fatal:", err);
+  }
+} // <-- INI YANG HILANG SEBELUMNYA
+
 
 // ====================== RESET / BACKUP / RESTORE ======================
 async function resetData() {
@@ -2775,6 +2781,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
