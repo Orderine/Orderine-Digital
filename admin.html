@@ -1801,30 +1801,42 @@ async function loadMenuAndFlipbook() {
       console.warn("⚠️ Tidak ada menu di __lastLoadedRestoData");
     }
 
-    // ================= FLIPBOOK =================
-    const flipbookRows = await window.MENUVA_DB.getAll("flipbookData");
+   // ================= FLIPBOOK (ANTI DUPLICATE) =================
+const flipbookRows = await window.MENUVA_DB.getAll("flipbookData");
 
-    const ruangan = flipbookRows.filter(f => f.type === "ruangan");
-    const menuImg = flipbookRows.filter(f => f.type === "menu");
+// 🔥 CLEAR CONTAINER (WAJIB)
+const ruanganContainer = document.getElementById("flipbookRuanganPreview");
+const menuContainer = document.getElementById("flipbookMenuPreview");
 
-    if (typeof renderImagePreview === "function") {
-      setTimeout(() => {
-        ruangan.forEach(f => {
-          if (f.src) renderImagePreview("ruangan", f.src);
-        });
+if (ruanganContainer) ruanganContainer.innerHTML = "";
+if (menuContainer) menuContainer.innerHTML = "";
 
-        menuImg.forEach(f => {
-          if (f.src) renderImagePreview("menu", f.src);
-        });
-      }, 150);
-    }
+// 🔥 RESET GLOBAL CACHE
+window.flipbookRuanganImages = [];
+window.flipbookMenuImages = [];
 
-    console.log("✅ Menu & Flipbook loaded (from loaded data)");
+const ruangan = flipbookRows.filter(f => f.type === "ruangan");
+const menuImg = flipbookRows.filter(f => f.type === "menu");
 
-  } catch (err) {
-    console.error("❌ loadMenuAndFlipbook fatal:", err);
-  }
+if (typeof renderImagePreview === "function") {
+  setTimeout(() => {
+    ruangan.forEach(f => {
+      if (f.src) {
+        window.flipbookRuanganImages.push(f.src);
+        renderImagePreview("ruangan", f.src);
+      }
+    });
+
+    menuImg.forEach(f => {
+      if (f.src) {
+        window.flipbookMenuImages.push(f.src);
+        renderImagePreview("menu", f.src);
+      }
+    });
+  }, 100);
 }
+
+console.log("✅ Menu & Flipbook loaded (anti duplicate)");
 
 // ====================== RESET / BACKUP / RESTORE ======================
 async function resetData() {
@@ -2763,6 +2775,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
