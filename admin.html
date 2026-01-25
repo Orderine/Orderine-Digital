@@ -1565,33 +1565,37 @@ async function simpanData() {
     };
 
     // ==================== SAVE ====================
-try {
-  // cek apakah data resto sudah ada
-  const existing = await window.MENUVA_DB.get("menuData", restoId);
-  if (existing) {
-    await window.MENUVA_DB.delete("menuData", restoId);
+    try {
+      // cek apakah data resto sudah ada
+      const existing = await window.MENUVA_DB.get("menuData", restoId);
+      if (existing) {
+        await window.MENUVA_DB.delete("menuData", restoId);
+      }
+
+      // simpan payload baru
+      await window.MENUVA_DB.add("menuData", payload);
+
+      syncRestoIdHidden(restoId);
+      prepareCustomerShare?.();
+
+      console.log("💾 menuData SAVED:", payload);
+      alert("✅ All Data Successfully Saved!");
+
+      showCustomerShareUI();
+      localStorage.setItem("customerShareReady", "1");
+
+    } catch (err) {
+      console.error("❌ simpanData fatal:", err);
+      alert("❌ Failed to save data");
+    }
+
+  } catch (errOuter) {
+    console.error("❌ simpanData outer fatal:", errOuter);
+  } finally {
+    hideLoader();
   }
-
-  // simpan payload baru
-  await window.MENUVA_DB.add("menuData", payload);
-
-  syncRestoIdHidden(restoId);
-  prepareCustomerShare?.();
-
-  console.log("💾 menuData SAVED:", payload);
-  alert("✅ All Data Successfully Saved!");
-
-  showCustomerShareUI();
-  localStorage.setItem("customerShareReady", "1");
-
-} catch (err) {
-  console.error("❌ simpanData fatal:", err);
-  alert("❌ Failed to save data");
-} finally {
-  hideLoader();
 }
-}
-}
+
 
   function getVal(id) {
   return document.getElementById(id)?.value.trim() || "";
@@ -2790,12 +2794,4 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
 
