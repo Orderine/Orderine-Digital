@@ -2125,10 +2125,6 @@ function startRealtimeOrderChecker() {
   }, 5000);
 }
 
-
-  let notifAudio = null;
-  let audioUnlocked = false;
-
   // ================= OWNER UI SAFE PATCH =================
 if (typeof initOwnerUI !== "function") {
   function initOwnerUI() {
@@ -2205,6 +2201,11 @@ document.body.addEventListener(
   },
   { once: true }
 );
+    window.playNotif = function () {
+  if (!window.audioUnlocked || !window.notifAudio) return;
+  window.notifAudio.currentTime = 0;
+  window.notifAudio.play().catch(() => {});
+};
 
     // ================= 5. OWNER UI =================
     initOwnerUI?.();
@@ -2746,6 +2747,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
