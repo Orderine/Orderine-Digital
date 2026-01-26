@@ -1049,28 +1049,28 @@ let flipbookMenuImages = [];
   }
 }
 
-function tambahPromo(
-  namaPromo = "",
-  harga = "",
-  deskripsi = "",
-  tanggalAkhir = "",
-  image = ""
-) {
+function tambahPromo(promo = {}) {
   const container = document.getElementById("promoContainer");
   if (!container) return;
 
-  const uid = "promo_" + Date.now();
+  const {
+    namaPromo = "",
+    harga = "",
+    deskripsi = "",
+    tanggalAkhir = "",
+    image = ""
+  } = promo;
+
+  const uid = "promo_" + crypto.randomUUID();
 
   const div = document.createElement("div");
   div.className = "menu-item promo-item";
 
   div.innerHTML = `
-    <input type="text" id="${uid}_name" placeholder="Promo Name" value="${namaPromo}">
-    <input type="number" id="${uid}_price" placeholder="Price" value="${harga}">
-    
-    <textarea id="${uid}_desc" placeholder="Description">${deskripsi}</textarea>
-
-    <input type="date" id="${uid}_date" value="${tanggalAkhir}">
+    <input type="text" placeholder="Promo Name" value="${namaPromo}">
+    <input type="number" placeholder="Price" value="${harga}">
+    <textarea placeholder="Description">${deskripsi}</textarea>
+    <input type="date" value="${tanggalAkhir}">
 
     <input type="file"
       accept="image/*"
@@ -1161,23 +1161,19 @@ function tambahPromo(
 
     const promos = await db.getAll("promoData");
 
-    document.getElementById("promoContainer").innerHTML = "";
+    const container = document.getElementById("promoContainer");
+    container.innerHTML = "";
 
-    promos.forEach(p => {
-      tambahPromo(
-        p.namaPromo,
-        p.harga,
-        p.deskripsi,
-        p.tanggalAkhir,
-        p.image
-      );
+    promos.forEach(promo => {
+      tambahPromo(promo); // 🔥 OBJECT PASS, BUKAN POSITIONAL
     });
 
     console.log("📦 Promo loaded:", promos.length);
   } catch (err) {
-    console.error("❌ loadPromoFromDB:", err);
+    console.error("❌ loadPromoFromDB gagal:", err);
   }
 }
+
 
 /* ============================================================
    MENU
@@ -2873,6 +2869,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
