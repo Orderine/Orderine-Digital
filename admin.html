@@ -1038,113 +1038,58 @@ if (!window.indexedDB) {
   console.log("✅ IndexedDB supported");
 }
 
-/* ====================== GLOBAL STATE ====================== */
-let menuPromo = [];
+window.menuPromo = [];
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
-
-// ====================== PROMO UI RENDERER (SAFE FINAL) ======================
-function renderPromoUI() {
+  function renderPromoUI() {
   const container = document.getElementById("promoContainer");
   if (!container) return;
 
   container.innerHTML = "";
-
   if (!Array.isArray(window.menuPromo)) return;
 
   window.menuPromo.forEach((promo, index) => {
     const div = document.createElement("div");
     div.className = "menu-item promo-item";
 
-   div.innerHTML = `
-  <img
-    id="promoImgPreview${index}"
-    src="${promo.image || 'img/no-image.png'}"
-    style="width:10%;max-height:80px;object-fit:cover"
-  >
+    div.innerHTML = `
+      <img
+        id="promoImgPreview${index}"
+        src="${promo.image || 'img/no-image.png'}"
+        style="width:80px;height:80px;object-fit:cover;border-radius:6px"
+      >
 
-  <input type="file"
-    accept="image/*"
-    onchange="uploadPromoImage(event, ${index})">
+      <input type="file"
+        accept="image/*"
+        onchange="uploadPromoImage(event, ${index})">
 
-  <input
-  type="text"
-  placeholder="Menu Name"
-  value="${promo.namaPromo || ""}"
-  onchange="updatePromo(${index}, 'namaPromo', this.value)">
+      <input
+        type="text"
+        placeholder="Menu Name"
+        value="${promo.namaPromo || ""}"
+        onchange="updatePromo(${index}, 'namaPromo', this.value)">
 
-  <textarea
-  placeholder="Menu Description"
-  onchange="updatePromo(${index}, 'deskripsi', this.value)"
->${promo.deskripsi || ""}</textarea>
+      <textarea
+        placeholder="Menu Description"
+        onchange="updatePromo(${index}, 'deskripsi', this.value)"
+      >${promo.deskripsi || ""}</textarea>
 
-  <input type="date"
-    value="${promo.tanggalAkhir || ""}"
-    onchange="updatePromo(${index}, 'tanggalAkhir', this.value)">
+      <input type="date"
+        value="${promo.tanggalAkhir || ""}"
+        onchange="updatePromo(${index}, 'tanggalAkhir', this.value)">
 
-  <input type="number"
-    value="${promo.harga || ""}"
-    onchange="updatePromo(${index}, 'harga', this.value)">
+      <input type="number"
+        value="${promo.harga || ""}"
+        onchange="updatePromo(${index}, 'harga', this.value)">
 
-  <button onclick="hapusPromo(${index})">Delete</button>
-`;
+      <button onclick="hapusPromo(${index})">Delete</button>
+    `;
 
     container.appendChild(div);
   });
 }
 
-function tambahPromo(promo = {}) {
-  menuPromo.push({
-    id: promo.id || crypto.randomUUID(),
-    namaPromo: promo.namaPromo || "",
-    image: promo.image || "",
-    deskripsi: promo.deskripsi || "",
-    harga: promo.harga || "",
-    kategori: promo.kategori || "PROMO",
-    tanggalAkhir: promo.tanggalAkhir || ""
-  });
-
-  renderPromoUI();
-}
-
-function updatePromo(index, key, value) {
-  if (!window.menuPromo[index]) return;
-
-  window.menuPromo[index][key] = value;
-
-  // ❌ jangan save di sini
-  // simpan via tombol Save All
-}
-
-function hapusPromo(index) {
-  if (!window.menuPromo[index]) return;
-
-  window.menuPromo.splice(index, 1);
-
-  renderPromoUI();
-
-  // 🧠 force sync
-  if (typeof savePromoToDB === "function") {
-    savePromoToDB();
-  }
-}
-
-// ====================== IMAGE UPLOAD ======================
-function uploadPromoImage(event, index) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  resizeIfNeeded(file)
-    .then((resized) => {
-      const el = document.getElementById(`promoImgPreview${index}`);
-      if (el) el.src = resized;
-
-      updatePromo(index, "image", resized);
-      savePromoToDB();
-    })
-    .catch(err => console.error("Failed upload promo:", err));
-}
 
 /* ============================================================
    MENU
@@ -2839,6 +2784,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
