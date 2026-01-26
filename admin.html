@@ -1144,6 +1144,43 @@ let flipbookMenuImages = [];
     .catch(err => console.error("Failed upload promo:", err));
 };
 
+  async function savePromoToDB() {
+  try {
+    const db = window.MENUVA_DB;
+    if (!db) return;
+
+    // 🔥 clear lama
+    await db.clear("promo");
+
+    // 🔥 simpan ulang semua
+    for (const promo of window.menuPromo) {
+      await db.add("promo", promo);
+    }
+
+    console.log("💾 Promo saved to DB:", window.menuPromo.length);
+  } catch (err) {
+    console.error("❌ savePromoToDB gagal:", err);
+  }
+}
+
+  async function loadPromoFromDB() {
+  try {
+    const db = window.MENUVA_DB;
+    if (!db) return;
+
+    const promos = await db.getAll("promo");
+
+    window.menuPromo = Array.isArray(promos) ? promos : [];
+
+    renderPromoUI();
+
+    console.log("📦 Promo loaded from DB:", window.menuPromo.length);
+  } catch (err) {
+    console.error("❌ loadPromoFromDB gagal:", err);
+  }
+}
+
+
 /* ============================================================
    MENU
 ============================================================ */
@@ -2247,6 +2284,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // ================= 4. LOAD & RENDER CORE =================
     await loadCoreAndRender(); // 🔥 WAJIB sebelum cek order
+    loadPromoFromDB();
 
     // ================= LOAD SAVED RESTO DATA =================
 const restoId = window.activeUser.restoID;
@@ -2837,6 +2875,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
