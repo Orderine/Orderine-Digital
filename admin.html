@@ -1042,7 +1042,7 @@ window.menuPromo = window.menuPromo || [];
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
-  function renderPromoUI() {
+ function renderPromoUI() {
   const container = document.getElementById("promoContainer");
   if (!container) return;
 
@@ -1080,7 +1080,8 @@ let flipbookMenuImages = [];
         onchange="updatePromo(${index}, 'tanggalAkhir', this.value)">
 
       <input type="number"
-        value="${promo.harga || ""}"
+        placeholder="Harga"
+        value="${promo.harga ?? ""}"
         onchange="updatePromo(${index}, 'harga', this.value)">
 
       <button onclick="hapusPromo(${index})">Delete</button>
@@ -1096,7 +1097,7 @@ let flipbookMenuImages = [];
     namaPromo: promo.namaPromo || "",
     image: promo.image || "",
     deskripsi: promo.deskripsi || "",
-    harga: promo.harga || "",
+    harga: Number(promo.harga) || 0,
     kategori: promo.kategori || "PROMO",
     tanggalAkhir: promo.tanggalAkhir || ""
   });
@@ -1107,10 +1108,11 @@ let flipbookMenuImages = [];
   window.updatePromo = function (index, key, value) {
   if (!window.menuPromo[index]) return;
 
-  window.menuPromo[index][key] = value;
+  if (key === "harga") {
+    value = Number(value) || 0;
+  }
 
-  // ❌ jangan save di sini
-  // save lewat tombol Save All / logic lain
+  window.menuPromo[index][key] = value;
 };
 
   window.hapusPromo = function (index) {
@@ -1119,7 +1121,6 @@ let flipbookMenuImages = [];
   window.menuPromo.splice(index, 1);
   renderPromoUI();
 
-  // 🧠 optional force sync
   if (typeof savePromoToDB === "function") {
     savePromoToDB();
   }
@@ -1131,39 +1132,27 @@ let flipbookMenuImages = [];
 
   resizeIfNeeded(file)
     .then((resized) => {
-      // 🔥 FIX: template literal bener
       const el = document.getElementById(`promoImgPreview${index}`);
       if (el) el.src = resized;
 
       updatePromo(index, "image", resized);
-
-      if (typeof savePromoToDB === "function") {
-        savePromoToDB();
-      }
+      savePromoToDB();
     })
-    .catch(err => console.error("Failed upload promo:", err));
+    .catch(err => console.error("❌ uploadPromoImage:", err));
 };
 
-async function savePromoToDB() {
+  async function savePromoToDB() {
   try {
     const db = window.MENUVA_DB;
     if (!db) return;
 
-    // 🔥 clear store promoData
     const promos = window.menuPromo || [];
 
-    // clear manual (karena core tidak expose clear umum)
-    const all = await db.getAll("promoData");
-    for (const p of all) {
-      await db.delete("promoData", p.id);
-    }
-
-    // simpan ulang
     for (const promo of promos) {
-      await db.add("promoData", promo);
+      await db.add("promoData", promo); // put by id
     }
 
-    console.log("💾 Promo saved to DB:", promos.length);
+    console.log("💾 Promo saved:", promos.length);
   } catch (err) {
     console.error("❌ savePromoToDB gagal:", err);
   }
@@ -1175,11 +1164,17 @@ async function savePromoToDB() {
     if (!db) return;
 
     const promos = await db.getAll("promoData");
-    window.menuPromo = Array.isArray(promos) ? promos : [];
+
+    window.menuPromo = Array.isArray(promos)
+      ? promos.map(p => ({
+          ...p,
+          harga: Number(p.harga) || 0
+        }))
+      : [];
 
     renderPromoUI();
 
-    console.log("📦 Promo loaded from DB:", window.menuPromo.length);
+    console.log("📦 Promo loaded:", window.menuPromo.length);
   } catch (err) {
     console.error("❌ loadPromoFromDB gagal:", err);
   }
@@ -2879,6 +2874,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
