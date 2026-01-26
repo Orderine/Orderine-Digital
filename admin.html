@@ -1038,7 +1038,7 @@ if (!window.indexedDB) {
   console.log("✅ IndexedDB supported");
 }
 
-window.menuPromo = [];
+window.menuPromo = window.menuPromo || [];
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
@@ -1090,6 +1090,59 @@ let flipbookMenuImages = [];
   });
 }
 
+  window.tambahPromo = function (promo = {}) {
+  window.menuPromo.push({
+    id: promo.id || crypto.randomUUID(),
+    namaPromo: promo.namaPromo || "",
+    image: promo.image || "",
+    deskripsi: promo.deskripsi || "",
+    harga: promo.harga || "",
+    kategori: promo.kategori || "PROMO",
+    tanggalAkhir: promo.tanggalAkhir || ""
+  });
+
+  renderPromoUI();
+};
+
+  window.updatePromo = function (index, key, value) {
+  if (!window.menuPromo[index]) return;
+
+  window.menuPromo[index][key] = value;
+
+  // ❌ jangan save di sini
+  // save lewat tombol Save All / logic lain
+};
+
+  window.hapusPromo = function (index) {
+  if (!window.menuPromo[index]) return;
+
+  window.menuPromo.splice(index, 1);
+  renderPromoUI();
+
+  // 🧠 optional force sync
+  if (typeof savePromoToDB === "function") {
+    savePromoToDB();
+  }
+};
+
+  window.uploadPromoImage = function (event, index) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  resizeIfNeeded(file)
+    .then((resized) => {
+      // 🔥 FIX: template literal bener
+      const el = document.getElementById(`promoImgPreview${index}`);
+      if (el) el.src = resized;
+
+      updatePromo(index, "image", resized);
+
+      if (typeof savePromoToDB === "function") {
+        savePromoToDB();
+      }
+    })
+    .catch(err => console.error("Failed upload promo:", err));
+};
 
 /* ============================================================
    MENU
@@ -2784,6 +2837,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
