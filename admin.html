@@ -1708,42 +1708,53 @@ function tambahNomorWa(value = "") {
 }
 
 
-// ====================== LOAD DATA (DEFENSIVE FIX) ======================
+// ====================== LOAD DATA (DEFENSIVE FIX - FINAL) ======================
 let sudahLoadData = false;
 
 async function loadData(data) {
-  // ================= VALIDASI DATA =================
-  if (!data || typeof data !== "object") {
-    console.warn("⚠️ loadData invalid → pakai default");
-    data = buatDataDefault(1);
-  }
-
-  // ================= RESET FLAG JIKA GANTI RESTO =================
-  if (window.__lastLoadedResto !== data?.restoId) {
-    sudahLoadData = false;
-  }
-  window.__lastLoadedResto = data?.restoId;
-
-  // ================= SKIP BASIC LOAD JIKA SUDAH =================
-  if (sudahLoadData) {
-    console.warn("⚠️ loadData sudah pernah jalan, skip basic fields");
-
-   if (Array.isArray(data.menuPromo)) {
-  const container = document.getElementById("promoContainer");
-  if (container) {
-    container.innerHTML = "";
-    data.menuPromo.forEach(promo => {
-      tambahPromo(promo); // 🔥 object-based
-    });
-  }
-}
-
-  sudahLoadData = true;
-  window.__lastLoadedRestoData = data;
-  
-  // ================= MAIN PROCESS =================
   try {
-    showLoader();
+    // ================= VALIDASI DATA =================
+    if (!data || typeof data !== "object") {
+      console.warn("⚠️ loadData invalid → pakai default");
+      data = buatDataDefault?.(1) || {};
+    }
+
+    // ================= RESET FLAG JIKA GANTI RESTO =================
+    if (window.__lastLoadedResto !== data?.restoId) {
+      sudahLoadData = false;
+    }
+    window.__lastLoadedResto = data?.restoId;
+
+    // ================= SKIP BASIC LOAD JIKA SUDAH =================
+    if (sudahLoadData) {
+      console.warn("⚠️ loadData sudah pernah jalan, skip basic fields");
+
+      // 🔥 PROMO TETAP BOLEH UPDATE
+      if (Array.isArray(data.menuPromo)) {
+        const container = document.getElementById("promoContainer");
+        if (container) {
+          container.innerHTML = "";
+          window.menuPromo = [];
+
+          data.menuPromo.forEach(promo => {
+            try {
+              tambahPromo?.(promo); // object-based
+            } catch (e) {
+              console.warn("⚠️ tambahPromo gagal:", e);
+            }
+          });
+        }
+      }
+
+      return; // ⛔ WAJIB STOP DI SINI
+    }
+
+    // ================= FLAG LOAD =================
+    sudahLoadData = true;
+    window.__lastLoadedRestoData = data;
+
+    // ================= MAIN PROCESS =================
+    showLoader?.();
 
     // ===== BASIC INFO =====
     const safeSet = (id, val) => {
@@ -1778,15 +1789,34 @@ async function loadData(data) {
       });
     }
 
+    // ===== PROMO (FIRST LOAD) =====
+    if (Array.isArray(data.menuPromo)) {
+      const container = document.getElementById("promoContainer");
+      if (container) {
+        container.innerHTML = "";
+        window.menuPromo = [];
+
+        data.menuPromo.forEach(promo => {
+          try {
+            tambahPromo?.(promo);
+          } catch (e) {
+            console.warn("⚠️ tambahPromo gagal:", e);
+          }
+        });
+      }
+    }
+
     // ===== MENU + FLIPBOOK =====
-    await loadMenuAndFlipbook();
+    if (typeof loadMenuAndFlipbook === "function") {
+      await loadMenuAndFlipbook();
+    }
 
     console.log("✅ loadData selesai tanpa crash");
 
   } catch (err) {
     console.error("❌ loadData fatal:", err);
   } finally {
-    hideLoader();
+    hideLoader?.();
   }
 }
 
@@ -2817,6 +2847,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
