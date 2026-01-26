@@ -3,7 +3,7 @@
   if (window.MENUVA_DB) return;
 
   const DB_NAME = "MenuvaDB";
-  const DB_VERSION = 16; // ⬅️ NAIK VERSION (WAJIB)
+  const DB_VERSION = 17; // ⬅️ NAIK VERSION (WAJIB)
 
   let dbInstance = null;
 
@@ -161,4 +161,5 @@
     }
   };
 })(); // ⬅️ INI WAJIB ADA
+
 
