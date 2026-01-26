@@ -1041,6 +1041,14 @@ if (!window.indexedDB) {
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
+  function renderPromoUI() {
+  // PROMO SEKARANG DOM-BASED
+  // fungsi ini cuma bridge supaya admin init tidak error
+  if (typeof loadPromoFromDB === "function") {
+    loadPromoFromDB();
+  }
+}
+
 function tambahPromo(
   namaPromo = "",
   harga = "",
@@ -2865,6 +2873,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
