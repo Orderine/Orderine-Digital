@@ -1144,20 +1144,26 @@ let flipbookMenuImages = [];
     .catch(err => console.error("Failed upload promo:", err));
 };
 
-  async function savePromoToDB() {
+async function savePromoToDB() {
   try {
     const db = window.MENUVA_DB;
     if (!db) return;
 
-    // 🔥 clear lama
-    await db.clear("promo");
+    // 🔥 clear store promoData
+    const promos = window.menuPromo || [];
 
-    // 🔥 simpan ulang semua
-    for (const promo of window.menuPromo) {
-      await db.add("promo", promo);
+    // clear manual (karena core tidak expose clear umum)
+    const all = await db.getAll("promoData");
+    for (const p of all) {
+      await db.delete("promoData", p.id);
     }
 
-    console.log("💾 Promo saved to DB:", window.menuPromo.length);
+    // simpan ulang
+    for (const promo of promos) {
+      await db.add("promoData", promo);
+    }
+
+    console.log("💾 Promo saved to DB:", promos.length);
   } catch (err) {
     console.error("❌ savePromoToDB gagal:", err);
   }
@@ -1168,8 +1174,7 @@ let flipbookMenuImages = [];
     const db = window.MENUVA_DB;
     if (!db) return;
 
-    const promos = await db.getAll("promo");
-
+    const promos = await db.getAll("promoData");
     window.menuPromo = Array.isArray(promos) ? promos : [];
 
     renderPromoUI();
@@ -1179,7 +1184,6 @@ let flipbookMenuImages = [];
     console.error("❌ loadPromoFromDB gagal:", err);
   }
 }
-
 
 /* ============================================================
    MENU
@@ -2875,6 +2879,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
