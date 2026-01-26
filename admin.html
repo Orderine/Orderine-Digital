@@ -1061,8 +1061,6 @@ function tambahPromo(promo = {}) {
     image = ""
   } = promo;
 
-  const uid = "promo_" + crypto.randomUUID();
-
   const div = document.createElement("div");
   div.className = "menu-item promo-item";
 
@@ -1106,74 +1104,22 @@ function tambahPromo(promo = {}) {
   const container = document.getElementById("promoContainer");
   if (!container) return [];
 
-  const result = [];
+  const promos = [];
 
   container.querySelectorAll(".promo-item").forEach(item => {
-    const namaPromo = item.querySelector("input[type=text]")?.value || "";
-    const harga = parseInt(item.querySelector("input[type=number]")?.value || "0");
-    const deskripsi = item.querySelector("textarea")?.value || "";
-    const tanggalAkhir = item.querySelector("input[type=date]")?.value || "";
-    const image = item.querySelector("input[type=file]")?.getAttribute("data-image") || "";
-
-    if (namaPromo && harga > 0) {
-      result.push({
-        id: crypto.randomUUID(),
-        namaPromo,
-        harga,
-        deskripsi,
-        tanggalAkhir,
-        image,
-        kategori: "PROMO"
-      });
-    }
+    promos.push({
+      id: crypto.randomUUID(),
+      namaPromo: item.querySelector("input[type=text]")?.value || "",
+      harga: Number(item.querySelector("input[type=number]")?.value || 0),
+      deskripsi: item.querySelector("textarea")?.value || "",
+      tanggalAkhir: item.querySelector("input[type=date]")?.value || "",
+      image: item.querySelector("input[type=file]")?.getAttribute("data-image") || "",
+      kategori: "PROMO"
+    });
   });
 
-  return result;
+  return promos;
 }
-
-  async function savePromoToDB() {
-  try {
-    const promos = ambilPromo();
-    const db = window.MENUVA_DB;
-    if (!db) return;
-
-    // 🔥 clear lama
-    const old = await db.getAll("promoData");
-    for (const p of old) {
-      await db.delete("promoData", p.id);
-    }
-
-    // 🔥 simpan baru
-    for (const promo of promos) {
-      await db.add("promoData", promo);
-    }
-
-    console.log("💾 Promo saved:", promos.length);
-  } catch (err) {
-    console.error("❌ savePromoToDB:", err);
-  }
-}
-
-  async function loadPromoFromDB() {
-  try {
-    const db = window.MENUVA_DB;
-    if (!db) return;
-
-    const promos = await db.getAll("promoData");
-
-    const container = document.getElementById("promoContainer");
-    container.innerHTML = "";
-
-    promos.forEach(promo => {
-      tambahPromo(promo); // 🔥 OBJECT PASS, BUKAN POSITIONAL
-    });
-
-    console.log("📦 Promo loaded:", promos.length);
-  } catch (err) {
-    console.error("❌ loadPromoFromDB gagal:", err);
-  }
-}
-
 
 /* ============================================================
    MENU
@@ -1616,7 +1562,7 @@ async function simpanData() {
       nomorWaAdmin,
 
       // backward compat only
-      menuPromo: Array.isArray(window.menuPromo) ? window.menuPromo : [],
+      menuPromo: ambilPromo(), // 🔥 PROMO DARI DOM
       menuVoucher: Array.isArray(window.menuVoucher) ? window.menuVoucher : [],
       flipbookRuanganImages: window.flipbookRuanganImages || [],
       flipbookMenuImages: window.flipbookMenuImages || [],
@@ -1782,13 +1728,15 @@ async function loadData(data) {
   if (sudahLoadData) {
     console.warn("⚠️ loadData sudah pernah jalan, skip basic fields");
 
-    // 🔥 PROMO TETAP BOLEH UPDATE
-    if (Array.isArray(data.menuPromo)) {
-      window.menuPromo = data.menuPromo;
-      renderPromoUI?.();
-    }
-    return;
+   if (Array.isArray(data.menuPromo)) {
+  const container = document.getElementById("promoContainer");
+  if (container) {
+    container.innerHTML = "";
+    data.menuPromo.forEach(promo => {
+      tambahPromo(promo); // 🔥 object-based
+    });
   }
+}
 
   sudahLoadData = true;
   window.__lastLoadedRestoData = data;
@@ -2869,6 +2817,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
