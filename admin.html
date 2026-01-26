@@ -1779,8 +1779,17 @@ async function loadData(data) {
   }
 }
 
+let __MENU_FLIPBOOK_RENDERED = false;
+
 async function loadMenuAndFlipbook() {
   try {
+    // 🔒 HARD GUARD (anti double / triple call)
+    if (__MENU_FLIPBOOK_RENDERED) {
+      console.warn("⛔ loadMenuAndFlipbook di-skip (sudah dirender)");
+      return;
+    }
+    __MENU_FLIPBOOK_RENDERED = true;
+
     console.log("🔄 loadMenuAndFlipbook()");
 
     // ================= RESET MENU CONTAINERS =================
@@ -1814,17 +1823,17 @@ async function loadMenuAndFlipbook() {
       console.warn("⚠️ Tidak ada menu di __lastLoadedRestoData");
     }
 
-    // ================= FLIPBOOK (ANTI DUPLICATE) =================
+    // ================= FLIPBOOK (GUARDED & CLEAN) =================
     const flipbookRows = await window.MENUVA_DB.getAll("flipbookData");
 
-    // 🔥 CLEAR CONTAINER (WAJIB)
     const ruanganContainer = document.getElementById("flipbookRuanganPreview");
     const menuContainer = document.getElementById("flipbookMenuPreview");
 
+    // 🧹 WAJIB CLEAR
     if (ruanganContainer) ruanganContainer.innerHTML = "";
     if (menuContainer) menuContainer.innerHTML = "";
 
-    // 🔥 RESET GLOBAL CACHE
+    // 🧹 RESET CACHE
     window.flipbookRuanganImages = [];
     window.flipbookMenuImages = [];
 
@@ -1832,29 +1841,31 @@ async function loadMenuAndFlipbook() {
     const menuImg = flipbookRows.filter(f => f.type === "menu");
 
     if (typeof renderImagePreview === "function") {
+      // ⏱️ Delay kecil biar DOM stabil (AMAN)
       setTimeout(() => {
         ruangan.forEach(f => {
-          if (f.src) {
+          if (f?.src && !window.flipbookRuanganImages.includes(f.src)) {
             window.flipbookRuanganImages.push(f.src);
             renderImagePreview("ruangan", f.src);
           }
         });
 
         menuImg.forEach(f => {
-          if (f.src) {
+          if (f?.src && !window.flipbookMenuImages.includes(f.src)) {
             window.flipbookMenuImages.push(f.src);
             renderImagePreview("menu", f.src);
           }
         });
-      }, 100);
+      }, 50);
     }
 
-    console.log("✅ Menu & Flipbook loaded (anti duplicate)");
+    console.log("✅ Menu & Flipbook loaded (GUARDED)");
 
   } catch (err) {
     console.error("❌ loadMenuAndFlipbook fatal:", err);
+    __MENU_FLIPBOOK_RENDERED = false; // 🔓 buka lagi kalau gagal
   }
-} // <-- INI YANG HILANG SEBELUMNYA
+}
 
 
 // ====================== RESET / BACKUP / RESTORE ======================
@@ -2794,4 +2805,5 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
