@@ -2016,6 +2016,9 @@ async function resetData() {
   /* =====================================================
    CORE BACKUP EXPORT (FINAL)
 ===================================================== */
+/* =====================================================
+   SAFE CORE EXPORT — BREAK ALL REFERENCES
+===================================================== */
 async function exportDBToJSON() {
   if (!window.MENUVA_DB) {
     throw new Error("MENUVA_DB belum siap");
@@ -2023,26 +2026,45 @@ async function exportDBToJSON() {
 
   const db = window.MENUVA_DB;
 
+  // 🔥 force plain JSON (kill circular ref)
+  const toPlain = data => JSON.parse(JSON.stringify(data));
+
+  const stores = [
+    "users",
+    "session",
+    "invites",
+    "restos",
+    "menuData",
+    "flipbookData",
+    "promoData",
+    "ordersData",
+    "roomData",
+    "packageData",
+    "voucherData"
+  ];
+
+  const data = {};
+
+  for (const store of stores) {
+    try {
+      const rows = await db.getAll(store);
+      data[store] = toPlain(rows);
+    } catch (e) {
+      console.warn(`⚠️ Skip store ${store}`, e);
+      data[store] = [];
+    }
+  }
+
   return {
     meta: {
-      app: "Orderine / Menuva",
+      app: "Orderine",
       format: "CORE",
-      exportedAt: new Date().toISOString()
+      exportedAt: Date.now()
     },
-    data: {
-      users: await db.getAll("users"),
-      session: await db.getAll("session"),
-      invites: await db.getAll("invites"),
-      restos: await db.getAll("restos"),
-      menuData: await db.getAll("menuData"),
-      flipbookData: await db.getAll("flipbookData"),
-      promoData: await db.getAll("promoData"),
-      ordersData: await db.getAll("ordersData")
-    }
+    data
   };
 }
 
-// expose
 window.exportDBToJSON = exportDBToJSON;
 
 
@@ -2978,6 +3000,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
