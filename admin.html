@@ -833,7 +833,7 @@ button {
   <div style="background: #fef9e7; padding: 10px; border-left: 5px solid #f1c40f; margin-top: 10px; font-size: 14px;">
     <strong>User Guide:</strong><br>
     IMPORTANT!!<br>
-    🔹 Click <strong>⬇️ Backup Data</strong> to save all data.<br>
+    🔹 Click <strong>⬇️  Data</strong> to save all data.<br>
     🔹 Keep the file safe.<br>
     🔹 Click <strong>📂 Choose File</strong> to restore data.<br>
     ⚠️ The restore process replaces all existing data.<br>
@@ -2013,6 +2013,39 @@ async function resetData() {
   location.reload();
 }
 
+  /* =====================================================
+   CORE BACKUP EXPORT (FINAL)
+===================================================== */
+async function exportDBToJSON() {
+  if (!window.MENUVA_DB) {
+    throw new Error("MENUVA_DB belum siap");
+  }
+
+  const db = window.MENUVA_DB;
+
+  return {
+    meta: {
+      app: "Orderine / Menuva",
+      format: "CORE",
+      exportedAt: new Date().toISOString()
+    },
+    data: {
+      users: await db.getAll("users"),
+      session: await db.getAll("session"),
+      invites: await db.getAll("invites"),
+      restos: await db.getAll("restos"),
+      menuData: await db.getAll("menuData"),
+      flipbookData: await db.getAll("flipbookData"),
+      promoData: await db.getAll("promoData"),
+      ordersData: await db.getAll("ordersData")
+    }
+  };
+}
+
+// expose
+window.exportDBToJSON = exportDBToJSON;
+
+
 async function downloadBackupJSON() {
   const data = await exportDBToJSON();
 
@@ -2028,6 +2061,7 @@ async function downloadBackupJSON() {
 
   URL.revokeObjectURL(a.href);
 }
+
 
 async function restoreDataFromFile(event) {
   const file = event.target.files[0];
@@ -2944,6 +2978,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
