@@ -2137,36 +2137,61 @@ async function restoreDataFromFile(event) {
       await migrateLegacyMenuva(json);
     }
 
-    if (format === "CORE") {
-      console.log("♻️ Restoring CORE backup");
+   if (format === "CORE") {
+  console.log("♻️ Restoring CORE backup");
 
-      const stores = [
-        "users",
-        "session",
-        "invites",
-        "restos",
-        "menuData",
-        "flipbookData",
-        "promoData",
-        "ordersData"
-      ];
+  const restoId = window.activeUser.restoID;
 
-      for (const store of stores) {
-        const rows = json.data?.[store];
-        if (!Array.isArray(rows)) continue;
+  /* =====================
+     1️⃣ RESTORE MENU DATA (SINGLE SOURCE)
+  ===================== */
+  const menuDataRows = json.data?.menuData;
 
-        // clear
-        const existing = await MENUVA_DB.getAll(store);
-        for (const item of existing) {
-          await MENUVA_DB.delete(store, item.id);
-        }
+  if (Array.isArray(menuDataRows) && menuDataRows.length > 0) {
+    const restoPayload = {
+      ...buatDataDefault(restoId),
+      ...menuDataRows[0],
+      id: restoId,
+      restoId
+    };
 
-        // restore
-        for (const item of rows) {
-          await MENUVA_DB.add(store, item);
-        }
+    // clear old
+    await MENUVA_DB.delete("menuData", restoId);
+
+    // save new
+    await MENUVA_DB.add("menuData", restoPayload);
+
+    console.log("✅ menuData restored (single payload)");
+  }
+
+  /* =====================
+     2️⃣ RESTORE OTHER STORES (NORMAL)
+  ===================== */
+  const otherStores = [
+    "flipbookData",
+    "promoData",
+    "ordersData"
+  ];
+
+  for (const store of otherStores) {
+    const rows = json.data?.[store];
+    if (!Array.isArray(rows)) continue;
+
+    const existing = await MENUVA_DB.getAll(store);
+    for (const item of existing) {
+      if (item.restoId === restoId) {
+        await MENUVA_DB.delete(store, item.id);
       }
     }
+
+    for (const item of rows) {
+      await MENUVA_DB.add(store, {
+        ...item,
+        restoId
+      });
+    }
+  }
+}
 
     alert("✅ Restore / Migrasi selesai");
     location.reload();
@@ -3048,6 +3073,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
