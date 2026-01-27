@@ -1894,6 +1894,22 @@ async function loadData() {
       }, 50);
     }
 
+    // ================= VOUCHER =================
+if (Array.isArray(restoData.menuVoucher)) {
+  window.menuVoucher = restoData.menuVoucher;
+  const voucherContainer = document.getElementById("voucherContainer");
+  if (voucherContainer) {
+    voucherContainer.innerHTML = "";
+    window.menuVoucher.forEach(v => {
+      try {
+        tambahVoucher?.(v); // pastikan ada fungsi tambahVoucher untuk render DOM
+      } catch (e) {
+        console.warn("⚠️ tambahVoucher gagal:", v, e);
+      }
+    });
+  }
+}
+
     // ================= PROMO / VOUCHER =================
     if (Array.isArray(restoData.menuPromo)) {
       const promoContainer = document.getElementById("promoContainer");
@@ -2924,6 +2940,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
