@@ -2365,9 +2365,17 @@ async function clearDataDB() {
     ];
 
     for (const store of stores) {
-      const rows = await MENUVA_DB.getAll(store);
-      for (const item of rows) {
-        await MENUVA_DB.delete(store, item.id);
+      if (typeof MENUVA_DB.clear === "function") {
+        await MENUVA_DB.clear(store);
+      } else {
+        // fallback ultra-safe
+        const rows = await MENUVA_DB.getAll(store);
+        for (const item of rows) {
+          const key = item.id || item.restoId || item.email || item.key;
+          if (key !== undefined) {
+            await MENUVA_DB.delete(store, key);
+          }
+        }
       }
     }
 
@@ -3032,6 +3040,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
