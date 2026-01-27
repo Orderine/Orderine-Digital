@@ -2008,8 +2008,9 @@ menuByResto.forEach(m => {
 
 // ====================== RESET / BACKUP / RESTORE ======================
 async function resetData() {
-  if (!confirm("Are you sure you want to delete all data?")) return;
-  await clearDataDB();
+  if (!confirm("Yakin ingin menghapus SEMUA DATA RESTO?\n(Akun & langganan TIDAK akan terhapus)")) return;
+
+  await clearRestoDataOnly();
   location.reload();
 }
 
@@ -2351,27 +2352,33 @@ function hideLoader() {
   }, 250);
 }
 
-async function clearDataDB() {
+async function clearRestoDataOnly() {
   try {
-    const stores = [
-      "users",
-      "session",
-      "invites",
-      "restos",
+    if (!window.activeUser || !window.activeUser.restoID) {
+      console.warn("⚠️ clearRestoDataOnly aborted: no activeUser");
+      return;
+    }
+
+    const restoId = window.activeUser.restoID;
+
+    // STORE YANG AMAN DIRESET
+    const scopedStores = [
       "menuData",
       "flipbookData",
       "promoData",
       "ordersData"
     ];
 
-    for (const store of stores) {
-      if (typeof MENUVA_DB.clear === "function") {
-        await MENUVA_DB.clear(store);
-      } else {
-        // fallback ultra-safe
-        const rows = await MENUVA_DB.getAll(store);
-        for (const item of rows) {
-          const key = item.id || item.restoId || item.email || item.key;
+    for (const store of scopedStores) {
+      const rows = await MENUVA_DB.getAll(store);
+      for (const item of rows) {
+        // hanya hapus milik resto aktif
+        if (item.restoId === restoId || item.id === restoId) {
+          const key =
+            item.id ??
+            item.restoId ??
+            item.orderId;
+
           if (key !== undefined) {
             await MENUVA_DB.delete(store, key);
           }
@@ -2379,9 +2386,10 @@ async function clearDataDB() {
       }
     }
 
-    console.log("🧹 CORE DB cleared successfully");
+    console.log("🧹 Resto data cleared (SAFE MODE):", restoId);
+
   } catch (err) {
-    console.error("❌ clearDataDB fatal:", err);
+    console.error("❌ clearRestoDataOnly fatal:", err);
   }
 }
 
@@ -3040,6 +3048,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
