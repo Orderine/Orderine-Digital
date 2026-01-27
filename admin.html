@@ -1919,19 +1919,34 @@ async function loadData() {
 
     console.log("🔄 loadMenuAndFlipbook (DB driven)");
 
-    // ================= MENU =================
-    const menuRows = await MENUVA_DB.getAll("menuData");
-    const menuByResto = menuRows.filter(m => m.restoId === restoId);
+  // ================= MENU =================
+const menuRows = await MENUVA_DB.getAll("menuData");
+const menuByResto = menuRows.filter(m => m.restoId === restoId);
 
-    clearMenuUI?.();
-    menuByResto.forEach(m => {
-      tambahMenu?.(
-        m.kategori || "food",
-        m.nama || "",
-        m.harga || "",
-        m.image || ""
-      );
-    });
+// 🧹 CLEAR MENU UI (DEFENSIVE)
+if (typeof clearMenuUI === "function") {
+  try {
+    clearMenuUI();
+  } catch (e) {
+    console.warn("⚠️ clearMenuUI error, lanjut render menu:", e);
+  }
+} else {
+  console.warn("⚠️ clearMenuUI tidak ditemukan, skip clear");
+}
+
+// 🍽️ RENDER MENU
+menuByResto.forEach(m => {
+  try {
+    tambahMenu?.(
+      m.kategori || "food",
+      m.nama || "",
+      m.harga || "",
+      m.image || ""
+    );
+  } catch (e) {
+    console.warn("⚠️ tambahMenu gagal:", m, e);
+  }
+});
 
     // ================= FLIPBOOK =================
     const flipbookRows = await MENUVA_DB.getAll("flipbookData");
@@ -2902,6 +2917,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
