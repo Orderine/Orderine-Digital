@@ -2067,21 +2067,53 @@ async function exportDBToJSON() {
 
 window.exportDBToJSON = exportDBToJSON;
 
-
+// 🔥 BACKUP CORE (SAFE, SINGLE RESTO SNAPSHOT)
 async function downloadBackupJSON() {
-  const data = await exportDBToJSON();
+  try {
+    showLoader?.();
 
-  const blob = new Blob(
-    [JSON.stringify(data, null, 2)],
-    { type: "application/json" }
-  );
+    if (!window.activeUser || !window.activeUser.restoID) {
+      alert("❌ Session tidak valid");
+      return;
+    }
 
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `orderine-backup-${Date.now()}.json`;
-  a.click();
+    const restoId = window.activeUser.restoID;
 
-  URL.revokeObjectURL(a.href);
+    // 🔥 ambil 1 payload resto (seperti sistem lama)
+    const restoData = await MENUVA_DB.get("menuData", restoId);
+
+    if (!restoData) {
+      alert("⚠️ Tidak ada data resto untuk di-backup");
+      return;
+    }
+
+    // 🔥 pastikan plain object (anti reference)
+    const safeData = JSON.parse(JSON.stringify(restoData));
+
+    const filename = `orderine-backup-${restoId}-${Date.now()}.json`;
+
+    const blob = new Blob(
+      [JSON.stringify(safeData, null, 2)],
+      { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    alert(`✅ Backup berhasil!\n${filename}`);
+
+  } catch (err) {
+    console.error("❌ Backup error:", err);
+    alert("❌ Backup gagal, cek console");
+  } finally {
+    hideLoader?.();
+  }
 }
 
 
@@ -3000,6 +3032,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
