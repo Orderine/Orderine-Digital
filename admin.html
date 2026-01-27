@@ -1783,10 +1783,9 @@ function tambahNomorWa(value = "") {
 }
 
 
-// ====================== LOAD DATA (DB REHYDRATE - FINAL) ======================
+// ====================== LOAD DATA (DB REHYDRATE - ADMIN FULL) ======================
 let sudahLoadData = false;
 
-// ====================== LOAD DATA (DB REHYDRATE - FINAL FIX ADMIN) ======================
 async function loadData() {
   try {
     /* ================= AUTH SAFETY ================= */
@@ -1798,40 +1797,15 @@ async function loadData() {
     const restoId = window.activeUser.restoID;
     showLoader?.();
 
-    /* =================================================
-       1️⃣ LOAD RESTO PROFILE (restos store)
-    ================================================= */
-    const resto = await window.MENUVA_DB.get("restos", restoId);
-
-    if (resto) {
-      const safeSet = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.value = val || "";
-      };
-
-      safeSet("namaRestoran", resto.namaRestoran);
-      safeSet("restoAddress", resto.restoAddress);
-      safeSet("restoPhone", resto.restoPhone);
-
-      if (resto.logo) {
-        const img = document.getElementById("previewLogo");
-        if (img) img.src = resto.logo;
-      }
-
-      // WA Admin
-      const waContainer = document.getElementById("nomorWaContainer");
-      if (waContainer) {
-        waContainer.innerHTML = "";
-        const waList = Array.isArray(resto.nomorWaAdmin) ? resto.nomorWaAdmin : [];
-        waList.forEach(num => {
-          try { tambahNomorWa?.(num); } 
-          catch (e) { console.warn("⚠️ render WA gagal:", e); }
-        });
-      }
+    // ================= RESET FLAG =================
+    if (window.__lastLoadedResto !== restoId) {
+      sudahLoadData = false;
     }
+    window.__lastLoadedResto = restoId;
+    sudahLoadData = true;
 
     /* =================================================
-       2️⃣ LOAD FULL RESTO PAYLOAD (menuData store)
+       1️⃣ LOAD FULL RESTO PAYLOAD (menuData store)
     ================================================= */
     const restoData = await window.MENUVA_DB.get("menuData", restoId);
 
@@ -1840,7 +1814,33 @@ async function loadData() {
       return;
     }
 
-    /* ===== MENU ===== */
+    // ================= RESTO PROFILE =================
+    const safeSet = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val || "";
+    };
+
+    safeSet("namaRestoran", restoData.namaRestoran);
+    safeSet("restoAddress", restoData.restoAddress);
+    safeSet("restoPhone", restoData.restoPhone);
+
+    if (restoData.logo) {
+      const img = document.getElementById("previewLogo");
+      if (img) img.src = restoData.logo;
+    }
+
+    // ================= NOMOR WA =================
+    const waContainer = document.getElementById("nomorWaContainer");
+    if (waContainer) {
+      waContainer.innerHTML = "";
+      const waList = Array.isArray(restoData.nomorWaAdmin) ? restoData.nomorWaAdmin : [];
+      waList.forEach(num => {
+        try { tambahNomorWa?.(num); }
+        catch (e) { console.warn("⚠️ render WA gagal:", e); }
+      });
+    }
+
+    // ================= MENU =================
     if (Array.isArray(restoData.menu)) {
       ["menuFoodContainer","menuSnackContainer","menuDrinkContainer","menuSpecialContainer"]
         .forEach(id => {
@@ -1862,7 +1862,7 @@ async function loadData() {
       });
     }
 
-    /* ===== ROOM / MEETING / PACKAGE ===== */
+    // ================= ROOM / MEETING / PACKAGE =================
     if (Array.isArray(restoData.rooms)) {
       ["roomHotelContainer","meetingRoomContainer","packageContainer"]
         .forEach(id => {
@@ -1877,16 +1877,24 @@ async function loadData() {
       }
     }
 
-    /* ===== FLIPBOOK IMAGES ===== */
-    if (Array.isArray(restoData.flipbookRuanganImages)) {
-      window.flipbookRuanganImages = restoData.flipbookRuanganImages;
-    } else { window.flipbookRuanganImages = []; }
+    // ================= FLIPBOOK IMAGES =================
+    window.flipbookRuanganImages = Array.isArray(restoData.flipbookRuanganImages)
+      ? restoData.flipbookRuanganImages
+      : [];
 
-    if (Array.isArray(restoData.flipbookMenuImages)) {
-      window.flipbookMenuImages = restoData.flipbookMenuImages;
-    } else { window.flipbookMenuImages = []; }
+    window.flipbookMenuImages = Array.isArray(restoData.flipbookMenuImages)
+      ? restoData.flipbookMenuImages
+      : [];
 
-    /* ===== PROMO / VOUCHER ===== */
+    // render preview (jika ada fungsi)
+    if (typeof renderImagePreview === "function") {
+      setTimeout(() => {
+        window.flipbookRuanganImages.forEach(src => renderImagePreview("ruangan", src));
+        window.flipbookMenuImages.forEach(src => renderImagePreview("menu", src));
+      }, 50);
+    }
+
+    // ================= PROMO / VOUCHER =================
     if (Array.isArray(restoData.menuPromo)) {
       const promoContainer = document.getElementById("promoContainer");
       if (promoContainer) {
@@ -1894,7 +1902,7 @@ async function loadData() {
         window.menuPromo = [];
 
         restoData.menuPromo.forEach(promo => {
-          try { tambahPromo?.(promo); } 
+          try { tambahPromo?.(promo); }
           catch (e) { console.warn("⚠️ tambahPromo gagal:", promo, e); }
         });
       }
@@ -1904,10 +1912,12 @@ async function loadData() {
 
   } catch (err) {
     console.error("❌ loadData fatal:", err);
+    sudahLoadData = false;
   } finally {
     hideLoader?.();
   }
 }
+
 
   async function loadMenuAndFlipbook() {
   try {
@@ -2914,6 +2924,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
