@@ -2014,54 +2014,56 @@ async function resetData() {
   location.reload();
 }
 
-async function backupAdminToJSON() {
-  const db = window.MENUVA_DB;
+// 🔥 BACKUP CORE (SAFE, SINGLE RESTO SNAPSHOT)
+async function downloadBackupJSON() {
+  try {
+    showLoader?.();
 
-  const stores = [
-    "users",
-    "session",
-    "invites",
-    "restos",
-    "menuData",
-    "flipbookData",
-    "promoData",
-    "ordersData",
-    "roomData",
-    "packageData",
-    "voucherData"
-  ];
-
-  const snapshot = {
-    meta: {
-      app: "Orderine Admin",
-      version: 1,
-      exportedAt: Date.now()
-    },
-    stores: {}
-  };
-
-  for (const store of stores) {
-    try {
-      snapshot.stores[store] = await db.getAll(store);
-    } catch {
-      snapshot.stores[store] = [];
+    if (!window.activeUser || !window.activeUser.restoID) {
+      alert("❌ Session tidak valid");
+      return;
     }
+
+    const restoId = window.activeUser.restoID;
+
+    // 🔥 ambil 1 payload resto (seperti sistem lama)
+    const restoData = await MENUVA_DB.get("menuData", restoId);
+
+    if (!restoData) {
+      alert("⚠️ Tidak ada data resto untuk di-backup");
+      return;
+    }
+
+    // 🔥 pastikan plain object (anti reference)
+    const safeData = JSON.parse(JSON.stringify(restoData));
+
+    const filename = `orderine-backup-${restoId}-${Date.now()}.json`;
+
+    const blob = new Blob(
+      [JSON.stringify(safeData, null, 2)],
+      { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    alert(`✅ Backup berhasil!\n${filename}`);
+
+  } catch (err) {
+    console.error("❌ Backup error:", err);
+    alert("❌ Backup gagal, cek console");
+  } finally {
+    hideLoader?.();
   }
-
-  const blob = new Blob(
-    [JSON.stringify(snapshot, null, 2)],
-    { type: "application/json" }
-  );
-
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `orderine-backup-${Date.now()}.json`;
-  a.click();
-
-  console.log("✅ Backup snapshot selesai");
 }
 
-  async function restoreAdminFromJSON(event) {
+  async function restoreDataFromFile(event) {
   const file = event.target.files[0];
   if (!file) return;
 
@@ -2069,36 +2071,37 @@ async function backupAdminToJSON() {
     const text = await file.text();
     const json = JSON.parse(text);
 
-    if (!json.stores) {
-      alert("❌ File backup tidak valid");
+    // 🔍 validasi minimal format lama
+    if (!json.restoId || !json.namaRestoran) {
+      alert("❌ File backup tidak sesuai format lama");
       return;
     }
 
     const db = window.MENUVA_DB;
+    const restoId = json.restoId;
 
-    // 1️⃣ clear semua store
-    for (const store in json.stores) {
-      await db.clear(store);
-    }
+    console.log("♻️ Restoring legacy snapshot:", restoId);
 
-    // 2️⃣ restore semua data
-    for (const store in json.stores) {
-      const rows = json.stores[store];
-      if (!Array.isArray(rows)) continue;
+    // 🧹 hapus semua data menuData lama
+    await db.clear("menuData");
 
-      for (const item of rows) {
-        await db.add(store, item);
-      }
-    }
+    // ✅ simpan snapshot persis seperti file
+    await db.add("menuData", {
+      ...json,
+      id: restoId // 🔑 pastikan ada id
+    });
+
+    console.log("✅ Legacy restore done:", json);
 
     alert("✅ Restore selesai");
     location.reload();
 
   } catch (err) {
     console.error("❌ Restore error:", err);
-    alert("❌ File backup rusak");
+    alert("❌ File backup rusak atau tidak valid");
   }
 }
+
 
 // ====================== SHARE & QR ======================
 function getCustomerLink() {
@@ -2390,24 +2393,18 @@ async function loadCoreAndRender() {
   console.log("🔄 loadCoreAndRender()");
 
   try {
-    // 🔍 cari restoData ala sistem lama
-    const all = await MENUVA_DB.getAll("menuData");
-    const restoData = all.find(d => d.id === "restoData");
+    const rows = await MENUVA_DB.getAll("menuData");
 
-    if (!restoData) {
-      console.info("ℹ️ restoData kosong, inject default");
-
-      await MENUVA_DB.add("menuData", {
-        ...buatDataDefault(1),
-        id: "restoData"
-      });
+    if (!rows || rows.length === 0) {
+      console.info("ℹ️ menuData kosong, belum ada restore");
+      return;
     }
 
-    console.log("🧪 restoData loaded:", restoData);
+    const restoData = rows[0]; // 🔑 SISTEM LAMA
+    console.log("✅ restoData loaded:", restoData);
 
-    if (typeof renderPromoUI === "function") {
-      renderPromoUI();
-    }
+    // render admin dari restoData
+    renderAdminUI(restoData);
 
   } catch (err) {
     console.error("❌ loadCoreAndRender error:", err);
@@ -2897,6 +2894,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
