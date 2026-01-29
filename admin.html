@@ -1775,19 +1775,16 @@ async function loadData() {
     const restoId = window.activeUser.restoID;
     console.log("📦 loadData start → resto:", restoId);
 
-    // Ambil satu record resto
+    // ---------------- AMBIL RESTO ----------------
     const resto = await MENUVA_DB.get("restos", restoId);
-    if (!resto) {
-      console.warn("⚠️ Resto not found in DB");
-      return;
-    }
+    if (!resto) return console.warn("⚠️ Resto not found in DB");
 
-    // ---------------- RESTO PROFILE ----------------
     const safeSetVal = (id, val) => {
       const el = document.getElementById(id);
       if (el) el.value = val ?? "";
     };
 
+    // ---------------- RESTO PROFILE ----------------
     safeSetVal("namaRestoran", resto.namaRestoran);
     safeSetVal("restoAddress", resto.restoAddress);
     safeSetVal("restoPhone", resto.restoPhone);
@@ -1806,27 +1803,31 @@ async function loadData() {
       try { tambahMenu?.(m.kategori || "food", m.nama || "", m.harga || "", m.image || ""); }
       catch(e) { console.warn("⚠️ tambahMenu error", m, e); }
     });
-    if (typeof renderMenuUI === "function") renderMenuUI();
+    try { renderMenuUI?.(); } catch(e){ console.warn("⚠️ renderMenuUI error:", e); }
 
     // ---------------- PROMO & VOUCHER ----------------
     window.menuPromo = Array.isArray(resto.menuPromo) ? resto.menuPromo : [];
     window.menuVoucher = Array.isArray(resto.menuVoucher) ? resto.menuVoucher : [];
 
-    renderPromoUI?.();
-    renderVoucher?.(window.menuVoucher);
+    try { renderPromoUI?.(); } catch(e){ console.warn("⚠️ renderPromoUI error:", e); }
+    try { renderVoucher?.(window.menuVoucher); } catch(e){ console.warn("⚠️ renderVoucher error:", e); }
 
     // ---------------- FLIPBOOK ----------------
     window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages) ? resto.flipbookRuanganImages : [];
     window.flipbookMenuImages = Array.isArray(resto.flipbookMenuImages) ? resto.flipbookMenuImages : [];
-
     window.flipbookList = window.flipbookRuanganImages.concat(window.flipbookMenuImages);
-    window.flipbookRuanganImages.forEach(src => renderImagePreview?.("ruangan", src));
-    window.flipbookMenuImages.forEach(src => renderImagePreview?.("menu", src));
-    renderFlipbookUI?.();
+
+    window.flipbookRuanganImages.forEach(src => { try { renderImagePreview?.("ruangan", src); } catch(e){console.warn(e);} });
+    window.flipbookMenuImages.forEach(src => { try { renderImagePreview?.("menu", src); } catch(e){console.warn(e);} });
+
+    try { renderFlipbookUI?.(); } catch(e){ console.warn("⚠️ renderFlipbookUI error:", e); }
 
     // ---------------- ROOMS ----------------
     window.roomList = Array.isArray(resto.rooms) ? resto.rooms : [];
-    renderRoomUI?.();
+    try { renderRoomUI?.(); } catch(e){ console.warn("⚠️ renderRoomUI error:", e); }
+
+    // ---------------- WA ADMIN ----------------
+    try { renderWaAdmin?.(); } catch(e){ console.warn("⚠️ renderWaAdmin error:", e); }
 
     console.log("✅ loadData FINISHED");
 
@@ -2593,6 +2594,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
