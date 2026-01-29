@@ -1884,7 +1884,9 @@ async function loadData() {
 
     if (vouchers.length && typeof renderVoucher === "function") {
       renderVoucher(vouchers);
-      document.getElementById("voucherContainer")?.style.display = "block";
+      const vc = document.getElementById("voucherContainer");
+      if (vc) vc.style.display = "block";
+
     } else {
       const box = document.getElementById("voucherPreview");
       if (box) box.innerHTML = "<em>Belum ada voucher aktif</em>";
@@ -2728,4 +2730,5 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
