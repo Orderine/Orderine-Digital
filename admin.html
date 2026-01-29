@@ -2014,94 +2014,89 @@ async function resetData() {
   location.reload();
 }
 
-// 🔥 BACKUP CORE (SAFE, SINGLE RESTO SNAPSHOT)
-async function downloadBackupJSON() {
-  try {
-    showLoader?.();
+async function backupAdminToJSON() {
+  const payload = {
+    resto: {
+      namaRestoran: getVal("namaRestoran"),
+      restoAddress: getVal("restoAddress"),
+      restoPhone: getVal("restoPhone"),
+      logo: window.__LOGO_BASE64__ || null
+    },
+    menus: window.menuList || [],
+    promos: window.promoList || [],
+    flipbooks: window.flipbookList || [],
+    orders: window.ordersList || []
+  };
 
-    if (!window.activeUser || !window.activeUser.restoID) {
-      alert("❌ Session tidak valid");
-      return;
-    }
+  const backup = {
+    app: "Orderine",
+    type: "ADMIN_BACKUP",
+    version: 1,
+    exportedAt: Date.now(),
+    payload
+  };
 
-    const restoId = window.activeUser.restoID;
+  const blob = new Blob(
+    [JSON.stringify(backup, null, 2)],
+    { type: "application/json" }
+  );
 
-    // 🔥 ambil 1 payload resto (seperti sistem lama)
-    const restoData = await MENUVA_DB.get("menuData", restoId);
-
-    if (!restoData) {
-      alert("⚠️ Tidak ada data resto untuk di-backup");
-      return;
-    }
-
-    // 🔥 pastikan plain object (anti reference)
-    const safeData = JSON.parse(JSON.stringify(restoData));
-
-    const filename = `orderine-backup-${restoId}-${Date.now()}.json`;
-
-    const blob = new Blob(
-      [JSON.stringify(safeData, null, 2)],
-      { type: "application/json" }
-    );
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    alert(`✅ Backup berhasil!\n${filename}`);
-
-  } catch (err) {
-    console.error("❌ Backup error:", err);
-    alert("❌ Backup gagal, cek console");
-  } finally {
-    hideLoader?.();
-  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `orderine-backup-${Date.now()}.json`;
+  a.click();
 }
 
- async function restoreDataFromFile(event) {
+  async function restoreAdminFromFile(event) {
   const file = event.target.files[0];
   if (!file) return;
 
   try {
-    const text = await file.text();
-    const json = JSON.parse(text);
+    const json = JSON.parse(await file.text());
 
-    // validasi format lama
-    if (!json.restoId || !json.namaRestoran) {
-      alert("❌ File backup tidak sesuai format lama");
+    if (
+      json.app !== "Orderine" ||
+      json.type !== "ADMIN_BACKUP"
+    ) {
+      alert("❌ File bukan backup Orderine");
       return;
     }
 
-    const db = window.MENUVA_DB;
-    const restoId = json.restoId;
+    const p = json.payload;
 
-    console.log("♻️ Restore snapshot resto:", restoId);
+    /* =====================
+       RESTORE FORM
+    ===================== */
+    setVal("namaRestoran", p.resto?.namaRestoran || "");
+    setVal("restoAddress", p.resto?.restoAddress || "");
+    setVal("restoPhone", p.resto?.restoPhone || "");
 
-    // 1️⃣ hapus SEMUA data menuData lama (manual)
-    const existing = await db.getAll("menuData");
-    for (const item of existing) {
-      await db.delete("menuData", item.id);
+    if (p.resto?.logo) {
+      window.__LOGO_BASE64__ = p.resto.logo;
+      document.getElementById("previewLogo").src = p.resto.logo;
     }
 
-    // 2️⃣ simpan snapshot baru (APA ADANYA)
-    await db.add("menuData", {
-      ...json,
-      id: restoId // 🔑 penting
-    });
+    /* =====================
+       RESTORE MEMORY STATE
+    ===================== */
+    window.menuList = p.menus || [];
+    window.promoList = p.promos || [];
+    window.flipbookList = p.flipbooks || [];
+    window.ordersList = p.orders || [];
 
-    console.log("✅ Restore sukses:", json);
+    /* =====================
+       RENDER ULANG
+    ===================== */
+    renderMenuUI?.();
+    renderPromoUI?.();
+    renderFlipbookUI?.();
+    renderOrdersUI?.();
 
-    alert("✅ Restore selesai");
-    location.reload();
+    alert("✅ Data berhasil direstore & ditampilkan");
 
   } catch (err) {
-    console.error("❌ Restore error:", err);
-    alert("❌ File backup rusak atau tidak valid");
+    console.error("Restore failed:", err);
+    alert("❌ File backup rusak");
   }
 }
 
@@ -2901,6 +2896,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
