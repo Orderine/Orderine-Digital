@@ -1826,28 +1826,40 @@ async function loadData() {
     const fbByResto = flipbookRows.filter(f => f.restoId === restoId);
     window.flipbookList = fbByResto;
 
-    // pisah ruangan & menu images
-    const ruangan = fbByResto.filter(f => f.type === "room-image");
-    const menuImg = fbByResto.filter(f => f.type === "menu-image");
-
     window.flipbookRuanganImages = [];
     window.flipbookMenuImages = [];
 
-    ruangan.forEach(f => {
-      if (f.src) {
+    fbByResto.forEach(f => {
+      if (f.type === "room-image" && f.src) {
         window.flipbookRuanganImages.push(f.src);
         renderImagePreview?.("ruangan", f.src);
-      }
-    });
-
-    menuImg.forEach(f => {
-      if (f.src) {
+      } else if (f.type === "menu-image" && f.src) {
         window.flipbookMenuImages.push(f.src);
         renderImagePreview?.("menu", f.src);
       }
     });
 
     if (typeof renderFlipbookUI === "function") renderFlipbookUI();
+
+    /* ================= ROOM ================= */
+    const roomRows = await MENUVA_DB.getAll("roomData");
+    window.roomList = roomRows.filter(r => r.restoId === restoId);
+    if (typeof renderRoomUI === "function") renderRoomUI();
+
+    /* ================= MEETING ROOM ================= */
+    const meetingRows = await MENUVA_DB.getAll("meetingRoomData");
+    window.meetingRoomList = meetingRows.filter(m => m.restoId === restoId);
+    if (typeof renderMeetingRoomUI === "function") renderMeetingRoomUI();
+
+    /* ================= PACKAGE ================= */
+    const packageRows = await MENUVA_DB.getAll("packageData");
+    window.packageList = packageRows.filter(p => p.restoId === restoId);
+    if (typeof renderPackageUI === "function") renderPackageUI();
+
+    /* ================= WA ADMIN ================= */
+    const waRows = await MENUVA_DB.getAll("waAdminData");
+    window.waAdmin = waRows.filter(w => w.restoId === restoId);
+    if (typeof renderWaAdmin === "function") renderWaAdmin();
 
     console.log("✅ loadData FINISHED");
 
@@ -2613,6 +2625,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
