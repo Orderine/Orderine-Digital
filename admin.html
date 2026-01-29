@@ -2396,15 +2396,21 @@ async function loadCoreAndRender() {
     const rows = await MENUVA_DB.getAll("menuData");
 
     if (!rows || rows.length === 0) {
-      console.info("ℹ️ menuData kosong, belum ada restore");
+      console.info("ℹ️ menuData kosong, belum ada data tersimpan");
       return;
     }
 
-    const restoData = rows[0]; // 🔑 SISTEM LAMA
+    const restoData = rows[0]; // 🔑 snapshot lama
     console.log("✅ restoData loaded:", restoData);
 
-    // render admin dari restoData
-    renderAdminUI(restoData);
+    // 🔥 SERAHKAN KE SISTEM ADMIN LAMA
+    if (typeof loadData === "function") {
+      await loadData(restoData);
+    }
+
+    if (typeof renderPromoUI === "function") {
+      renderPromoUI();
+    }
 
   } catch (err) {
     console.error("❌ loadCoreAndRender error:", err);
@@ -2894,6 +2900,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
