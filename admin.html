@@ -881,7 +881,12 @@ button {
 </div>
 
 <script>
-function initSubscriptionCountdown(user) {
+/* ================= SUBSCRIPTION COUNTDOWN ================= */
+
+let subscriptionCountdownTimer = null;
+
+window.initSubscriptionCountdown = function () {
+  const user = window.activeUser;
   if (!user || !user.premiumExpire || !user.premiumPlan) return;
 
   const box = document.getElementById("subscriptionCountdown");
@@ -891,10 +896,9 @@ function initSubscriptionCountdown(user) {
     ⏳ ${user.premiumPlan.toUpperCase()} plan expires in:
     <span id="countdownText"></span>
   `;
-
-  const text = document.getElementById("countdownText");
   box.style.display = "block";
 
+  const text = document.getElementById("countdownText");
   const expireTime = new Date(user.premiumExpire).getTime();
 
   function formatTime(ms) {
@@ -921,59 +925,71 @@ function initSubscriptionCountdown(user) {
     }
   }
 
+  if (subscriptionCountdownTimer) {
+    clearInterval(subscriptionCountdownTimer);
+  }
+
   tick();
-  setInterval(tick, 1000);
-}
+  subscriptionCountdownTimer = setInterval(tick, 1000);
+};
 </script>
-
 <script>
-function startSubscriptionWatcher(subscription) {
-  if (!subscription || !subscription.expire_at) return;
+/* ================= SUBSCRIPTION WATCHER ================= */
 
-  const expireTime = new Date(subscription.expire_at).getTime();
+let subscriptionWatcherTimer = null;
 
-  setInterval(() => {
+window.startSubscriptionWatcher = function () {
+  const user = window.activeUser;
+  if (!user || !user.premiumExpire) return;
+
+  const expireTime = new Date(user.premiumExpire).getTime();
+
+  if (subscriptionWatcherTimer) {
+    clearInterval(subscriptionWatcherTimer);
+  }
+
+  subscriptionWatcherTimer = setInterval(() => {
     if (Date.now() > expireTime) {
-      console.warn("🚨 Subscription expired (validated)");
+      console.warn("🚨 Subscription expired");
       handleSubscriptionExpired();
     }
-  }, 10000); // cukup 10 detik
-}
+  }, 10000);
+};
 
-function handleSubscriptionExpired() {
+window.handleSubscriptionExpired = function () {
   alert("⏱ Subscription expired. Please renew to continue.");
 
   localStorage.removeItem("activeUser");
   localStorage.removeItem("isLoggedIn");
 
+  window.activeUser = null;
   location.href = "plans.html";
-}
+};
 </script>
-
 <script>
 /* ================= RESTO ID CORE ================= */
 
-function hashEmail(email) {
+window.hashEmail = function (email) {
   let hash = 0;
   for (let i = 0; i < email.length; i++) {
     hash = (hash << 5) - hash + email.charCodeAt(i);
     hash |= 0;
   }
   return Math.abs(hash);
-}
+};
 
-function generateRestoIdFromEmail(email) {
+window.generateRestoIdFromEmail = function (email) {
   if (!email) throw new Error("Email owner wajib ada");
   return "RESTO_" + hashEmail(email.toLowerCase());
-}
+};
 
-function ensureRestoId() {
+window.ensureRestoId = function () {
   let restoId = localStorage.getItem("restoId");
   if (restoId) return restoId;
 
-  const email = window.currentUser?.email;
+  const email = window.activeUser?.email;
   if (!email) {
-    console.warn("⛔ Email owner belum siap, restoId belum bisa dibuat");
+    console.warn("⛔ activeUser belum siap, restoId belum bisa dibuat");
     return null;
   }
 
@@ -981,9 +997,8 @@ function ensureRestoId() {
   localStorage.setItem("restoId", restoId);
   console.log("✅ restoId generated:", restoId);
   return restoId;
-}
+};
 </script>
-
 <script>
 
   /* ============================================================
@@ -1782,7 +1797,7 @@ function tambahNomorWa(value = "") {
   container.appendChild(wrapper);
 }
 
-  let sudahLoadData = false;
+let sudahLoadData = false;
 
 async function loadData() {
   try {
@@ -1795,23 +1810,23 @@ async function loadData() {
     const restoId = window.activeUser.restoID;
     showLoader?.();
 
-    // ================= RESET FLAG =================
-    if (window.__lastLoadedResto !== restoId) {
-      sudahLoadData = false;
+    // ================= GUARD =================
+    if (window.__lastLoadedResto === restoId && sudahLoadData) {
+      console.log("⏭️ loadData skipped (already loaded)");
+      return;
     }
     window.__lastLoadedResto = restoId;
     sudahLoadData = true;
 
     /* =================================================
-       1️⃣ LOAD FULL RESTO PAYLOAD (menuData store)
+       1️⃣ LOAD RESTO PROFILE (restos)
     ================================================= */
-    const restoData = await window.MENUVA_DB.get("menuData", restoId);
+    const restoData = await MENUVA_DB.get("restos", restoId);
     if (!restoData) {
-      console.warn("⚠️ Tidak ada restoData di menuData store");
+      console.warn("⚠️ resto profile not found:", restoId);
       return;
     }
 
-    // ================= RESTO PROFILE =================
     const safeSet = (id, val) => {
       const el = document.getElementById(id);
       if (el) el.value = val || "";
@@ -1830,103 +1845,59 @@ async function loadData() {
     const waContainer = document.getElementById("nomorWaContainer");
     if (waContainer) {
       waContainer.innerHTML = "";
-      const waList = Array.isArray(restoData.nomorWaAdmin) ? restoData.nomorWaAdmin : [];
-      waList.forEach(num => {
-        try { tambahNomorWa?.(num); }
-        catch (e) { console.warn("⚠️ render WA gagal:", e); }
+      (Array.isArray(restoData.nomorWaAdmin) ? restoData.nomorWaAdmin : [])
+        .forEach(num => tambahNomorWa?.(num));
+    }
+
+    /* =================================================
+       2️⃣ LOAD MENU + FLIPBOOK IMAGE (menuData + flipbookData)
+    ================================================= */
+    await loadMenuAndFlipbook();
+
+    /* =================================================
+       3️⃣ LOAD ROOM / MEETING (flipbookData)
+    ================================================= */
+    const flipbookRows = await MENUVA_DB.getAll("flipbookData");
+    const rooms = flipbookRows.filter(
+      r => r.restoId === restoId && (r.type === "room" || r.type === "meeting")
+    );
+
+    ["roomHotelContainer","meetingRoomContainer","packageContainer"]
+      .forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = "";
       });
+
+    if (rooms.length) {
+      restoreRoomFromData?.(rooms);
     }
 
-    // ================= MENU =================
-    if (Array.isArray(restoData.menu)) {
-      ["menuFoodContainer","menuSnackContainer","menuDrinkContainer","menuSpecialContainer"]
-        .forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.innerHTML = "";
-        });
+    /* =================================================
+       4️⃣ LOAD PROMO & VOUCHER (promoData)
+    ================================================= */
+    const promoRows = await MENUVA_DB.getAll("promoData");
+    const promoByResto = promoRows.filter(p => p.restoId === restoId);
 
-      restoData.menu.forEach(m => {
-        try {
-          tambahMenu?.(
-            m.kategori || "food",
-            m.nama || "",
-            m.harga || "",
-            m.image || ""
-          );
-        } catch (e) {
-          console.warn("⚠️ tambahMenu gagal:", m, e);
-        }
-      });
-    }
+    // ---------- VOUCHER ----------
+    const vouchers = promoByResto.filter(p => p.type === "voucher");
+    window.menuVoucher = vouchers;
 
-    // ================= ROOM / MEETING / PACKAGE =================
-    if (Array.isArray(restoData.rooms)) {
-      ["roomHotelContainer","meetingRoomContainer","packageContainer"]
-        .forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.innerHTML = "";
-        });
-
-      try {
-        restoreRoomFromData?.(restoData.rooms);
-      } catch (e) {
-        console.warn("⚠️ restoreRoomFromData gagal:", e);
-      }
-    }
-
-    // ================= FLIPBOOK IMAGES =================
-    window.flipbookRuanganImages = Array.isArray(restoData.flipbookRuanganImages)
-      ? restoData.flipbookRuanganImages
-      : [];
-    window.flipbookMenuImages = Array.isArray(restoData.flipbookMenuImages)
-      ? restoData.flipbookMenuImages
-      : [];
-
-    if (typeof renderImagePreview === "function") {
-      setTimeout(() => {
-        window.flipbookRuanganImages.forEach(src => renderImagePreview("ruangan", src));
-        window.flipbookMenuImages.forEach(src => renderImagePreview("menu", src));
-      }, 50);
-    }
-
-    // ================= VOUCHER =================
-    let vouchers = Array.isArray(restoData.menuVoucher) ? restoData.menuVoucher : [];
-
-    // fallback: load voucher dari promoData jika menuVoucher kosong
-    if (vouchers.length === 0) {
-      try {
-        const allPromo = await window.MENUVA_DB.getAll("promoData");
-        vouchers = allPromo.filter(p => p.restoId === restoId && p.type === "voucher");
-        window.menuVoucher = vouchers;
-      } catch (e) {
-        console.warn("⚠️ load vouchers dari promoData gagal:", e);
-      }
-    }
-
-    if (vouchers.length) {
-      if (typeof renderVoucher === "function") {
-        renderVoucher(vouchers);
-      }
-      const voucherContainer = document.getElementById("voucherContainer");
-      if (voucherContainer) {
-        voucherContainer.style.display = "block";
-      }
+    if (vouchers.length && typeof renderVoucher === "function") {
+      renderVoucher(vouchers);
+      document.getElementById("voucherContainer")?.style.display = "block";
     } else {
       const box = document.getElementById("voucherPreview");
       if (box) box.innerHTML = "<em>Belum ada voucher aktif</em>";
     }
 
-    // ================= PROMO =================
-    if (Array.isArray(restoData.menuPromo)) {
-      const promoContainer = document.getElementById("promoContainer");
-      if (promoContainer) {
-        promoContainer.innerHTML = "";
-        window.menuPromo = [];
-        restoData.menuPromo.forEach(promo => {
-          try { tambahPromo?.(promo); }
-          catch (e) { console.warn("⚠️ tambahPromo gagal:", promo, e); }
-        });
-      }
+    // ---------- PROMO ----------
+    const promos = promoByResto.filter(p => p.type !== "voucher");
+    const promoContainer = document.getElementById("promoContainer");
+
+    if (promoContainer) {
+      promoContainer.innerHTML = "";
+      window.menuPromo = [];
+      promos.forEach(p => tambahPromo?.(p));
     }
 
     console.log("✅ loadData SUCCESS → resto:", restoId);
@@ -1938,6 +1909,7 @@ async function loadData() {
     hideLoader?.();
   }
 }
+
 
   async function loadMenuAndFlipbook() {
   try {
@@ -2008,32 +1980,33 @@ menuByResto.forEach(m => {
 
 // ====================== RESET / BACKUP / RESTORE ======================
 async function resetData() {
-  if (!confirm("Yakin ingin menghapus SEMUA DATA RESTO?\n(Akun & langganan TIDAK akan terhapus)")) return;
+  if (!confirm("Yakin ingin menghapus SEMUA DATA RESTO?\n(Data akun & langganan aman)")) return;
 
   await clearRestoDataOnly();
   location.reload();
 }
 
 async function backupAdminToJSON() {
-  const payload = {
-    resto: {
-      namaRestoran: getVal("namaRestoran"),
-      restoAddress: getVal("restoAddress"),
-      restoPhone: getVal("restoPhone"),
-      logo: window.__LOGO_BASE64__ || null
-    },
-    menus: window.menuList || [],
-    promos: window.promoList || [],
-    flipbooks: window.flipbookList || [],
-    orders: window.ordersList || []
-  };
+  if (!window.activeUser?.restoID) {
+    alert("❌ Tidak ada resto aktif");
+    return;
+  }
+
+  const restoId = window.activeUser.restoID;
 
   const backup = {
     app: "Orderine",
     type: "ADMIN_BACKUP",
-    version: 1,
+    version: 2,
     exportedAt: Date.now(),
-    payload
+    restoId,
+
+    data: {
+      restos: await MENUVA_DB.get("restos", restoId),
+      menuData: (await MENUVA_DB.getAll("menuData")).filter(d => d.restoId === restoId),
+      flipbookData: (await MENUVA_DB.getAll("flipbookData")).filter(d => d.restoId === restoId),
+      promoData: (await MENUVA_DB.getAll("promoData")).filter(d => d.restoId === restoId)
+    }
   };
 
   const blob = new Blob(
@@ -2043,8 +2016,10 @@ async function backupAdminToJSON() {
 
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `orderine-backup-${Date.now()}.json`;
+  a.download = `orderine-backup-${restoId}-${Date.now()}.json`;
   a.click();
+
+  console.log("📦 Backup DB success:", restoId);
 }
 
   async function restoreDataFromFile(event) {
@@ -2054,49 +2029,56 @@ async function backupAdminToJSON() {
   try {
     const json = JSON.parse(await file.text());
 
-    if (
-      json.app !== "Orderine" ||
-      json.type !== "ADMIN_BACKUP"
-    ) {
+    if (json.app !== "Orderine" || json.type !== "ADMIN_BACKUP") {
       alert("❌ File bukan backup Orderine");
       return;
     }
 
-    const p = json.payload;
-
-    /* =====================
-       RESTORE FORM
-    ===================== */
-    setVal("namaRestoran", p.resto?.namaRestoran || "");
-    setVal("restoAddress", p.resto?.restoAddress || "");
-    setVal("restoPhone", p.resto?.restoPhone || "");
-
-    if (p.resto?.logo) {
-      window.__LOGO_BASE64__ = p.resto.logo;
-      document.getElementById("previewLogo").src = p.resto.logo;
+    if (!window.activeUser?.restoID) {
+      alert("❌ Tidak ada resto aktif");
+      return;
     }
 
-    /* =====================
-       RESTORE MEMORY STATE
-    ===================== */
-    window.menuList = p.menus || [];
-    window.promoList = p.promos || [];
-    window.flipbookList = p.flipbooks || [];
-    window.ordersList = p.orders || [];
+    const restoId = window.activeUser.restoID;
 
-    /* =====================
-       RENDER ULANG
-    ===================== */
-    renderMenuUI?.();
-    renderPromoUI?.();
-    renderFlipbookUI?.();
-    renderOrdersUI?.();
+    showLoader("Restoring data...");
 
-    alert("✅ Data berhasil direstore & ditampilkan");
+    // 1️⃣ clear data lama
+    await clearRestoDataOnly();
+
+    // 2️⃣ restore restos
+    if (json.data?.restos) {
+      await MENUVA_DB.add("restos", {
+        ...json.data.restos,
+        id: restoId
+      });
+    }
+
+    // 3️⃣ restore menu
+    for (const m of json.data?.menuData || []) {
+      await MENUVA_DB.add("menuData", { ...m, restoId });
+    }
+
+    // 4️⃣ restore flipbook
+    for (const f of json.data?.flipbookData || []) {
+      await MENUVA_DB.add("flipbookData", { ...f, restoId });
+    }
+
+    // 5️⃣ restore promo
+    for (const p of json.data?.promoData || []) {
+      await MENUVA_DB.add("promoData", { ...p, restoId });
+    }
+
+    console.log("♻️ Restore DB SUCCESS:", restoId);
+
+    alert("✅ Data berhasil direstore");
+    location.reload(); // ⬅️ BIAR loadData() JALAN NORMAL
 
   } catch (err) {
-    console.error("Restore failed:", err);
-    alert("❌ File backup rusak");
+    console.error("❌ Restore failed:", err);
+    alert("❌ File backup rusak / tidak valid");
+  } finally {
+    hideLoader();
   }
 }
 
@@ -2250,12 +2232,6 @@ window.addEventListener("error", e => {
 </script>
 <script>
   
-function startRealtimeOrderChecker() {
-  setInterval(async () => {
-    cekOrderBaru();
-  }, 5000);
-}
-
   // ================= OWNER UI SAFE PATCH =================
 if (typeof initOwnerUI !== "function") {
   function initOwnerUI() {
@@ -2267,22 +2243,22 @@ if (typeof initOwnerUI !== "function") {
 function initAdmin() {
   console.log("🚀 initAdmin ROOT");
 
-  // 1. safety check
   if (!window.activeUser) {
     console.warn("⚠️ activeUser not found, admin limited");
   }
 
-  // 2. init UI dasar
   initAdminUI();
-
-  // 3. bind event tombol / form
   bindAdminEvents();
-
-  // 4. load semua data admin
   loadAdminData();
+
+  // 🔥 PATCH 6 SYNC
+  initAllToggles();
+  startRealtimeOrderChecker();
+  initOwnerUI();
 
   console.log("✅ initAdmin FINISHED");
 }
+
 
   function initAdminUI() {
   console.log("🎨 initAdminUI");
@@ -2433,108 +2409,62 @@ async function initVoucherToggle() {
 }
 
 /* ===================== VOUCHER CORE (FINAL & SYNC) ===================== */
-function loadVouchers() {
-  console.groupCollapsed("📥 Load Vouchers");
+async function loadVouchers() {
+  console.groupCollapsed("📥 Load Vouchers (DB)");
 
-  // ================= SOURCE OF TRUTH =================
-  let list = Array.isArray(window.menuVoucher)
-    ? [...window.menuVoucher]
-    : [];
+  const restoId = window.activeUser?.restoID;
+  if (!restoId) return [];
+
+  const list = (await MENUVA_DB.getAll("voucherData"))
+    .filter(v => v.restoId === restoId);
 
   const today = new Date();
+  const active = list.filter(v => new Date(v.expiry) >= today);
 
-  // ================= FILTER EXPIRED =================
-  const active = list.filter(v => {
-    const exp = new Date(v.expiry);
-    return isFinite(exp) && exp >= today;
-  });
-
-  // ================= AUTO CLEANUP (IN-MEMORY) =================
-  if (active.length !== list.length) {
-    console.log("🧹 Voucher expired dibersihkan:", list.length - active.length);
-    window.menuVoucher = active;
-  }
-
-  // ================= RENDER =================
-  if (typeof renderVoucher === "function") {
-    renderVoucher(active);
-  } else {
-    console.warn("⚠️ renderVoucher tidak tersedia");
-  }
+  renderVoucher(active);
 
   console.groupEnd();
   return active;
 }
 
-
 /* ===================== SAVE VOUCHER (FINAL - SYNC WITH simpanData) ===================== */
-window.saveVoucher = function () {
+window.saveVoucher = async function () {
   try {
-    console.log("💾 saveVoucher clicked");
-
-    const codeEl = document.getElementById("voucherCode");
-    const discEl = document.getElementById("voucherDiscount");
-    const expEl  = document.getElementById("voucherExpiry");
-
-    if (!codeEl || !discEl || !expEl) {
-      alert("❌ Form voucher tidak lengkap");
-      return;
-    }
-
-    const code     = codeEl.value.trim().toUpperCase();
-    const discount = parseFloat(discEl.value);
-    const expiry   = expEl.value;
+    const code = voucherCode.value.trim().toUpperCase();
+    const discount = parseFloat(voucherDiscount.value);
+    const expiry = voucherExpiry.value;
 
     if (!code || isNaN(discount) || !expiry) {
-      alert("⚠️ Lengkapi data voucher");
+      alert("⚠️ Data voucher tidak valid");
       return;
     }
 
-    const expiryDate = new Date(expiry);
-    if (!isFinite(expiryDate) || expiryDate < new Date()) {
-      alert("⚠️ Tanggal kadaluarsa tidak valid");
-      return;
-    }
+    const restoId = window.activeUser?.restoID;
+    if (!restoId) return;
 
-    // ==================== SOURCE OF TRUTH ====================
-    window.menuVoucher = Array.isArray(window.menuVoucher)
-      ? window.menuVoucher
-      : [];
+    await MENUVA_DB.add("voucherData", {
+      id: crypto.randomUUID(),
+      restoId,
+      code,
+      discount,
+      expiry,
+      createdAt: Date.now()
+    });
 
-    const now = new Date().toISOString();
-    const existing = window.menuVoucher.find(v => v.code === code);
+    await loadVouchers();
 
-    if (existing) {
-      existing.discount  = discount;
-      existing.expiry    = expiry;
-      existing.updatedAt = now;
-    } else {
-      window.menuVoucher.push({
-        id: crypto.randomUUID(),
-        code,
-        discount,
-        expiry,
-        createdAt: now
-      });
-    }
+    voucherCode.value = "";
+    voucherDiscount.value = "";
+    voucherExpiry.value = "";
 
-    // ==================== RENDER ONLY ====================
-    if (typeof renderVoucher === "function") {
-      renderVoucher(window.menuVoucher);
-    }
-
-    // ==================== RESET FORM ====================
-    codeEl.value = "";
-    discEl.value = "";
-    expEl.value  = "";
-
-    alert("✅ Voucher disimpan (klik SAVE ALL untuk permanen)");
+    alert("✅ Voucher disimpan");
 
   } catch (err) {
-    console.error("❌ saveVoucher fatal:", err);
-    alert("❌ Gagal menyimpan voucher");
+    console.error("❌ saveVoucher error:", err);
+    alert("❌ Gagal simpan voucher");
   }
 };
+
 
   /* ===================== VOUCHER UI ===================== */
 function renderVoucher(vouchers = []) {
@@ -2798,42 +2728,4 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
