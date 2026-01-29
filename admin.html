@@ -2263,6 +2263,40 @@ if (typeof initOwnerUI !== "function") {
   }
 }
 
+  // ==================== ADMIN ROOT INIT ====================
+function initAdmin() {
+  console.log("🚀 initAdmin ROOT");
+
+  // 1. safety check
+  if (!window.activeUser) {
+    console.warn("⚠️ activeUser not found, admin limited");
+  }
+
+  // 2. init UI dasar
+  initAdminUI();
+
+  // 3. bind event tombol / form
+  bindAdminEvents();
+
+  // 4. load semua data admin
+  loadAdminData();
+
+  console.log("✅ initAdmin FINISHED");
+}
+
+  function initAdminUI() {
+  console.log("🎨 initAdminUI");
+}
+
+function bindAdminEvents() {
+  console.log("🖱️ bindAdminEvents");
+}
+
+function loadAdminData() {
+  console.log("📦 loadAdminData");
+}
+
+
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     console.log("🚀 Admin Init (CORE)");
@@ -2764,6 +2798,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
