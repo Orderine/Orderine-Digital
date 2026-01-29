@@ -2263,101 +2263,46 @@ if (typeof initOwnerUI !== "function") {
   }
 }
 
-/* ===================== ADMIN INIT (UI MODE) ===================== */
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 Admin Init (UI MODE)");
+  console.log("🚀 Init mulai...");
   showLoader();
 
+  const timeout = setTimeout(() => {
+    console.warn("⚠ Init lama → hide loader paksa");
+    hideLoader();
+  }, 8000);
+
   try {
-    // ================= 1. WAIT AUTH =================
-    let wait = 0;
-    while (!window.activeUser && wait < 20) {
-      await new Promise(r => setTimeout(r, 100));
-      wait++;
-    }
+    // --- INIT IndexedDB ---
+    await initDB();
+    console.log("✅ IndexedDB siap");
 
-    if (!window.activeUser) {
-      throw new Error("activeUser not ready");
-    }
+    // --- Ambil data dari DB hybrid ---
+    const data = await safeLoadDataFromDB();
+    console.log("📦 Hybrid data (before UI):", data);
 
-    // ================= 2. SAFE GLOBAL STATE =================
-    window.menuList = window.menuList || [];
-    window.promoList = window.promoList || [];
-    window.flipbookList = window.flipbookList || [];
-    window.ordersList = window.ordersList || [];
+    // --- Render ke UI ---
+    await safeLoadData(data);
 
-    // ================= 3. RENDER EMPTY UI =================
-    renderPromoUI?.();
+    // --- INIT toggle UI ---
+    await initAllToggles();
 
-    // ================= AUDIO SYSTEM =================
-    if (!window.notifAudio) {
-      window.notifAudio = new Audio("./beep.mp3");
-      window.notifAudio.preload = "auto";
-    }
-
-    if (!window.clickAudio) {
-      window.clickAudio = new Audio("./click.mp3");
-      window.clickAudio.preload = "auto";
-    }
-
-    window.audioUnlocked = false;
-    document.body.addEventListener(
-      "click",
-      () => {
-        if (window.audioUnlocked) return;
-        window.notifAudio.play().then(() => {
-          window.notifAudio.pause();
-          window.notifAudio.currentTime = 0;
-          window.audioUnlocked = true;
-          console.log("🔊 Audio unlocked");
-        }).catch(() => {});
-      },
-      { once: true }
-    );
-
-    window.playNotif = function () {
-      if (!window.audioUnlocked) return;
-      window.notifAudio.currentTime = 0;
-      window.notifAudio.play().catch(() => {});
-    };
-
-    // ================= OWNER UI =================
-    initOwnerUI?.();
-
-    // ================= REALTIME =================
-    startRealtimeOrderChecker?.();
-
-    // ================= TOGGLES =================
-    await initAllToggles?.();
-
-    // ================= EVENTS =================
-    const btnCustomer = document.getElementById("btnOpenCustomer");
-    if (btnCustomer && !btnCustomer.dataset.bound) {
-      btnCustomer.onclick = openCustomerPage;
-      btnCustomer.dataset.bound = "1";
-    }
-
-    // ================= FIXED BAR =================
+    // --- Fix padding bar bawah ---
     const fixbar = document.querySelector(".fixed-bar");
     if (fixbar) {
       document.body.style.paddingBottom = fixbar.offsetHeight + "px";
     }
 
-    console.log("✅ Admin siap digunakan (UI MODE)");
+    console.log("✅ Admin siap (Hybrid Ready, Voucher Multi Device OK)");
 
   } catch (err) {
-    console.error("❌ Admin Init fatal:", err);
-    alert("❌ Failed loading admin panel.");
+    console.error("❌ Error saat init:", err);
+    alert("Terjadi error saat init. Silakan refresh halaman.");
   } finally {
+    clearTimeout(timeout);
     hideLoader();
   }
 });
-
-
-  async function loadCoreAndRender() {
-  console.log("⚠️ CORE LOAD DISABLED (UI MODE)");
-}
-
 
 /* ===================== TOGGLE MASTER ===================== */
 async function initAllToggles() {
@@ -2842,6 +2787,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
