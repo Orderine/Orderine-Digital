@@ -2047,7 +2047,7 @@ async function backupAdminToJSON() {
   a.click();
 }
 
-  async function restoreAdminFromFile(event) {
+  async function restoreDataFromFile(event) {
   const file = event.target.files[0];
   if (!file) return;
 
@@ -2263,9 +2263,9 @@ if (typeof initOwnerUI !== "function") {
   }
 }
 
-/* ===================== ADMIN INIT (CORE AWARE) ===================== */
+/* ===================== ADMIN INIT (UI MODE) ===================== */
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 Admin Init (CORE)");
+  console.log("🚀 Admin Init (UI MODE)");
   showLoader();
 
   try {
@@ -2280,138 +2280,85 @@ document.addEventListener("DOMContentLoaded", async () => {
       throw new Error("activeUser not ready");
     }
 
-    // ================= 2. WAIT DB CORE =================
-    let dbWait = 0;
-    while (!window.MENUVA_DB && dbWait < 20) {
-      await new Promise(r => setTimeout(r, 100));
-      dbWait++;
-    }
+    // ================= 2. SAFE GLOBAL STATE =================
+    window.menuList = window.menuList || [];
+    window.promoList = window.promoList || [];
+    window.flipbookList = window.flipbookList || [];
+    window.ordersList = window.ordersList || [];
 
-    if (!window.MENUVA_DB) {
-      throw new Error("MENUVA_DB not ready (db-core.js missing)");
-    }
-
-    console.log("✅ DB CORE READY");
-
-    // ================= 3. SAFE GLOBAL INIT =================
-    if (!Array.isArray(window.menuPromo)) {
-      window.menuPromo = [];
-    }
-
-    // ================= 4. LOAD & RENDER CORE =================
-    await loadCoreAndRender(); // 🔥 WAJIB sebelum cek order
-    
-
-    // ================= LOAD SAVED RESTO DATA =================
-const restoId = window.activeUser.restoID;
-const savedData = await window.MENUVA_DB.get("menuData", restoId);
-
-if (savedData) {
-  console.log("📦 Loaded resto data from DB");
-  await loadData(savedData);
-} else {
-  console.warn("⚠️ No saved resto data found");
-}
-
-
-    // ================= AUDIO SYSTEM (FINAL CLEAN) =================
-if (!window.notifAudio) {
-  window.notifAudio = new Audio("./beep.mp3");
-  window.notifAudio.preload = "auto";
-}
-
-if (!window.clickAudio) {
-  window.clickAudio = new Audio("./click.mp3");
-  window.clickAudio.preload = "auto";
-}
-
-window.audioUnlocked = false;
-
-document.body.addEventListener(
-  "click",
-  () => {
-    if (window.audioUnlocked) return;
-    if (!window.notifAudio) return;
-
-    window.notifAudio
-      .play()
-      .then(() => {
-        window.notifAudio.pause();
-        window.notifAudio.currentTime = 0;
-        window.audioUnlocked = true;
-        console.log("🔊 Audio unlocked");
-      })
-      .catch(() => {});
-  },
-  { once: true }
-);
-    window.playNotif = function () {
-  if (!window.audioUnlocked || !window.notifAudio) return;
-  window.notifAudio.currentTime = 0;
-  window.notifAudio.play().catch(() => {});
-};
-
-    // ================= 5. OWNER UI =================
-    initOwnerUI?.();
-
-    // ================= 6. REALTIME ORDER CHECKER =================
-    startRealtimeOrderChecker(); // ❗ hanya dipanggil di sini
-
-    // ================= 7. UI TOGGLES =================
-    await initAllToggles?.();
-
-    // ================= 8. PROMO UI =================
+    // ================= 3. RENDER EMPTY UI =================
+    renderAdminUI?.();
     renderPromoUI?.();
 
-    // ================= 9. EVENT BINDING =================
+    // ================= AUDIO SYSTEM =================
+    if (!window.notifAudio) {
+      window.notifAudio = new Audio("./beep.mp3");
+      window.notifAudio.preload = "auto";
+    }
+
+    if (!window.clickAudio) {
+      window.clickAudio = new Audio("./click.mp3");
+      window.clickAudio.preload = "auto";
+    }
+
+    window.audioUnlocked = false;
+    document.body.addEventListener(
+      "click",
+      () => {
+        if (window.audioUnlocked) return;
+        window.notifAudio.play().then(() => {
+          window.notifAudio.pause();
+          window.notifAudio.currentTime = 0;
+          window.audioUnlocked = true;
+          console.log("🔊 Audio unlocked");
+        }).catch(() => {});
+      },
+      { once: true }
+    );
+
+    window.playNotif = function () {
+      if (!window.audioUnlocked) return;
+      window.notifAudio.currentTime = 0;
+      window.notifAudio.play().catch(() => {});
+    };
+
+    // ================= OWNER UI =================
+    initOwnerUI?.();
+
+    // ================= REALTIME =================
+    startRealtimeOrderChecker?.();
+
+    // ================= TOGGLES =================
+    await initAllToggles?.();
+
+    // ================= EVENTS =================
     const btnCustomer = document.getElementById("btnOpenCustomer");
     if (btnCustomer && !btnCustomer.dataset.bound) {
       btnCustomer.onclick = openCustomerPage;
       btnCustomer.dataset.bound = "1";
     }
 
-    // ================= 10. FIXED BAR =================
+    // ================= FIXED BAR =================
     const fixbar = document.querySelector(".fixed-bar");
     if (fixbar) {
       document.body.style.paddingBottom = fixbar.offsetHeight + "px";
     }
 
-    console.log("✅ Admin siap digunakan (CORE MODE)");
+    console.log("✅ Admin siap digunakan (UI MODE)");
 
   } catch (err) {
     console.error("❌ Admin Init fatal:", err);
-    alert("❌ Failed loading admin panel. Please re-login.");
+    alert("❌ Failed loading admin panel.");
   } finally {
     hideLoader();
   }
 });
 
-async function loadCoreAndRender() {
-  console.log("🔄 loadCoreAndRender()");
 
-  try {
-    const rows = await MENUVA_DB.getAll("menuData");
-
-    if (!rows || rows.length === 0) {
-      console.warn("⚠️ No saved resto data found");
-      return;
-    }
-
-    const restoData = rows[0]; // snapshot lama
-    console.log("✅ restoData loaded:", restoData);
-
-    if (typeof loadData === "function") {
-      await loadData(restoData);
-    }
-
-    if (typeof renderPromoUI === "function") {
-      renderPromoUI();
-    }
-
-  } catch (err) {
-    console.error("❌ loadCoreAndRender error:", err);
-  }
+  async function loadCoreAndRender() {
+  console.log("⚠️ CORE LOAD DISABLED (UI MODE)");
 }
+
 
 /* ===================== TOGGLE MASTER ===================== */
 async function initAllToggles() {
@@ -2896,6 +2843,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
