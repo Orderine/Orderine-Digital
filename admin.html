@@ -2390,37 +2390,29 @@ async function loadCoreAndRender() {
   console.log("🔄 loadCoreAndRender()");
 
   try {
-    // 🔑 ambil restoData SESUAI CORE
-    const restoData = await window.MENUVA_DB.get("menuData", "restoData");
+    // 🔍 cari restoData ala sistem lama
+    const all = await MENUVA_DB.getAll("menuData");
+    const restoData = all.find(d => d.id === "restoData");
 
-    // ❗ HANYA inject default kalau:
-    // - bukan restore
-    // - DAN restoData benar-benar tidak ada
-    if (!restoData && !window.__RESTORE_MODE__) {
+    if (!restoData) {
       console.info("ℹ️ restoData kosong, inject default");
-      await MENUVA_DB.put(
-        "menuData",
-        buatDataDefault(1),
-        "restoData"
-      );
+
+      await MENUVA_DB.add("menuData", {
+        ...buatDataDefault(1),
+        id: "restoData"
+      });
     }
 
-    // 🧪 debug aman
     console.log("🧪 restoData loaded:", restoData);
 
-    // ✅ render promo
     if (typeof renderPromoUI === "function") {
       renderPromoUI();
     }
-
-    // selesai restore → matikan flag
-    window.__RESTORE_MODE__ = false;
 
   } catch (err) {
     console.error("❌ loadCoreAndRender error:", err);
   }
 }
-
 
 /* ===================== TOGGLE MASTER ===================== */
 async function initAllToggles() {
@@ -2905,6 +2897,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
