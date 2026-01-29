@@ -1547,7 +1547,7 @@ window.flipbookRuanganImages = window.flipbookRuanganImages || [];
 window.flipbookMenuImages = window.flipbookMenuImages || [];
 window.menuVoucher = window.menuVoucher || [];
 
-// ====================== SIMPAN (ADMIN → MENUVA DATA) ======================
+// ====================== SIMPAN (ADMIN → RESTOS ONLY) ======================
 async function simpanData() {
   try {
     showLoader();
@@ -1563,135 +1563,94 @@ async function simpanData() {
     const restoId = window.activeUser.restoID;
 
     /* ==================== FORM DATA ==================== */
-    const namaRestoran  = getVal("namaRestoran");
-    const restoAddress  = getVal("restoAddress");
-    const restoPhone    = getVal("restoPhone");
-    const logo          = document.getElementById("previewLogo")?.src || "";
-    const nomorWaAdmin  = getNomorWaAdmin();
+    const namaRestoran = getVal("namaRestoran");
+    const restoAddress = getVal("restoAddress");
+    const restoPhone   = getVal("restoPhone");
+    const logo         = document.getElementById("previewLogo")?.src || "";
+    const nomorWaAdmin = getNomorWaAdmin?.() || "";
 
     if (!restoPhone) {
       alert("❌ Nomor telepon resto wajib diisi!");
       return;
     }
 
-    /* ==================== MENU ==================== */
-    const menuData = Array.isArray(ambilSemuaMenu?.()) ? ambilSemuaMenu() : [];
+    /* ==================== COLLECT ADMIN DATA ==================== */
+    const menu = Array.isArray(ambilSemuaMenu?.())
+      ? ambilSemuaMenu()
+      : [];
+
+    const rooms = typeof ambilSemuaRoom === "function"
+      ? ambilSemuaRoom()
+      : [];
+
+    const promos = typeof ambilPromo === "function"
+      ? ambilPromo()
+      : [];
+
+    const vouchers = Array.isArray(window.menuVoucher)
+      ? window.menuVoucher
+      : [];
+
+    const flipbookRuanganImages = Array.isArray(window.flipbookRuanganImages)
+      ? window.flipbookRuanganImages
+      : [];
+
+    const flipbookMenuImages = Array.isArray(window.flipbookMenuImages)
+      ? window.flipbookMenuImages
+      : [];
 
     /* ==================== VALIDASI ==================== */
-    if (highlightInvalidPromo()) {
-      alert("⚠️ Please complete the data promos.\nLengkapi dulu sebelum Save.");
+    if (highlightInvalidPromo?.()) {
+      alert("⚠️ Please complete the data promos.");
       return;
     }
 
-    if (highlightInvalidMenu()) {
-      alert("⚠️ Please complete the data menus.\nLengkapi dulu sebelum Save.");
+    if (highlightInvalidMenu?.()) {
+      alert("⚠️ Please complete the data menus.");
       return;
     }
 
-    /* ====================================================
-       1️⃣ SIMPAN / UPDATE RESTO PROFILE
-    ==================================================== */
-    await window.MENUVA_DB.add("restos", {
+    /* ==================== BUILD SINGLE RESTO OBJECT ==================== */
+    const restoPayload = {
       id: restoId,
       ownerId,
+
+      // profile
       namaRestoran,
       restoAddress,
       restoPhone,
       logo,
       nomorWaAdmin,
+
+      // 🔥 ALL ADMIN DATA HERE
+      menu,
+      rooms,
+      menuPromo: promos,
+      menuVoucher: vouchers,
+      flipbookRuanganImages,
+      flipbookMenuImages,
+
       updatedAt: Date.now()
-    });
+    };
 
-    /* ====================================================
-       2️⃣ SIMPAN MENU (menuData store)
-    ==================================================== */
-    for (const menu of menuData) {
-      await window.MENUVA_DB.add("menuData", {
-        ...menu,
-        restoId,
-        active: menu.active !== false
-      });
-    }
-
-    /* ====================================================
-       3️⃣ SIMPAN ROOM & MEETING ROOM (flipbookData)
-    ==================================================== */
-    const rooms = typeof ambilSemuaRoom === "function"
-      ? ambilSemuaRoom()
-      : [];
-
-    for (const room of rooms) {
-      await window.MENUVA_DB.add("flipbookData", {
-        ...room,
-        type: room.type || "room", // room | meeting
-        restoId
-      });
-    }
-
-    /* ====================================================
-       4️⃣ SIMPAN IMAGE FLIPBOOK (BACKWARD COMPAT)
-    ==================================================== */
-    const ruanganImages = window.flipbookRuanganImages || [];
-    const menuImages    = window.flipbookMenuImages || [];
-
-    for (const img of ruanganImages) {
-      await window.MENUVA_DB.add("flipbookData", {
-        ...img,
-        type: "room-image",
-        restoId
-      });
-    }
-
-    for (const img of menuImages) {
-      await window.MENUVA_DB.add("flipbookData", {
-        ...img,
-        type: "menu-image",
-        restoId
-      });
-    }
-
-    /* ====================================================
-       5️⃣ SIMPAN PACKAGE & VOUCHER (promoData)
-    ==================================================== */
-    const promos = typeof ambilPromo === "function"
-      ? ambilPromo()
-      : [];
-
-    for (const promo of promos) {
-      await window.MENUVA_DB.add("promoData", {
-        ...promo,
-        restoId,
-        active: promo.active !== false
-      });
-    }
-
-    // backward compat: voucher lama
-    if (Array.isArray(window.menuVoucher)) {
-      for (const voucher of window.menuVoucher) {
-        await window.MENUVA_DB.add("promoData", {
-          ...voucher,
-          type: "voucher",
-          restoId,
-          active: true
-        });
-      }
-    }
+    /* ==================== SAVE (UPSERT) ==================== */
+    await window.MENUVA_DB.add("restos", restoPayload);
 
     /* ==================== FINALIZE ==================== */
-    syncRestoIdHidden(restoId);
+    syncRestoIdHidden?.(restoId);
     prepareCustomerShare?.();
 
     console.log("💾 SIMPAN DATA SUCCESS → RESTO:", restoId);
     alert("✅ All Data Successfully Saved!");
 
-    showCustomerShareUI();
+    showCustomerShareUI?.();
     localStorage.setItem("customerShareReady", "1");
 
   } catch (err) {
     console.error("❌ simpanData fatal:", err);
     alert("❌ Failed to save data");
   } finally {
-    hideLoader();
+    hideLoader?.();
   }
 }
 
@@ -2730,6 +2689,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
