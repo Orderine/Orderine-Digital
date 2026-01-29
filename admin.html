@@ -1765,7 +1765,6 @@ async function loadData() {
   try {
     showLoader?.("Loading data...");
 
-    // 🔁 Tunggu activeUser siap
     if (!window.activeUser || !window.activeUser.restoID) {
       console.warn("⏳ activeUser belum siap, retry loadData...");
       __LOAD_DATA_RUNNING__ = false;
@@ -1776,100 +1775,69 @@ async function loadData() {
     const restoId = window.activeUser.restoID;
     console.log("📦 loadData start → resto:", restoId);
 
-    /* ================= RESTO PROFILE ================= */
+    // Ambil satu record resto
     const resto = await MENUVA_DB.get("restos", restoId);
-    if (resto) {
-      const safeSetVal = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.value = val ?? "";
-      };
-      safeSetVal("namaRestoran", resto.namaRestoran);
-      safeSetVal("restoAddress", resto.restoAddress);
-      safeSetVal("restoPhone", resto.restoPhone);
-
-      if (resto.logo) {
-        window.__LOGO_BASE64__ = resto.logo;
-        const img = document.getElementById("previewLogo");
-        if (img) img.src = resto.logo;
-      }
+    if (!resto) {
+      console.warn("⚠️ Resto not found in DB");
+      return;
     }
 
-    /* ================= MENU ================= */
-    const menuRows = await MENUVA_DB.getAll("menuData");
-    const menuByResto = menuRows.filter(m => m.restoId === restoId);
-    window.menuList = menuByResto;
+    // ---------------- RESTO PROFILE ----------------
+    const safeSetVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val ?? "";
+    };
 
-    // 🧹 CLEAR & RENDER MENU
-    if (typeof clearMenuUI === "function") {
-      try { clearMenuUI(); } catch (e) { console.warn("⚠️ clearMenuUI error:", e); }
+    safeSetVal("namaRestoran", resto.namaRestoran);
+    safeSetVal("restoAddress", resto.restoAddress);
+    safeSetVal("restoPhone", resto.restoPhone);
+    safeSetVal("nomorWaAdmin", resto.nomorWaAdmin);
+
+    if (resto.logo) {
+      window.__LOGO_BASE64__ = resto.logo;
+      const img = document.getElementById("previewLogo");
+      if (img) img.src = resto.logo;
     }
 
-    menuByResto.forEach(m => {
+    // ---------------- MENU ----------------
+    window.menuList = Array.isArray(resto.menu) ? resto.menu : [];
+    if (typeof clearMenuUI === "function") clearMenuUI();
+    window.menuList.forEach(m => {
       try { tambahMenu?.(m.kategori || "food", m.nama || "", m.harga || "", m.image || ""); }
-      catch (e) { console.warn("⚠️ tambahMenu gagal:", m, e); }
+      catch(e) { console.warn("⚠️ tambahMenu error", m, e); }
     });
-
     if (typeof renderMenuUI === "function") renderMenuUI();
 
-    /* ================= PROMO & VOUCHER ================= */
-    const promoRows = await MENUVA_DB.getAll("promoData");
-    const promoByResto = promoRows.filter(p => p.restoId === restoId);
+    // ---------------- PROMO & VOUCHER ----------------
+    window.menuPromo = Array.isArray(resto.menuPromo) ? resto.menuPromo : [];
+    window.menuVoucher = Array.isArray(resto.menuVoucher) ? resto.menuVoucher : [];
 
-    window.menuVoucher = promoByResto.filter(p => p.type === "voucher");
-    window.menuPromo   = promoByResto.filter(p => p.type !== "voucher");
+    renderPromoUI?.();
+    renderVoucher?.(window.menuVoucher);
 
-    if (typeof renderVoucher === "function") renderVoucher(window.menuVoucher);
-    if (typeof renderPromoUI === "function") renderPromoUI();
+    // ---------------- FLIPBOOK ----------------
+    window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages) ? resto.flipbookRuanganImages : [];
+    window.flipbookMenuImages = Array.isArray(resto.flipbookMenuImages) ? resto.flipbookMenuImages : [];
 
-    /* ================= FLIPBOOK ================= */
-    const flipbookRows = await MENUVA_DB.getAll("flipbookData");
-    const fbByResto = flipbookRows.filter(f => f.restoId === restoId);
-    window.flipbookList = fbByResto;
+    window.flipbookList = window.flipbookRuanganImages.concat(window.flipbookMenuImages);
+    window.flipbookRuanganImages.forEach(src => renderImagePreview?.("ruangan", src));
+    window.flipbookMenuImages.forEach(src => renderImagePreview?.("menu", src));
+    renderFlipbookUI?.();
 
-    window.flipbookRuanganImages = [];
-    window.flipbookMenuImages = [];
-
-    fbByResto.forEach(f => {
-      if (f.type === "room-image" && f.src) {
-        window.flipbookRuanganImages.push(f.src);
-        renderImagePreview?.("ruangan", f.src);
-      } else if (f.type === "menu-image" && f.src) {
-        window.flipbookMenuImages.push(f.src);
-        renderImagePreview?.("menu", f.src);
-      }
-    });
-
-    if (typeof renderFlipbookUI === "function") renderFlipbookUI();
-
-    /* ================= ROOM ================= */
-    const roomRows = await MENUVA_DB.getAll("roomData");
-    window.roomList = roomRows.filter(r => r.restoId === restoId);
-    if (typeof renderRoomUI === "function") renderRoomUI();
-
-    /* ================= MEETING ROOM ================= */
-    const meetingRows = await MENUVA_DB.getAll("meetingRoomData");
-    window.meetingRoomList = meetingRows.filter(m => m.restoId === restoId);
-    if (typeof renderMeetingRoomUI === "function") renderMeetingRoomUI();
-
-    /* ================= PACKAGE ================= */
-    const packageRows = await MENUVA_DB.getAll("packageData");
-    window.packageList = packageRows.filter(p => p.restoId === restoId);
-    if (typeof renderPackageUI === "function") renderPackageUI();
-
-    /* ================= WA ADMIN ================= */
-    const waRows = await MENUVA_DB.getAll("waAdminData");
-    window.waAdmin = waRows.filter(w => w.restoId === restoId);
-    if (typeof renderWaAdmin === "function") renderWaAdmin();
+    // ---------------- ROOMS ----------------
+    window.roomList = Array.isArray(resto.rooms) ? resto.rooms : [];
+    renderRoomUI?.();
 
     console.log("✅ loadData FINISHED");
 
-  } catch (err) {
+  } catch(err) {
     console.error("❌ loadData fatal:", err);
   } finally {
     hideLoader?.();
     __LOAD_DATA_RUNNING__ = false;
   }
 }
+
 
 // ====================== RESET / BACKUP / RESTORE ======================
 async function resetData() {
@@ -2625,6 +2593,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
