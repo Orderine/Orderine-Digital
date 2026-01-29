@@ -2014,21 +2014,8 @@ async function resetData() {
   location.reload();
 }
 
-  /* =====================================================
-   CORE BACKUP EXPORT (FINAL)
-===================================================== */
-/* =====================================================
-   SAFE CORE EXPORT — BREAK ALL REFERENCES
-===================================================== */
-async function exportDBToJSON() {
-  if (!window.MENUVA_DB) {
-    throw new Error("MENUVA_DB belum siap");
-  }
-
+async function backupAdminToJSON() {
   const db = window.MENUVA_DB;
-
-  // 🔥 force plain JSON (kill circular ref)
-  const toPlain = data => JSON.parse(JSON.stringify(data));
 
   const stores = [
     "users",
@@ -2044,261 +2031,72 @@ async function exportDBToJSON() {
     "voucherData"
   ];
 
-  const data = {};
+  const snapshot = {
+    meta: {
+      app: "Orderine Admin",
+      version: 1,
+      exportedAt: Date.now()
+    },
+    stores: {}
+  };
 
   for (const store of stores) {
     try {
-      const rows = await db.getAll(store);
-      data[store] = toPlain(rows);
-    } catch (e) {
-      console.warn(`⚠️ Skip store ${store}`, e);
-      data[store] = [];
+      snapshot.stores[store] = await db.getAll(store);
+    } catch {
+      snapshot.stores[store] = [];
     }
   }
 
-  return {
-    meta: {
-      app: "Orderine",
-      format: "CORE",
-      exportedAt: Date.now()
-    },
-    data
-  };
+  const blob = new Blob(
+    [JSON.stringify(snapshot, null, 2)],
+    { type: "application/json" }
+  );
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `orderine-backup-${Date.now()}.json`;
+  a.click();
+
+  console.log("✅ Backup snapshot selesai");
 }
 
-window.exportDBToJSON = exportDBToJSON;
-
-// 🔥 BACKUP CORE (SAFE, SINGLE RESTO SNAPSHOT)
-async function downloadBackupJSON() {
-  try {
-    showLoader?.();
-
-    if (!window.activeUser || !window.activeUser.restoID) {
-      alert("❌ Session tidak valid");
-      return;
-    }
-
-    const restoId = window.activeUser.restoID;
-
-    // 🔥 ambil 1 payload resto (seperti sistem lama)
-    const restoData = await MENUVA_DB.get("menuData", restoId);
-
-    if (!restoData) {
-      alert("⚠️ Tidak ada data resto untuk di-backup");
-      return;
-    }
-
-    // 🔥 pastikan plain object (anti reference)
-    const safeData = JSON.parse(JSON.stringify(restoData));
-
-    const filename = `orderine-backup-${restoId}-${Date.now()}.json`;
-
-    const blob = new Blob(
-      [JSON.stringify(safeData, null, 2)],
-      { type: "application/json" }
-    );
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    alert(`✅ Backup berhasil!\n${filename}`);
-
-  } catch (err) {
-    console.error("❌ Backup error:", err);
-    alert("❌ Backup gagal, cek console");
-  } finally {
-    hideLoader?.();
-  }
-}
-
-
-async function restoreDataFromFile(event) {
+  async function restoreAdminFromJSON(event) {
   const file = event.target.files[0];
   if (!file) return;
 
   try {
     const text = await file.text();
     const json = JSON.parse(text);
-    const format = detectBackupFormat(json);
 
-    if (format === "UNKNOWN") {
-      alert("❌ Format backup tidak dikenali");
+    if (!json.stores) {
+      alert("❌ File backup tidak valid");
       return;
     }
 
-    /* =====================
-       LEGACY → CORE
-    ===================== */
-    if (format === "LEGACY") {
-      console.log("♻️ Migrating legacy Menuva → CORE");
-      await migrateLegacyMenuva(json);
+    const db = window.MENUVA_DB;
+
+    // 1️⃣ clear semua store
+    for (const store in json.stores) {
+      await db.clear(store);
     }
 
-    /* =====================
-       CORE RESTORE
-    ===================== */
-    if (format === "CORE") {
-      console.log("♻️ Restoring CORE backup");
+    // 2️⃣ restore semua data
+    for (const store in json.stores) {
+      const rows = json.stores[store];
+      if (!Array.isArray(rows)) continue;
 
-      const restoId = window.activeUser.restoID;
-
-      /* =====================
-         1️⃣ RESTORE RESTO DATA (FIXED KEY)
-      ===================== */
-      const menuDataRows = json.data?.menuData;
-
-      if (Array.isArray(menuDataRows) && menuDataRows.length > 0) {
-        const restoPayload = {
-          ...buatDataDefault(restoId),
-          ...menuDataRows[0],
-          restoId
-        };
-
-        // 🔥 FIX: gunakan key semantic CORE
-        await MENUVA_DB.delete("menuData", "restoData");
-        await MENUVA_DB.put("menuData", restoPayload, "restoData");
-
-        console.log("✅ restoData restored (key: restoData)");
-
-        // 🧪 DEBUG (boleh hapus kalau sudah yakin)
-        console.log(
-          "🧪 verify restoData:",
-          await MENUVA_DB.get("menuData", "restoData")
-        );
-      } else {
-        console.warn("⚠️ menuData kosong di file backup");
-      }
-
-      /* =====================
-         2️⃣ RESTORE OTHER STORES
-      ===================== */
-      const otherStores = [
-        "flipbookData",
-        "promoData",
-        "ordersData"
-      ];
-
-      for (const store of otherStores) {
-        const rows = json.data?.[store];
-        if (!Array.isArray(rows)) continue;
-
-        // hapus data lama milik resto ini
-        const existing = await MENUVA_DB.getAll(store);
-        for (const item of existing) {
-          if (item.restoId === restoId) {
-            await MENUVA_DB.delete(store, item.id);
-          }
-        }
-
-        // restore data baru
-        for (const item of rows) {
-          await MENUVA_DB.add(store, {
-            ...item,
-            restoId
-          });
-        }
-
-        console.log(`✅ ${store} restored (${rows.length} items)`);
+      for (const item of rows) {
+        await db.add(store, item);
       }
     }
 
-   alert("✅ Restore / Migrasi selesai");
-
-// 🔐 tandai sedang restore
-window.__RESTORE_MODE__ = true;
-
-// 🔄 render ulang TANPA reload
-await loadCoreAndRender();
+    alert("✅ Restore selesai");
+    location.reload();
 
   } catch (err) {
     console.error("❌ Restore error:", err);
-    alert("❌ File backup rusak atau tidak valid");
-  }
-}
-
-  function detectBackupFormat(json) {
-  if (json.meta && json.data) return "CORE";
-  if (json.restoId || json.menuList) return "LEGACY";
-  return "UNKNOWN";
-}
-
- async function migrateLegacyMenuva(json) {
-  try {
-    console.log("🔁 Migrating legacy menuva data...");
-
-    const restoId = json.restoId || crypto.randomUUID();
-
-    /* =====================
-       RESTO
-    ===================== */
-    await window.MENUVA_DB.add("restos", {
-      id: restoId,
-      name: json.restoName || "Imported Menuva Resto",
-      source: "menuva-legacy",
-      importedAt: Date.now()
-    });
-
-    /* =====================
-       MENUS → menuData
-    ===================== */
-    if (Array.isArray(json.menuList)) {
-      for (const m of json.menuList) {
-        await window.MENUVA_DB.add("menuData", {
-          ...m,
-          restoId,
-          source: "menuva-legacy"
-        });
-      }
-    }
-
-    /* =====================
-       PROMOS → promoData
-    ===================== */
-    if (Array.isArray(json.promoList)) {
-      for (const p of json.promoList) {
-        await window.MENUVA_DB.add("promoData", {
-          ...p,
-          restoId,
-          source: "menuva-legacy"
-        });
-      }
-    }
-
-    /* =====================
-       FLIPBOOK → flipbookData
-    ===================== */
-    if (Array.isArray(json.flipbookRuanganImages)) {
-      for (const src of json.flipbookRuanganImages) {
-        await window.MENUVA_DB.add("flipbookData", {
-          restoId,
-          type: "ruangan",
-          src,
-          source: "menuva-legacy"
-        });
-      }
-    }
-
-    if (Array.isArray(json.flipbookMenuImages)) {
-      for (const src of json.flipbookMenuImages) {
-        await window.MENUVA_DB.add("flipbookData", {
-          restoId,
-          type: "menu",
-          src,
-          source: "menuva-legacy"
-        });
-      }
-    }
-
-    console.log("✅ Legacy migration DONE");
-
-  } catch (err) {
-    console.error("❌ migrateLegacyMenuva fatal:", err);
+    alert("❌ File backup rusak");
   }
 }
 
@@ -3107,6 +2905,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
