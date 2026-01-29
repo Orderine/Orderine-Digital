@@ -2208,8 +2208,13 @@ async function restoreDataFromFile(event) {
       }
     }
 
-    alert("✅ Restore / Migrasi selesai");
-    location.reload();
+   alert("✅ Restore / Migrasi selesai");
+
+// 🔐 tandai sedang restore
+window.__RESTORE_MODE__ = true;
+
+// 🔄 render ulang TANPA reload
+await loadCoreAndRender();
 
   } catch (err) {
     console.error("❌ Restore error:", err);
@@ -2587,23 +2592,37 @@ async function loadCoreAndRender() {
   console.log("🔄 loadCoreAndRender()");
 
   try {
-    // ✅ ambil menu dari store resmi
-    const menuData = await window.MENUVA_DB.getAll("menuData");
+    // 🔑 ambil restoData SESUAI CORE
+    const restoData = await window.MENUVA_DB.get("menuData", "restoData");
 
-    if (!menuData || menuData.length === 0) {
-      console.info("ℹ️ menuData kosong, inject default");
-      await loadData(buatDataDefault(1));
+    // ❗ HANYA inject default kalau:
+    // - bukan restore
+    // - DAN restoData benar-benar tidak ada
+    if (!restoData && !window.__RESTORE_MODE__) {
+      console.info("ℹ️ restoData kosong, inject default");
+      await MENUVA_DB.put(
+        "menuData",
+        buatDataDefault(1),
+        "restoData"
+      );
     }
 
-    // ✅ promo render aman
+    // 🧪 debug aman
+    console.log("🧪 restoData loaded:", restoData);
+
+    // ✅ render promo
     if (typeof renderPromoUI === "function") {
       renderPromoUI();
     }
+
+    // selesai restore → matikan flag
+    window.__RESTORE_MODE__ = false;
 
   } catch (err) {
     console.error("❌ loadCoreAndRender error:", err);
   }
 }
+
 
 /* ===================== TOGGLE MASTER ===================== */
 async function initAllToggles() {
@@ -3088,6 +3107,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
