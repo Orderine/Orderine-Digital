@@ -1776,19 +1776,25 @@ async function loadData() {
     const restoId = window.activeUser.restoID;
     console.log("📦 loadData start → resto:", restoId);
 
-    /* ================= RESTO PROFILE ================= */
-    const resto = await MENUVA_DB.get("restos", restoId);
-    if (resto) {
-      setVal?.("namaRestoran", resto.namaRestoran || "");
-      setVal?.("restoAddress", resto.restoAddress || "");
-      setVal?.("restoPhone", resto.restoPhone || "");
+   /* ================= RESTO PROFILE ================= */
+const resto = await MENUVA_DB.get("restos", restoId);
+if (resto) {
+  const safeSetVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val ?? "";
+  };
 
-      if (resto.logo) {
-        window.__LOGO_BASE64__ = resto.logo;
-        const img = document.getElementById("previewLogo");
-        if (img) img.src = resto.logo;
-      }
-    }
+  safeSetVal("namaRestoran", resto.namaRestoran);
+  safeSetVal("restoAddress", resto.restoAddress);
+  safeSetVal("restoPhone", resto.restoPhone);
+
+  if (resto.logo) {
+    window.__LOGO_BASE64__ = resto.logo;
+    const img = document.getElementById("previewLogo");
+    if (img) img.src = resto.logo;
+  }
+}
+
 
     /* ================= MENU ================= */
     const menuRows = await MENUVA_DB.getAll("menuData");
@@ -2642,6 +2648,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
