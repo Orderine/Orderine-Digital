@@ -1765,7 +1765,7 @@ async function loadData() {
   try {
     showLoader?.("Loading data...");
 
-    // 🔁 TUNGGU activeUser (JANGAN MATI)
+    // 🔁 Tunggu activeUser siap
     if (!window.activeUser || !window.activeUser.restoID) {
       console.warn("⏳ activeUser belum siap, retry loadData...");
       __LOAD_DATA_RUNNING__ = false;
@@ -1776,30 +1776,40 @@ async function loadData() {
     const restoId = window.activeUser.restoID;
     console.log("📦 loadData start → resto:", restoId);
 
-   /* ================= RESTO PROFILE ================= */
-const resto = await MENUVA_DB.get("restos", restoId);
-if (resto) {
-  const safeSetVal = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.value = val ?? "";
-  };
+    /* ================= RESTO PROFILE ================= */
+    const resto = await MENUVA_DB.get("restos", restoId);
+    if (resto) {
+      const safeSetVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val ?? "";
+      };
+      safeSetVal("namaRestoran", resto.namaRestoran);
+      safeSetVal("restoAddress", resto.restoAddress);
+      safeSetVal("restoPhone", resto.restoPhone);
 
-  safeSetVal("namaRestoran", resto.namaRestoran);
-  safeSetVal("restoAddress", resto.restoAddress);
-  safeSetVal("restoPhone", resto.restoPhone);
-
-  if (resto.logo) {
-    window.__LOGO_BASE64__ = resto.logo;
-    const img = document.getElementById("previewLogo");
-    if (img) img.src = resto.logo;
-  }
-}
-
+      if (resto.logo) {
+        window.__LOGO_BASE64__ = resto.logo;
+        const img = document.getElementById("previewLogo");
+        if (img) img.src = resto.logo;
+      }
+    }
 
     /* ================= MENU ================= */
     const menuRows = await MENUVA_DB.getAll("menuData");
-    window.menuList = menuRows.filter(m => m.restoId === restoId);
-    renderMenuUI?.();
+    const menuByResto = menuRows.filter(m => m.restoId === restoId);
+    window.menuList = menuByResto;
+
+    // 🧹 CLEAR & RENDER MENU
+    if (typeof clearMenuUI === "function") {
+      try { clearMenuUI(); } catch (e) { console.warn("⚠️ clearMenuUI error:", e); }
+    }
+
+    menuByResto.forEach(m => {
+      try { tambahMenu?.(m.kategori || "food", m.nama || "", m.harga || "", m.image || ""); }
+      catch (e) { console.warn("⚠️ tambahMenu gagal:", m, e); }
+    });
+
+    if (typeof renderMenuUI === "function") renderMenuUI();
 
     /* ================= PROMO & VOUCHER ================= */
     const promoRows = await MENUVA_DB.getAll("promoData");
@@ -1808,65 +1818,15 @@ if (resto) {
     window.menuVoucher = promoByResto.filter(p => p.type === "voucher");
     window.menuPromo   = promoByResto.filter(p => p.type !== "voucher");
 
-    renderVoucher?.(window.menuVoucher);
-    renderPromoUI?.();
+    if (typeof renderVoucher === "function") renderVoucher(window.menuVoucher);
+    if (typeof renderPromoUI === "function") renderPromoUI();
 
     /* ================= FLIPBOOK ================= */
     const flipbookRows = await MENUVA_DB.getAll("flipbookData");
-    window.flipbookList = flipbookRows.filter(f => f.restoId === restoId);
-    renderFlipbookUI?.();
-
-    console.log("✅ loadData FINISHED");
-
-  } catch (err) {
-    console.error("❌ loadData fatal:", err);
-  } finally {
-    hideLoader?.();
-    __LOAD_DATA_RUNNING__ = false;
-  }
-}
-
-
-  async function loadMenuAndFlipbook() {
-  try {
-    if (!window.activeUser?.restoID) return;
-    const restoId = window.activeUser.restoID;
-
-    console.log("🔄 loadMenuAndFlipbook (DB driven)");
-
-  // ================= MENU =================
-const menuRows = await MENUVA_DB.getAll("menuData");
-const menuByResto = menuRows.filter(m => m.restoId === restoId);
-
-// 🧹 CLEAR MENU UI (DEFENSIVE)
-if (typeof clearMenuUI === "function") {
-  try {
-    clearMenuUI();
-  } catch (e) {
-    console.warn("⚠️ clearMenuUI error, lanjut render menu:", e);
-  }
-} else {
-  console.warn("⚠️ clearMenuUI tidak ditemukan, skip clear");
-}
-
-// 🍽️ RENDER MENU
-menuByResto.forEach(m => {
-  try {
-    tambahMenu?.(
-      m.kategori || "food",
-      m.nama || "",
-      m.harga || "",
-      m.image || ""
-    );
-  } catch (e) {
-    console.warn("⚠️ tambahMenu gagal:", m, e);
-  }
-});
-
-    // ================= FLIPBOOK =================
-    const flipbookRows = await MENUVA_DB.getAll("flipbookData");
     const fbByResto = flipbookRows.filter(f => f.restoId === restoId);
+    window.flipbookList = fbByResto;
 
+    // pisah ruangan & menu images
     const ruangan = fbByResto.filter(f => f.type === "room-image");
     const menuImg = fbByResto.filter(f => f.type === "menu-image");
 
@@ -1887,10 +1847,15 @@ menuByResto.forEach(m => {
       }
     });
 
-    console.log("✅ Menu & Flipbook loaded (DB OK)");
+    if (typeof renderFlipbookUI === "function") renderFlipbookUI();
+
+    console.log("✅ loadData FINISHED");
 
   } catch (err) {
-    console.error("❌ loadMenuAndFlipbook fatal:", err);
+    console.error("❌ loadData fatal:", err);
+  } finally {
+    hideLoader?.();
+    __LOAD_DATA_RUNNING__ = false;
   }
 }
 
@@ -2648,6 +2613,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
