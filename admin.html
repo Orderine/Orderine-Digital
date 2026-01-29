@@ -1756,118 +1756,67 @@ function tambahNomorWa(value = "") {
   container.appendChild(wrapper);
 }
 
-let sudahLoadData = false;
+let __LOAD_DATA_RUNNING__ = false;
 
 async function loadData() {
+  if (__LOAD_DATA_RUNNING__) return;
+  __LOAD_DATA_RUNNING__ = true;
+
   try {
-    /* ================= AUTH SAFETY ================= */
+    showLoader?.("Loading data...");
+
+    // 🔁 TUNGGU activeUser (JANGAN MATI)
     if (!window.activeUser || !window.activeUser.restoID) {
-      console.warn("⚠️ loadData aborted: no activeUser");
+      console.warn("⏳ activeUser belum siap, retry loadData...");
+      __LOAD_DATA_RUNNING__ = false;
+      setTimeout(loadData, 100);
       return;
     }
 
     const restoId = window.activeUser.restoID;
-    showLoader?.();
+    console.log("📦 loadData start → resto:", restoId);
 
-    // ================= GUARD =================
-    if (window.__lastLoadedResto === restoId && sudahLoadData) {
-      console.log("⏭️ loadData skipped (already loaded)");
-      return;
-    }
-    window.__lastLoadedResto = restoId;
-    sudahLoadData = true;
+    /* ================= RESTO PROFILE ================= */
+    const resto = await MENUVA_DB.get("restos", restoId);
+    if (resto) {
+      setVal?.("namaRestoran", resto.namaRestoran || "");
+      setVal?.("restoAddress", resto.restoAddress || "");
+      setVal?.("restoPhone", resto.restoPhone || "");
 
-    /* =================================================
-       1️⃣ LOAD RESTO PROFILE (restos)
-    ================================================= */
-    const restoData = await MENUVA_DB.get("restos", restoId);
-    if (!restoData) {
-      console.warn("⚠️ resto profile not found:", restoId);
-      return;
+      if (resto.logo) {
+        window.__LOGO_BASE64__ = resto.logo;
+        const img = document.getElementById("previewLogo");
+        if (img) img.src = resto.logo;
+      }
     }
 
-    const safeSet = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.value = val || "";
-    };
+    /* ================= MENU ================= */
+    const menuRows = await MENUVA_DB.getAll("menuData");
+    window.menuList = menuRows.filter(m => m.restoId === restoId);
+    renderMenuUI?.();
 
-    safeSet("namaRestoran", restoData.namaRestoran);
-    safeSet("restoAddress", restoData.restoAddress);
-    safeSet("restoPhone", restoData.restoPhone);
-
-    if (restoData.logo) {
-      const img = document.getElementById("previewLogo");
-      if (img) img.src = restoData.logo;
-    }
-
-    // ================= NOMOR WA =================
-    const waContainer = document.getElementById("nomorWaContainer");
-    if (waContainer) {
-      waContainer.innerHTML = "";
-      (Array.isArray(restoData.nomorWaAdmin) ? restoData.nomorWaAdmin : [])
-        .forEach(num => tambahNomorWa?.(num));
-    }
-
-    /* =================================================
-       2️⃣ LOAD MENU + FLIPBOOK IMAGE (menuData + flipbookData)
-    ================================================= */
-    await loadMenuAndFlipbook();
-
-    /* =================================================
-       3️⃣ LOAD ROOM / MEETING (flipbookData)
-    ================================================= */
-    const flipbookRows = await MENUVA_DB.getAll("flipbookData");
-    const rooms = flipbookRows.filter(
-      r => r.restoId === restoId && (r.type === "room" || r.type === "meeting")
-    );
-
-    ["roomHotelContainer","meetingRoomContainer","packageContainer"]
-      .forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = "";
-      });
-
-    if (rooms.length) {
-      restoreRoomFromData?.(rooms);
-    }
-
-    /* =================================================
-       4️⃣ LOAD PROMO & VOUCHER (promoData)
-    ================================================= */
+    /* ================= PROMO & VOUCHER ================= */
     const promoRows = await MENUVA_DB.getAll("promoData");
     const promoByResto = promoRows.filter(p => p.restoId === restoId);
 
-    // ---------- VOUCHER ----------
-    const vouchers = promoByResto.filter(p => p.type === "voucher");
-    window.menuVoucher = vouchers;
+    window.menuVoucher = promoByResto.filter(p => p.type === "voucher");
+    window.menuPromo   = promoByResto.filter(p => p.type !== "voucher");
 
-    if (vouchers.length && typeof renderVoucher === "function") {
-      renderVoucher(vouchers);
-      const vc = document.getElementById("voucherContainer");
-      if (vc) vc.style.display = "block";
+    renderVoucher?.(window.menuVoucher);
+    renderPromoUI?.();
 
-    } else {
-      const box = document.getElementById("voucherPreview");
-      if (box) box.innerHTML = "<em>Belum ada voucher aktif</em>";
-    }
+    /* ================= FLIPBOOK ================= */
+    const flipbookRows = await MENUVA_DB.getAll("flipbookData");
+    window.flipbookList = flipbookRows.filter(f => f.restoId === restoId);
+    renderFlipbookUI?.();
 
-    // ---------- PROMO ----------
-    const promos = promoByResto.filter(p => p.type !== "voucher");
-    const promoContainer = document.getElementById("promoContainer");
-
-    if (promoContainer) {
-      promoContainer.innerHTML = "";
-      window.menuPromo = [];
-      promos.forEach(p => tambahPromo?.(p));
-    }
-
-    console.log("✅ loadData SUCCESS → resto:", restoId);
+    console.log("✅ loadData FINISHED");
 
   } catch (err) {
     console.error("❌ loadData fatal:", err);
-    sudahLoadData = false;
   } finally {
     hideLoader?.();
+    __LOAD_DATA_RUNNING__ = false;
   }
 }
 
@@ -2233,24 +2182,28 @@ function loadAdminData() {
   console.log("📦 loadAdminData");
 }
 
-
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
   try {
     console.log("🚀 Admin Init (CORE)");
 
-    // pastikan DB core sudah ready
     if (!window.MENUVA_DB) {
       throw new Error("MENUVA_DB not ready");
     }
 
-    await initAdmin(); // ⬅️ init UI + data admin
+    // UI & event boleh di-init
+    initAdminUI?.();
+    bindAdminEvents?.();
 
-    console.log("✅ Admin ready");
+    // 🔥 SATU-SATUNYA LOAD
+    loadData();
+
+    console.log("✅ Admin init triggered");
   } catch (err) {
     console.error("❌ Error saat init:", err);
     alert("Terjadi error saat init. Silakan refresh halaman.");
   }
 });
+
 
 /* ===================== TOGGLE MASTER ===================== */
 async function initAllToggles() {
@@ -2689,6 +2642,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
