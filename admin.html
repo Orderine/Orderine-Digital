@@ -2063,7 +2063,7 @@ async function downloadBackupJSON() {
   }
 }
 
-  async function restoreDataFromFile(event) {
+ async function restoreDataFromFile(event) {
   const file = event.target.files[0];
   if (!file) return;
 
@@ -2071,7 +2071,7 @@ async function downloadBackupJSON() {
     const text = await file.text();
     const json = JSON.parse(text);
 
-    // 🔍 validasi minimal format lama
+    // validasi format lama
     if (!json.restoId || !json.namaRestoran) {
       alert("❌ File backup tidak sesuai format lama");
       return;
@@ -2080,18 +2080,21 @@ async function downloadBackupJSON() {
     const db = window.MENUVA_DB;
     const restoId = json.restoId;
 
-    console.log("♻️ Restoring legacy snapshot:", restoId);
+    console.log("♻️ Restore snapshot resto:", restoId);
 
-    // 🧹 hapus semua data menuData lama
-    await db.clear("menuData");
+    // 1️⃣ hapus SEMUA data menuData lama (manual)
+    const existing = await db.getAll("menuData");
+    for (const item of existing) {
+      await db.delete("menuData", item.id);
+    }
 
-    // ✅ simpan snapshot persis seperti file
+    // 2️⃣ simpan snapshot baru (APA ADANYA)
     await db.add("menuData", {
       ...json,
-      id: restoId // 🔑 pastikan ada id
+      id: restoId // 🔑 penting
     });
 
-    console.log("✅ Legacy restore done:", json);
+    console.log("✅ Restore sukses:", json);
 
     alert("✅ Restore selesai");
     location.reload();
@@ -2101,7 +2104,6 @@ async function downloadBackupJSON() {
     alert("❌ File backup rusak atau tidak valid");
   }
 }
-
 
 // ====================== SHARE & QR ======================
 function getCustomerLink() {
@@ -2396,14 +2398,13 @@ async function loadCoreAndRender() {
     const rows = await MENUVA_DB.getAll("menuData");
 
     if (!rows || rows.length === 0) {
-      console.info("ℹ️ menuData kosong, belum ada data tersimpan");
+      console.warn("⚠️ No saved resto data found");
       return;
     }
 
-    const restoData = rows[0]; // 🔑 snapshot lama
+    const restoData = rows[0]; // snapshot lama
     console.log("✅ restoData loaded:", restoData);
 
-    // 🔥 SERAHKAN KE SISTEM ADMIN LAMA
     if (typeof loadData === "function") {
       await loadData(restoData);
     }
@@ -2900,6 +2901,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
