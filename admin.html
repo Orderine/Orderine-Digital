@@ -2264,43 +2264,20 @@ if (typeof initOwnerUI !== "function") {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 Init mulai...");
-  showLoader();
-
-  const timeout = setTimeout(() => {
-    console.warn("⚠ Init lama → hide loader paksa");
-    hideLoader();
-  }, 8000);
-
   try {
-    // --- INIT IndexedDB ---
-    await initDB();
-    console.log("✅ IndexedDB siap");
+    console.log("🚀 Admin Init (CORE)");
 
-    // --- Ambil data dari DB hybrid ---
-    const data = await safeLoadDataFromDB();
-    console.log("📦 Hybrid data (before UI):", data);
-
-    // --- Render ke UI ---
-    await safeLoadData(data);
-
-    // --- INIT toggle UI ---
-    await initAllToggles();
-
-    // --- Fix padding bar bawah ---
-    const fixbar = document.querySelector(".fixed-bar");
-    if (fixbar) {
-      document.body.style.paddingBottom = fixbar.offsetHeight + "px";
+    // pastikan DB core sudah ready
+    if (!window.MENUVA_DB) {
+      throw new Error("MENUVA_DB not ready");
     }
 
-    console.log("✅ Admin siap (Hybrid Ready, Voucher Multi Device OK)");
+    await initAdmin(); // ⬅️ init UI + data admin
 
+    console.log("✅ Admin ready");
   } catch (err) {
     console.error("❌ Error saat init:", err);
     alert("Terjadi error saat init. Silakan refresh halaman.");
-  } finally {
-    clearTimeout(timeout);
-    hideLoader();
   }
 });
 
@@ -2787,6 +2764,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
