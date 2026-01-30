@@ -1035,7 +1035,7 @@ function buatDataDefault(restoId = "") {
     logo: "",
 
     menu: [],
-    promoData: [],
+    menuPromo: [],
     menuVoucher: [],
     rooms: [],
     nomorWaAdmin: [],
@@ -1056,19 +1056,28 @@ if (!window.indexedDB) {
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
-  function renderPromoUI() {
-  // PROMO SEKARANG DOM-BASED
-  // fungsi ini cuma bridge supaya admin init tidak error
-  if (typeof loadPromoFromDB === "function") {
-    loadPromoFromDB();
-  }
+ function renderPromoUI() {
+  const container = document.getElementById("promoContainer");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (!Array.isArray(window.menuPromo)) return;
+
+  window.menuPromo.forEach(promo => {
+    tambahPromo(promo);
+  });
 }
+
+window.renderPromoUI = renderPromoUI;
+
 
 function tambahPromo(promo = {}) {
   const container = document.getElementById("promoContainer");
   if (!container) return;
 
   const {
+    id = "",
     namaPromo = "",
     harga = "",
     deskripsi = "",
@@ -1079,23 +1088,31 @@ function tambahPromo(promo = {}) {
   const div = document.createElement("div");
   div.className = "menu-item promo-item";
 
+  // ✅ ID PROMO PERSISTENT (PENTING)
+  div.dataset.id = id || crypto.randomUUID();
+
   div.innerHTML = `
     <input type="text" placeholder="Promo Name" value="${namaPromo}">
     <input type="number" placeholder="Price" value="${harga}">
     <textarea placeholder="Description">${deskripsi}</textarea>
     <input type="date" value="${tanggalAkhir}">
 
-    <input type="file"
+    <input
+      type="file"
       accept="image/*"
       onchange="uploadPromoImage(event, this)"
       data-image="${image}"
     >
 
-    <img class="promoPreview"
+    <img
+      class="promoPreview"
       src="${image}"
-      style="max-height:80px;margin:5px 0;${image ? "" : "display:none"}">
+      style="max-height:80px;margin:5px 0;${image ? "" : "display:none"}"
+    >
 
-    <button class="btn-danger" onclick="this.parentElement.remove()">Delete</button>
+    <button class="btn-danger" onclick="this.parentElement.remove()">
+      Delete
+    </button>
   `;
 
   container.appendChild(div);
@@ -1123,7 +1140,7 @@ function tambahPromo(promo = {}) {
 
   container.querySelectorAll(".promo-item").forEach(item => {
     promos.push({
-      id: crypto.randomUUID(),
+      id: item.dataset.id || crypto.randomUUID(),
       namaPromo: item.querySelector("input[type=text]")?.value || "",
       harga: Number(item.querySelector("input[type=number]")?.value || 0),
       deskripsi: item.querySelector("textarea")?.value || "",
@@ -1867,7 +1884,7 @@ async function backupAdminToJSON() {
       restos: await MENUVA_DB.get("restos", restoId),
       menuData: (await MENUVA_DB.getAll("menuData")).filter(d => d.restoId === restoId),
       flipbookData: (await MENUVA_DB.getAll("flipbookData")).filter(d => d.restoId === restoId),
-      promoData: (await MENUVA_DB.getAll("promoData")).filter(d => d.restoId === restoId)
+      menuPromo: (await MENUVA_DB.getAll("menuPromo")).filter(d => d.restoId === restoId)
     }
   };
 
@@ -1927,8 +1944,8 @@ async function backupAdminToJSON() {
     }
 
     // 5️⃣ restore promo
-    for (const p of json.data?.promoData || []) {
-      await MENUVA_DB.add("promoData", { ...p, restoId });
+    for (const p of json.data?.menuPromo || []) {
+      await MENUVA_DB.add("menuPromo", { ...p, restoId });
     }
 
     console.log("♻️ Restore DB SUCCESS:", restoId);
@@ -2052,7 +2069,7 @@ async function clearRestoDataOnly() {
     const scopedStores = [
       "menuData",
       "flipbookData",
-      "promoData",
+      "menuPromo",
       "ordersData"
     ];
 
@@ -2309,7 +2326,7 @@ window.saveVoucher = async function () {
     if (!restoId) return;
 
     await MENUVA_DB.add("voucherData", {
-      id: crypto.randomUUID(),
+      id: item.dataset.id || crypto.randomUUID(),
       restoId,
       code,
       discount,
@@ -2594,6 +2611,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
