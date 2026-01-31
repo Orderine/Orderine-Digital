@@ -1584,8 +1584,8 @@ async function simpanData() {
     const restoAddress = getVal("restoAddress");
     const restoPhone   = getVal("restoPhone");
     const logo         = document.getElementById("previewLogo")?.src || "";
-    const nomorWaAdmin = getNomorWaAdmin();
-
+    const nomorWaAdmin = collectWaFromUI();
+    
     if (!restoPhone) {
       alert("❌ Nomor telepon resto wajib diisi!");
       return;
@@ -1750,46 +1750,77 @@ function highlightInvalidPromo() {
   return invalid;
 }
 
-  // ====================== RENDER WA ADMIN ======================
-function renderWaAdmin(waList) {
-  const container = document.getElementById("nomorWaContainer");
-  if (!container) return;
+ /* =========================================================
+   WA ADMIN — CLEAN ROOM IMPLEMENTATION
+   ========================================================= */
 
-  // hapus HANYA input, bukan label
-  container.querySelectorAll(".nomor-wa").forEach(el => el.remove());
+/** SINGLE SOURCE OF TRUTH */
+window.WA_ADMIN = [];
 
-  if (!Array.isArray(waList) || waList.length === 0) {
-    tambahNomorWa("");
-    return;
-  }
-
-  waList.forEach(wa => tambahNomorWa(wa));
+/** DOM REF */
+function waContainer() {
+  return document.getElementById("nomorWaContainer");
 }
 
-  // ====================== WA ADMIN HANDLER ======================
-function tambahNomorWa(value = "") {
-  const container = document.getElementById("nomorWaContainer");
-  if (!container) return;
-
+/** CREATE INPUT */
+function createWaInput(value = "") {
   const input = document.createElement("input");
   input.type = "text";
   input.name = "waNumber[]";
   input.className = "nomor-wa";
   input.placeholder = "Example: 6281234567890";
   input.value = value;
-
-  container.appendChild(input);
+  return input;
 }
 
-  function getNomorWaAdmin() {
-  return Array.from(
-    document.querySelectorAll("#nomorWaContainer .nomor-wa")
-  )
+/** RENDER (IDEMPOTENT) */
+function renderWaAdmin() {
+  const box = waContainer();
+  if (!box) return;
+
+  // remove only inputs, keep label
+  box.querySelectorAll("input.nomor-wa").forEach(i => i.remove());
+
+  if (!Array.isArray(window.WA_ADMIN) || window.WA_ADMIN.length === 0) {
+    box.appendChild(createWaInput(""));
+    return;
+  }
+
+  window.WA_ADMIN.forEach(wa => {
+    box.appendChild(createWaInput(wa));
+  });
+
+  console.log("📱 WA rendered:", window.WA_ADMIN);
+}
+
+/** READ FROM UI */
+function collectWaFromUI() {
+  const box = waContainer();
+  if (!box) return [];
+
+  return Array.from(box.querySelectorAll("input.nomor-wa"))
     .map(i => i.value.trim())
     .filter(Boolean);
 }
 
-window.__WA_ADMIN_CACHE__ = [];
+/** ADD BUTTON */
+function initWaAdminUI() {
+  const btn = document.getElementById("btnAddWa");
+  if (!btn) return;
+
+  btn.onclick = () => {
+    window.WA_ADMIN = collectWaFromUI();
+    window.WA_ADMIN.push("");
+    renderWaAdmin();
+  };
+}
+
+/** LOAD FROM DATA (CALL THIS!) */
+function loadWaAdminFromData(list) {
+  window.WA_ADMIN = Array.isArray(list) ? [...list] : [];
+  renderWaAdmin();
+}
+
 let __LOAD_DATA_RUNNING__ = false;
 
 async function loadData() {
@@ -1824,8 +1855,7 @@ async function loadData() {
     safeSetVal("restoPhone", resto.restoPhone);
 
     // ---------------- WA ADMIN ----------------
-   window.__WA_ADMIN_CACHE__ = resto?.nomorWaAdmin || [];
-   console.log("📦 WA cached:", window.__WA_ADMIN_CACHE__);
+   loadWaAdminFromData(resto?.nomorWaAdmin);
 
     if (resto.logo) {
       window.__LOGO_BASE64__ = resto.logo;
@@ -1862,9 +1892,6 @@ async function loadData() {
     // ---------------- ROOMS ----------------
     window.roomList = Array.isArray(resto.rooms) ? resto.rooms : [];
     try { renderRoomUI?.(); } catch(e){ console.warn("⚠️ renderRoomUI error:", e); }
-
-    // ---------------- WA ADMIN ----------------
-    try { renderWaAdmin?.(); } catch(e){ console.warn("⚠️ renderWaAdmin error:", e); }
 
     console.log("✅ loadData FINISHED");
 
@@ -2177,6 +2204,8 @@ function loadAdminData() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  initWaAdminUI();
+  
   try {
     console.log("🚀 Admin Init (CORE)");
 
@@ -2636,6 +2665,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
