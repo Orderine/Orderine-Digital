@@ -2259,8 +2259,8 @@ if (typeof initOwnerUI !== "function") {
   }
 }
 
-  // ==================== ADMIN ROOT INIT ====================
-function initAdmin() {
+ // ==================== ADMIN ROOT INIT ====================
+async function initAdmin() {
   console.log("🚀 initAdmin ROOT");
 
   if (!window.activeUser) {
@@ -2269,10 +2269,13 @@ function initAdmin() {
 
   initAdminUI();
   bindAdminEvents();
+
+  // 🔥 tunggu data admin siap
   await loadAdminData();
 
-  // 🔥 PATCH 6 SYNC
+  // 🔥 baru sync toggle
   initAllToggles();
+
   startRealtimeOrderChecker();
   initOwnerUI();
 
@@ -2767,5 +2770,6 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
