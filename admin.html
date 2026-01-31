@@ -1292,10 +1292,10 @@ function tambahRoom(kategori) {
 function ambilSemuaRoom() {
   const hasil = [];
 
-  // 🔥 ROOM & MEETING ONLY (PACKAGE BUKAN DI SINI)
   const kategoriMap = [
     { id: "roomHotelContainer", type: "room" },
-    { id: "meetingRoomContainer", type: "meeting" }
+    { id: "meetingRoomContainer", type: "meeting" },
+    { id: "packageContainer", type: "package" } // 🔥 TAMBAH INI
   ];
 
   kategoriMap.forEach(({ id, type }) => {
@@ -1306,16 +1306,13 @@ function ambilSemuaRoom() {
       const nama = form.querySelector(".room-nama")?.value?.trim() || "";
       const harga = parseInt(form.querySelector(".room-harga")?.value || "0");
 
-      // ⛔ skip data kosong
       if (!nama || harga <= 0) return;
 
       hasil.push({
-        // 🔑 DB IDENTITAS
         id: "R" + Date.now() + Math.floor(Math.random() * 1000),
         restoId: window.activeUser?.restoID || "",
-        type, // "room" | "meeting"
+        type, // room | meeting | package
 
-        // 📦 DATA INTI
         nama,
         harga,
         kapasitas: parseInt(form.querySelector(".room-kapasitas")?.value || "0"),
@@ -1323,7 +1320,6 @@ function ambilSemuaRoom() {
         deskripsi: form.querySelector(".room-deskripsi")?.value || "",
         image: form.querySelector(".room-image-upload")?.getAttribute("data-image") || "",
 
-        // 🕒 META
         updatedAt: Date.now()
       });
     });
@@ -2780,3 +2776,4 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
