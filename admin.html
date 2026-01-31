@@ -2302,6 +2302,9 @@ function loadAdminData() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   initWaAdminUI();
+  initOrderToggle();
+  initRoomToggle();
+  initVoucherToggle();
 
   try {
     console.log("🚀 Admin Init (CORE)");
@@ -2342,13 +2345,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-/* ===================== TOGGLE MASTER ===================== */
-async function initAllToggles() {
-  await domReady();
-  initOrderToggle();
-  initRoomToggle();
-  await initVoucherToggle();
-}
 
 function domReady() {
   return new Promise(resolve => {
@@ -2359,84 +2355,60 @@ function domReady() {
   });
 }
 
-/* ===================== ORDER TOGGLE (PATCHED) ===================== */
-function initRoomToggle() {
-  const toggle = document.getElementById("toggleRoomPage");
-  if (!toggle) return;
-
-  let saved = localStorage.getItem("page_room");
-
-  // default ON supaya public page tampil pertama kali
-  if (saved === null) {
-    saved = "true";
-    localStorage.setItem("page_room", saved);
+function getBool(key, defaultVal = true) {
+  const val = localStorage.getItem(key);
+  if (val === null) {
+    localStorage.setItem(key, String(defaultVal));
+    return defaultVal;
   }
-
-  toggle.checked = saved === "true";
-
-  toggle.onchange = e => {
-    const enabled = e.target.checked;
-    localStorage.setItem("page_room", String(enabled));
-    console.log("🌍 PUBLIC ROOM PAGE =", enabled);
-  };
+  return val === "true";
 }
 
-function initOrderToggle() {
+function setBool(key, val) {
+  localStorage.setItem(key, String(val));
+}
+
+  function initOrderToggle() {
   const toggle = document.getElementById("toggleOrderPage");
   if (!toggle) return;
 
-  let saved = localStorage.getItem("page_order");
+  const enabled = getBool("public_order_enabled", true);
+  toggle.checked = enabled;
 
-  if (saved === null) {
-    saved = "true";
-    localStorage.setItem("page_order", saved);
-  }
-
-  toggle.checked = saved === "true";
-
-  toggle.onchange = e => {
-    const enabled = e.target.checked;
-    localStorage.setItem("page_order", String(enabled));
-    console.log("🌍 PUBLIC ORDER PAGE =", enabled);
-  };
+  toggle.addEventListener("change", e => {
+    setBool("public_order_enabled", e.target.checked);
+    console.log("🌍 order.html =", e.target.checked ? "ON" : "OFF");
+  });
 }
 
-/* ===================== VOUCHER TOGGLE (PATCHED & SAFE) ===================== */
-async function initVoucherToggle() {
+  function initRoomToggle() {
+  const toggle = document.getElementById("toggleRoomPage");
+  if (!toggle) return;
+
+  const enabled = getBool("public_room_enabled", true);
+  toggle.checked = enabled;
+
+  toggle.addEventListener("change", e => {
+    setBool("public_room_enabled", e.target.checked);
+    console.log("🌍 room.html =", e.target.checked ? "ON" : "OFF");
+  });
+}
+
+  function initVoucherToggle() {
   const toggle = document.getElementById("toggleVoucherPage");
   const form = document.getElementById("voucherForm");
-  const box = document.getElementById("voucherContainerBox");
+  if (!toggle || !form) return;
 
-  if (!toggle || !form || !box) return;
-
-  const user = JSON.parse(localStorage.getItem("activeUser") || "null");
-  const plan = user?.premiumPlan || localStorage.getItem("user_plan");
-
-  // ⛔ PLAN RESTRICTION
-  if (plan === "monthly") {
-    box.style.display = "none";
-    toggle.checked = false;
-    return;
-  }
-
-  let saved = localStorage.getItem("page_voucher");
-
-  // default OFF lebih masuk akal untuk form
-  if (saved === null) {
-    saved = "false";
-    localStorage.setItem("page_voucher", saved);
-  }
-
-  const enabled = saved === "true";
+  const enabled = getBool("voucher_form_enabled", false);
   toggle.checked = enabled;
   form.style.display = enabled ? "block" : "none";
 
-  toggle.onchange = e => {
+  toggle.addEventListener("change", e => {
     const isOn = e.target.checked;
-    localStorage.setItem("page_voucher", String(isOn));
+    setBool("voucher_form_enabled", isOn);
     form.style.display = isOn ? "block" : "none";
-    console.log("🧾 VOUCHER FORM =", isOn);
-  };
+    console.log("🧾 voucher form =", isOn ? "ON" : "OFF");
+  });
 }
 
 
@@ -2760,6 +2732,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
