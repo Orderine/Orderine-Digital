@@ -2269,7 +2269,7 @@ function initAdmin() {
 
   initAdminUI();
   bindAdminEvents();
-  loadAdminData();
+  await loadAdminData();
 
   // 🔥 PATCH 6 SYNC
   initAllToggles();
@@ -2357,39 +2357,30 @@ function domReady() {
 }
 
 /* ===================== ORDER TOGGLE (PATCHED) ===================== */
+function initRoomToggle() {
+  const toggle = document.getElementById("toggleRoomPage");
+  if (!toggle) return;
+
+  const saved = localStorage.getItem("page_room") === "true";
+  toggle.checked = saved;
+
+  toggle.onchange = e => {
+    localStorage.setItem("page_room", String(e.target.checked));
+  };
+}
+  
 function initOrderToggle() {
   const toggle = document.getElementById("toggleOrderPage");
-  const box = document.getElementById("orderToggleBox");
-
-  if (!toggle || !box) return;
-
-  // 🔥 ADMIN SETTING HARUS SELALU TAMPIL
-  box.style.display = "block";
+  if (!toggle) return;
 
   const enabled = localStorage.getItem("page_order") === "true";
   toggle.checked = enabled;
 
   toggle.onchange = e => {
-    localStorage.setItem("page_order", e.target.checked);
+    localStorage.setItem("page_order", String(e.target.checked));
   };
 }
 
-/* ===================== ROOM TOGGLE ===================== */
-function initRoomToggle() {
-  const toggle = document.getElementById("toggleRoomPage");
-  const box = document.getElementById("roomContainerBox");
-
-  if (!toggle || !box) return;
-
-  const saved = localStorage.getItem("page_room") === "true";
-  toggle.checked = saved;
-  box.style.display = saved ? "block" : "none";
-
-  toggle.onchange = e => {
-    localStorage.setItem("page_room", e.target.checked);
-    box.style.display = e.target.checked ? "block" : "none";
-  };
-}
 
 /* ===================== VOUCHER TOGGLE (PATCHED & SAFE) ===================== */
 async function initVoucherToggle() {
@@ -2776,4 +2767,5 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
