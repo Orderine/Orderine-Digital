@@ -2364,26 +2364,40 @@ function initRoomToggle() {
   const toggle = document.getElementById("toggleRoomPage");
   if (!toggle) return;
 
-  const saved = localStorage.getItem("page_room");
+  let saved = localStorage.getItem("page_room");
+
+  // default ON supaya public page tampil pertama kali
+  if (saved === null) {
+    saved = "true";
+    localStorage.setItem("page_room", saved);
+  }
+
   toggle.checked = saved === "true";
 
   toggle.onchange = e => {
-    localStorage.setItem("page_room", String(e.target.checked));
-    console.log("💾 page_room =", e.target.checked);
+    const enabled = e.target.checked;
+    localStorage.setItem("page_room", String(enabled));
+    console.log("🌍 PUBLIC ROOM PAGE =", enabled);
   };
 }
 
-  
 function initOrderToggle() {
   const toggle = document.getElementById("toggleOrderPage");
   if (!toggle) return;
 
-  const saved = localStorage.getItem("page_order");
+  let saved = localStorage.getItem("page_order");
+
+  if (saved === null) {
+    saved = "true";
+    localStorage.setItem("page_order", saved);
+  }
+
   toggle.checked = saved === "true";
 
   toggle.onchange = e => {
-    localStorage.setItem("page_order", String(e.target.checked));
-    console.log("💾 page_order =", e.target.checked);
+    const enabled = e.target.checked;
+    localStorage.setItem("page_order", String(enabled));
+    console.log("🌍 PUBLIC ORDER PAGE =", enabled);
   };
 }
 
@@ -2398,25 +2412,33 @@ async function initVoucherToggle() {
   const user = JSON.parse(localStorage.getItem("activeUser") || "null");
   const plan = user?.premiumPlan || localStorage.getItem("user_plan");
 
+  // ⛔ PLAN RESTRICTION
   if (plan === "monthly") {
     box.style.display = "none";
     toggle.checked = false;
-    return; // ⛔ JANGAN SET localStorage
+    return;
   }
 
-  const saved = localStorage.getItem("page_voucher");
-  const enabled = saved === "true";
+  let saved = localStorage.getItem("page_voucher");
 
+  // default OFF lebih masuk akal untuk form
+  if (saved === null) {
+    saved = "false";
+    localStorage.setItem("page_voucher", saved);
+  }
+
+  const enabled = saved === "true";
   toggle.checked = enabled;
   form.style.display = enabled ? "block" : "none";
 
-  toggle.onchange = async e => {
+  toggle.onchange = e => {
     const isOn = e.target.checked;
     localStorage.setItem("page_voucher", String(isOn));
     form.style.display = isOn ? "block" : "none";
-    console.log("💾 page_voucher =", isOn);
+    console.log("🧾 VOUCHER FORM =", isOn);
   };
 }
+
 
 /* ===================== VOUCHER CORE (FINAL & SYNC) ===================== */
 async function loadVouchers() {
@@ -2738,6 +2760,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
