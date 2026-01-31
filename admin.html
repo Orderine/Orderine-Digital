@@ -1825,6 +1825,8 @@ async function loadData() {
     safeSetVal("restoPhone", resto.restoPhone);
 
     // ---------------- WA ADMIN ----------------
+    console.log("🧪 RESTO DATA:", resto);
+    console.log("🧪 WA ADMIN RAW:", resto?.nomorWaAdmin);
      renderWaAdmin(resto.nomorWaAdmin || []);
 
 
@@ -2632,6 +2634,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
