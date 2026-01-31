@@ -1189,6 +1189,19 @@ function tambahMenu(kategori = "food", nama = "", harga = "", image = "") {
   container.appendChild(div);
 }
 
+  function renderMenuUI(menuList = []) {
+  if (!Array.isArray(menuList)) {
+    console.warn("⚠️ renderMenuUI: data bukan array", menuList);
+    return;
+  }
+
+  console.log("🍽️ renderMenuUI called:", menuList.length);
+
+  // TODO: render UI menu di sini
+  // sementara ini cukup noop biar warning hilang
+}
+
+
 function uploadMenuImage(event, inputEl) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1225,6 +1238,25 @@ function ambilMenu(containerId) {
 /* ============================================================
    ROOM
 ============================================================ */
+  function renderRoomUI() {
+  try {
+    const rooms = Array.isArray(window.rooms) ? window.rooms : [];
+
+    console.log("🛏️ renderRoomUI called:", rooms.length);
+
+    // =================================================
+    // TODO (nanti):
+    // - render daftar room
+    // - render capacity
+    // - render harga
+    // =================================================
+
+    // sementara ini NO-OP
+  } catch (err) {
+    console.warn("⚠️ renderRoomUI error:", err);
+  }
+}
+
 function tambahRoom(kategori) {
   const containerId = {
     hotel: "roomHotelContainer",
@@ -1461,6 +1493,39 @@ document.getElementById("logoInput")?.addEventListener("change", async e => {
 /* ============================================================
    FLIPBOOK IMAGE PREVIEW (SYNC WITH CSS GRID)
 ============================================================ */
+ function renderFlipbookUI() {
+  try {
+    const ruangan = Array.isArray(window.flipbookRuanganImages)
+      ? window.flipbookRuanganImages
+      : [];
+
+    const menu = Array.isArray(window.flipbookMenuImages)
+      ? window.flipbookMenuImages
+      : [];
+
+    const all = Array.isArray(window.flipbookList)
+      ? window.flipbookList
+      : ruangan.concat(menu);
+
+    console.log("📖 renderFlipbookUI", {
+      ruangan: ruangan.length,
+      menu: menu.length,
+      total: all.length
+    });
+
+    // =================================================
+    // TODO (nanti):
+    // - sync preview
+    // - sync pagination
+    // - sync reorder
+    // =================================================
+
+    // sementara ini NO-OP (biar warning hilang & flow aman)
+  } catch (err) {
+    console.warn("⚠️ renderFlipbookUI error:", err);
+  }
+}
+
 function renderImagePreview(tipe, url) {
   if (!url) return;
 
@@ -1821,6 +1886,20 @@ function loadWaAdminFromData(list) {
   renderWaAdmin();
 }
 
+  function waitForActiveUser() {
+  return new Promise(resolve => {
+    const check = () => {
+      if (window.activeUser && window.activeUser.restoID) {
+        resolve(window.activeUser);
+      } else {
+        setTimeout(check, 100);
+      }
+    };
+    check();
+  });
+}
+
+
 let __LOAD_DATA_RUNNING__ = false;
 
 async function loadData() {
@@ -1829,13 +1908,6 @@ async function loadData() {
 
   try {
     showLoader?.("Loading data...");
-
-    if (!window.activeUser || !window.activeUser.restoID) {
-      console.warn("⏳ activeUser belum siap, retry loadData...");
-      __LOAD_DATA_RUNNING__ = false;
-      setTimeout(loadData, 100);
-      return;
-    }
 
     const restoId = window.activeUser.restoID;
     console.log("📦 loadData start → resto:", restoId);
@@ -1870,7 +1942,12 @@ async function loadData() {
       try { tambahMenu?.(m.kategori || "food", m.nama || "", m.harga || "", m.image || ""); }
       catch(e) { console.warn("⚠️ tambahMenu error", m, e); }
     });
-    try { renderMenuUI?.(); } catch(e){ console.warn("⚠️ renderMenuUI error:", e); }
+    
+   try {
+  renderMenuUI?.(resto.menu || []);
+} catch (e) {
+  console.warn("⚠️ renderMenuUI error:", e);
+}
 
     // ---------------- PROMO & VOUCHER ----------------
     window.menuPromo = Array.isArray(resto.menuPromo) ? resto.menuPromo : [];
@@ -1902,7 +1979,6 @@ async function loadData() {
     __LOAD_DATA_RUNNING__ = false;
   }
 }
-
 
 // ====================== RESET / BACKUP / RESTORE ======================
 async function resetData() {
@@ -2203,9 +2279,9 @@ function loadAdminData() {
   console.log("📦 loadAdminData");
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   initWaAdminUI();
-  
+
   try {
     console.log("🚀 Admin Init (CORE)");
 
@@ -2213,12 +2289,30 @@ document.addEventListener("DOMContentLoaded", () => {
       throw new Error("MENUVA_DB not ready");
     }
 
-    // UI & event boleh di-init
+    // UI & event boleh di-init lebih awal
     initAdminUI?.();
     bindAdminEvents?.();
 
-    // 🔥 SATU-SATUNYA LOAD
-    loadData();
+    // ===============================
+    // TUNGGU activeUser SIAP
+    // ===============================
+    const waitForActiveUser = () =>
+      new Promise(resolve => {
+        const check = () => {
+          if (window.activeUser && window.activeUser.restoID) {
+            resolve(window.activeUser);
+          } else {
+            setTimeout(check, 100);
+          }
+        };
+        check();
+      });
+
+    const user = await waitForActiveUser();
+    console.log("✅ activeUser ready:", user.email);
+
+    // 🔥 BARU LOAD DATA
+    await loadData();
 
     console.log("✅ Admin init triggered");
   } catch (err) {
@@ -2226,7 +2320,6 @@ document.addEventListener("DOMContentLoaded", () => {
     alert("Terjadi error saat init. Silakan refresh halaman.");
   }
 });
-
 
 /* ===================== TOGGLE MASTER ===================== */
 async function initAllToggles() {
@@ -2665,6 +2758,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
