@@ -2454,9 +2454,11 @@ async function loadVouchers() {
 /* ===================== SAVE VOUCHER (FINAL - SYNC WITH simpanData) ===================== */
 window.saveVoucher = async function () {
   try {
-    const code = voucherCode.value.trim().toUpperCase();
-    const discount = parseFloat(voucherDiscount.value);
-    const expiry = voucherExpiry.value;
+    console.log("💾 saveVoucher triggered");
+
+    const code = document.getElementById("voucherCode")?.value.trim().toUpperCase();
+    const discount = Number(document.getElementById("voucherDiscount")?.value);
+    const expiry = document.getElementById("voucherExpiry")?.value;
 
     if (!code || isNaN(discount) || !expiry) {
       alert("⚠️ Data voucher tidak valid");
@@ -2464,31 +2466,60 @@ window.saveVoucher = async function () {
     }
 
     const restoId = window.activeUser?.restoID;
-    if (!restoId) return;
+    if (!restoId) {
+      alert("❌ Session resto tidak valid");
+      return;
+    }
 
-    await MENUVA_DB.add("voucherData", {
-      id: item.dataset.id || crypto.randomUUID(),
+    // =========================
+    // BUILD OBJECT VOUCHER
+    // =========================
+    const voucher = {
+      id: crypto.randomUUID(),
       restoId,
       code,
       discount,
       expiry,
       createdAt: Date.now()
-    });
+    };
 
-    await loadVouchers();
+    // =========================
+    // PUSH KE STATE ADMIN
+    // =========================
+    window.menuVoucher = Array.isArray(window.menuVoucher)
+      ? window.menuVoucher
+      : [];
 
-    voucherCode.value = "";
-    voucherDiscount.value = "";
-    voucherExpiry.value = "";
+    window.menuVoucher.push(voucher);
 
-    alert("✅ Voucher disimpan");
+    // =========================
+    // OPTIONAL: SIMPAN KE DB TERPISAH
+    // (kalau masih dipakai)
+    // =========================
+    if (window.MENUVA_DB?.add) {
+      await MENUVA_DB.add("voucherData", voucher);
+    }
+
+    // =========================
+    // RENDER ULANG
+    // =========================
+    renderVoucher(window.menuVoucher);
+
+    // =========================
+    // RESET FORM
+    // =========================
+    document.getElementById("voucherCode").value = "";
+    document.getElementById("voucherDiscount").value = "";
+    document.getElementById("voucherExpiry").value = "";
+
+    alert("✅ Voucher berhasil disimpan");
+    console.log("✅ Voucher saved:", voucher);
 
   } catch (err) {
     console.error("❌ saveVoucher error:", err);
     alert("❌ Gagal simpan voucher");
   }
 };
-
 
   /* ===================== VOUCHER UI ===================== */
 function renderVoucher(vouchers = []) {
@@ -2752,6 +2783,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
