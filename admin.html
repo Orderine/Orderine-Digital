@@ -1616,6 +1616,9 @@ async function simpanData() {
       ? window.flipbookMenuImages
       : [];
 
+    const nomorWaAdmin = getNomorWaAdmin();
+
+
     /* ==================== VALIDASI ==================== */
     if (highlightInvalidPromo?.()) {
       alert("⚠️ Please complete the data promos.");
@@ -1750,15 +1753,16 @@ function highlightInvalidPromo() {
 }
 
   // ====================== RENDER WA ADMIN ======================
-function renderWaAdmin(waList = []) {
+function renderWaAdmin(waList) {
   const container = document.getElementById("nomorWaContainer");
   if (!container) return;
 
-  container.innerHTML = "";
+  // hapus SEMUA input lama (label tetap)
+  container.querySelectorAll(".nomor-wa").forEach(el => el.remove());
 
-  // kalau kosong, tetap tampilkan 1 input
   if (!Array.isArray(waList) || waList.length === 0) {
-    waList = [""];
+    tambahNomorWa("");
+    return;
   }
 
   waList.forEach(wa => tambahNomorWa(wa));
@@ -1772,23 +1776,22 @@ function tambahNomorWa(value = "") {
   const container = document.getElementById("nomorWaContainer");
   if (!container) return;
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "wa-item";
-
   const input = document.createElement("input");
   input.type = "text";
+  input.name = "waNumber[]";
   input.className = "nomor-wa";
   input.placeholder = "Example: 6281234567890";
   input.value = value;
 
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.textContent = "❌";
-  btn.onclick = () => wrapper.remove();
+  container.appendChild(input);
+}
 
-  wrapper.appendChild(input);
-  wrapper.appendChild(btn);
-  container.appendChild(wrapper);
+  function getNomorWaAdmin() {
+  return Array.from(
+    document.querySelectorAll("#nomorWaContainer .nomor-wa")
+  )
+    .map(i => i.value.trim())
+    .filter(Boolean);
 }
 
 let __LOAD_DATA_RUNNING__ = false;
@@ -2634,6 +2637,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
