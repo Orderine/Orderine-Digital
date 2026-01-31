@@ -1966,9 +1966,16 @@ async function loadData() {
 
     try { renderFlipbookUI?.(); } catch(e){ console.warn("⚠️ renderFlipbookUI error:", e); }
 
-    // ---------------- ROOMS ----------------
-    window.roomList = Array.isArray(resto.rooms) ? resto.rooms : [];
-    try { renderRoomUI?.(); } catch(e){ console.warn("⚠️ renderRoomUI error:", e); }
+  // ---------------- ROOMS ----------------
+window.rooms = Array.isArray(resto.rooms) ? resto.rooms : [];
+renderRoomUI();
+
+try {
+  renderRoomsFromDB(window.roomList);
+  console.log("🛏️ Rooms restored:", window.roomList.length);
+} catch (e) {
+  console.warn("⚠️ renderRoomsFromDB error:", e);
+}
 
     console.log("✅ loadData FINISHED");
 
@@ -2758,6 +2765,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
