@@ -1584,7 +1584,7 @@ async function simpanData() {
     const restoAddress = getVal("restoAddress");
     const restoPhone   = getVal("restoPhone");
     const logo         = document.getElementById("previewLogo")?.src || "";
-    const nomorWaAdmin = getNomorWaAdmin?.() || "";
+    const nomorWaAdmin = getNomorWaAdmin();
 
     if (!restoPhone) {
       alert("❌ Nomor telepon resto wajib diisi!");
@@ -1749,6 +1749,24 @@ function highlightInvalidPromo() {
   return invalid;
 }
 
+  // ====================== RENDER WA ADMIN ======================
+function renderWaAdmin(waList = []) {
+  const container = document.getElementById("nomorWaContainer");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  // kalau kosong, tetap tampilkan 1 input
+  if (!Array.isArray(waList) || waList.length === 0) {
+    waList = [""];
+  }
+
+  waList.forEach(wa => tambahNomorWa(wa));
+
+  console.log("✅ WA Admin rendered:", waList);
+}
+
+
   // ====================== WA ADMIN HANDLER ======================
 function tambahNomorWa(value = "") {
   const container = document.getElementById("nomorWaContainer");
@@ -1759,8 +1777,8 @@ function tambahNomorWa(value = "") {
 
   const input = document.createElement("input");
   input.type = "text";
-  input.className = "nomor-wa"; // 🔥 FIX DISINI
-  input.placeholder = "Nomor WhatsApp Admin";
+  input.className = "nomor-wa";
+  input.placeholder = "Example: 6281234567890";
   input.value = value;
 
   const btn = document.createElement("button");
@@ -1805,7 +1823,10 @@ async function loadData() {
     safeSetVal("namaRestoran", resto.namaRestoran);
     safeSetVal("restoAddress", resto.restoAddress);
     safeSetVal("restoPhone", resto.restoPhone);
-    safeSetVal("nomorWaAdmin", resto.nomorWaAdmin);
+
+    // ---------------- WA ADMIN ----------------
+     renderWaAdmin(resto.nomorWaAdmin || []);
+
 
     if (resto.logo) {
       window.__LOGO_BASE64__ = resto.logo;
@@ -2611,6 +2632,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
