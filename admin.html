@@ -1755,7 +1755,7 @@ function renderWaAdmin(waList) {
   const container = document.getElementById("nomorWaContainer");
   if (!container) return;
 
-  // hapus SEMUA input lama (label tetap)
+  // hapus HANYA input, bukan label
   container.querySelectorAll(".nomor-wa").forEach(el => el.remove());
 
   if (!Array.isArray(waList) || waList.length === 0) {
@@ -1764,10 +1764,7 @@ function renderWaAdmin(waList) {
   }
 
   waList.forEach(wa => tambahNomorWa(wa));
-
-  console.log("✅ WA Admin rendered:", waList);
 }
-
 
   // ====================== WA ADMIN HANDLER ======================
 function tambahNomorWa(value = "") {
@@ -1792,6 +1789,7 @@ function tambahNomorWa(value = "") {
     .filter(Boolean);
 }
 
+window.__WA_ADMIN_CACHE__ = [];
 let __LOAD_DATA_RUNNING__ = false;
 
 async function loadData() {
@@ -1826,10 +1824,8 @@ async function loadData() {
     safeSetVal("restoPhone", resto.restoPhone);
 
     // ---------------- WA ADMIN ----------------
-    console.log("🧪 RESTO DATA:", resto);
-    console.log("🧪 WA ADMIN RAW:", resto?.nomorWaAdmin);
-     renderWaAdmin(resto.nomorWaAdmin || []);
-
+   window.__WA_ADMIN_CACHE__ = resto?.nomorWaAdmin || [];
+   console.log("📦 WA cached:", window.__WA_ADMIN_CACHE__);
 
     if (resto.logo) {
       window.__LOGO_BASE64__ = resto.logo;
@@ -2170,6 +2166,11 @@ function initAdmin() {
 function bindAdminEvents() {
   console.log("🖱️ bindAdminEvents");
 }
+  setTimeout(() => {
+  renderWaAdmin(window.__WA_ADMIN_CACHE__);
+  console.log("🔁 WA rendered after init UI");
+}, 0);
+
 
 function loadAdminData() {
   console.log("📦 loadAdminData");
@@ -2635,6 +2636,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
