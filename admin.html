@@ -2364,90 +2364,58 @@ function initRoomToggle() {
   const toggle = document.getElementById("toggleRoomPage");
   if (!toggle) return;
 
-  const saved = localStorage.getItem("page_room") === "true";
-  toggle.checked = saved;
+  const saved = localStorage.getItem("page_room");
+  toggle.checked = saved === "true";
 
   toggle.onchange = e => {
     localStorage.setItem("page_room", String(e.target.checked));
+    console.log("💾 page_room =", e.target.checked);
   };
 }
+
   
 function initOrderToggle() {
   const toggle = document.getElementById("toggleOrderPage");
   if (!toggle) return;
 
-  const enabled = localStorage.getItem("page_order") === "true";
-  toggle.checked = enabled;
+  const saved = localStorage.getItem("page_order");
+  toggle.checked = saved === "true";
 
   toggle.onchange = e => {
     localStorage.setItem("page_order", String(e.target.checked));
+    console.log("💾 page_order =", e.target.checked);
   };
 }
 
-
 /* ===================== VOUCHER TOGGLE (PATCHED & SAFE) ===================== */
 async function initVoucherToggle() {
-  try {
-    const toggle = document.getElementById("toggleVoucherPage");
-    const form = document.getElementById("voucherForm");
-    const box = document.getElementById("voucherContainerBox");
+  const toggle = document.getElementById("toggleVoucherPage");
+  const form = document.getElementById("voucherForm");
+  const box = document.getElementById("voucherContainerBox");
 
-    if (!toggle || !form || !box) {
-      console.warn("⚠️ Voucher toggle element tidak lengkap, skip");
-      return;
-    }
+  if (!toggle || !form || !box) return;
 
-    const user = JSON.parse(localStorage.getItem("activeUser") || "null");
-    const plan = user?.premiumPlan || localStorage.getItem("user_plan");
+  const user = JSON.parse(localStorage.getItem("activeUser") || "null");
+  const plan = user?.premiumPlan || localStorage.getItem("user_plan");
 
-    // 🚫 Monthly plan tidak boleh voucher
-    if (plan === "monthly") {
-      box.style.display = "none";
-      toggle.checked = false;
-      localStorage.setItem("page_voucher", "false");
-      return;
-    }
-
-    const enabled = localStorage.getItem("page_voucher") === "true";
-    toggle.checked = enabled;
-    form.style.display = enabled ? "block" : "none";
-
-    // ================= SAFE CHANGE HANDLER =================
-    toggle.onchange = async e => {
-      const isOn = !!e.target.checked;
-      localStorage.setItem("page_voucher", String(isOn));
-      form.style.display = isOn ? "block" : "none";
-
-      if (isOn) {
-        try {
-          if (typeof loadVouchers === "function") {
-            await loadVouchers();
-          } else {
-            console.warn("⚠️ loadVouchers tidak tersedia");
-          }
-        } catch (err) {
-          console.warn("⚠️ loadVouchers error (toggle):", err);
-        }
-      }
-    };
-
-    // ================= SAFE INIT LOAD =================
-    if (enabled) {
-      try {
-        if (typeof loadVouchers === "function") {
-          await loadVouchers();
-        } else {
-          console.warn("⚠️ loadVouchers tidak tersedia");
-        }
-      } catch (err) {
-        console.warn("⚠️ loadVouchers error (init):", err);
-      }
-    }
-
-  } catch (fatal) {
-    // 🔥 ABSOLUTE FIREWALL
-    console.error("❌ initVoucherToggle fatal error (DI-SHIELD):", fatal);
+  if (plan === "monthly") {
+    box.style.display = "none";
+    toggle.checked = false;
+    return; // ⛔ JANGAN SET localStorage
   }
+
+  const saved = localStorage.getItem("page_voucher");
+  const enabled = saved === "true";
+
+  toggle.checked = enabled;
+  form.style.display = enabled ? "block" : "none";
+
+  toggle.onchange = async e => {
+    const isOn = e.target.checked;
+    localStorage.setItem("page_voucher", String(isOn));
+    form.style.display = isOn ? "block" : "none";
+    console.log("💾 page_voucher =", isOn);
+  };
 }
 
 /* ===================== VOUCHER CORE (FINAL & SYNC) ===================== */
@@ -2770,6 +2738,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
