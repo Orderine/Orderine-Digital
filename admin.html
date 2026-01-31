@@ -1395,22 +1395,44 @@ function hapusGambarRoom(btn) {
 function hapusFormRoom(btn) {
   btn.closest(".room-form")?.remove();
 }
+function renderRoomsFromDB(rooms = []) {
+  // 🛡️ safety guard
+  if (!Array.isArray(rooms)) {
+    console.warn("⚠️ renderRoomsFromDB: rooms bukan array", rooms);
+    return;
+  }
 
-  function renderRoomsFromDB(rooms) {
-  // clear dulu
-  ["roomHotelContainer", "meetingRoomContainer"].forEach(id => {
+  // 🧹 clear container (anti duplikat saat reload)
+  ["roomHotelContainer", "meetingRoomContainer", "packageContainer"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = "";
   });
 
+  // 🚫 tidak ada data
+  if (!rooms.length) {
+    console.log("ℹ️ renderRoomsFromDB: tidak ada room");
+    return;
+  }
+
+  // 🔁 restore satu per satu
   rooms.forEach(room => {
+    if (!room) return;
+
+    const kategori =
+      room.type === "meeting"
+        ? "meeting"
+        : room.type === "package"
+          ? "package"
+          : "hotel";
+
     restoreRoomFromData([{
       ...room,
-      kategori: room.type === "meeting" ? "meeting" : "hotel"
+      kategori
     }]);
   });
-}
 
+  console.log("✅ Rooms rendered from DB:", rooms.length);
+}
 
 /* ============================================================
    EXPOSE TO WINDOW (WAJIB UNTUK MODULE)
@@ -1968,14 +1990,7 @@ async function loadData() {
 
   // ---------------- ROOMS ----------------
 window.rooms = Array.isArray(resto.rooms) ? resto.rooms : [];
-renderRoomUI();
-
-try {
-  renderRoomsFromDB(window.roomList);
-  console.log("🛏️ Rooms restored:", window.roomList.length);
-} catch (e) {
-  console.warn("⚠️ renderRoomsFromDB error:", e);
-}
+renderRoomsFromDB(window.rooms);
 
     console.log("✅ loadData FINISHED");
 
@@ -2765,22 +2780,3 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
