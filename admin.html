@@ -1135,7 +1135,7 @@ function tambahPromo(promo = {}) {
     .catch(err => console.error("Upload promo image failed:", err));
 }
 
-  function ambilPromo() {
+ function ambilPromo() {
   const container = document.getElementById("promoContainer");
   if (!container) return [];
 
@@ -1147,19 +1147,22 @@ function tambahPromo(promo = {}) {
       namaPromo: item.querySelector("input[type=text]")?.value || "",
       harga: Number(item.querySelector("input[type=number]")?.value || 0),
       deskripsi: item.querySelector("textarea")?.value || "",
-      image: item.querySelector("input[type=file]")?.getAttribute("data-image") || "",
-      kategori: "PROMO"
-      tanggalAkhir: item.querySelector("input[type=datetime-local]")?.value
-  ? new Date(
-      item.querySelector("input[type=datetime-local]").value
-    ).toISOString()
-  : ""
+      image: item
+        .querySelector("input[type=file]")
+        ?.getAttribute("data-image") || "",
+      kategori: "PROMO", // ✅ KOMA YANG HILANG
 
+      tanggalAkhir: item.querySelector("input[type=date]")?.value
+        ? new Date(
+            item.querySelector("input[type=date]").value + "T23:59:59"
+          ).toISOString()
+        : ""
     });
   });
 
   return promos;
 }
+
 
 /* ============================================================
    MENU
@@ -2879,6 +2882,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
