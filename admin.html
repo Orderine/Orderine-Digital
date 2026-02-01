@@ -1017,9 +1017,9 @@ const DB_VERSION = window.MENUVA_DB.VERSION;
 
 // 🔐 Ambil ID aktif (AMAN)
 function getActiveRestoId() {
-  if (window.activeUser?.restoId) return window.activeUser.restoId;
-  console.warn("⚠️ activeUser.restoId tidak ada, pakai id=1");
-  return 1;
+  if (window.activeUser?.restoID) return window.activeUser.restoID;
+  console.warn("⚠️ activeUser.restoID tidak ada");
+  return null;
 }
 
 /* ====================== DEFAULT DATA ====================== */
@@ -1659,7 +1659,7 @@ async function simpanData() {
       return;
     }
 
-    const ownerId = window.activeUser.email;
+    const ownerId = window.activeUser.email.trim().toLowerCase();
     const restoId = window.activeUser.restoID;
 
     /* ==================== FORM DATA ==================== */
@@ -1907,7 +1907,7 @@ function loadWaAdminFromData(list) {
   function waitForActiveUser() {
   return new Promise(resolve => {
     const check = () => {
-      if (window.activeUser && window.activeUser.restoID) {
+      if (window.activeUser?.email && window.activeUser?.restoID) {
         resolve(window.activeUser);
       } else {
         setTimeout(check, 100);
@@ -1931,8 +1931,12 @@ async function loadData() {
     console.log("📦 loadData start → resto:", restoId);
 
     // ---------------- AMBIL RESTO ----------------
-    const resto = await MENUVA_DB.get("restos", restoId);
-    if (!resto) return console.warn("⚠️ Resto not found in DB");
+   const resto = await MENUVA_DB.get("restos", restoId);
+if (!resto) {
+  console.warn("⚠️ Resto not found in DB");
+  return;
+}
+
 
     const safeSetVal = (id, val) => {
       const el = document.getElementById(id);
@@ -2007,25 +2011,33 @@ async function resetData() {
 }
 
 async function backupAdminToJSON() {
-  if (!window.activeUser?.restoID) {
-    alert("❌ Tidak ada resto aktif");
+  if (!window.activeUser?.email) {
+    alert("❌ User belum login");
     return;
   }
 
-  const restoId = window.activeUser.restoID;
+  const email = window.activeUser.email.trim().toLowerCase();
+  const restoId = window.activeUser.restoID; // hanya untuk ambil data
 
   const backup = {
     app: "Orderine",
     type: "ADMIN_BACKUP",
-    version: 2,
+    version: 3,
     exportedAt: Date.now(),
-    restoId,
+
+    owner: { email },
 
     data: {
-      restos: await MENUVA_DB.get("restos", restoId),
-      menuData: (await MENUVA_DB.getAll("menuData")).filter(d => d.restoId === restoId),
-      flipbookData: (await MENUVA_DB.getAll("flipbookData")).filter(d => d.restoId === restoId),
-      menuPromo: (await MENUVA_DB.getAll("menuPromo")).filter(d => d.restoId === restoId)
+      restos: restoId ? await MENUVA_DB.get("restos", restoId) : null,
+      menuData: restoId
+        ? (await MENUVA_DB.getAll("menuData")).filter(d => d.restoId === restoId)
+        : [],
+      flipbookData: restoId
+        ? (await MENUVA_DB.getAll("flipbookData")).filter(d => d.restoId === restoId)
+        : [],
+      menuPromo: restoId
+        ? (await MENUVA_DB.getAll("menuPromo")).filter(d => d.restoId === restoId)
+        : []
     }
   };
 
@@ -2036,13 +2048,13 @@ async function backupAdminToJSON() {
 
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `orderine-backup-${restoId}-${Date.now()}.json`;
+  a.download = `orderine-backup-${email}.json`;
   a.click();
 
-  console.log("📦 Backup DB success:", restoId);
+  console.log("📦 Backup success (EMAIL):", email);
 }
 
-  async function restoreDataFromFile(event) {
+async function restoreDataFromFile(event) {
   const file = event.target.files[0];
   if (!file) return;
 
@@ -2054,19 +2066,32 @@ async function backupAdminToJSON() {
       return;
     }
 
-    if (!window.activeUser?.restoID) {
-      alert("❌ Tidak ada resto aktif");
+    if (!json.owner?.email) {
+      alert("❌ Backup tidak memiliki email owner");
+      return;
+    }
+
+    if (!window.activeUser?.email || !window.activeUser?.restoID) {
+      alert("❌ User belum login dengan benar");
+      return;
+    }
+
+    const loginEmail = window.activeUser.email.trim().toLowerCase();
+    const backupEmail = json.owner.email.trim().toLowerCase();
+
+    if (loginEmail !== backupEmail) {
+      alert("❌ Backup ini bukan milik akun ini");
       return;
     }
 
     const restoId = window.activeUser.restoID;
 
-    showLoader("Restoring data...");
+    showLoader("♻️ Restoring data...");
 
-    // 1️⃣ clear data lama
+    // 1️⃣ bersihkan data lama (context resto sekarang)
     await clearRestoDataOnly();
 
-    // 2️⃣ restore restos
+    // 2️⃣ restore resto profile
     if (json.data?.restos) {
       await MENUVA_DB.add("restos", {
         ...json.data.restos,
@@ -2089,10 +2114,10 @@ async function backupAdminToJSON() {
       await MENUVA_DB.add("menuPromo", { ...p, restoId });
     }
 
-    console.log("♻️ Restore DB SUCCESS:", restoId);
+    console.log("♻️ Restore SUCCESS for:", loginEmail);
 
     alert("✅ Data berhasil direstore");
-    location.reload(); // ⬅️ BIAR loadData() JALAN NORMAL
+    location.reload(); // biar loadData() + render jalan normal
 
   } catch (err) {
     console.error("❌ Restore failed:", err);
@@ -2101,6 +2126,7 @@ async function backupAdminToJSON() {
     hideLoader();
   }
 }
+
 
 // ====================== SHARE & QR ======================
 function getCustomerLink() {
@@ -2319,7 +2345,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const waitForActiveUser = () =>
       new Promise(resolve => {
         const check = () => {
-          if (window.activeUser && window.activeUser.restoID) {
+          if (window.activeUser?.email && window.activeUser?.restoID) {
             resolve(window.activeUser);
           } else {
             setTimeout(check, 100);
@@ -2779,6 +2805,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
