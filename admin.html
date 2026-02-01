@@ -2237,14 +2237,21 @@ function hideLoader() {
 
 async function clearRestoDataOnly() {
   try {
-    if (!window.activeUser || !window.activeUser.restoID) {
-      console.warn("⚠️ clearRestoDataOnly aborted: no activeUser");
+    if (!window.activeUser?.restoID) {
+      console.warn("⚠️ clearRestoDataOnly aborted: no active resto");
       return;
     }
 
     const restoId = window.activeUser.restoID;
 
-    // STORE YANG AMAN DIRESET
+    // ===============================
+    // 1️⃣ HAPUS DATA RESTO PROFILE
+    // ===============================
+    await MENUVA_DB.delete("restos", restoId);
+
+    // ===============================
+    // 2️⃣ STORE YANG TERIKAT RESTO
+    // ===============================
     const scopedStores = [
       "menuData",
       "flipbookData",
@@ -2254,22 +2261,15 @@ async function clearRestoDataOnly() {
 
     for (const store of scopedStores) {
       const rows = await MENUVA_DB.getAll(store);
-      for (const item of rows) {
-        // hanya hapus milik resto aktif
-        if (item.restoId === restoId || item.id === restoId) {
-          const key =
-            item.id ??
-            item.restoId ??
-            item.orderId;
 
-          if (key !== undefined) {
-            await MENUVA_DB.delete(store, key);
-          }
+      for (const item of rows) {
+        if (item.restoId === restoId) {
+          await MENUVA_DB.delete(store, item.id);
         }
       }
     }
 
-    console.log("🧹 Resto data cleared (SAFE MODE):", restoId);
+    console.log("🧹 Resto data cleared (ADMIN DATA ONLY):", restoId);
 
   } catch (err) {
     console.error("❌ clearRestoDataOnly fatal:", err);
@@ -2817,6 +2817,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
