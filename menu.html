@@ -278,24 +278,6 @@
   
 <script src="./db-core.js"></script>
 <script>
-
-async function initDB() {
-  if (!window.MENUVA_DB) {
-    throw new Error("MENUVA_DB not loaded");
-  }
-
-  const db = await window.MENUVA_DB.open();
-
-  // 🔥 auto reload jika admin upgrade DB
-  db.onversionchange = () => {
-    console.warn("🔁 DB version changed → reload menu");
-    db.close();
-    location.reload();
-  };
-
-  return db;
-}
-
 /* =======================
    RESTO ID
 ======================= */
@@ -500,10 +482,9 @@ async function initMenuPage() {
    START
 ======================= */
 document.addEventListener("DOMContentLoaded", async () => {
-  await window.MENUVA_DB.open(); // 🔥 pastikan schema ready
+  await window.MENUVA_DB.openDB(); // ✅ sesuai kontrak
   initMenuPage();
 });
-
 
 /* =======================
    UTIL
@@ -521,5 +502,6 @@ function goToPage(page) {
 
 </body>
 </html>
+
 
 
