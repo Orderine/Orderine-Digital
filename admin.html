@@ -2011,33 +2011,28 @@ async function resetData() {
 }
 
 async function backupAdminToJSON() {
-  if (!window.activeUser?.email) {
+  if (!window.activeUser?.email || !window.activeUser?.restoID) {
     alert("❌ User belum login");
     return;
   }
 
   const email = window.activeUser.email.trim().toLowerCase();
-  const restoId = window.activeUser.restoID; // hanya untuk ambil data
+  const restoId = window.activeUser.restoID;
+
+  const resto = await MENUVA_DB.get("restos", restoId);
+  if (!resto) {
+    alert("❌ Data resto tidak ditemukan");
+    return;
+  }
 
   const backup = {
     app: "Orderine",
     type: "ADMIN_BACKUP",
     version: 3,
     exportedAt: Date.now(),
-
     owner: { email },
-
     data: {
-      restos: restoId ? await MENUVA_DB.get("restos", restoId) : null,
-      menuData: restoId
-        ? (await MENUVA_DB.getAll("menuData")).filter(d => d.restoId === restoId)
-        : [],
-      flipbookData: restoId
-        ? (await MENUVA_DB.getAll("flipbookData")).filter(d => d.restoId === restoId)
-        : [],
-      menuPromo: restoId
-        ? (await MENUVA_DB.getAll("menuPromo")).filter(d => d.restoId === restoId)
-        : []
+      restos: resto   // 🔥 SATU SUMBER KEBENARAN
     }
   };
 
@@ -2110,11 +2105,11 @@ async function restoreDataFromFile(event) {
 
     // 2️⃣ restore resto profile
     if (json.data?.restos) {
-      await MENUVA_DB.add("restos", {
-        ...json.data.restos,
-        id: restoId
-      });
-    }
+  await MENUVA_DB.add("restos", {
+    ...json.data.restos,
+    id: restoId
+  });
+}
 
     // 3️⃣ restore menu
     for (const m of json.data?.menuData || []) {
@@ -2822,6 +2817,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
