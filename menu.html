@@ -299,22 +299,33 @@ function getRestoId() {
   return null;
 }
 
+/* =======================
+   LOAD MENU PAGE DATA (FINAL)
+   ⛔ TANPA flipbookData
+======================= */
 async function loadMenuPageData(restoId) {
   const resto = await MENUVA_DB.get("restos", restoId);
 
-  const menu = await MENUVA_DB.getAll("menuData");
-  const promo = await MENUVA_DB.getAll("promoData");
-  const flipbook = await MENUVA_DB.getAll("flipbookData");
+  if (!resto) return null;
 
   return {
     resto,
-    menu,
-    promo,
-    flipbookMenu: flipbook.filter(f => f.type === "menu"),
-    flipbookRuangan: flipbook.filter(f => f.type === "room")
+
+    // promo disimpan menyatu di resto
+    promo: Array.isArray(resto.menuPromo)
+      ? resto.menuPromo
+      : [],
+
+    // flipbook juga MENYATU di resto
+    flipbookRuangan: Array.isArray(resto.flipbookRuanganImages)
+      ? resto.flipbookRuanganImages
+      : [],
+
+    flipbookMenu: Array.isArray(resto.flipbookMenuImages)
+      ? resto.flipbookMenuImages
+      : []
   };
 }
-
 
 /* =======================
    RENDER
@@ -381,56 +392,31 @@ function renderPromo(list = []) {
 }
 
 /* =======================
-   FLIPBOOK
+   FLIPBOOK (FINAL)
 ======================= */
 function renderFlipbookGallery(id, images = [], warnId) {
   const box = document.getElementById(id);
   const warn = document.getElementById(warnId);
+  if (!box || !warn) return;
+
   box.innerHTML = "";
   warn.textContent = "";
 
-  if (!images.length) {
+  const validImages = Array.isArray(images)
+    ? images.filter(src => typeof src === "string" && src.trim() !== "")
+    : [];
+
+  if (!validImages.length) {
     warn.textContent = "No pictures.";
     return;
   }
 
-  images.forEach(src => {
+  validImages.forEach(src => {
     const img = document.createElement("img");
     img.src = src;
+    img.loading = "lazy";
     box.appendChild(img);
   });
-}
-
-/* =======================
-   WATCHER (SAFE)
-======================= */
-async function watchDBChanges(restoId) {
-  let last = "";
-
-  setInterval(async () => {
-    try {
-      const data = await loadDataFromDB(restoId);
-      if (!data) return;
-
-      const now = JSON.stringify(data);
-      if (now !== last) {
-        last = now;
-        console.log("🔄 Data updated");
-
-        renderPromo(data.menuPromo || []);
-        renderFlipbookGallery(
-          "flipbookRuanganGallery",
-          data.flipbookRuanganImages || [],
-          "ruanganWarning"
-        );
-        renderFlipbookGallery(
-          "flipbookMenuGallery",
-          data.flipbookMenuImages || [],
-          "menuWarning"
-        );
-      }
-    } catch {}
-  }, 5000);
 }
 
 /* =======================
@@ -442,36 +428,31 @@ async function initMenuPage() {
   const restoId = getRestoId();
   if (!restoId) return;
 
-  // 🔥 ambil data sesuai kontrak DB
+  // 🔑 ambil data resto (SUMBER UTAMA)
   const resto = await MENUVA_DB.get("restos", restoId);
   if (!resto) {
     showFallbackUI("Menu belum tersedia");
     return;
   }
 
-  const promo = await MENUVA_DB.getAll("promoData");
-  const flipbook = await MENUVA_DB.getAll("flipbookData");
-
-  // 🔥 pisahkan flipbook
-  const flipbookRuangan = flipbook
-    .filter(f => f.type === "room")
-    .map(f => f.image);
-
-  const flipbookMenu = flipbook
-    .filter(f => f.type === "menu")
-    .map(f => f.image);
-
   // ================= RENDER =================
   renderHeader(resto);
-  renderPromo(promo);
+
+  renderPromo(Array.isArray(resto.menuPromo) ? resto.menuPromo : []);
+
   renderFlipbookGallery(
     "flipbookRuanganGallery",
-    flipbookRuangan,
+    Array.isArray(resto.flipbookRuanganImages)
+      ? resto.flipbookRuanganImages
+      : [],
     "ruanganWarning"
   );
+
   renderFlipbookGallery(
     "flipbookMenuGallery",
-    flipbookMenu,
+    Array.isArray(resto.flipbookMenuImages)
+      ? resto.flipbookMenuImages
+      : [],
     "menuWarning"
   );
 
@@ -502,6 +483,7 @@ function goToPage(page) {
 
 </body>
 </html>
+
 
 
 
