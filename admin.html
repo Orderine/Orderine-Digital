@@ -2054,6 +2054,23 @@ async function backupAdminToJSON() {
   console.log("📦 Backup success (EMAIL):", email);
 }
 
+ let __BACKUP_RUNNING__ = false;
+
+window.downloadBackupJSON = async function () {
+  if (__BACKUP_RUNNING__) return;
+  __BACKUP_RUNNING__ = true;
+
+  try {
+    await backupAdminToJSON();
+  } catch (err) {
+    console.error("❌ Backup failed:", err);
+    alert("❌ Gagal melakukan backup data");
+  } finally {
+    __BACKUP_RUNNING__ = false;
+  }
+};
+
+
 async function restoreDataFromFile(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -2805,6 +2822,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
