@@ -278,7 +278,6 @@
   
 <script src="./db-core.js"></script>
 <script>
-let watcherStarted = false;
 
 async function initDB() {
   if (!window.MENUVA_DB) {
@@ -318,18 +317,22 @@ function getRestoId() {
   return null;
 }
 
-async function loadDataFromDB(restoId) {
-  const database = await initDB();
+async function loadMenuPageData(restoId) {
+  const resto = await MENUVA_DB.get("restos", restoId);
 
-  return new Promise((resolve, reject) => {
-    const tx = database.transaction("menuvaData", "readonly");
-    const store = tx.objectStore("menuvaData");
-    const req = store.get(restoId);
+  const menu = await MENUVA_DB.getAll("menuData");
+  const promo = await MENUVA_DB.getAll("promoData");
+  const flipbook = await MENUVA_DB.getAll("flipbookData");
 
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-  });
+  return {
+    resto,
+    menu,
+    promo,
+    flipbookMenu: flipbook.filter(f => f.type === "menu"),
+    flipbookRuangan: flipbook.filter(f => f.type === "room")
+  };
 }
+
 
 /* =======================
    RENDER
@@ -457,29 +460,38 @@ async function initMenuPage() {
   const restoId = getRestoId();
   if (!restoId) return;
 
-  const data = await loadDataFromDB(restoId);
-  if (!data) {
+  // 🔥 ambil data sesuai kontrak DB
+  const resto = await MENUVA_DB.get("restos", restoId);
+  if (!resto) {
     showFallbackUI("Menu belum tersedia");
     return;
   }
 
-  renderHeader(data);
-  renderPromo(data.menuPromo || []);
+  const promo = await MENUVA_DB.getAll("promoData");
+  const flipbook = await MENUVA_DB.getAll("flipbookData");
+
+  // 🔥 pisahkan flipbook
+  const flipbookRuangan = flipbook
+    .filter(f => f.type === "room")
+    .map(f => f.image);
+
+  const flipbookMenu = flipbook
+    .filter(f => f.type === "menu")
+    .map(f => f.image);
+
+  // ================= RENDER =================
+  renderHeader(resto);
+  renderPromo(promo);
   renderFlipbookGallery(
     "flipbookRuanganGallery",
-    data.flipbookRuanganImages || [],
+    flipbookRuangan,
     "ruanganWarning"
   );
   renderFlipbookGallery(
     "flipbookMenuGallery",
-    data.flipbookMenuImages || [],
+    flipbookMenu,
     "menuWarning"
   );
-
-  if (!watcherStarted) {
-    watchDBChanges(restoId);
-    watcherStarted = true;
-  }
 
   console.log("✅ Menu ready");
 }
@@ -509,4 +521,5 @@ function goToPage(page) {
 
 </body>
 </html>
+
 
