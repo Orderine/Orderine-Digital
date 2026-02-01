@@ -1098,7 +1098,7 @@ function tambahPromo(promo = {}) {
     <input type="text" placeholder="Promo Name" value="${namaPromo}">
     <input type="number" placeholder="Price" value="${harga}">
     <textarea placeholder="Description">${deskripsi}</textarea>
-    <input type="date" value="${tanggalAkhir}">
+    <input type="datetime-local" value="${tanggalAkhir}">
 
     <input
       type="file"
@@ -1147,9 +1147,14 @@ function tambahPromo(promo = {}) {
       namaPromo: item.querySelector("input[type=text]")?.value || "",
       harga: Number(item.querySelector("input[type=number]")?.value || 0),
       deskripsi: item.querySelector("textarea")?.value || "",
-      tanggalAkhir: item.querySelector("input[type=date]")?.value || "",
       image: item.querySelector("input[type=file]")?.getAttribute("data-image") || "",
       kategori: "PROMO"
+      tanggalAkhir: item.querySelector("input[type=datetime-local]")?.value
+  ? new Date(
+      item.querySelector("input[type=datetime-local]").value
+    ).toISOString()
+  : ""
+
     });
   });
 
@@ -2874,6 +2879,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
