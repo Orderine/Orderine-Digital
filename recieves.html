@@ -209,47 +209,14 @@ header{
   <button onclick="goBackToAdmin()">⬅ Kembali ke Admin</button>
 </div>
 
+<script src="js/db-core.js"></script>
 <script>
-/* ================== DB CONFIG (v9) =================== */
-const DB_NAME = 'MenuvaDB';
-let db;
+/* =====================================================
+   RECEIEVES — PATUH MENUVA_DB (NO DB MANDIRI)
+===================================================== */
 
-function initDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 14);
-
-    req.onupgradeneeded = (e) => {
-      db = e.target.result;
-
-      // ====== ordersData ======
-      if (!db.objectStoreNames.contains('ordersData')) {
-        const store = db.createObjectStore('ordersData', { keyPath: 'id', autoIncrement: true });
-        store.createIndex('status', 'status', { unique: false });
-      }
-
-      // ====== menuvaData (buat resto info) ======
-      if (!db.objectStoreNames.contains('menuvaData')) {
-        db.createObjectStore('menuvaData', { keyPath: 'id', autoIncrement: true });
-      }
-
-      console.log('✅ stores checked/created');
-    };
-
-    req.onsuccess = (e) => {
-      db = e.target.result;
-      console.log('✅ DB connected');
-      resolve();
-    };
-
-    req.onerror = () => {
-      console.error('❌ DB Init Error:', req.error);
-      reject(req.error);
-    };
-  });
-}
-  /* ================== NOTIFIKASI ORDER BARU ================== */
+/* ================== NOTIFIKASI ORDER BARU ================== */
 function showNewOrderNotification() {
-  // ====== 1️⃣ Notifikasi visual ======
   const notif = document.createElement('div');
   notif.className = 'new-order-toast';
   notif.innerHTML = `
@@ -258,117 +225,78 @@ function showNewOrderNotification() {
   `;
   document.body.appendChild(notif);
 
-  // animasi muncul
   setTimeout(() => notif.classList.add('show'), 50);
 
-  // hilang otomatis setelah 4 detik
   setTimeout(() => {
     notif.classList.remove('show');
     setTimeout(() => notif.remove(), 500);
   }, 8000);
 
-  // ====== 2️⃣ Notifikasi suara (pakai file lokal) ======
   try {
-    const audio = new Audio('./beep.mp3'); // ✅ file lokal
-    audio.volume = 0.6;                    // sesuaikan volume
+    const audio = new Audio('./beep.mp3');
+    audio.volume = 0.6;
     audio.play().catch(() => {
-      console.warn('⚠️ Browser menolak autoplay suara (butuh interaksi user dulu).');
+      console.warn('⚠️ Autoplay suara diblokir browser');
     });
   } catch (err) {
-    console.warn('⚠️ Gagal memutar suara notif:', err);
+    console.warn('⚠️ Gagal play audio:', err);
   }
 }
 
-/* ================== REAL-TIME UPDATER ================== */
+/* ================== REAL-TIME CHANNEL ================== */
 const bc = new BroadcastChannel("menuvaOrders");
 
-
-// Dengarkan sinyal update dari tab lain
 bc.onmessage = (event) => {
   if (event.data?.type === 'newOrder') {
-    console.log('📡 Pesanan baru diterima dari book.html');
-    loadOrders(); // 🔄 reload daftar order
-    showNewOrderNotification(); // 🔔 tampilkan notifikasi visual + suara
+    console.log('📡 Order baru diterima');
+    loadOrders();
+    showNewOrderNotification();
   }
 };
 
-// Fungsi untuk kirim sinyal update ke semua tab
 function notifyOrdersUpdated() {
-  bc.postMessage('update_orders');
+  bc.postMessage({ type: 'update_orders' });
 }
 
-/* amanin akses ke store */
-function safeTransaction(storeName, mode = 'readonly') {
-  if (!db) {
-    console.error('❌ Database belum siap.');
-    return null;
-  }
+/* ================= LOAD ORDERS ================= */
+async function loadOrders() {
   try {
-    return db.transaction(storeName, mode).objectStore(storeName);
+    const orders = await MENUVA_DB.getAll("ordersData");
+    renderOrders(orders || []);
   } catch (err) {
-    console.error(`❌ Gagal buka store ${storeName}:`, err);
-    return null;
-  }
-}
-
-/* ambil semua order dari store ordersData */
-function loadOrders() {
-  const store = safeTransaction('ordersData', 'readonly');
-  if (!store) {
+    console.error('❌ loadOrders error:', err);
     document.getElementById('ordersBox').innerHTML =
-      "<p style='color:red'>❌ ordersData tidak ditemukan. Pastikan book.html sudah mengirim pesanan.</p>";
-    return;
+      "<p style='color:red'>❌ Gagal load orders.</p>";
   }
-
-  const req = store.getAll();
-  req.onsuccess = () => {
-    const orders = req.result || [];
-    renderOrders(orders);
-  };
-  req.onerror = (e) => {
-    console.error('❌ Gagal load orders:', e.target.error);
-    document.getElementById('ordersBox').innerHTML =
-      "<p style='color:red'>❌ Error loading orders.</p>";
-  };
 }
 
 /* ================= LOAD RESTO INFO ================= */
-function loadRestoInfo(){
-  const tx = db.transaction('menuvaData', 'readonly');
-  const store = tx.objectStore('menuvaData');
-  const req = store.get(1); // data resto tersimpan di id=1
+async function loadRestoInfo() {
+  try {
+    const resto = await MENUVA_DB.get("restos", "active");
 
-  req.onsuccess = () => {
-    const data = req.result;
-    if (!data) {
-      console.warn('⚠️ Data resto tidak ditemukan di IndexedDB');
+    if (!resto) {
       document.getElementById('restoName').textContent = 'Unknown Resto';
       return;
     }
 
-    // nama resto
-    const name = data.namaRestoran || data.restoName || 'Unknown Resto';
-    document.getElementById('restoName').textContent = name;
+    document.getElementById('restoName').textContent =
+      resto.namaRestoran || resto.restoName || 'Unknown Resto';
 
-    // logo
-    if (data.logo)
-      document.getElementById('restoLogo').src = data.logo;
+    if (resto.logo)
+      document.getElementById('restoLogo').src = resto.logo;
 
-    // alamat
-    if (data.restoAddress)
-      document.getElementById('restoAddress').textContent = data.restoAddress;
+    if (resto.restoAddress)
+      document.getElementById('restoAddress').textContent = resto.restoAddress;
 
-    // nomor telepon
-    if (data.restoPhone)
-      document.getElementById('restoPhone').textContent = `📞 ${data.restoPhone}`;
-  };
-
-  req.onerror = () => {
-    console.warn('⚠️ Gagal load resto info');
-    document.getElementById('restoName').textContent = 'Unknown Resto';
-  };
+    if (resto.restoPhone)
+      document.getElementById('restoPhone').textContent = `📞 ${resto.restoPhone}`;
+  } catch (err) {
+    console.warn('⚠️ Gagal load resto info:', err);
+  }
 }
 
+/* ================= RENDER ================= */
 function renderOrders(data) {
   const box = document.getElementById('ordersBox');
   box.innerHTML = '';
@@ -378,53 +306,43 @@ function renderOrders(data) {
     return;
   }
 
-  // Urutkan berdasarkan tanggal (lama ke baru)
-  data.sort((a, b) => new Date(a.date) - new Date(b.date));
+  data.sort((a, b) => (a.orderTime || 0) - (b.orderTime || 0));
 
-  // Ambil semua tanggal unik
   const uniqueDates = [...new Set(data.map(o => o.date || 'Unknown Date'))];
 
-  // ======== FILTER NAV (TOMBOL PER TANGGAL) ========
   const filterBar = document.createElement('div');
   filterBar.className = 'filter-bar';
   filterBar.innerHTML = uniqueDates
-    .map(
-      (tgl, idx) =>
-        `<button class="date-btn ${idx === uniqueDates.length - 1 ? 'active' : ''}" data-date="${tgl}">${tgl}</button>`
-    )
-    .join('');
+    .map((tgl, i) =>
+      `<button class="date-btn ${i === uniqueDates.length - 1 ? 'active' : ''}" data-date="${tgl}">${tgl}</button>`
+    ).join('');
+
   box.appendChild(filterBar);
 
-  // ======== TEMPAT ORDER ========
   const listContainer = document.createElement('div');
   listContainer.id = 'ordersList';
   box.appendChild(listContainer);
 
-  // tampilkan default tanggal terakhir
   const defaultDate = uniqueDates[uniqueDates.length - 1];
   renderOrdersByDate(data, defaultDate);
 
-  // Event klik pada tombol tanggal
   box.querySelectorAll('.date-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      // ubah highlight
+    btn.onclick = () => {
       box.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      // render ulang
       renderOrdersByDate(data, btn.dataset.date);
-    });
+    };
   });
 }
 
-/* render hanya untuk tanggal tertentu */
-function renderOrdersByDate(data, selectedDate) {
-  const listContainer = document.getElementById('ordersList');
-  listContainer.innerHTML = '';
+function renderOrdersByDate(data, date) {
+  const list = document.getElementById('ordersList');
+  list.innerHTML = '';
 
-  const filtered = data.filter(o => (o.date || 'Unknown Date') === selectedDate);
+  const filtered = data.filter(o => (o.date || 'Unknown Date') === date);
 
   if (!filtered.length) {
-    listContainer.innerHTML = `<p style="color:var(--muted)">No orders for ${selectedDate}.</p>`;
+    list.innerHTML = `<p style="color:var(--muted)">No orders for ${date}</p>`;
     return;
   }
 
@@ -436,14 +354,12 @@ function renderOrdersByDate(data, selectedDate) {
         <h3>Table ${order.table || '-'} - ${order.customer || '-'}</h3>
         <span>${order.time || ''}</span>
       </div>
+
       <div class="order-meta">
         Order ID: ${order.id} | Status: ${order.status}
       </div>
 
-      ${order.note ? `
-      <div class="order-note">
-        📝 <b>Note:</b> ${order.note}
-      </div>` : ''}
+      ${order.note ? `<div class="order-note">📝 ${order.note}</div>` : ''}
 
       <div class="order-items">
         ${order.items.map(i => `
@@ -455,165 +371,48 @@ function renderOrdersByDate(data, selectedDate) {
       </div>
 
       <div class="order-summary">
-        Subtotal: ${formatHarga(order.subtotal)}<br>
-        ${order.discount > 0
-          ? `Discount (${order.voucherCode || ''} - ${order.discountPercent}%): -${formatHarga(order.discount)}<br>`
-          : ''
-        }
         <strong>Grand Total: ${formatHarga(order.grandTotal)}</strong>
       </div>
 
       <div class="order-actions">
-        <button class="btn btn-print" onclick="printOrder(${order.id})">🖨 Print</button>
-        <button class="btn btn-void" onclick="voidOrder(${order.id})">❌ Void</button>
+        <button onclick="printOrder(${order.id})">🖨 Print</button>
+        <button onclick="voidOrder(${order.id})">❌ Void</button>
       </div>
     `;
-    listContainer.appendChild(div);
+    list.appendChild(div);
   });
 }
 
-/* format harga */
-function formatHarga(amount){
+/* ================= ACTIONS ================= */
+function formatHarga(v) {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency', currency: 'IDR', minimumFractionDigits: 0
-  }).format(amount || 0);
+  }).format(v || 0);
 }
 
-function printOrder(id) {
-  const card = document.querySelector(`.order-card:nth-child(${id})`);
-  if (!card) {
-    alert("⚠️ Order tidak ditemukan.");
-    return;
-  }
+async function voidOrder(id) {
+  const order = await MENUVA_DB.get("ordersData", id);
+  if (!order) return alert("Order tidak ditemukan");
 
-  // buat clone elemen card
-  const printContent = card.cloneNode(true);
+  if (!confirm(`VOID Order #${id}?`)) return;
 
-  // gaya minimal khusus print
-  const printStyle = `
-    <style>
-      * { font-family: Inter, sans-serif; color: #000; }
-      body { background: #fff; margin: 20px; }
-      .order-card {
-        border: 1px solid #ccc;
-        border-radius: 10px;
-        padding: 16px;
-        max-width: 500px;
-        margin: auto;
-      }
-      h3 { margin: 0 0 8px 0; }
-      .order-item { display:flex; justify-content:space-between; margin-bottom:4px; }
-      .order-summary { margin-top:12px; font-weight:bold; }
-      .order-actions { display:none; }
-    </style>
-  `;
+  order.status = "void";
+  await MENUVA_DB.add("ordersData", order);
 
-  // buka window print
-  const win = window.open('', '', 'width=600,height=800');
-  win.document.write(`
-    <html>
-      <head>
-        <title>Print Order #${id}</title>
-        ${printStyle}
-      </head>
-      <body>${printContent.outerHTML}</body>
-    </html>
-  `);
-  win.document.close();
-  win.focus();
-
-  // tunggu sedikit supaya CSS kebaca, baru print
-  setTimeout(() => {
-    win.print();
-    win.close();
-  }, 500);
-}
-/* aksi void (real-time update) */
-function voidOrder(id) {
-  const tx = db.transaction('ordersData', 'readwrite');
-  const store = tx.objectStore('ordersData');
-  const req = store.get(id);
-
-  req.onsuccess = () => {
-    const order = req.result;
-    if (order) {
-      // Konfirmasi manual aja biar gak ke-klik sembarangan
-      const confirmVoid = confirm(`Yakin ingin VOID Order #${id}?`);
-      if (!confirmVoid) return;
-
-      order.status = 'void';
-      store.put(order);
-
-      tx.oncomplete = () => {
-        console.log(`🗑 Order #${id} berhasil diubah menjadi void`);
-        loadOrders();        // 🔄 refresh tampilan lokal
-        notifyOrdersUpdated(); // 📡 kirim sinyal update ke tab lain
-        alert(`✅ Order #${id} berhasil di-VOID.`);
-      };
-    } else {
-      console.warn(`⚠️ Order dengan ID ${id} tidak ditemukan.`);
-    }
-  };
-
-  req.onerror = (e) => {
-    console.error('❌ Gagal mengambil order:', e.target.error);
-  };
+  loadOrders();
+  notifyOrdersUpdated();
 }
 
+/* ================= INIT ================= */
+document.getElementById('ordersBox').innerHTML =
+  `<p style="color:var(--muted)">⏳ Loading orders...</p>`;
 
-const themeToggle = document.getElementById('themeToggle');
-const themeIcon = document.getElementById('themeIcon');
-
-// === apply theme saat load ===
-if (localStorage.getItem('theme') === 'dark') {
-  document.body.classList.add('dark-mode');
-  themeIcon.textContent = '🌞';
-} else {
-  document.body.classList.remove('dark-mode');
-  themeIcon.textContent = '🌙';
-}
-
-// === toggle saat diklik ===
-themeToggle.addEventListener('click', () => {
-  const isDark = document.body.classList.toggle('dark-mode');
-  themeIcon.textContent = isDark ? '🌞' : '🌙';
-  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+MENUVA_DB.openDB().then(() => {
+  loadRestoInfo();
+  loadOrders();
 });
-
-/* start */
-document.getElementById('ordersBox').innerHTML = `
-  <p style="color:var(--muted)">⏳ Loading orders...</p>
-`;
-
-initDB()
-  .then(() => {
-    // ✅ tampilkan logo & nama resto
-    loadRestoInfo();
-
-    // ✅ tampilkan daftar pesanan
-    loadOrders();
-  })
-  .catch(err => {
-    console.error('❌ DB Init Error:', err);
-    document.getElementById('ordersBox').innerHTML = `
-      <p style="color:red">❌ Gagal membuka database. Periksa IndexedDB di browser.</p>
-    `;
-  });
-  
-function goBackToAdmin() {
-  // arahkan balik ke admin.html
-  window.location.href = 'admin.html';
-}
-
-</script>
-  
-<script>
-localStorage.setItem("lastViewedOrderTime", Date.now());
 </script>
 
 </body>
 </html>
-
-
-
 
