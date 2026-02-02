@@ -1076,15 +1076,34 @@ async function sendOrder() {
   const time = document.getElementById('custTime')?.value || '';
   const note = (document.getElementById('custNote')?.value || '').trim();
 
-  if (!name) return showToast('⚠️ Please fill in customer name!', "error"), playSound("error");
-  if (!table) return showToast('⚠️ Please fill in table number!', "error"), playSound("error");
-  if (!cart || !cart.length) return showToast('⚠️ Please add items to cart before submitting!', "error"), playSound("error");
+  if (!name) {
+    showToast('⚠️ Please fill in customer name!', "error");
+    playSound("error");
+    return;
+  }
+
+  if (!table) {
+    showToast('⚠️ Please fill in table number!', "error");
+    playSound("error");
+    return;
+  }
+
+  if (!cart || !cart.length) {
+    showToast('⚠️ Please add items to cart before submitting!', "error");
+    playSound("error");
+    return;
+  }
 
   // ✅ Hitung subtotal
   let subtotal = 0;
-  cart.forEach(c => subtotal += (Number(c.harga) || 0) * (Number(c.qty) || 0));
+  cart.forEach(c => {
+    subtotal += (Number(c.harga) || 0) * (Number(c.qty) || 0);
+  });
 
-  let discount = 0, voucherCode = null, discountPercent = 0;
+  let discount = 0;
+  let voucherCode = null;
+  let discountPercent = 0;
+
   if (activeVoucherData) {
     discountPercent = parseFloat(activeVoucherData.discount) || 0;
     discount = subtotal * (discountPercent / 100);
@@ -1092,9 +1111,8 @@ async function sendOrder() {
   }
 
   const grandTotal = subtotal - discount;
-  const now = new Date();
 
-  // ✅ Order payload (clean & konsisten)
+  // ✅ Payload order (FINAL & KONSISTEN)
   const orderData = {
     resto: restoData?.namaRestoran || '',
     customer: name,
@@ -1113,62 +1131,41 @@ async function sendOrder() {
     discountPercent,
     voucherCode,
     grandTotal,
-    status: "new",
-    orderTime: Date.now() // ⬅️ timestamp real (sorting & index friendly)
+    status: "pending",
+    orderTime: Date.now(),
+    createdAt: Date.now()
   };
 
-   try {
-    await MENUVA_DB.add("ordersData", {
-      ...orderData,
-      createdAt: Date.now(),
-      status: "pending"
-    });
+  try {
+    // 🔐 SIMPAN VIA MOTHER DB
+    const orderId = await MENUVA_DB.add("ordersData", orderData);
 
-    showToast("✅ Order berhasil dikirim", "success");
+    console.log("✅ Order stored:", { ...orderData, id: orderId });
+
+    showToast("✅ Order submitted successfully!", "success", "top");
+    playSound("success");
+
+    // 🔔 REALTIME BROADCAST (receives.html / admin)
+    try {
+      const bc = new BroadcastChannel("menuvaOrders");
+      bc.postMessage({
+        type: "newOrder",
+        data: { ...orderData, id: orderId }
+      });
+      bc.close();
+    } catch (err) {
+      console.warn("⚠️ BroadcastChannel failed:", err);
+    }
+
+    showToast("🧾 Order is being processed", "info", "bottom");
 
   } catch (err) {
     console.error("❌ sendOrder error:", err);
-    showToast("❌ Gagal mengirim order", "error");
+    showToast("❌ Failed to save order, please try again.", "error");
+    playSound("error");
   }
 }
 
-    const tx = db.transaction(ORDER_STORE, "readwrite");
-    const store = tx.objectStore(ORDER_STORE);
-    const req = store.add(orderData);
-
-    req.onsuccess = (e) => {
-      const newId = e.target.result;
-      console.log("✅ Order stored:", { ...orderData, id: newId });
-
-      showToast("✅ Order submitted successfully!", "success", "top");
-      playSound("success");
-
-      // ✅ REALTIME → recieves.html
-      try {
-        const bc = new BroadcastChannel("menuvaOrders");
-        bc.postMessage({
-          type: "newOrder",
-          data: { ...orderData, id: newId }
-        });
-        bc.close();
-      } catch (err) {
-        console.warn("⚠️ BroadcastChannel failed:", err);
-      }
-
-      showToast("🧾 Order is being processed", "info", "bottom");
-    };
-
-    req.onerror = () => {
-      console.error("❌ Failed saving order:", req.error);
-      showToast("❌ Failed to save order, please try again.", "error");
-      playSound("error");
-    };
-
-  } catch (err) {
-    console.error("❌ DB Error:", err);
-    showToast("❌ Database not initialized", "error");
-  }
-}
 
 /* ---------------- SOUND EFFECT ---------------- */
 function playSound(type) {
@@ -1407,6 +1404,7 @@ function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
 
