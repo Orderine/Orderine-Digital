@@ -1098,7 +1098,7 @@ function tambahPromo(promo = {}) {
     <input type="text" placeholder="Promo Name" value="${namaPromo}">
     <input type="number" placeholder="Price" value="${harga}">
     <textarea placeholder="Description">${deskripsi}</textarea>
-    <input type="datetime-local" value="${tanggalAkhir}">
+    <input type="date" value="${toDateInput(tanggalAkhir)}">
 
     <input
       type="file"
@@ -1121,6 +1121,12 @@ function tambahPromo(promo = {}) {
   container.appendChild(div);
 }
 
+  function toDateInput(iso) {
+  if (!iso) return "";
+  return iso.slice(0, 10); // yyyy-MM-dd
+}
+
+
   function uploadPromoImage(event, inputEl) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1135,34 +1141,32 @@ function tambahPromo(promo = {}) {
     .catch(err => console.error("Upload promo image failed:", err));
 }
 
- function ambilPromo() {
+function ambilPromo() {
   const container = document.getElementById("promoContainer");
   if (!container) return [];
 
   const promos = [];
 
   container.querySelectorAll(".promo-item").forEach(item => {
+    const end = item.querySelector("input[type=date]")?.value;
+
     promos.push({
       id: item.dataset.id || crypto.randomUUID(),
       namaPromo: item.querySelector("input[type=text]")?.value || "",
       harga: Number(item.querySelector("input[type=number]")?.value || 0),
       deskripsi: item.querySelector("textarea")?.value || "",
-      image: item
-        .querySelector("input[type=file]")
-        ?.getAttribute("data-image") || "",
-      kategori: "PROMO", // ✅ KOMA YANG HILANG
+      image: item.querySelector("input[type=file]")?.dataset.image || "",
+      kategori: "PROMO",
 
-      tanggalAkhir: item.querySelector("input[type=datetime-local]")?.value
-  ? new Date(
-      item.querySelector("input[type=datetime-local]").value
-    ).toISOString()
-  : ""
+      // ⏳ batas akhir 23:59
+      tanggalAkhir: end
+        ? new Date(end + "T23:59:59").toISOString()
+        : ""
     });
   });
 
   return promos;
 }
-
 
 /* ============================================================
    MENU
@@ -2882,6 +2886,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
