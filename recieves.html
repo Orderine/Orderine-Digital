@@ -402,9 +402,24 @@ function renderOrdersByDate(data, date) {
         `).join('')}
       </div>
 
-      <div class="order-summary">
-        <strong>Grand Total: ${formatHarga(order.grandTotal)}</strong>
-      </div>
+     <div class="order-summary">
+
+  ${order.subtotal ? `
+    <div>Subtotal: ${formatHarga(order.subtotal)}</div>
+  ` : ""}
+
+  ${order.voucherCode ? `
+    <div style="color:green">
+      Voucher ${order.voucherCode}
+      ${order.discountPercent ? `(${order.discountPercent}%)` : ""}
+      - ${formatHarga(order.discount)}
+    </div>
+  ` : ""}
+
+  <strong>Grand Total: ${formatHarga(order.grandTotal)}</strong>
+
+</div>
+
 
       <div class="order-actions">
         <button onclick="printOrder(${order.id})">🖨 Print</button>
@@ -457,4 +472,5 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
 
