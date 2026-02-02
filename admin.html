@@ -2763,11 +2763,22 @@ function prepareCustomerShare() {
   localStorage.removeItem("customerShareReady");
 }
 
+  let audioUnlocked = false;
+
 function playNotifSound() {
-  if (!notifAudio || !audioUnlocked) return;
-  notifAudio.currentTime = 0;
-  notifAudio.play().catch(() => {});
+  if (!audioUnlocked) return;
+
+  const audio = new Audio('./beep.mp3');
+  audio.volume = 0.6;
+  audio.play().catch(() => {});
 }
+
+
+  document.addEventListener("click", () => {
+  audioUnlocked = true;
+  console.log("🔓 Audio unlocked (admin)");
+}, { once: true });
+
 
 /* ============================================================
    3. INDEXEDDB HELPERS (SAFE)
@@ -2880,4 +2891,5 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
