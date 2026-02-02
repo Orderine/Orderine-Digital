@@ -211,6 +211,7 @@ header{
 
 <script src="db-core.js"></script>
 <script>
+
 /* =====================================================
    RECEIEVES — PATUH MENUVA_DB (NO DB MANDIRI)
 ===================================================== */
@@ -294,15 +295,24 @@ async function loadOrders() {
 /* ================= LOAD RESTO INFO ================= */
 async function loadRestoInfo() {
   try {
-    const resto = await MENUVA_DB.get("restos", "active");
+    const restoId =
+      localStorage.getItem("restoId") ||
+      localStorage.getItem("activeRestoId");
+
+    if (!restoId) {
+      console.warn("⚠️ restoId tidak ditemukan");
+      return;
+    }
+
+    const resto = await MENUVA_DB.get("restos", restoId);
 
     if (!resto) {
-      document.getElementById('restoName').textContent = 'Unknown Resto';
+      console.warn("⚠️ resto tidak ditemukan di DB");
       return;
     }
 
     document.getElementById('restoName').textContent =
-      resto.namaRestoran || resto.restoName || 'Unknown Resto';
+      resto.namaRestoran || 'Unknown Resto';
 
     if (resto.logo)
       document.getElementById('restoLogo').src = resto.logo;
@@ -312,6 +322,7 @@ async function loadRestoInfo() {
 
     if (resto.restoPhone)
       document.getElementById('restoPhone').textContent = `📞 ${resto.restoPhone}`;
+
   } catch (err) {
     console.warn('⚠️ Gagal load resto info:', err);
   }
@@ -446,3 +457,4 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
