@@ -379,6 +379,11 @@ function renderOrdersByDate(data, date) {
   }
 
   filtered.forEach(order => {
+    // Hitung ulang subtotal & grandTotal tanpa item yang void
+    const activeItems = order.items.filter(i => !i.void);
+    order.subtotal = activeItems.reduce((sum, i) => sum + (i.total || 0), 0);
+    order.grandTotal = order.subtotal - (order.discount || 0);
+
     const div = document.createElement('div');
     div.className = 'order-card';
     div.innerHTML = `
@@ -395,35 +400,29 @@ function renderOrdersByDate(data, date) {
 
       <div class="order-items">
         ${order.items.map(i => `
-          <div class="order-item">
+          <div class="order-item" ${i.void ? 'style="opacity:0.5;text-decoration:line-through"' : ''}>
             <span>${i.nama} ×${i.qty}</span>
             <span>${formatHarga(i.total)}</span>
+            ${!i.void ? `<button class="void-item-btn" data-orderid="${order.id}" data-itemid="${i.id}">❌ Void Item</button>` : ''}
           </div>
         `).join('')}
       </div>
 
-     <div class="order-summary">
-
-  ${order.subtotal ? `
-    <div>Subtotal: ${formatHarga(order.subtotal)}</div>
-  ` : ""}
-
-  ${order.voucherCode ? `
-    <div style="color:green">
-      Voucher ${order.voucherCode}
-      ${order.discountPercent ? `(${order.discountPercent}%)` : ""}
-      - ${formatHarga(order.discount)}
-    </div>
-  ` : ""}
-
-  <strong>Grand Total: ${formatHarga(order.grandTotal)}</strong>
-
-</div>
-
+      <div class="order-summary">
+        ${order.subtotal ? `<div>Subtotal: ${formatHarga(order.subtotal)}</div>` : ""}
+        ${order.voucherCode ? `
+          <div style="color:green">
+            Voucher ${order.voucherCode}
+            ${order.discountPercent ? `(${order.discountPercent}%)` : ""}
+            - ${formatHarga(order.discount)}
+          </div>
+        ` : ""}
+        <strong>Grand Total: ${formatHarga(order.grandTotal)}</strong>
+      </div>
 
       <div class="order-actions">
         <button onclick="printOrder(${order.id})">🖨 Print</button>
-        <button onclick="voidOrder(${order.id})">❌ Void</button>
+        <button onclick="voidOrder(${order.id})">❌ Void Order</button>
       </div>
     `;
     list.appendChild(div);
@@ -436,6 +435,32 @@ function formatHarga(v) {
     style: 'currency', currency: 'IDR', minimumFractionDigits: 0
   }).format(v || 0);
 }
+
+  async function voidOrderItem(orderId, itemId) {
+  const order = await MENUVA_DB.get("ordersData", orderId);
+  if (!order) return alert("Order tidak ditemukan");
+
+  const item = order.items.find(i => i.id === itemId);
+  if (!item) return alert("Item tidak ditemukan");
+
+  if (!confirm(`VOID item ${item.nama}?`)) return;
+
+  item.void = true;       // tandai void
+  item.total = 0;          // opsional, supaya total item jadi 0
+  await MENUVA_DB.add("ordersData", order);
+
+  loadOrders();
+  notifyOrdersUpdated();
+}
+
+  document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('void-item-btn')) {
+    const orderId = e.target.dataset.orderid;
+    const itemId = e.target.dataset.itemid;
+    voidOrderItem(orderId, itemId);
+  }
+});
+
 
 async function voidOrder(id) {
   const order = await MENUVA_DB.get("ordersData", id);
@@ -472,5 +497,6 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
 
 
