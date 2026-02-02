@@ -427,6 +427,8 @@ footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);paddin
   let activeVoucherData = null; // object voucher aktif (null jika none)
   let promoCountdownTimer = null;
 
+  const orderBC = new BroadcastChannel("menuvaOrders");
+
   /* ------------------ LOCALE / CURRENCY ---------------- */
   const localeToCurrencyFallback = {
     'id': 'IDR','en-US': 'USD','en': 'USD','en-GB': 'GBP','de': 'EUR','fr': 'EUR','ja': 'JPY','zh': 'CNY'
@@ -1152,7 +1154,7 @@ async function sendOrder() {
         type: "newOrder",
         data: { ...orderData, id: orderId }
       });
-      bc.close();
+      
     } catch (err) {
       console.warn("⚠️ BroadcastChannel failed:", err);
     }
@@ -1414,9 +1416,3 @@ function initDarkMode() {
 </script>
 </body>
 </html>
-
-
-
-
-
-
