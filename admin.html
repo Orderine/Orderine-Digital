@@ -855,13 +855,6 @@ button {
     <div class="label">Receives</div>
   </div>
 
-  <div class="nav-item danger" onclick="openRestorePopup()">
-    <div class="icon-wrapper">
-      <ion-icon name="cloud-download-outline" class="icon"></ion-icon>
-    </div>
-    <div class="label">Restore</div>
-  </div>
-
  <div
   class="nav-item vertical"
   id="inviteAdminBtn"
@@ -2389,6 +2382,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initPageToggles(); // 🔥 SEMUA TOGGLE DI SINI
   bindCustomerButtons();
   loadAdminData?.();
+  startRealtimeOrderChecker();
 
   try {
     console.log("🚀 Admin Init (CORE)");
@@ -2886,23 +2880,3 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
