@@ -357,9 +357,6 @@ function renderHeader(data) {
     `📞 Telephone: ${data.restoPhone || "-"}`;
 }
 
-/* =======================
-   PROMO
-======================= */
 function renderPromo(list = []) {
   const box = document.getElementById("promoContainer");
   const warn = document.getElementById("promoWarning");
@@ -372,7 +369,7 @@ function renderPromo(list = []) {
     return;
   }
 
-  list.forEach((p, i) => {
+  list.forEach(p => {
     const card = document.createElement("div");
     card.className = "promo-item";
 
@@ -389,49 +386,57 @@ function renderPromo(list = []) {
       card.appendChild(img);
     }
 
-   const countdownId = `promo-countdown-${i}`;
+    // 🔥 ID COUNTDOWN HARUS PAKAI ID PROMO
+    const countdownId = `cd-${p.id}`;
 
-card.innerHTML += `
-  <h3>${p.namaPromo || "-"}</h3>
-  <p>${p.deskripsi || "-"}</p>
-  <div class="promo-price">
-    ${p.harga ? "Rp " + Number(p.harga).toLocaleString("id-ID") : "-"}
-  </div>
-  <div class="promo-countdown" id="${countdownId}"></div>
-`;
+    card.innerHTML += `
+      <h3>${p.namaPromo || "-"}</h3>
+      <p>${p.deskripsi || "-"}</p>
+      <div class="promo-price">
+        ${p.harga ? "Rp " + Number(p.harga).toLocaleString("id-ID") : "-"}
+      </div>
+      <div class="promo-countdown" id="${countdownId}"></div>
+    `;
+
     box.appendChild(card);
-    
-    const countdownEl = document.getElementById(countdownId);
-    startPromoCountdown(countdownEl, p.deadline);
 
+    // 🔥 PANGGIL COUNTDOWN SETELAH DOM ADA
+    startPromoCountdown(p);
   });
 }
 
-  function startPromoCountdown(el, deadline) {
-  if (!deadline) return;
+  function renderMenuPromoUI(promos = []) {
+  const container = document.getElementById("menuPromoContainer");
+  if (!container) return;
 
-  const end = new Date(deadline).getTime();
-  if (isNaN(end)) return;
+  container.innerHTML = "";
 
-  function update() {
-    const now = Date.now();
-    const diff = end - now;
+  promos.forEach(promo => {
+    renderMenuPromo(promo);
+  });
+}
 
-    if (diff <= 0) {
-      el.textContent = "⏰ Promo berakhir";
-      return;
-    }
+ function startPromoCountdown(promo) {
+  const el = document.getElementById(`cd-${promo.id}`);
+  if (!el || !promo.tanggalAkhir) return;
 
-    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    const m = Math.floor((diff / (1000 * 60)) % 60);
-    const s = Math.floor((diff / 1000) % 60);
+  const end = new Date(promo.tanggalAkhir);
+  const now = new Date();
 
-    el.textContent = `⏳ ${d}h ${h}j ${m}m ${s}d`;
+  end.setHours(23, 59, 59, 999);
+  now.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.ceil(
+    (end - now) / (1000 * 60 * 60 * 24)
+  );
+
+  if (diffDays <= 0) {
+    el.textContent = "❌ Promo berakhir";
+  } else if (diffDays === 1) {
+    el.textContent = "🔥 Promo berakhir hari ini!";
+  } else {
+    el.textContent = `⏳ ${diffDays} hari lagi`;
   }
-
-  update();
-  setInterval(update, 1000);
 }
 
 
@@ -527,6 +532,7 @@ function goToPage(page) {
 
 </body>
 </html>
+
 
 
 
