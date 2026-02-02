@@ -1169,14 +1169,24 @@ async function sendOrder() {
 
 /* ---------------- SOUND EFFECT ---------------- */
 function playSound(type) {
-  let file = "";
-  if (type === "success") file = "clik.mp3";
-  else if (type === "error") file = "beep.mp3";
+  const sounds = {
+    success: "/Orderine-Digital/beep.mp3",
+    error: "/Orderine-Digital/beep.mp3",
+    order: "/Orderine-Digital/beep.mp3",
+    click: "/Orderine-Digital/click.mp3"
+  };
 
-  if (!file) return;
-  const audio = new Audio(`./${file}`);
-  audio.play().catch(err => console.warn("Sound error:", err));
+  const src = sounds[type];
+  if (!src) return;
+
+  const audio = new Audio(src);
+  audio.volume = 0.6;
+
+  audio.play().catch(err => {
+    console.warn("🔇 Sound skipped:", err.message);
+  });
 }
+
 
  function showToast(message, type = "info", position = "top") {
     const toast = document.createElement("div");
@@ -1404,6 +1414,7 @@ function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
 
