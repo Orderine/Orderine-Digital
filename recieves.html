@@ -247,12 +247,18 @@ function showNewOrderNotification() {
 const bc = new BroadcastChannel("menuvaOrders");
 
 bc.onmessage = (event) => {
-  if (event.data?.type === 'newOrder') {
-    console.log('📡 Order baru diterima');
+  const type = event.data?.type;
+
+  if (type === 'newOrder' || type === 'update_orders' || type === 'order_changed') {
+    console.log('📡 Orders updated:', type);
     loadOrders();
-    showNewOrderNotification();
+
+    if (type === 'newOrder') {
+      showNewOrderNotification();
+    }
   }
 };
+
 
 function notifyOrdersUpdated() {
   bc.postMessage({ type: 'update_orders' });
@@ -306,7 +312,7 @@ function renderOrders(data) {
     return;
   }
 
-  data.sort((a, b) => (a.orderTime || 0) - (b.orderTime || 0));
+  data.sort((a, b) => (b.orderTime || 0) - (a.orderTime || 0));
 
   const uniqueDates = [...new Set(data.map(o => o.date || 'Unknown Date'))];
 
@@ -411,10 +417,12 @@ MENUVA_DB.openDB().then(() => {
   loadRestoInfo();
   loadOrders();
 });
+
+  setInterval(() => {
+  loadOrders();
+}, 5000);
+
 </script>
 
 </body>
 </html>
-
-
-
