@@ -398,15 +398,20 @@ function renderOrdersByDate(data, date) {
 
       ${order.note ? `<div class="order-note">📝 ${order.note}</div>` : ''}
 
-      <div class="order-items">
-        ${order.items.map(i => `
-          <div class="order-item" ${i.void ? 'style="opacity:0.5;text-decoration:line-through"' : ''}>
-            <span>${i.nama} ×${i.qty}</span>
-            <span>${formatHarga(i.total)}</span>
-            ${!i.void ? `<button class="void-item-btn" data-orderid="${order.id}" data-itemid="${i.id}">❌ Void Item</button>` : ''}
-          </div>
-        `).join('')}
+     <div class="order-items">
+  ${order.items.map(i => {
+    // pastikan setiap item punya ID unik
+    if (!i.id) i.id = 'ITM-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    
+    return `
+      <div class="order-item" ${i.void ? 'style="opacity:0.5;text-decoration:line-through"' : ''}>
+        <span>${i.nama} ×${i.qty}</span>
+        <span>${formatHarga(i.total)}</span>
+        ${!i.void ? `<button class="void-item-btn" data-orderid="${order.id.toString()}" data-itemid="${i.id}">❌ Void Item</button>` : ''}
       </div>
+    `;
+  }).join('')}
+</div>
 
       <div class="order-summary">
         ${order.subtotal ? `<div>Subtotal: ${formatHarga(order.subtotal)}</div>` : ""}
@@ -497,6 +502,7 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
 
 
 
