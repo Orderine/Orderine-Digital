@@ -501,6 +501,19 @@ async function getDB() {
   return await MENUVA_DB.open();
 }
 
+  function normalizeAdminData(raw) {
+  if (!raw) return null;
+
+  // backup lama
+  if (raw.data) return raw.data;
+
+  // format baru
+  if (raw.menu || raw.menuPromo) return raw;
+
+  return null;
+}
+
+
   /* ================== REALTIME BROADCAST CHANNEL ================== */
 const bc = new BroadcastChannel("menuvaOrders");
 
@@ -919,7 +932,7 @@ async function loadVoucherList() {
     const db = await MENUVA_DB.open();
     return new Promise((resolve) => {
       const tx = db.transaction(MENUVA_DB.STORE, "readonly");
-      const store = tx.objectStore("menuvaData");
+      const store = tx.objectStore(MENUVA_DB.STORE);
       const req = store.get(1);
 
       req.onsuccess = () => {
@@ -1231,8 +1244,18 @@ function playSound(type) {
     // ⬇️ TAMBAHKAN INI
     renderBookHeader(data);
     restoData = data;
-    menuData  = Array.isArray(data.menu) ? data.menu : [];
-    menuPromo = Array.isArray(data.menuPromo) ? data.menuPromo : [];
+    const normalized = normalizeAdminData(data);
+if (!normalized) {
+  console.error("❌ Format data admin tidak dikenali", data);
+  return;
+}
+
+restoData = normalized;
+menuData  = Array.isArray(normalized.menu) ? normalized.menu : [];
+menuPromo = Array.isArray(normalized.menuPromo) ? normalized.menuPromo : [];
+cachedVoucherList = Array.isArray(normalized.menuVoucher)
+  ? normalized.menuVoucher.map(normalizeVoucher)
+  : [];
 
     // ===== DEFAULT DATE / TIME =====
     const now = new Date();
@@ -1404,5 +1427,6 @@ function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
