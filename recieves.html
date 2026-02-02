@@ -264,6 +264,21 @@ function notifyOrdersUpdated() {
   bc.postMessage({ type: 'update_orders' });
 }
 
+  let audioUnlocked = false;
+
+document.addEventListener('click', () => {
+  if (!audioUnlocked) {
+    const a = new Audio('./beep.mp3');
+    a.volume = 0;
+    a.play().then(() => {
+      a.pause();
+      audioUnlocked = true;
+      console.log('🔓 Audio unlocked');
+    }).catch(() => {});
+  }
+});
+
+
 /* ================= LOAD ORDERS ================= */
 async function loadOrders() {
   try {
@@ -426,4 +441,5 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
 
