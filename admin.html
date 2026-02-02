@@ -1152,11 +1152,11 @@ function tambahPromo(promo = {}) {
         ?.getAttribute("data-image") || "",
       kategori: "PROMO", // ✅ KOMA YANG HILANG
 
-      tanggalAkhir: item.querySelector("input[type=date]")?.value
-        ? new Date(
-            item.querySelector("input[type=date]").value + "T23:59:59"
-          ).toISOString()
-        : ""
+      tanggalAkhir: item.querySelector("input[type=datetime-local]")?.value
+  ? new Date(
+      item.querySelector("input[type=datetime-local]").value
+    ).toISOString()
+  : ""
     });
   });
 
@@ -2882,6 +2882,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
