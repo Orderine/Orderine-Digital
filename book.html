@@ -497,10 +497,6 @@ footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);paddin
     return p.get('resto') || null;
   }
 
-async function getDB() {
-  return await MENUVA_DB.open();
-}
-
   function normalizeAdminData(raw) {
   if (!raw) return null;
 
@@ -513,38 +509,20 @@ async function getDB() {
   return null;
 }
 
-
   /* ================== REALTIME BROADCAST CHANNEL ================== */
 const bc = new BroadcastChannel("menuvaOrders");
 
- async function loadDataFromDB(restoId) {
+async function loadDataFromDB(restoId) {
   if (!restoId) return null;
 
-  const db = await MENUVA_DB.open();
-  const STORE = MENUVA_DB.STORE;
-
-  return new Promise((resolve) => {
-    if (!db.objectStoreNames.contains(STORE)) {
-      console.warn(`⚠️ ObjectStore "${STORE}" not found`);
-      return resolve(null);
-    }
-
-    const tx = db.transaction(STORE, "readonly");
-    const store = tx.objectStore(STORE);
-
-    // 🔥 ADMIN.html simpan data pakai key = restoId
-    const req = store.get(restoId);
-
-    req.onsuccess = () => {
-      resolve(req.result || null);
-    };
-
-    req.onerror = () => {
-      console.error("❌ loadDataFromDB error", req.error);
-      resolve(null);
-    };
-  });
+  try {
+    return await MENUVA_DB.get("restos", restoId);
+  } catch (e) {
+    console.error("❌ loadDataFromDB error:", e);
+    return null;
+  }
 }
+
 
   /* ------------------ CART ------------------- */
   function updateCartCount() {
@@ -927,29 +905,26 @@ function restoreVoucherFromStorage() {
       LOAD VOUCHER LIST
 ========================== */
 
-async function loadVoucherList() {
+async function loadVoucherList(restoId) {
+  if (!restoId) return loadVoucherFromLocalStorage();
+
   try {
-    const db = await MENUVA_DB.open();
-    return new Promise((resolve) => {
-      const tx = db.transaction(MENUVA_DB.STORE, "readonly");
-      const store = tx.objectStore(MENUVA_DB.STORE);
-      const req = store.get(1);
+    const restoData = await MENUVA_DB.get("restos", restoId);
 
-      req.onsuccess = () => {
-        const data = req.result;
-        if (!data || !Array.isArray(data.menuVoucher)) {
-          resolve(loadVoucherFromLocalStorage());
-          return;
-        }
-        resolve(data.menuVoucher.map(normalizeVoucher).filter(Boolean));
-      };
+    if (!restoData || !Array.isArray(restoData.menuVoucher)) {
+      return loadVoucherFromLocalStorage();
+    }
 
-      req.onerror = () => resolve(loadVoucherFromLocalStorage());
-    });
+    return restoData.menuVoucher
+      .map(normalizeVoucher)
+      .filter(Boolean);
+
   } catch (err) {
+    console.error("❌ loadVoucherList error:", err);
     return loadVoucherFromLocalStorage();
   }
 }
+
 
 function loadVoucherFromLocalStorage() {
   try {
@@ -1142,15 +1117,20 @@ async function sendOrder() {
     orderTime: Date.now() // ⬅️ timestamp real (sorting & index friendly)
   };
 
-  try {
-    const db = await MENUVA_DB.open();
-    const ORDER_STORE = "ordersData"; // ✅ sesuai db-core.js
+   try {
+    await MENUVA_DB.add("ordersData", {
+      ...orderData,
+      createdAt: Date.now(),
+      status: "pending"
+    });
 
-    if (!db.objectStoreNames.contains(ORDER_STORE)) {
-      console.error(`❌ ObjectStore "${ORDER_STORE}" not found`);
-      showToast("❌ Order store not found", "error");
-      return;
-    }
+    showToast("✅ Order berhasil dikirim", "success");
+
+  } catch (err) {
+    console.error("❌ sendOrder error:", err);
+    showToast("❌ Gagal mengirim order", "error");
+  }
+}
 
     const tx = db.transaction(ORDER_STORE, "readwrite");
     const store = tx.objectStore(ORDER_STORE);
@@ -1427,6 +1407,7 @@ function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
 
