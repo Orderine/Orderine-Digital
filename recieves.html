@@ -280,11 +280,14 @@ document.addEventListener('click', () => {
 });
 
 
-/* ================= LOAD ORDERS ================= */
-async function loadOrders() {
+let activeDate = null;
+let cachedOrders = [];
+
+  async function loadOrders() {
   try {
     const orders = await MENUVA_DB.getAll("ordersData");
-    renderOrders(orders || []);
+    cachedOrders = orders || [];
+    renderOrders(cachedOrders);
   } catch (err) {
     console.error('❌ loadOrders error:', err);
     document.getElementById('ordersBox').innerHTML =
@@ -355,16 +358,20 @@ function renderOrders(data) {
   listContainer.id = 'ordersList';
   box.appendChild(listContainer);
 
-  const defaultDate = uniqueDates[uniqueDates.length - 1];
-  renderOrdersByDate(data, defaultDate);
+  if (!activeDate || !uniqueDates.includes(activeDate)) {
+  activeDate = uniqueDates[uniqueDates.length - 1];
+}
+renderOrdersByDate(data, activeDate);
 
   box.querySelectorAll('.date-btn').forEach(btn => {
-    btn.onclick = () => {
-      box.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderOrdersByDate(data, btn.dataset.date);
-    };
-  });
+  btn.onclick = () => {
+    activeDate = btn.dataset.date;
+    box.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderOrdersByDate(data, activeDate);
+  };
+});
+
 }
 
 function renderOrdersByDate(data, date) {
@@ -456,10 +463,13 @@ function formatHarga(v) {
 
   await MENUVA_DB.put("ordersData", order);
 
-  loadOrders();
+  // 🔥 update cache lokal
+  const idx = cachedOrders.findIndex(o => o.id === orderId);
+  if (idx !== -1) cachedOrders[idx] = order;
+
+  renderOrdersByDate(cachedOrders, activeDate);
   notifyOrdersUpdated();
 }
-
 
   document.addEventListener('click', (e) => {
   if (e.target.classList.contains('void-item-btn')) {
@@ -477,11 +487,15 @@ async function voidOrder(id) {
   if (!confirm(`VOID Order #${id}?`)) return;
 
   order.status = "void";
-  await MENUVA_DB.add("ordersData", order);
+  await MENUVA_DB.put("ordersData", order);
 
-  loadOrders();
+  const idx = cachedOrders.findIndex(o => o.id === id);
+  if (idx !== -1) cachedOrders[idx] = order;
+
+  renderOrdersByDate(cachedOrders, activeDate);
   notifyOrdersUpdated();
 }
+
 
 /* ================= INIT ================= */
 document.getElementById('ordersBox').innerHTML =
@@ -505,6 +519,7 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
 
 
 
