@@ -282,6 +282,8 @@ document.addEventListener('click', () => {
 
 let activeDate = null;
 let cachedOrders = [];
+let userSelectingDate = false;
+
 
   async function loadOrders() {
   try {
@@ -343,7 +345,13 @@ function renderOrders(data) {
 
   data.sort((a, b) => (b.orderTime || 0) - (a.orderTime || 0));
 
-  const uniqueDates = [...new Set(data.map(o => o.date || 'Unknown Date'))];
+  const uniqueDates = [
+  ...new Set(data.map(o => normalizeDate(o.date) || 'Unknown Date'))
+];
+
+if (!activeDate || !uniqueDates.includes(normalizeDate(activeDate))) {
+  activeDate = uniqueDates[uniqueDates.length - 1];
+}
 
   const filterBar = document.createElement('div');
   filterBar.className = 'filter-bar';
@@ -363,15 +371,23 @@ function renderOrders(data) {
 }
 renderOrdersByDate(data, activeDate);
 
-  box.querySelectorAll('.date-btn').forEach(btn => {
+ box.querySelectorAll('.date-btn').forEach(btn => {
   btn.onclick = () => {
     activeDate = btn.dataset.date;
-    box.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+
+    box.querySelectorAll('.date-btn').forEach(b =>
+      b.classList.remove('active')
+    );
     btn.classList.add('active');
-    renderOrdersByDate(data, activeDate);
+
+    // 🔥 render pakai data TERBARU + state global
+    renderOrdersByDate(cachedOrders, activeDate);
   };
 });
+}
 
+  function normalizeDate(d) {
+  return (d || '').trim();
 }
 
 function renderOrdersByDate(data, date) {
@@ -506,9 +522,7 @@ MENUVA_DB.openDB().then(() => {
   loadOrders();
 });
 
-  setInterval(() => {
-  loadOrders();
-}, 5000);
+  //setInterval(() => {loadOrders();}, 5000);
 
   function goBackToAdmin() {
   window.location.href = "admin.html";
@@ -519,6 +533,7 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
 
 
 
