@@ -401,7 +401,6 @@ function renderOrdersByDate(data, date) {
      <div class="order-items">
   ${order.items.map(i => {
     // pastikan setiap item punya ID unik
-    if (!i.id) i.id = 'ITM-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
     
     return `
       <div class="order-item" ${i.void ? 'style="opacity:0.5;text-decoration:line-through"' : ''}>
@@ -441,7 +440,9 @@ function formatHarga(v) {
   }).format(v || 0);
 }
 
-  async function voidOrderItem(orderId, itemId) {
+ async function voidOrderItem(orderId, itemId) {
+  orderId = Number(orderId);
+
   const order = await MENUVA_DB.get("ordersData", orderId);
   if (!order) return alert("Order tidak ditemukan");
 
@@ -450,13 +451,15 @@ function formatHarga(v) {
 
   if (!confirm(`VOID item ${item.nama}?`)) return;
 
-  item.void = true;       // tandai void
-  item.total = 0;          // opsional, supaya total item jadi 0
-  await MENUVA_DB.add("ordersData", order);
+  item.void = true;
+  item.total = 0;
+
+  await MENUVA_DB.put("ordersData", order);
 
   loadOrders();
   notifyOrdersUpdated();
 }
+
 
   document.addEventListener('click', (e) => {
   if (e.target.classList.contains('void-item-btn')) {
@@ -502,6 +505,7 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
 
 
 
