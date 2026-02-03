@@ -211,6 +211,15 @@ header{
 
 <script src="db-core.js"></script>
 <script>
+  
+  function getTodayDate() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 
 /* =====================================================
    RECEIEVES — PATUH MENUVA_DB (NO DB MANDIRI)
@@ -280,22 +289,20 @@ document.addEventListener('click', () => {
 });
 
 
-let activeDate = null;
+let activeDate = sessionStorage.getItem('receivesActiveDate');
 let cachedOrders = [];
 let userSelectingDate = false;
 
-
-  async function loadOrders() {
+async function loadOrders() {
   try {
     const orders = await MENUVA_DB.getAll("ordersData");
     cachedOrders = orders || [];
     renderOrders(cachedOrders);
   } catch (err) {
     console.error('❌ loadOrders error:', err);
-    document.getElementById('ordersBox').innerHTML =
-      "<p style='color:red'>❌ Gagal load orders.</p>";
   }
 }
+
 
 /* ================= LOAD RESTO INFO ================= */
 async function loadRestoInfo() {
@@ -333,7 +340,6 @@ async function loadRestoInfo() {
   }
 }
 
-/* ================= RENDER ================= */
 function renderOrders(data) {
   const box = document.getElementById('ordersBox');
   box.innerHTML = '';
@@ -343,47 +349,63 @@ function renderOrders(data) {
     return;
   }
 
+  // simpan ke cache
+  cachedOrders = data;
+
+  // urutkan terbaru
   data.sort((a, b) => (b.orderTime || 0) - (a.orderTime || 0));
 
-  const uniqueDates = [
-  ...new Set(data.map(o => normalizeDate(o.date) || 'Unknown Date'))
-];
+  const uniqueDates = [...new Set(data.map(o => o.date))];
+  const today = getTodayDate();
 
-if (!activeDate || !uniqueDates.includes(normalizeDate(activeDate))) {
-  activeDate = uniqueDates[uniqueDates.length - 1];
-}
+  // PRIORITAS ACTIVE DATE
+  // 1. sessionStorage / klik user
+  // 2. hari ini
+  // 3. tanggal terbaru
+  if (!activeDate || !uniqueDates.includes(activeDate)) {
+    if (uniqueDates.includes(today)) {
+      activeDate = today;
+    } else {
+      activeDate = uniqueDates[uniqueDates.length - 1];
+    }
+  }
 
+  sessionStorage.setItem('receivesActiveDate', activeDate);
+
+  // === FILTER BAR ===
   const filterBar = document.createElement('div');
   filterBar.className = 'filter-bar';
   filterBar.innerHTML = uniqueDates
-    .map((tgl, i) =>
-      `<button class="date-btn ${i === uniqueDates.length - 1 ? 'active' : ''}" data-date="${tgl}">${tgl}</button>`
+    .map(tgl =>
+      `<button class="date-btn ${tgl === activeDate ? 'active' : ''}" data-date="${tgl}">
+        ${tgl}
+      </button>`
     ).join('');
 
   box.appendChild(filterBar);
 
+  // === LIST ===
   const listContainer = document.createElement('div');
   listContainer.id = 'ordersList';
   box.appendChild(listContainer);
 
-  if (!activeDate || !uniqueDates.includes(activeDate)) {
-  activeDate = uniqueDates[uniqueDates.length - 1];
-}
-renderOrdersByDate(data, activeDate);
+  // render awal
+  renderOrdersByDate(cachedOrders, activeDate);
 
- box.querySelectorAll('.date-btn').forEach(btn => {
-  btn.onclick = () => {
-    activeDate = btn.dataset.date;
+  // === CLICK HANDLER ===
+  box.querySelectorAll('.date-btn').forEach(btn => {
+    btn.onclick = () => {
+      activeDate = btn.dataset.date;
+      sessionStorage.setItem('receivesActiveDate', activeDate);
 
-    box.querySelectorAll('.date-btn').forEach(b =>
-      b.classList.remove('active')
-    );
-    btn.classList.add('active');
+      box.querySelectorAll('.date-btn').forEach(b =>
+        b.classList.remove('active')
+      );
+      btn.classList.add('active');
 
-    // 🔥 render pakai data TERBARU + state global
-    renderOrdersByDate(cachedOrders, activeDate);
-  };
-});
+      renderOrdersByDate(cachedOrders, activeDate);
+    };
+  });
 }
 
   function normalizeDate(d) {
@@ -533,6 +555,7 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
 
 
 
