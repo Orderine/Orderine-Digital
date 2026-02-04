@@ -289,6 +289,23 @@ header{
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
+  #voidReasonSelect,
+#voidReasonOther {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+}
+
+#voidReasonSelect:focus,
+#voidReasonOther:focus {
+  border-color: #ff4d4f;
+  outline: none;
+}
+
+
 </style>
 </head>
 <body>
@@ -331,6 +348,21 @@ header{
       placeholder="PIN Supervisor"
       autocomplete="off"
     />
+
+    <select id="voidReasonSelect">
+  <option value="">-- Pilih Alasan Void --</option>
+  <option value="Salah input">Salah input</option>
+  <option value="Cancel customer">Cancel customer</option>
+  <option value="Menu habis">Menu habis</option>
+  <option value="Lainnya">Lainnya</option>
+</select>
+
+<input
+  type="text"
+  id="voidReasonOther"
+  placeholder="Tulis alasan void..."
+  style="display:none"
+/>
 
     <div class="modal-actions">
       <button id="voidCancelBtn">❌ Cancel</button>
@@ -607,29 +639,31 @@ function formatHarga(v) {
 
 let pendingVoidAction = null;
 
-async function voidOrderItem(orderId, itemIndex) {
-  orderId = Number(orderId);
-  itemIndex = Number(itemIndex);
-
-  const order = await MENUVA_DB.get("ordersData", orderId);
+async function voidOrderItem(orderId, itemId, user, reason) {
+  const order = await MENUVA_DB.get("ordersData", Number(orderId));
   if (!order) return alert("Order tidak ditemukan");
 
-  const item = order.items[itemIndex];
+  const item = order.items.find(i => Number(i.id) === Number(itemId));
   if (!item) return alert("Item tidak ditemukan");
 
-  if (!confirm(`VOID item ${item.nama}?`)) return;
+  if (item.void) return;
 
   item.void = true;
+  item.voidReason = reason;
+  item.voidBy = user.username || user.name || "unknown";
+  item.voidAt = Date.now();
   item.total = 0;
 
+  // simpan ulang (UPSERT)
   await MENUVA_DB.add("ordersData", order);
 
-  const idx = cachedOrders.findIndex(o => o.id === orderId);
+  const idx = cachedOrders.findIndex(o => o.id === order.id);
   if (idx !== -1) cachedOrders[idx] = order;
 
   renderOrdersByDate(cachedOrders, activeDate);
   notifyOrdersUpdated();
 }
+
 
 /* ================= CLICK HANDLER ================= */
 document.addEventListener('click', (e) => {
@@ -672,16 +706,25 @@ document.getElementById("voidConfirmBtn").onclick = async () => {
     return;
   }
 
-  // 🔥 EKSEKUSI VOID
+  const reason =
+    reasonSelect.value === "Lainnya"
+      ? reasonOther.value.trim()
+      : reasonSelect.value;
+
+  if (!reason) {
+    alert("Alasan void wajib diisi");
+    return;
+  }
+
+  // 🔥 EKSEKUSI VOID ITEM
   if (pendingVoidAction?.type === "item") {
     await voidOrderItem(
       pendingVoidAction.orderId,
-      pendingVoidAction.itemId
+      pendingVoidAction.itemId,
+      authorizedUser,
+      reason
     );
   }
-
-  // nanti bisa tambah:
-  // if (type === "order") voidOrder(...)
 
   closeVoidAuthModal();
 };
@@ -726,6 +769,7 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
 
 
 
