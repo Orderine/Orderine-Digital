@@ -349,38 +349,29 @@ function renderOrders(data) {
     return;
   }
 
-  // simpan ke cache
   cachedOrders = data;
 
-  // urutkan terbaru
+  // urutkan order terbaru
   data.sort((a, b) => (b.orderTime || 0) - (a.orderTime || 0));
 
   const uniqueDates = [...new Set(data.map(o => o.date))];
   const today = getTodayDate();
 
   // PRIORITAS ACTIVE DATE
-// 1. sessionStorage (kalau masih valid)
-// 2. hari ini
-// 3. tanggal terbaru (index 0)
-if (!activeDate || !uniqueDates.includes(activeDate)) {
-  if (uniqueDates.includes(today)) {
-    activeDate = today;
-  } else {
-    activeDate = uniqueDates[0]; // 🔥 TERBARU
+  if (!activeDate || !uniqueDates.includes(activeDate)) {
+    activeDate = uniqueDates.includes(today) ? today : uniqueDates[0];
   }
-}
 
   sessionStorage.setItem('receivesActiveDate', activeDate);
 
   // === FILTER BAR ===
   const filterBar = document.createElement('div');
   filterBar.className = 'filter-bar';
-  filterBar.innerHTML = uniqueDates
-    .map(tgl =>
-      `<button class="date-btn ${tgl === activeDate ? 'active' : ''}" data-date="${tgl}">
-        ${tgl}
-      </button>`
-    ).join('');
+  filterBar.innerHTML = uniqueDates.map(tgl => `
+    <button class="date-btn ${tgl === activeDate ? 'active' : ''}" data-date="${tgl}">
+      ${tgl}
+    </button>
+  `).join('');
 
   box.appendChild(filterBar);
 
@@ -389,25 +380,20 @@ if (!activeDate || !uniqueDates.includes(activeDate)) {
   listContainer.id = 'ordersList';
   box.appendChild(listContainer);
 
-  // render awal
   renderOrdersByDate(cachedOrders, activeDate);
 
-  // === CLICK HANDLER ===
   box.querySelectorAll('.date-btn').forEach(btn => {
     btn.onclick = () => {
       activeDate = btn.dataset.date;
       sessionStorage.setItem('receivesActiveDate', activeDate);
 
-      box.querySelectorAll('.date-btn').forEach(b =>
-        b.classList.remove('active')
-      );
+      box.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
 
       renderOrdersByDate(cachedOrders, activeDate);
     };
   });
 }
-
   function normalizeDate(d) {
   return (d || '').trim();
 }
@@ -416,7 +402,7 @@ function renderOrdersByDate(data, date) {
   const list = document.getElementById('ordersList');
   list.innerHTML = '';
 
-  const filtered = data.filter(o => (o.date || 'Unknown Date') === date);
+  const filtered = data.filter(o => o.date === date);
 
   if (!filtered.length) {
     list.innerHTML = `<p style="color:var(--muted)">No orders for ${date}</p>`;
@@ -424,7 +410,7 @@ function renderOrdersByDate(data, date) {
   }
 
   filtered.forEach(order => {
-    // Hitung ulang subtotal & grandTotal tanpa item yang void
+    // hitung ulang subtotal & grand total
     const activeItems = order.items.filter(i => !i.void);
     order.subtotal = activeItems.reduce((sum, i) => sum + (i.total || 0), 0);
     order.grandTotal = order.subtotal - (order.discount || 0);
@@ -443,22 +429,24 @@ function renderOrdersByDate(data, date) {
 
       ${order.note ? `<div class="order-note">📝 ${order.note}</div>` : ''}
 
-     <div class="order-items">
-  ${order.items.map(i => {
-    // pastikan setiap item punya ID unik
-    
-    return `
-      <div class="order-item" ${i.void ? 'style="opacity:0.5;text-decoration:line-through"' : ''}>
-        <span>${i.nama} ×${i.qty}</span>
-        <span>${formatHarga(i.total)}</span>
-        ${!i.void ? `<button class="void-item-btn" data-orderid="${order.id.toString()}" data-itemid="${i.id}">❌ Void Item</button>` : ''}
+      <div class="order-items">
+        ${order.items.map((i, idx) => `
+          <div class="order-item" ${i.void ? 'style="opacity:0.5;text-decoration:line-through"' : ''}>
+            <span>${i.nama} ×${i.qty}</span>
+            <span>${formatHarga(i.total)}</span>
+            ${!i.void ? `
+              <button class="void-item-btn"
+                data-orderid="${order.id}"
+                data-itemindex="${idx}">
+                ❌ Void Item
+              </button>
+            ` : ''}
+          </div>
+        `).join('')}
       </div>
-    `;
-  }).join('')}
-</div>
 
       <div class="order-summary">
-        ${order.subtotal ? `<div>Subtotal: ${formatHarga(order.subtotal)}</div>` : ""}
+        <div>Subtotal: ${formatHarga(order.subtotal)}</div>
         ${order.voucherCode ? `
           <div style="color:green">
             Voucher ${order.voucherCode}
@@ -477,7 +465,7 @@ function renderOrdersByDate(data, date) {
     list.appendChild(div);
   });
 }
-
+  
 /* ================= ACTIONS ================= */
 function formatHarga(v) {
   return new Intl.NumberFormat('id-ID', {
@@ -485,14 +473,15 @@ function formatHarga(v) {
   }).format(v || 0);
 }
 
-async function voidOrderItem(orderId, itemId) {
+/* ================= VOID ITEM (FINAL) ================= */
+async function voidOrderItem(orderId, itemIndex) {
   orderId = Number(orderId);
-  itemId = Number(itemId); // 🔥 KUNCI NYAWA
+  itemIndex = Number(itemIndex);
 
   const order = await MENUVA_DB.get("ordersData", orderId);
   if (!order) return alert("Order tidak ditemukan");
 
-  const item = order.items.find(i => Number(i.id) === itemId);
+  const item = order.items[itemIndex];
   if (!item) return alert("Item tidak ditemukan");
 
   if (!confirm(`VOID item ${item.nama}?`)) return;
@@ -502,23 +491,22 @@ async function voidOrderItem(orderId, itemId) {
 
   await MENUVA_DB.put("ordersData", order);
 
-  // 🔥 update cache lokal
   const idx = cachedOrders.findIndex(o => o.id === orderId);
   if (idx !== -1) cachedOrders[idx] = order;
 
   renderOrdersByDate(cachedOrders, activeDate);
   notifyOrdersUpdated();
 }
-  document.addEventListener('click', (e) => {
+
+/* ================= CLICK HANDLER ================= */
+document.addEventListener('click', (e) => {
   if (e.target.classList.contains('void-item-btn')) {
     const orderId = e.target.dataset.orderid;
-    const itemId = e.target.dataset.itemid;
-    voidOrderItem(orderId, itemId);
+    const itemIndex = e.target.dataset.itemindex;
+    voidOrderItem(orderId, itemIndex);
   }
 });
-
-
-
+  
 async function voidOrder(id) {
   const order = await MENUVA_DB.get("ordersData", id);
   if (!order) return alert("Order tidak ditemukan");
@@ -557,4 +545,5 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
 
