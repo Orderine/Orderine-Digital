@@ -489,7 +489,7 @@ async function voidOrderItem(orderId, itemIndex) {
   item.void = true;
   item.total = 0;
 
-  await MENUVA_DB.put("ordersData", order);
+  await MENUVA_DB.add("ordersData", order);
 
   const idx = cachedOrders.findIndex(o => o.id === orderId);
   if (idx !== -1) cachedOrders[idx] = order;
@@ -545,5 +545,6 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
 
 
