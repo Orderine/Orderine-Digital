@@ -359,16 +359,16 @@ function renderOrders(data) {
   const today = getTodayDate();
 
   // PRIORITAS ACTIVE DATE
-  // 1. sessionStorage / klik user
-  // 2. hari ini
-  // 3. tanggal terbaru
-  if (!activeDate || !uniqueDates.includes(activeDate)) {
-    if (uniqueDates.includes(today)) {
-      activeDate = today;
-    } else {
-      activeDate = uniqueDates[uniqueDates.length - 1];
-    }
+// 1. sessionStorage (kalau masih valid)
+// 2. hari ini
+// 3. tanggal terbaru (index 0)
+if (!activeDate || !uniqueDates.includes(activeDate)) {
+  if (uniqueDates.includes(today)) {
+    activeDate = today;
+  } else {
+    activeDate = uniqueDates[0]; // 🔥 TERBARU
   }
+}
 
   sessionStorage.setItem('receivesActiveDate', activeDate);
 
@@ -555,11 +555,6 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
-
-
-
-
-
 
 
 
