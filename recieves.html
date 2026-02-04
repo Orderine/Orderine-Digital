@@ -178,6 +178,30 @@ header{
   transform: scale(1.03);
 }
 
+  .modal.hidden { display: none; }
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.modal-box {
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  min-width: 280px;
+}
+.modal-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+
 </style>
 </head>
 <body>
@@ -616,6 +640,7 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
 
 
 
