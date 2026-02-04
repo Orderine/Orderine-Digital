@@ -485,13 +485,14 @@ function formatHarga(v) {
   }).format(v || 0);
 }
 
- async function voidOrderItem(orderId, itemId) {
+async function voidOrderItem(orderId, itemId) {
   orderId = Number(orderId);
+  itemId = Number(itemId); // 🔥 KUNCI NYAWA
 
   const order = await MENUVA_DB.get("ordersData", orderId);
   if (!order) return alert("Order tidak ditemukan");
 
-  const item = order.items.find(i => i.id === itemId);
+  const item = order.items.find(i => Number(i.id) === itemId);
   if (!item) return alert("Item tidak ditemukan");
 
   if (!confirm(`VOID item ${item.nama}?`)) return;
@@ -508,7 +509,6 @@ function formatHarga(v) {
   renderOrdersByDate(cachedOrders, activeDate);
   notifyOrdersUpdated();
 }
-
   document.addEventListener('click', (e) => {
   if (e.target.classList.contains('void-item-btn')) {
     const orderId = e.target.dataset.orderid;
@@ -516,6 +516,7 @@ function formatHarga(v) {
     voidOrderItem(orderId, itemId);
   }
 });
+
 
 
 async function voidOrder(id) {
@@ -533,6 +534,7 @@ async function voidOrder(id) {
   renderOrdersByDate(cachedOrders, activeDate);
   notifyOrdersUpdated();
 }
+  
 
 
 /* ================= INIT ================= */
@@ -555,7 +557,4 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
-
-
-
 
