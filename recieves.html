@@ -209,6 +209,26 @@ header{
   <button onclick="goBackToAdmin()">⬅ Kembali ke Admin</button>
 </div>
 
+  <div id="voidAuthModal" class="modal hidden">
+  <div class="modal-box">
+    <h3>🔐 Otorisasi Void</h3>
+    <p>Masukkan PIN Supervisor</p>
+
+    <input
+      type="password"
+      id="voidPinInput"
+      placeholder="PIN Supervisor"
+      autocomplete="off"
+    />
+
+    <div class="modal-actions">
+      <button id="voidCancelBtn">❌ Cancel</button>
+      <button id="voidConfirmBtn">✅ Lanjut</button>
+    </div>
+  </div>
+</div>
+
+
 <script src="db-core.js"></script>
 <script>
   
@@ -474,6 +494,9 @@ function formatHarga(v) {
 }
 
 /* ================= VOID ITEM (FINAL) ================= */
+
+let pendingVoidAction = null;
+
 async function voidOrderItem(orderId, itemIndex) {
   orderId = Number(orderId);
   itemIndex = Number(itemIndex);
@@ -501,12 +524,60 @@ async function voidOrderItem(orderId, itemIndex) {
 /* ================= CLICK HANDLER ================= */
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('void-item-btn')) {
-    const orderId = e.target.dataset.orderid;
-    const itemIndex = e.target.dataset.itemindex;
-    voidOrderItem(orderId, itemIndex);
+    pendingVoidAction = {
+      type: "item",
+      orderId: Number(e.target.dataset.orderid),
+      itemId: Number(e.target.dataset.itemid)
+    };
+    openVoidAuthModal();
   }
 });
+
+  function openVoidAuthModal() {
+  document.getElementById("voidPinInput").value = "";
+  document.getElementById("voidAuthModal").classList.remove("hidden");
+}
+
+function closeVoidAuthModal() {
+  document.getElementById("voidAuthModal").classList.add("hidden");
+  pendingVoidAction = null;
+}
+
+  async function validateSupervisorPin(pin) {
+  const users = await MENUVA_DB.getAll("users");
+
+  return users.find(u =>
+    ["owner", "manager", "supervisor"].includes(u.role) &&
+    u.pin === pin
+  );
+}
   
+document.getElementById("voidConfirmBtn").onclick = async () => {
+  const pin = document.getElementById("voidPinInput").value;
+  if (!pin) return alert("PIN wajib diisi");
+
+  const authorizedUser = await validateSupervisorPin(pin);
+  if (!authorizedUser) {
+    alert("PIN salah atau tidak berwenang");
+    return;
+  }
+
+  // 🔥 EKSEKUSI VOID
+  if (pendingVoidAction?.type === "item") {
+    await voidOrderItem(
+      pendingVoidAction.orderId,
+      pendingVoidAction.itemId
+    );
+  }
+
+  // nanti bisa tambah:
+  // if (type === "order") voidOrder(...)
+
+  closeVoidAuthModal();
+};
+
+document.getElementById("voidCancelBtn").onclick = closeVoidAuthModal;
+
 async function voidOrder(id) {
   const order = await MENUVA_DB.get("ordersData", id);
   if (!order) return alert("Order tidak ditemukan");
@@ -545,6 +616,7 @@ MENUVA_DB.openDB().then(() => {
 
 </body>
 </html>
+
 
 
 
