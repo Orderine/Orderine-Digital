@@ -86,8 +86,7 @@
     </div>
 </div>
 
-<script src="db-core.js"></script>
-
+<script src="./db-core.js"></script>
 <script>
 /* ======================================================
    DOM
@@ -99,8 +98,7 @@ const form = document.getElementById("acceptForm");
 /* ======================================================
    TOKEN
 ====================================================== */
-const params = new URLSearchParams(location.search);
-const token = params.get("token");
+const token = new URLSearchParams(location.search).get("token");
 
 if (!token) {
   msg.innerHTML = "<div class='error'>❌ Invalid invite link</div>";
@@ -108,27 +106,28 @@ if (!token) {
 }
 
 /* ======================================================
-   LOAD INVITE FROM DB
+   ROLE CONFIG
 ====================================================== */
-let invite;
+const NEED_PIN_KEYWORDS = ["supervisor", "manager", "general_manager"];
 
-(async () => {
-  const invites = await dbGetAll("admin_invites");
-  invite = invites.find(i => i.token === token && i.status === "pending");
+const ROLE_REDIRECT = {
+  cashier: "recieves.html",
 
-  if (!invite) {
-    msg.innerHTML =
-      "<div class='error'>❌ Invite not found or already used</div>";
-    return;
-  }
+  kitchen_admin: "menu-manager.html",
+  kitchen_supervisor: "menu-manager.html",
+  kitchen_manager: "menu-manager.html",
 
-  info.innerHTML = `
-    ✅ You are invited as <b>${invite.role.replaceAll("_", " ")}</b><br>
-    Email: <b>${invite.email}</b>
-  `;
+  bar_admin: "drink-manager.html",
+  bar_supervisor: "drink-manager.html",
+  bar_manager: "drink-manager.html",
 
-  form.classList.remove("hidden");
-})();
+  room_admin: "room-manager.html",
+
+  front_office_supervisor: "recieves.html",
+  front_office_manager: "recieves.html",
+
+  general_manager: "admin.html"
+};
 
 /* ======================================================
    PIN UTILS
@@ -137,63 +136,106 @@ function generatePIN() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-async function hashPIN(pin) {
-  const data = new TextEncoder().encode(pin);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
+function hashPIN(pin) {
+  return btoa(pin); // konsisten dengan sistem lu
 }
+
+/* ======================================================
+   LOAD INVITE
+====================================================== */
+let invite;
+
+(async () => {
+  if (!window.MENUVA_DB) {
+    msg.innerHTML = "<div class='error'>❌ DB Core not loaded</div>";
+    return;
+  }
+
+  invite = await MENUVA_DB.getByIndex(
+    "admin_invites",
+    "token",
+    token
+  );
+
+  if (!invite || invite.status !== "pending") {
+    msg.innerHTML =
+      "<div class='error'>❌ Invite tidak valid atau sudah dipakai</div>";
+    return;
+  }
+
+  info.innerHTML = `
+    ✅ Anda diundang sebagai <b>${invite.role.replaceAll("_", " ")}</b><br>
+    Email: <b>${invite.email}</b>
+  `;
+
+  form.classList.remove("hidden");
+})();
 
 /* ======================================================
    ACCEPT INVITE
 ====================================================== */
-form.addEventListener("submit", async (e) => {
+form.addEventListener("submit", async e => {
   e.preventDefault();
   msg.innerHTML = "";
 
   if (!invite) return;
 
-  const pin = generatePIN();
-  const pinHash = await hashPIN(pin);
-  const now = Date.now();
+  const needsPin = NEED_PIN_KEYWORDS.some(k =>
+    invite.role.includes(k)
+  );
 
-  /* ================= CREATE ADMIN ================= */
+  let pin = null;
+  let pinHash = null;
+
+  if (needsPin) {
+    pin = generatePIN();
+    pinHash = hashPIN(pin);
+  }
+
   const admin = {
     id: "ADM-" + crypto.randomUUID(),
+    restoID: invite.restoID,
     email: invite.email,
     role: invite.role,
-    restoID: invite.restoID,
-
     pinHash,
-    pinUsed: false,
-
-    status: "active",
-    createdAt: now
+    createdAt: Date.now(),
+    active: true
   };
 
-  await dbPut("admins", admin);
+  await MENUVA_DB.add("admins", admin);
 
-  /* ================= CLOSE INVITE ================= */
   invite.status = "accepted";
-  invite.acceptedAt = now;
-  await dbPut("admin_invites", invite);
+  invite.acceptedAt = Date.now();
+  await MENUVA_DB.add("admin_invites", invite);
 
-  /* ================= RESULT ================= */
+  await MENUVA_DB.setSession({
+    userID: admin.id,
+    email: admin.email,
+    role: admin.role,
+    restoID: admin.restoID
+  });
+
   msg.innerHTML = `
     <div class="success">
-      ✅ Account activated<br><br>
-      🔐 <b>Your One-Time PIN:</b><br>
+      ✅ Akun admin aktif
+      ${pin ? `
+      <br><br>
+      🔐 <b>PIN OTORISASI (SIMPAN)</b>
       <div style="font-size:22px;letter-spacing:4px;margin:10px 0;">
         ${pin}
       </div>
-      <small>Save this PIN. It will be required for approvals.</small>
+      <small>PIN ini tidak akan ditampilkan ulang</small>
+      ` : ""}
     </div>
   `;
+
+  setTimeout(() => {
+    location.replace(
+      ROLE_REDIRECT[admin.role] || "admin.html"
+    );
+  }, 2500);
 });
 </script>
 
-
 </body>
 </html>
-
