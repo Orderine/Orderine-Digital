@@ -333,9 +333,10 @@ header{
 </main>
   
 <!-- Tombol kembali -->
-<div id="backToAdmin">
-  <button onclick="goBackToAdmin()">⬅ Kembali ke Admin</button>
-</div>
+<button id="btnBackToAdmin" style="display:none;">
+  ⬅ Back to Admin
+</button>
+
 
   <div id="voidAuthModal" class="modal hidden">
   <div class="modal-box">
@@ -618,13 +619,26 @@ MENUVA_DB.openDB().then(()=>{
   loadOrders();
 });
 
+</script>
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const role = localStorage.getItem("role");
+    const btn = document.getElementById("btnBackToAdmin");
+
+    // hanya manager & owner yang boleh lihat
+    if (role === "manager" || role === "owner") {
+      btn.style.display = "inline-block";
+      btn.onclick = goBackToAdmin;
+    } else {
+      btn.remove(); // 🔥 lebih aman daripada cuma hide
+    }
+  });
+
   function goBackToAdmin() {
     window.location.href = "admin.html";
   }
 </script>
 
+
 </body>
 </html>
-
-
-
