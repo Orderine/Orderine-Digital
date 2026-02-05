@@ -140,36 +140,40 @@ function hashPIN(pin) {
   return btoa(pin); // konsisten dengan sistem lu
 }
 
-/* ======================================================
-   LOAD INVITE
-====================================================== */
-let invite;
+let invite = null;
 
 (async () => {
   if (!window.MENUVA_DB) {
-    msg.innerHTML = "<div class='error'>❌ DB Core not loaded</div>";
+    msg.innerHTML = "<div class='error'>❌ DB Core not ready</div>";
     return;
   }
 
-  invite = await MENUVA_DB.getByIndex(
-    "admin_invites",
-    "token",
-    token
+  const token = new URLSearchParams(location.search).get("token");
+  if (!token) {
+    msg.innerHTML = "<div class='error'>❌ Invalid invite link</div>";
+    return;
+  }
+
+  const invites = await MENUVA_DB.getAll("admin_invites");
+
+  invite = invites.find(
+    i => i.token === token && i.status === "pending"
   );
 
-  if (!invite || invite.status !== "pending") {
+  if (!invite) {
     msg.innerHTML =
-      "<div class='error'>❌ Invite tidak valid atau sudah dipakai</div>";
+      "<div class='error'>❌ Invite tidak ditemukan / sudah dipakai</div>";
     return;
   }
 
   info.innerHTML = `
-    ✅ Anda diundang sebagai <b>${invite.role.replaceAll("_", " ")}</b><br>
+    ✅ Anda diundang sebagai <b>${invite.role.replaceAll("_"," ")}</b><br>
     Email: <b>${invite.email}</b>
   `;
 
   form.classList.remove("hidden");
 })();
+
 
 /* ======================================================
    ACCEPT INVITE
@@ -180,32 +184,35 @@ form.addEventListener("submit", async e => {
 
   if (!invite) return;
 
-  const needsPin = NEED_PIN_KEYWORDS.some(k =>
-    invite.role.includes(k)
-  );
+  const now = Date.now();
 
   let pin = null;
   let pinHash = null;
 
-  if (needsPin) {
-    pin = generatePIN();
-    pinHash = hashPIN(pin);
+  if (isSupervisorUp(invite.role)) {
+    pin = Math.floor(100000 + Math.random() * 900000).toString();
+    const enc = new TextEncoder().encode(pin);
+    const hash = await crypto.subtle.digest("SHA-256", enc);
+    pinHash = Array.from(new Uint8Array(hash))
+      .map(b => b.toString(16).padStart(2,"0"))
+      .join("");
   }
 
   const admin = {
     id: "ADM-" + crypto.randomUUID(),
-    restoID: invite.restoID,
     email: invite.email,
     role: invite.role,
-    pinHash,
-    createdAt: Date.now(),
-    active: true
+    restoID: invite.restoID,
+    status: "active",
+    createdAt: now,
+
+    ...(pinHash ? { pinHash, pinUsed:false } : {})
   };
 
   await MENUVA_DB.add("admins", admin);
 
   invite.status = "accepted";
-  invite.acceptedAt = Date.now();
+  invite.acceptedAt = now;
   await MENUVA_DB.add("admin_invites", invite);
 
   await MENUVA_DB.setSession({
@@ -217,25 +224,35 @@ form.addEventListener("submit", async e => {
 
   msg.innerHTML = `
     <div class="success">
-      ✅ Akun admin aktif
-      ${pin ? `
-      <br><br>
-      🔐 <b>PIN OTORISASI (SIMPAN)</b>
-      <div style="font-size:22px;letter-spacing:4px;margin:10px 0;">
-        ${pin}
-      </div>
-      <small>PIN ini tidak akan ditampilkan ulang</small>
-      ` : ""}
+      ✅ Akun admin aktif<br>
+      ${pin ? `<b>🔐 PIN Anda:</b><div style="font-size:22px">${pin}</div>` : ""}
+      <br>Redirecting...
     </div>
   `;
 
   setTimeout(() => {
-    location.replace(
-      ROLE_REDIRECT[admin.role] || "admin.html"
-    );
-  }, 2500);
+    location.replace(getAdminRedirect(admin.role));
+  }, 1800);
 });
+
+
+  function isSupervisorUp(role) {
+  return role.includes("supervisor")
+      || role.includes("manager")
+      || role === "general_manager";
+}
+
+function getAdminRedirect(role) {
+  if (role.includes("kitchen")) return "kitchen.html";
+  if (role.includes("bar")) return "bar.html";
+  if (role.includes("room")) return "room.html";
+  if (role.includes("finance")) return "finance.html";
+  if (role.includes("inventory")) return "inventory.html";
+  return "admin.html";
+}
+
 </script>
 
 </body>
 </html>
+
