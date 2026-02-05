@@ -620,17 +620,24 @@ MENUVA_DB.openDB().then(()=>{
 });
 
 </script>
-  <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const role = localStorage.getItem("role");
+ <script>
+  document.addEventListener("DOMContentLoaded", async () => {
     const btn = document.getElementById("btnBackToAdmin");
 
-    // hanya manager & owner yang boleh lihat
-    if (role === "manager" || role === "owner") {
-      btn.style.display = "inline-block";
-      btn.onclick = goBackToAdmin;
-    } else {
-      btn.remove(); // 🔥 lebih aman daripada cuma hide
+    try {
+      const session = await MENUVA_DB.getSession();
+      const role = session?.role;
+
+      // hanya manager & owner
+      if (role === "manager" || role === "owner") {
+        btn.style.display = "inline-block";
+        btn.onclick = goBackToAdmin;
+      } else {
+        btn.remove();
+      }
+    } catch (err) {
+      console.error("❌ gagal ambil session", err);
+      btn?.remove();
     }
   });
 
@@ -642,3 +649,4 @@ MENUVA_DB.openDB().then(()=>{
 
 </body>
 </html>
+
