@@ -200,22 +200,24 @@
 
 <script src="./db-core.js"></script>
 <script>
-  if (typeof dbPut !== "function") {
-  alert("DB Core not loaded");
-  throw new Error("db-core.js missing");
+ if (!window.MENUVA_DB) {
+  throw new Error("MENUVA_DB not loaded");
 }
 
 /* ======================================================
    OWNER ONLY GUARD
 ====================================================== */
-(function ownerGuard() {
-  const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
-  if (!activeUser || activeUser.role !== "owner" || !activeUser.restoID) {
+async function getActiveOwner() {
+  const session = await MENUVA_DB.getSession();
+
+  if (!session || session.role !== "owner" || !session.restoID) {
     alert("Session expired. Please login again.");
     location.replace("login.html");
     throw new Error("Invalid owner context");
   }
-})();
+
+  return session;
+}
 
 function getActiveOwner() {
   const user = JSON.parse(localStorage.getItem("activeUser") || "null");
@@ -302,10 +304,8 @@ form.addEventListener("submit", async (e) => {
 
   let owner;
   try {
-    owner = getActiveOwner();
+    owner = await getActiveOwner();
   } catch {
-    alert("Session expired");
-    location.replace("login.html");
     return;
   }
 
@@ -322,10 +322,8 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
-  /* --------------------------------------------------
-     CEK INVITE PENDING (EMAIL + RESTO)
-  -------------------------------------------------- */
-  const allInvites = await dbGetAll("admin_invites");
+  const allInvites = await MENUVA_DB.getAll("admin_invites");
+
   const activeInvite = allInvites.find(
     i =>
       i.restoID === owner.restoID &&
@@ -342,21 +340,18 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
-  /* --------------------------------------------------
-     CREATE INVITE
-  -------------------------------------------------- */
   const invite = {
     id: "INV-" + crypto.randomUUID(),
     restoID: owner.restoID,
     email,
-    role, // cashier | supervisor | manager
+    role,
     invitedBy: owner.userID,
     token: generateToken(),
     status: "pending",
     createdAt: Date.now()
   };
 
-  await dbPut("admin_invites", invite);
+  await MENUVA_DB.add("admin_invites", invite);
 
   showInvite(invite);
 
@@ -408,6 +403,7 @@ function goBack() {
 
 </body>
 </html>
+
 
 
 
