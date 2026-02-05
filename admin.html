@@ -2463,9 +2463,9 @@ function setBool(key, val) {
   localStorage.setItem(key, String(val));
 }
 
- function initPageToggles() {
+async function initPageToggles() {
   // =========================
-  // DOM CACHE (SEKALI SAJA)
+  // DOM CACHE
   // =========================
   const dom = {
     order: document.getElementById("toggleOrderPage"),
@@ -2475,29 +2475,32 @@ function setBool(key, val) {
   };
 
   // =========================
-  // HELPER STATE
+  // HELPER STATE (MENUVADB)
   // =========================
-  const getState = (key, def) => {
-    const v = localStorage.getItem(key);
-    if (v === null) {
-      localStorage.setItem(key, String(def));
+  const getState = async (key, def) => {
+    let v = await MENUVA_DB.get("ui_state", key);
+
+    if (v === undefined || v === null) {
+      await MENUVA_DB.set("ui_state", key, def);
       return def;
     }
-    return v === "true";
+
+    return Boolean(v);
   };
 
-  const setState = (key, val) =>
-    localStorage.setItem(key, String(val));
+  const setState = async (key, val) => {
+    await MENUVA_DB.set("ui_state", key, Boolean(val));
+  };
 
   // =========================
   // ORDER PAGE (PUBLIC)
   // =========================
   if (dom.order) {
-    const enabled = getState("public_order_enabled", true);
+    const enabled = await getState("public_order_enabled", true);
     dom.order.checked = enabled;
 
-    dom.order.onchange = e => {
-      setState("public_order_enabled", e.target.checked);
+    dom.order.onchange = async e => {
+      await setState("public_order_enabled", e.target.checked);
       console.log("🌍 order.html =", e.target.checked);
     };
   }
@@ -2506,11 +2509,11 @@ function setBool(key, val) {
   // ROOM PAGE (PUBLIC)
   // =========================
   if (dom.room) {
-    const enabled = getState("public_room_enabled", true);
+    const enabled = await getState("public_room_enabled", true);
     dom.room.checked = enabled;
 
-    dom.room.onchange = e => {
-      setState("public_room_enabled", e.target.checked);
+    dom.room.onchange = async e => {
+      await setState("public_room_enabled", e.target.checked);
       console.log("🌍 room.html =", e.target.checked);
     };
   }
@@ -2519,13 +2522,13 @@ function setBool(key, val) {
   // VOUCHER FORM (ADMIN)
   // =========================
   if (dom.voucher && dom.voucherForm) {
-    const enabled = getState("voucher_form_enabled", false);
+    const enabled = await getState("voucher_form_enabled", false);
     dom.voucher.checked = enabled;
     dom.voucherForm.style.display = enabled ? "block" : "none";
 
-    dom.voucher.onchange = e => {
+    dom.voucher.onchange = async e => {
       const isOn = e.target.checked;
-      setState("voucher_form_enabled", isOn);
+      await setState("voucher_form_enabled", isOn);
       dom.voucherForm.style.display = isOn ? "block" : "none";
       console.log("🧾 voucher form =", isOn);
     };
@@ -2891,5 +2894,6 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
