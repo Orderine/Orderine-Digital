@@ -81,6 +81,10 @@
       display: flex;
       justify-content: center;
     }
+    #inviteBox {
+  display: none;
+}
+
   </style>
 </head>
 
@@ -96,12 +100,76 @@
         placeholder="Email admin"
         required
       />
-      <select id="adminType" required>
-  <option value="">-- Pilih Tipe Admin --</option>
-  <option value="cashier">🧾 Admin Cashier</option>
-  <option value="menu">🍽️ Admin Menu</option>
-  <option value="room">🏨 Admin Room</option>
+      
+   <select id="adminType" required>
+  <option value="">-- Pilih Role Admin --</option>
+
+  <small class="hint">
+  Role menentukan akses & otorisasi PIN (void, approve, dll)
+  </small>
+
+
+  <!-- FRONT OFFICE -->
+  <optgroup label="Front Office">
+    <option value="cashier">Cashier</option>
+    <option value="front_office_supervisor">Front Office Supervisor</option>
+    <option value="front_office_manager">Front Office Manager</option>
+  </optgroup>
+
+  <!-- KITCHEN -->
+  <optgroup label="Kitchen">
+    <option value="kitchen_admin">Kitchen Admin</option>
+    <option value="kitchen_supervisor">Kitchen Supervisor</option>
+    <option value="kitchen_manager">Kitchen Manager</option>
+  </optgroup>
+
+  <!-- BAR -->
+  <optgroup label="Bar">
+    <option value="bar_admin">Bar Admin</option>
+    <option value="bar_supervisor">Bar Supervisor</option>
+    <option value="bar_manager">Bar Manager</option>
+  </optgroup>
+
+  <!-- ROOM / HOUSEKEEPING -->
+  <optgroup label="Room / Housekeeping">
+    <option value="room_admin">Room Admin</option>
+    <option value="housekeeping_supervisor">Housekeeping Supervisor</option>
+    <option value="housekeeping_manager">Housekeeping Manager</option>
+  </optgroup>
+
+  <!-- PURCHASING -->
+  <optgroup label="Purchasing">
+    <option value="purchasing_admin">Purchasing Admin</option>
+    <option value="purchasing_supervisor">Purchasing Supervisor</option>
+    <option value="purchasing_manager">Purchasing Manager</option>
+  </optgroup>
+
+  <!-- INVENTORY -->
+  <optgroup label="Inventory">
+    <option value="inventory_admin">Inventory Admin</option>
+    <option value="inventory_supervisor">Inventory Supervisor</option>
+    <option value="inventory_manager">Inventory Manager</option>
+  </optgroup>
+
+  <!-- FINANCE -->
+  <optgroup label="Finance">
+    <option value="finance_admin">Finance Admin</option>
+    <option value="finance_supervisor">Finance Supervisor</option>
+    <option value="finance_manager">Finance Manager</option>
+  </optgroup>
+
+  <!-- HRD -->
+  <optgroup label="HRD">
+    <option value="hrd_admin">HRD Admin</option>
+    <option value="hrd_manager">HRD Manager</option>
+  </optgroup>
+
+  <!-- TOP LEVEL -->
+  <optgroup label="Top Management">
+    <option value="general_manager">General Manager</option>
+  </optgroup>
 </select>
+
 
       <button type="submit">Generate Invite</button>
     </form>
@@ -130,26 +198,20 @@
     </button>
   </div>
 
+<script src="db-core.js"></script>
 <script>
 /* ======================================================
-   OWNER ONLY GUARD (HARD)
+   OWNER ONLY GUARD
 ====================================================== */
 (function ownerGuard() {
   const activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
-
   if (!activeUser || activeUser.role !== "owner" || !activeUser.restoID) {
     alert("Session expired. Please login again.");
     location.replace("login.html");
     throw new Error("Invalid owner context");
   }
-
-  // simpan flag navigasi aman
-  sessionStorage.setItem("fromInviteAdmin", "1");
 })();
 
-/* ======================================================
-   SAFE GET ACTIVE OWNER (HELPER)
-====================================================== */
 function getActiveOwner() {
   const user = JSON.parse(localStorage.getItem("activeUser") || "null");
   if (!user || user.role !== "owner" || !user.restoID) {
@@ -159,25 +221,55 @@ function getActiveOwner() {
 }
 
 /* ======================================================
-   ADMIN CONFIG
+   ROLE CONFIG (FINAL – HOTEL 5★)
 ====================================================== */
-const ADMIN_CONFIG = {
-  cashier: {
-    label: "Admin Cashier",
-    redirect: "recievers.html",
-    permissions: ["orders", "payments"]
-  },
-  menu: {
-    label: "Admin Menu",
-    redirect: "menu-manager.html",
-    permissions: ["menu", "stock"]
-  },
-  room: {
-    label: "Admin Room",
-    redirect: "room-manager.html",
-    permissions: ["room"]
-  }
+const ADMIN_ROLES = {
+  /* ===== FRONT OFFICE ===== */
+  cashier: "Cashier",
+  front_office_supervisor: "Front Office Supervisor",
+  front_office_manager: "Front Office Manager",
+
+  /* ===== KITCHEN ===== */
+  kitchen_admin: "Kitchen Admin",
+  kitchen_supervisor: "Kitchen Supervisor",
+  kitchen_manager: "Kitchen Manager",
+
+  /* ===== BAR ===== */
+  bar_admin: "Bar Admin",
+  bar_supervisor: "Bar Supervisor",
+  bar_manager: "Bar Manager",
+
+  /* ===== ROOM / HOUSEKEEPING ===== */
+  room_admin: "Room Admin",
+  housekeeping_supervisor: "Housekeeping Supervisor",
+  housekeeping_manager: "Housekeeping Manager",
+
+  /* ===== PURCHASING ===== */
+  purchasing_admin: "Purchasing Admin",
+  purchasing_supervisor: "Purchasing Supervisor",
+  purchasing_manager: "Purchasing Manager",
+
+  /* ===== INVENTORY / WAREHOUSE ===== */
+  inventory_admin: "Inventory Admin",
+  inventory_supervisor: "Inventory Supervisor",
+  inventory_manager: "Inventory Manager",
+
+  /* ===== FINANCE ===== */
+  finance_admin: "Finance Admin",
+  finance_supervisor: "Finance Supervisor",
+  finance_manager: "Finance Manager",
+
+  /* ===== HRD ===== */
+  hrd_admin: "HRD Admin",
+  hrd_manager: "HRD Manager",
+
+  /* ===== IT / SYSTEM ===== */
+  system_admin: "System Admin",
+
+  /* ===== TOP LEVEL ===== */
+  general_manager: "General Manager"
 };
+
 
 /* ======================================================
    DOM
@@ -186,66 +278,61 @@ const form = document.getElementById("inviteForm");
 const result = document.getElementById("result");
 
 /* ======================================================
-   UTIL
+   TOKEN
 ====================================================== */
-function generateToken(len = 24) {
+function generateToken(len = 32) {
   const chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let token = "";
-  for (let i = 0; i < len; i++) {
-    token += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return token;
+  return Array.from({ length: len }, () =>
+    chars[Math.floor(Math.random() * chars.length)]
+  ).join("");
 }
 
 /* ======================================================
-   SUBMIT INVITE
+   SUBMIT INVITE (DB-CORE)
 ====================================================== */
-form.addEventListener("submit", (e) => {
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
   result.innerHTML = "";
 
   let owner;
   try {
     owner = getActiveOwner();
-  } catch (err) {
-    alert("Session expired. Please login again.");
+  } catch {
+    alert("Session expired");
     location.replace("login.html");
     return;
   }
 
   const email = document.getElementById("email").value.trim().toLowerCase();
-  const adminType = document.getElementById("adminType").value;
+  const role = document.getElementById("adminType").value;
 
   if (!email) {
     result.innerHTML = "<div class='error'>❌ Email wajib diisi</div>";
     return;
   }
 
-  if (!ADMIN_CONFIG[adminType]) {
-    result.innerHTML = "<div class='error'>❌ Pilih tipe admin</div>";
+  if (!ADMIN_ROLES[role]) {
+    result.innerHTML = "<div class='error'>❌ Role tidak valid</div>";
     return;
   }
 
-  const invites =
-    JSON.parse(localStorage.getItem("menuvaInvites")) || [];
-
   /* --------------------------------------------------
-     CEK INVITE AKTIF (1 ADMIN TYPE = 1 INVITE AKTIF)
+     CEK INVITE PENDING (EMAIL + RESTO)
   -------------------------------------------------- */
-  const existingInvite = invites.find(
+  const allInvites = await dbGetAll("admin_invites");
+  const activeInvite = allInvites.find(
     i =>
       i.restoID === owner.restoID &&
-      i.adminType === adminType &&
-      !i.isUsed &&
-      new Date() < new Date(i.expireAt)
+      i.email === email &&
+      i.status === "pending"
   );
 
-  if (existingInvite) {
-    showInvite(existingInvite);
+  if (activeInvite) {
+    showInvite(activeInvite);
     result.innerHTML = `
       <div class="success">
-        ℹ️ Invite aktif untuk <b>${ADMIN_CONFIG[adminType].label}</b> sudah ada
+        ℹ️ Invite pending untuk <b>${email}</b> sudah ada
       </div>`;
     return;
   }
@@ -254,32 +341,23 @@ form.addEventListener("submit", (e) => {
      CREATE INVITE
   -------------------------------------------------- */
   const invite = {
-    inviteID: "INV-" + crypto.randomUUID(),
-    email,
+    id: "INV-" + crypto.randomUUID(),
     restoID: owner.restoID,
-    ownerID: owner.userID,
-    role: "admin",
-    adminType,
-    permissions: ADMIN_CONFIG[adminType].permissions,
-    redirect: ADMIN_CONFIG[adminType].redirect,
-
-    // 🔑 PENTING: token hanya untuk aktivasi awal
+    email,
+    role, // cashier | supervisor | manager
+    invitedBy: owner.userID,
     token: generateToken(),
-    isUsed: false,
-
-    createdAt: new Date().toISOString(),
-    expireAt: new Date(Date.now() + 86400000).toISOString() // 24 jam
+    status: "pending",
+    createdAt: Date.now()
   };
 
-  invites.push(invite);
-  localStorage.setItem("menuvaInvites", JSON.stringify(invites));
-  localStorage.setItem("lastInviteAdminType", adminType);
+  await dbPut("admin_invites", invite);
 
   showInvite(invite);
 
   result.innerHTML = `
     <div class="success">
-      ✅ Invite <b>${ADMIN_CONFIG[adminType].label}</b> berhasil dibuat
+      ✅ Invite <b>${ADMIN_ROLES[role]}</b> berhasil dibuat
     </div>`;
 
   form.reset();
@@ -289,18 +367,12 @@ form.addEventListener("submit", (e) => {
    SHOW INVITE
 ====================================================== */
 function showInvite(invite) {
-  const adminCfg = ADMIN_CONFIG[invite.adminType];
-
   const basePath = location.pathname.replace("invite-admin.html", "");
   const inviteURL =
     location.origin + basePath + "accept-invite.html?token=" + invite.token;
 
   document.getElementById("inviteLink").value = inviteURL;
   document.getElementById("inviteBox").style.display = "block";
-
-  result.innerHTML = adminCfg
-    ? `<div class="success">🔑 Invite aktif: <b>${adminCfg.label}</b></div>`
-    : `<div class="success">🔑 Invite aktif</div>`;
 
   generateQRCode(inviteURL);
 }
@@ -309,84 +381,26 @@ function showInvite(invite) {
    QR + COPY
 ====================================================== */
 function copyInviteLink() {
-  const input = document.getElementById("inviteLink");
-  navigator.clipboard.writeText(input.value);
+  navigator.clipboard.writeText(
+    document.getElementById("inviteLink").value
+  );
   alert("✅ Invite link copied");
 }
 
 function generateQRCode(url) {
   const qrBox = document.getElementById("qrBox");
   qrBox.innerHTML = "";
-  new QRCode(qrBox, {
-    text: url,
-    width: 180,
-    height: 180
-  });
-}
-
-function downloadQRCode() {
-  const canvas = document.querySelector("#qrBox canvas");
-  if (!canvas) {
-    alert("QR code belum tersedia");
-    return;
-  }
-  const link = document.createElement("a");
-  link.href = canvas.toDataURL("image/png");
-  link.download = "invite-admin-qr.png";
-  link.click();
+  new QRCode(qrBox, { text: url, width: 180, height: 180 });
 }
 
 /* ======================================================
-   SAFE BACK
+   BACK
 ====================================================== */
 function goBack() {
-  sessionStorage.removeItem("fromInviteAdmin");
   location.replace("admin.html");
 }
-
-/* ======================================================
-   LOAD ACTIVE INVITE
-====================================================== */
-window.addEventListener("DOMContentLoaded", () => {
-  let owner;
-  try {
-    owner = getActiveOwner();
-  } catch {
-    return;
-  }
-
-  const invites =
-    JSON.parse(localStorage.getItem("menuvaInvites")) || [];
-  const lastType = localStorage.getItem("lastInviteAdminType");
-
-  let activeInvite = null;
-
-  if (lastType) {
-    activeInvite = invites.find(
-      i =>
-        i.restoID === owner.restoID &&
-        i.adminType === lastType &&
-        !i.isUsed &&
-        new Date() < new Date(i.expireAt)
-    );
-  }
-
-  if (!activeInvite) {
-    activeInvite = invites.find(
-      i =>
-        i.restoID === owner.restoID &&
-        !i.isUsed &&
-        new Date() < new Date(i.expireAt)
-    );
-  }
-
-  if (activeInvite) {
-    showInvite(activeInvite);
-    const select = document.getElementById("adminType");
-    if (select) select.value = activeInvite.adminType;
-  }
-});
 </script>
 
 </body>
 </html>
+
