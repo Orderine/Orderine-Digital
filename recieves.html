@@ -439,15 +439,37 @@ async function loadOrders() {
 }
 
 async function loadRestoInfo() {
-  const restoId = localStorage.getItem("restoId") || localStorage.getItem("activeRestoId");
-  if (!restoId) return;
-  const r = await MENUVA_DB.get("restos", restoId);
-  if (!r) return;
-  restoName.textContent = r.namaRestoran || "-";
-  if (r.logo) restoLogo.src = r.logo;
-  restoAddress.textContent = r.restoAddress || "";
-  restoPhone.textContent = r.restoPhone ? `📞 ${r.restoPhone}` : "";
+  try {
+    // 🔐 SINGLE SOURCE: RESTO DI DB
+    const restos = await MENUVA_DB.getAll("restos");
+
+    if (!restos || !restos.length) {
+      console.warn("⚠️ Tidak ada data resto di DB");
+      return;
+    }
+
+    // 👉 asumsi 1 device = 1 resto aktif
+    const resto = restos[0];
+
+    document.getElementById("restoName").textContent =
+      resto.namaRestoran || "Unknown Resto";
+
+    if (resto.logo)
+      document.getElementById("restoLogo").src = resto.logo;
+
+    if (resto.restoAddress)
+      document.getElementById("restoAddress").textContent =
+        resto.restoAddress;
+
+    if (resto.restoPhone)
+      document.getElementById("restoPhone").textContent =
+        `📞 ${resto.restoPhone}`;
+
+  } catch (err) {
+    console.warn("⚠️ Gagal load resto info:", err);
+  }
 }
+
 
 /* ================== RENDER ================== */
 function renderOrders(data) {
@@ -599,4 +621,5 @@ MENUVA_DB.openDB().then(()=>{
 
 </body>
 </html>
+
 
