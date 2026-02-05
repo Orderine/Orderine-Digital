@@ -103,10 +103,6 @@
 
      <label for="adminType">Role Admin</label>
 
-    <small class="hint">
-  Role menentukan akses & otorisasi PIN (void, approve, dll)
-  </small>
-      
    <select id="adminType" required>
 
   <!-- FRONT OFFICE -->
@@ -199,7 +195,8 @@
   </div>
 
 <script src="./db-core.js"></script>
-<script><option value="">-- Pilih Role Admin --</option>
+<script>
+  
  if (!window.MENUVA_DB) {
   throw new Error("MENUVA_DB not loaded");
 }
@@ -403,8 +400,3 @@ function goBack() {
 
 </body>
 </html>
-
-
-
-
-
