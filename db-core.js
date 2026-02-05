@@ -1,12 +1,24 @@
-/* ================== MENUVA DB CORE (GLOBAL SINGLE SOURCE) ================== */
+/* ======================================================
+   MENUVA DB CORE (GLOBAL SINGLE SOURCE OF TRUTH)
+   ⚠️ DO NOT MODIFY FROM PAGE LEVEL
+====================================================== */
+
 (function () {
   if (window.MENUVA_DB) return;
 
+  /* ======================================================
+     INTERNAL GUARD FLAG
+  ====================================================== */
+  window.__MENUVA_INTERNAL__ = true;
+
   const DB_NAME = "MenuvaDB";
-  const DB_VERSION = 17; // ⬅️ NAIK VERSION (WAJIB)
+  const DB_VERSION = 18;
 
   let dbInstance = null;
 
+  /* ======================================================
+     OPEN DB (INTERNAL ONLY)
+  ====================================================== */
   function openDB() {
     return new Promise((resolve, reject) => {
       if (dbInstance) return resolve(dbInstance);
@@ -19,27 +31,35 @@
         const db = e.target.result;
         console.warn(`🔁 MenuvaDB upgrade → v${DB_VERSION}`);
 
-        /* ================= USERS ================= */
+        /* ========== CORE ========== */
         if (!db.objectStoreNames.contains("users")) {
           db.createObjectStore("users", { keyPath: "email" });
         }
 
-        /* ================= SESSION ================= */
         if (!db.objectStoreNames.contains("session")) {
           db.createObjectStore("session", { keyPath: "id" });
         }
 
-        /* ================= INVITES ================= */
-        if (!db.objectStoreNames.contains("invites")) {
-          db.createObjectStore("invites", { keyPath: "token" });
-        }
-
-        /* ================= RESTOS ================= */
         if (!db.objectStoreNames.contains("restos")) {
           db.createObjectStore("restos", { keyPath: "id" });
         }
 
-        /* ================= MENU DATA (NEW) ================= */
+        /* ========== ADMIN & SECURITY ========== */
+        if (!db.objectStoreNames.contains("admin_invites")) {
+          db.createObjectStore("admin_invites", { keyPath: "id" });
+        }
+
+        if (!db.objectStoreNames.contains("admins")) {
+          db.createObjectStore("admins", { keyPath: "id" });
+        }
+
+        if (!db.objectStoreNames.contains("void_logs")) {
+          const v = db.createObjectStore("void_logs", { keyPath: "id" });
+          v.createIndex("type", "type", { unique: false });
+          v.createIndex("createdAt", "createdAt", { unique: false });
+        }
+
+        /* ========== OPERATIONAL ========== */
         if (!db.objectStoreNames.contains("menuData")) {
           const menu = db.createObjectStore("menuData", {
             keyPath: "id",
@@ -49,17 +69,6 @@
           menu.createIndex("active", "active", { unique: false });
         }
 
-        /* ================= FLIPBOOK / GALLERY (NEW) ================= */
-        if (!db.objectStoreNames.contains("flipbookData")) {
-          const flipbook = db.createObjectStore("flipbookData", {
-            keyPath: "id",
-            autoIncrement: true
-          });
-          flipbook.createIndex("type", "type", { unique: false }); // room | menu
-          flipbook.createIndex("refId", "refId", { unique: false }); // menuId
-        }
-
-        /* ================= ORDERS ================= */
         if (!db.objectStoreNames.contains("ordersData")) {
           const orders = db.createObjectStore("ordersData", {
             keyPath: "id",
@@ -69,7 +78,6 @@
           orders.createIndex("orderTime", "orderTime", { unique: false });
         }
 
-        /* ================= PROMO ================= */
         if (!db.objectStoreNames.contains("promoData")) {
           db.createObjectStore("promoData", {
             keyPath: "id",
@@ -77,11 +85,21 @@
           });
         }
 
+        if (!db.objectStoreNames.contains("flipbookData")) {
+          const flip = db.createObjectStore("flipbookData", {
+            keyPath: "id",
+            autoIncrement: true
+          });
+          flip.createIndex("type", "type", { unique: false });
+          flip.createIndex("refId", "refId", { unique: false });
+        }
+
         console.log("✅ MenuvaDB schema ensured");
       };
 
       request.onsuccess = (e) => {
         dbInstance = e.target.result;
+        window.__MENUVA_INTERNAL__ = false;
 
         dbInstance.onversionchange = () => {
           dbInstance.close();
@@ -95,8 +113,16 @@
     });
   }
 
+  /* ======================================================
+     SAFE STORE ACCESS
+  ====================================================== */
   async function withStore(storeName, mode, callback) {
+    if (!MENUVA_DB.STORES.includes(storeName)) {
+      throw new Error(`🚫 Illegal store access: ${storeName}`);
+    }
+
     const db = await openDB();
+
     return new Promise((resolve, reject) => {
       const tx = db.transaction(storeName, mode);
       const store = tx.objectStore(storeName);
@@ -107,20 +133,24 @@
     });
   }
 
+  /* ======================================================
+     PUBLIC API (ONLY THIS IS ALLOWED)
+  ====================================================== */
   window.MENUVA_DB = {
     NAME: DB_NAME,
     VERSION: DB_VERSION,
 
-    // 🔑 KONTRAK STORE (PEGANGAN SEMUA HALAMAN)
     STORES: [
       "users",
       "session",
-      "invites",
       "restos",
+      "admin_invites",
+      "admins",
+      "void_logs",
       "menuData",
-      "flipbookData",
       "ordersData",
-      "promoData"
+      "promoData",
+      "flipbookData"
     ],
 
     openDB,
@@ -141,7 +171,7 @@
       return withStore(store, "readwrite", s => s.delete(key));
     },
 
-    /* 🔐 SESSION API (GLOBAL) */
+    /* ===== SESSION ===== */
     setSession(user) {
       return withStore("session", "readwrite", s =>
         s.put({ id: "active", ...user, loginAt: Date.now() })
@@ -149,17 +179,38 @@
     },
 
     getSession() {
-      return withStore("session", "readonly", s =>
-        s.get("active")
-      );
+      return withStore("session", "readonly", s => s.get("active"));
     },
 
     clearSession() {
-      return withStore("session", "readwrite", s =>
-        s.delete("active")
-      );
+      return withStore("session", "readwrite", s => s.delete("active"));
     }
   };
-})(); // ⬅️ INI WAJIB ADA
+})();
 
+/* ======================================================
+   MENUVA POLICY GUARD (HARD LOCK)
+====================================================== */
+(function enforcePolicy() {
 
+  /* ---- indexedDB ---- */
+  const _open = indexedDB.open;
+  indexedDB.open = function (...args) {
+    if (window.__MENUVA_INTERNAL__) {
+      return _open.apply(indexedDB, args);
+    }
+    throw new Error("🚫 Direct indexedDB access forbidden. Use MENUVA_DB.");
+  };
+
+  indexedDB.deleteDatabase = function () {
+    throw new Error("🚫 Database deletion forbidden.");
+  };
+
+  /* ---- localStorage ---- */
+  ["getItem", "setItem", "removeItem", "clear"].forEach(fn => {
+    localStorage[fn] = function () {
+      throw new Error("🚫 localStorage is forbidden. Use MENUVA_DB.");
+    };
+  });
+
+})();
