@@ -85,7 +85,9 @@
   </a>
     </div>
 </div>
- 
+
+<script src="db-core.js"></script>
+
 <script>
 /* ======================================================
    DOM
@@ -95,30 +97,9 @@ const msg = document.getElementById("msg");
 const form = document.getElementById("acceptForm");
 
 /* ======================================================
-   ADMIN CONFIG (LOGIN LEWAT admin-login.html)
-====================================================== */
-const ADMIN_CONFIG = {
-  cashier: {
-    label: "Admin Cashier",
-    redirect: "admin-login.html",
-    permissions: ["orders", "payments"]
-  },
-  menu: {
-    label: "Admin Menu",
-    redirect: "admin-login.html",
-    permissions: ["menu", "stock"]
-  },
-  room: {
-    label: "Admin Room",
-    redirect: "admin-login.html",
-    permissions: ["room"]
-  }
-};
-
-/* ======================================================
    TOKEN
 ====================================================== */
-const params = new URLSearchParams(window.location.search);
+const params = new URLSearchParams(location.search);
 const token = params.get("token");
 
 if (!token) {
@@ -126,126 +107,93 @@ if (!token) {
   throw new Error("Missing token");
 }
 
-const invites =
-  JSON.parse(localStorage.getItem("menuvaInvites")) || [];
+/* ======================================================
+   LOAD INVITE FROM DB
+====================================================== */
+let invite;
 
-const invite = invites.find(
-  i => i.token === token && i.isUsed !== true
-);
+(async () => {
+  const invites = await dbGetAll("admin_invites");
+  invite = invites.find(i => i.token === token && i.status === "pending");
 
-if (!invite) {
-  msg.innerHTML =
-    "<div class='error'>❌ Invite not found or already used</div>";
-  throw new Error("Invite invalid");
-}
+  if (!invite) {
+    msg.innerHTML =
+      "<div class='error'>❌ Invite not found or already used</div>";
+    return;
+  }
 
-if (invite.expireAt && new Date() > new Date(invite.expireAt)) {
-  msg.innerHTML = "<div class='error'>❌ Invite expired</div>";
-  throw new Error("Invite expired");
-}
+  info.innerHTML = `
+    ✅ You are invited as <b>${invite.role.replaceAll("_", " ")}</b><br>
+    Email: <b>${invite.email}</b>
+  `;
+
+  form.classList.remove("hidden");
+})();
 
 /* ======================================================
-   ADMIN TYPE
+   PIN UTILS
 ====================================================== */
-const adminType = invite.adminType || "cashier";
-const adminCfg = ADMIN_CONFIG[adminType];
-
-if (!adminCfg) {
-  msg.innerHTML = "<div class='error'>❌ Invalid admin role</div>";
-  throw new Error("Invalid adminType");
+function generatePIN() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-info.innerHTML = `
-  ✅ You are invited as <b>${adminCfg.label}</b><br>
-  Email: <b>${invite.email}</b>
-`;
-
-form.classList.remove("hidden");
-
-function generateUserID() {
-  return "USR-" + crypto.randomUUID();
+async function hashPIN(pin) {
+  const data = new TextEncoder().encode(pin);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 /* ======================================================
    ACCEPT INVITE
 ====================================================== */
-form.addEventListener("submit", (e) => {
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  msg.textContent = "";
+  msg.innerHTML = "";
 
-  const password = document.getElementById("password").value;
+  if (!invite) return;
 
-  if (password.length < 6) {
-    msg.innerHTML = "<div class='error'>❌ Password too short</div>";
-    return;
-  }
+  const pin = generatePIN();
+  const pinHash = await hashPIN(pin);
+  const now = Date.now();
 
-  /* ================= USER DB ================= */
-  const users =
-    JSON.parse(localStorage.getItem("menuvaUsers")) || [];
-
-  if (users.some(u => u.email === invite.email)) {
-    msg.innerHTML =
-      "<div class='error'>❌ Account already exists. Please login.</div>";
-    return;
-  }
-
-  const now = new Date().toISOString();
-
-  const newAdmin = {
-    userID: generateUserID(),
+  /* ================= CREATE ADMIN ================= */
+  const admin = {
+    id: "ADM-" + crypto.randomUUID(),
     email: invite.email,
-    password,
-
-    role: "admin",
-    adminType,
+    role: invite.role,
     restoID: invite.restoID,
-    permissions: adminCfg.permissions,
 
-    premiumPlan: "inherit",
-    trialUsed: true,
-    isPaid: true,
-    isExpired: false,
+    pinHash,
+    pinUsed: false,
 
+    status: "active",
     createdAt: now
   };
 
-  users.push(newAdmin);
-  localStorage.setItem("menuvaUsers", JSON.stringify(users));
+  await dbPut("admins", admin);
 
-  /* ================= ADMIN LOGIN DB (INI WAJIB) ================= */
-  const admins =
-    JSON.parse(localStorage.getItem("orderine_admins")) || [];
+  /* ================= CLOSE INVITE ================= */
+  invite.status = "accepted";
+  invite.acceptedAt = now;
+  await dbPut("admin_invites", invite);
 
-  admins.push({
-    email: newAdmin.email,
-    password: newAdmin.password,
-    restoID: newAdmin.restoID,
-    adminType,
-    permissions: adminCfg.permissions,
-    status: "active",
-    createdAt: now
-  });
-
-  localStorage.setItem("orderine_admins", JSON.stringify(admins));
-
-  /* ================= MARK INVITE USED ================= */
-  invite.isUsed = true;
-  invite.usedAt = now;
-  localStorage.setItem("menuvaInvites", JSON.stringify(invites));
-
+  /* ================= RESULT ================= */
   msg.innerHTML = `
     <div class="success">
-      ✅ Account created successfully.<br>
-      Please login to continue.
+      ✅ Account activated<br><br>
+      🔐 <b>Your One-Time PIN:</b><br>
+      <div style="font-size:22px;letter-spacing:4px;margin:10px 0;">
+        ${pin}
+      </div>
+      <small>Save this PIN. It will be required for approvals.</small>
     </div>
   `;
-
-  setTimeout(() => {
-    window.location.replace("admin-login.html");
-  }, 1200);
 });
 </script>
 
+
 </body>
 </html>
+
