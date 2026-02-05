@@ -2373,9 +2373,44 @@ function bindAdminEvents() {
 }
 
 
-function loadAdminData() {
+async function loadAdminData() {
   console.log("📦 loadAdminData");
+
+  const inviteBtn = document.getElementById("inviteAdminBtn");
+  if (!inviteBtn) {
+    console.warn("⚠️ inviteAdminBtn not found");
+    return;
+  }
+
+  try {
+    // Ambil session dari MENUVA_DB (single source of truth)
+    const session = await MENUVA_DB.getSession();
+
+    if (!session) {
+      console.warn("⚠️ No active session");
+      inviteBtn.style.display = "none";
+      return;
+    }
+
+    const role = session.role;
+    console.log("👤 Admin role:", role);
+
+    // 🔐 ROLE GUARD
+    if (role === "owner") {
+      inviteBtn.style.display = "flex"; // FIX UTAMA
+      console.log("✅ Invite Admin button enabled");
+    } else {
+      inviteBtn.remove(); // lebih bersih
+      console.log("🚫 Invite Admin hidden for role:", role);
+    }
+
+  } catch (err) {
+    console.error("❌ loadAdminData error:", err);
+    inviteBtn.style.display = "none";
+  }
 }
+
+  
 document.addEventListener("DOMContentLoaded", async () => {
   initWaAdminUI();
   initPageToggles(); // 🔥 SEMUA TOGGLE DI SINI
@@ -2875,6 +2910,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
