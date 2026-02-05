@@ -216,14 +216,6 @@ async function getActiveOwner() {
   return session;
 }
 
-function getActiveOwner() {
-  const user = JSON.parse(localStorage.getItem("activeUser") || "null");
-  if (!user || user.role !== "owner" || !user.restoID) {
-    throw new Error("Owner context missing");
-  }
-  return user;
-}
-
 /* ======================================================
    ROLE CONFIG (FINAL – HOTEL 5★)
 ====================================================== */
@@ -400,3 +392,4 @@ function goBack() {
 
 </body>
 </html>
+
