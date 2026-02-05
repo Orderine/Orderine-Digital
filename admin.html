@@ -2085,15 +2085,14 @@ window.downloadBackupJSON = async function () {
   }
 };
 
-  function hasBackupForCurrentUser() {
-  if (!window.activeUser?.email) return false;
+ async function hasBackupForCurrentUser() {
+  const session = await MENUVA_DB.getSession();
+  if (!session?.email) return false;
 
-  const key = `orderine:lastBackup:${window.activeUser.email
-    .trim()
-    .toLowerCase()}`;
-
-  return !!localStorage.getItem(key);
+  const backup = await MENUVA_DB.get("flipbookData", "backup_" + session.email);
+  return !!backup;
 }
+
 
 async function restoreDataFromFile(event) {
   const file = event.target.files[0];
@@ -2423,23 +2422,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-  function updateResetButtonState() {
-  const btn = document.getElementById("btnResetData");
+ async function updateResetButtonState() {
+  const hasBackup = await hasBackupForCurrentUser();
+  const btn = document.getElementById("btnReset");
+
   if (!btn) return;
-
-  if (!hasBackupForCurrentUser()) {
-    btn.disabled = true;
-    btn.title = "⚠️ Lakukan backup data terlebih dahulu";
-    btn.style.opacity = "0.6";
-    btn.style.cursor = "not-allowed";
-  } else {
-    btn.disabled = false;
-    btn.title = "Reset data admin";
-    btn.style.opacity = "1";
-    btn.style.cursor = "pointer";
-  }
+  btn.disabled = !hasBackup;
 }
-
 
 function domReady() {
   return new Promise(resolve => {
@@ -2464,9 +2453,6 @@ function setBool(key, val) {
 }
 
 async function initPageToggles() {
-  // =========================
-  // DOM CACHE
-  // =========================
   const dom = {
     order: document.getElementById("toggleOrderPage"),
     room: document.getElementById("toggleRoomPage"),
@@ -2474,65 +2460,60 @@ async function initPageToggles() {
     voucherForm: document.getElementById("voucherForm")
   };
 
-  // =========================
-  // HELPER STATE (MENUVADB)
-  // =========================
-  const getState = async (key, def) => {
-    let v = await MENUVA_DB.get("ui_state", key);
+  const cfg = await getAdminConfig();
 
-    if (v === undefined || v === null) {
-      await MENUVA_DB.set("ui_state", key, def);
-      return def;
-    }
-
-    return Boolean(v);
-  };
-
-  const setState = async (key, val) => {
-    await MENUVA_DB.set("ui_state", key, Boolean(val));
-  };
-
-  // =========================
-  // ORDER PAGE (PUBLIC)
-  // =========================
+  // ORDER PAGE
   if (dom.order) {
-    const enabled = await getState("public_order_enabled", true);
-    dom.order.checked = enabled;
-
+    dom.order.checked = cfg.public_order_enabled;
     dom.order.onchange = async e => {
-      await setState("public_order_enabled", e.target.checked);
+      await setAdminConfig({ public_order_enabled: e.target.checked });
       console.log("🌍 order.html =", e.target.checked);
     };
   }
 
-  // =========================
-  // ROOM PAGE (PUBLIC)
-  // =========================
+  // ROOM PAGE
   if (dom.room) {
-    const enabled = await getState("public_room_enabled", true);
-    dom.room.checked = enabled;
-
+    dom.room.checked = cfg.public_room_enabled;
     dom.room.onchange = async e => {
-      await setState("public_room_enabled", e.target.checked);
+      await setAdminConfig({ public_room_enabled: e.target.checked });
       console.log("🌍 room.html =", e.target.checked);
     };
   }
 
-  // =========================
-  // VOUCHER FORM (ADMIN)
-  // =========================
+  // VOUCHER FORM
   if (dom.voucher && dom.voucherForm) {
-    const enabled = await getState("voucher_form_enabled", false);
-    dom.voucher.checked = enabled;
-    dom.voucherForm.style.display = enabled ? "block" : "none";
+    dom.voucher.checked = cfg.voucher_form_enabled;
+    dom.voucherForm.style.display =
+      cfg.voucher_form_enabled ? "block" : "none";
 
     dom.voucher.onchange = async e => {
-      const isOn = e.target.checked;
-      await setState("voucher_form_enabled", isOn);
-      dom.voucherForm.style.display = isOn ? "block" : "none";
-      console.log("🧾 voucher form =", isOn);
+      const on = e.target.checked;
+      await setAdminConfig({ voucher_form_enabled: on });
+      dom.voucherForm.style.display = on ? "block" : "none";
+      console.log("🧾 voucher form =", on);
     };
   }
+}
+  
+async function getAdminConfig() {
+  let cfg = await MENUVA_DB.get("restos", "config");
+
+  if (!cfg) {
+    cfg = {
+      id: "config",
+      public_order_enabled: true,
+      public_room_enabled: true,
+      voucher_form_enabled: false
+    };
+    await MENUVA_DB.add("restos", cfg);
+  }
+
+  return cfg;
+}
+
+async function setAdminConfig(patch) {
+  const cfg = await getAdminConfig();
+  await MENUVA_DB.add("restos", { ...cfg, ...patch });
 }
 
 
@@ -2894,6 +2875,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
