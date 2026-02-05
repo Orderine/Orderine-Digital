@@ -99,7 +99,6 @@ const form = document.getElementById("acceptForm");
    TOKEN
 ====================================================== */
 const token = new URLSearchParams(location.search).get("token");
-
 if (!token) {
   msg.innerHTML = "<div class='error'>❌ Invalid invite link</div>";
   throw new Error("Missing token");
@@ -110,47 +109,18 @@ if (!token) {
 ====================================================== */
 const NEED_PIN_KEYWORDS = ["supervisor", "manager", "general_manager"];
 
-const ROLE_REDIRECT = {
-  cashier: "recieves.html",
-
-  kitchen_admin: "menu-manager.html",
-  kitchen_supervisor: "menu-manager.html",
-  kitchen_manager: "menu-manager.html",
-
-  bar_admin: "drink-manager.html",
-  bar_supervisor: "drink-manager.html",
-  bar_manager: "drink-manager.html",
-
-  room_admin: "room-manager.html",
-
-  front_office_supervisor: "recieves.html",
-  front_office_manager: "recieves.html",
-
-  general_manager: "admin.html"
-};
+/* ======================================================
+   STATE
+====================================================== */
+let invite = null;
+let NEXT_PAGE = null;
 
 /* ======================================================
-   PIN UTILS
+   INIT
 ====================================================== */
-function generatePIN() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-function hashPIN(pin) {
-  return btoa(pin); // konsisten dengan sistem lu
-}
-
-let invite = null;
-
 (async () => {
   if (!window.MENUVA_DB) {
     msg.innerHTML = "<div class='error'>❌ DB Core not ready</div>";
-    return;
-  }
-
-  const token = new URLSearchParams(location.search).get("token");
-  if (!token) {
-    msg.innerHTML = "<div class='error'>❌ Invalid invite link</div>";
     return;
   }
 
@@ -174,7 +144,6 @@ let invite = null;
   form.classList.remove("hidden");
 })();
 
-
 /* ======================================================
    ACCEPT INVITE
 ====================================================== */
@@ -184,13 +153,18 @@ form.addEventListener("submit", async e => {
 
   if (!invite) return;
 
-  const now = Date.now();
+  const password = document.getElementById("password").value.trim();
+  if (password.length < 6) {
+    msg.innerHTML = "<div class='error'>❌ Password minimal 6 karakter</div>";
+    return;
+  }
 
+  const now = Date.now();
   let pin = null;
   let pinHash = null;
 
   if (isSupervisorUp(invite.role)) {
-    pin = Math.floor(100000 + Math.random() * 900000).toString();
+    pin = generatePIN();
     const enc = new TextEncoder().encode(pin);
     const hash = await crypto.subtle.digest("SHA-256", enc);
     pinHash = Array.from(new Uint8Array(hash))
@@ -205,7 +179,6 @@ form.addEventListener("submit", async e => {
     restoID: invite.restoID,
     status: "active",
     createdAt: now,
-
     ...(pinHash ? { pinHash, pinUsed:false } : {})
   };
 
@@ -222,37 +195,73 @@ form.addEventListener("submit", async e => {
     restoID: admin.restoID
   });
 
+  NEXT_PAGE = getAdminRedirect(admin.role);
+
+  renderSuccess(invite.role, pin);
+});
+
+/* ======================================================
+   UI RENDER
+====================================================== */
+function renderSuccess(role, pin) {
+  form.classList.add("hidden");
+
   msg.innerHTML = `
-    <div class="success">
-      ✅ Akun admin aktif<br>
-      ${pin ? `<b>🔐 PIN Anda:</b><div style="font-size:22px">${pin}</div>` : ""}
-      <br>Redirecting...
+    <div class="success" style="text-align:center">
+      <h3>✅ Akun Admin Aktif</h3>
+      <p><b>Role:</b> ${role.replaceAll("_"," ")}</p>
+
+      ${
+        pin ? `
+        <div style="margin-top:12px">
+          <p><b>🔐 PIN VOID (SIMPAN BAIK-BAIK)</b></p>
+          <input id="voidPin" value="${pin}" readonly
+            style="font-size:20px;text-align:center;width:140px"/>
+          <br>
+          <button id="copyPin" style="margin-top:6px">📋 Copy PIN</button>
+        </div>` : ""
+      }
+
+      <div style="margin-top:18px">
+        <button id="goDashboard">➡️ Lanjut ke Dashboard</button>
+      </div>
     </div>
   `;
 
-  setTimeout(() => {
-    location.replace(getAdminRedirect(admin.role));
-  }, 1800);
-});
+  if (pin) {
+    document.getElementById("copyPin").onclick = () => {
+      navigator.clipboard.writeText(pin);
+      alert("✅ PIN berhasil disalin");
+    };
+  }
 
+  document.getElementById("goDashboard").onclick = () => {
+    location.href = NEXT_PAGE;
+  };
+}
 
-  function isSupervisorUp(role) {
+/* ======================================================
+   HELPERS
+====================================================== */
+function generatePIN() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+function isSupervisorUp(role) {
   return role.includes("supervisor")
       || role.includes("manager")
       || role === "general_manager";
 }
 
 function getAdminRedirect(role) {
-  if (role.includes("kitchen")) return "kitchen.html";
-  if (role.includes("bar")) return "bar.html";
-  if (role.includes("room")) return "room.html";
-  if (role.includes("finance")) return "finance.html";
-  if (role.includes("inventory")) return "inventory.html";
+  if (role.includes("kitchen")) return "menu-manager.html";
+  if (role.includes("bar")) return "drink-manager.html";
+  if (role.includes("room")) return "room-manager.html";
+  if (role.includes("front_office")) return "recieves.html";
   return "admin.html";
 }
-
 </script>
+
 
 </body>
 </html>
-
