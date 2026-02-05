@@ -100,14 +100,14 @@
         placeholder="Email admin"
         required
       />
-      
-   <select id="adminType" required>
-  <option value="">-- Pilih Role Admin --</option>
 
-  <small class="hint">
+     <label for="adminType">Role Admin</label>
+
+    <small class="hint">
   Role menentukan akses & otorisasi PIN (void, approve, dll)
   </small>
-
+      
+   <select id="adminType" required>
 
   <!-- FRONT OFFICE -->
   <optgroup label="Front Office">
@@ -199,7 +199,7 @@
   </div>
 
 <script src="./db-core.js"></script>
-<script>
+<script><option value="">-- Pilih Role Admin --</option>
  if (!window.MENUVA_DB) {
   throw new Error("MENUVA_DB not loaded");
 }
@@ -403,6 +403,7 @@ function goBack() {
 
 </body>
 </html>
+
 
 
 
