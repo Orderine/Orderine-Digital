@@ -262,56 +262,53 @@
     });
   }
 
-  /* ====================== COUNTDOWN ====================== */
-  async function startCountdownWatcher() {
-    if (!countdownEl) return;
+let countdownInterval = null;
+let currentUser = null;
 
-    setInterval(updateCountdown, 1000);
-    updateCountdown();
+async function startCountdownWatcher() {
+  const session = await MENUVA_DB.getSession();
+  if (!session?.email) return;
+
+  currentUser = await MENUVA_DB.get("users", session.email);
+  if (!currentUser?.premiumExpire) return;
+
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
   }
 
-  async function updateCountdown() {
-    const session = await MENUVA_DB.getSession();
-    if (!session || !session.email) {
-      countdownEl.textContent = "";
-      return;
-    }
+  countdownInterval = setInterval(updateCountdownLocal, 1000);
+  updateCountdownLocal();
+}
 
-    const user = await MENUVA_DB.get("users", session.email);
-    if (!user || !user.premiumExpire) {
-      countdownEl.textContent = "";
-      return;
-    }
+function updateCountdownLocal() {
+  if (!currentUser?.premiumExpire) return;
 
-    // Hide trial button if trial already used
-    if (user.premiumPlan === "trial" && trialBtn) {
-      trialBtn.style.display = "none";
-    }
+  const now = new Date();
+  const endTime = new Date(currentUser.premiumExpire);
+  const diff = endTime - now;
 
-    const now = new Date();
-    const endTime = new Date(user.premiumExpire);
-    const diff = endTime - now;
+  if (diff <= 0) {
+    clearInterval(countdownInterval);
+    countdownEl.textContent = "⏰ Your plan has expired";
 
-    if (diff <= 0) {
-      countdownEl.textContent = "⏰ Your plan has expired";
+    setTimeout(async () => {
+      alert("❌ Subscription expired.");
+      await MENUVA_DB.clearSession();
+      location.href = "login.html";
+    }, 3000);
 
-      setTimeout(async () => {
-        alert("❌ Subscription expired. Please renew.");
-        await MENUVA_DB.clearSession();
-        location.href = "login.html";
-      }, 3000);
-
-      return;
-    }
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((diff / (1000 * 60)) % 60);
-    const seconds = Math.floor((diff / 1000) % 60);
-
-    countdownEl.textContent =
-      `⏳ Time left: ${days}d ${hours}h ${minutes}m ${seconds}s`;
+    return;
   }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / (1000 * 60)) % 60);
+  const seconds = Math.floor((diff / 1000) % 60);
+
+  countdownEl.textContent =
+    `⏳ Time left: ${days}d ${hours}h ${minutes}m ${seconds}s`;
+}
+
 
   /* ====================== LOGOUT ====================== */
   async function logout() {
@@ -339,6 +336,7 @@
 
 </body>
 </html>
+
 
 
 
