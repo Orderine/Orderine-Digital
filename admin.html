@@ -2045,7 +2045,7 @@ async function backupAdminToJSON() {
     exportedAt: Date.now(),
     owner: { email },
     data: {
-      restos: resto   // 🔥 SATU SUMBER KEBENARAN
+      restos: resto
     }
   };
 
@@ -2055,15 +2055,26 @@ async function backupAdminToJSON() {
   );
 
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+
+  a.href = url;
   a.download = `orderine-backup-${email}.json`;
   a.click();
 
-  // tandai backup terakhir (EMAIL-BASED)
-localStorage.setItem(
-  `orderine:lastBackup:${email}`,
-  Date.now()
-);
+  URL.revokeObjectURL(url);
+
+  // ==============================
+  // 🔥 REPLACE localStorage WITH MENUVA_DB
+  // ==============================
+
+  await MENUVA_DB.set(
+    "system",
+    `lastBackup:${email}`,
+    {
+      email,
+      lastBackupAt: Date.now()
+    }
+  );
 
   console.log("📦 Backup success (EMAIL):", email);
 }
@@ -2910,6 +2921,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
