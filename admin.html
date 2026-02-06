@@ -2032,52 +2032,58 @@ async function backupAdminToJSON() {
   const email = window.activeUser.email.trim().toLowerCase();
   const restoId = window.activeUser.restoID;
 
-  const resto = await MENUVA_DB.get("restos", restoId);
-  if (!resto) {
-    alert("❌ Data resto tidak ditemukan");
-    return;
+  try {
+    const resto = await MENUVA_DB.get("restos", restoId);
+    if (!resto) {
+      alert("❌ Data resto tidak ditemukan");
+      return;
+    }
+
+    const backup = {
+      app: "Orderine",
+      type: "ADMIN_BACKUP",
+      version: 3,
+      exportedAt: Date.now(),
+      owner: { email },
+      data: {
+        restos: resto
+      }
+    };
+
+    const blob = new Blob(
+      [JSON.stringify(backup, null, 2)],
+      { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = `orderine-backup-${email}.json`;
+    a.click();
+
+    URL.revokeObjectURL(url);
+
+    /* =========================================
+       SAVE LAST BACKUP META INTO USERS STORE
+       ========================================= */
+    const user = await MENUVA_DB.get("users", email);
+
+    if (user) {
+      await MENUVA_DB.add("users", {
+        ...user,
+        lastBackupAt: Date.now()
+      });
+    }
+
+    console.log("📦 Backup success (DB STORED):", email);
+
+  } catch (err) {
+    console.error("❌ Backup failed:", err);
+    alert("❌ Gagal melakukan backup data");
   }
-
-  const backup = {
-    app: "Orderine",
-    type: "ADMIN_BACKUP",
-    version: 3,
-    exportedAt: Date.now(),
-    owner: { email },
-    data: {
-      restos: resto
-    }
-  };
-
-  const blob = new Blob(
-    [JSON.stringify(backup, null, 2)],
-    { type: "application/json" }
-  );
-
-  const a = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-
-  a.href = url;
-  a.download = `orderine-backup-${email}.json`;
-  a.click();
-
-  URL.revokeObjectURL(url);
-
-  // ==============================
-  // 🔥 REPLACE localStorage WITH MENUVA_DB
-  // ==============================
-
-  await MENUVA_DB.set(
-    "system",
-    `lastBackup:${email}`,
-    {
-      email,
-      lastBackupAt: Date.now()
-    }
-  );
-
-  console.log("📦 Backup success (EMAIL):", email);
 }
+
 
  let __BACKUP_RUNNING__ = false;
 
@@ -2921,6 +2927,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
