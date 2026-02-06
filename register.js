@@ -1,6 +1,6 @@
 // =====================================================
-// ORDERINE – REGISTER PAGE (ES MODULE)
-// FINAL – SYNC WITH DB-CORE + AUTH-GUARD (ENTERPRISE CLEAN)
+// ORDERINE – REGISTER PAGE (ENTERPRISE CLEAN)
+// 100% IndexedDB – NO localStorage
 // =====================================================
 
 import {
@@ -11,6 +11,7 @@ import {
 } from "./db.js";
 
 document.addEventListener("DOMContentLoaded", () => {
+
   const registerForm = document.getElementById("registerForm");
   const errorMsg = document.getElementById("errorMsg");
   const passwordInput = document.getElementById("password");
@@ -19,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!registerForm) return;
 
   /* ================== UTILS ================== */
+
   const isValidEmail = (email) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -31,13 +33,14 @@ document.addEventListener("DOMContentLoaded", () => {
     return d;
   };
 
-  // 🔥 FIX: Ambil selectedPlan dari SESSION (bukan localStorage)
-  const safeGetSelectedPlan = async () => {
+  /* ================== GET SELECTED PLAN FROM SESSION ================== */
+  const getSelectedPlanFromSession = async () => {
     const session = await MENUVA_DB.getSession();
-    return session?.selectedPlan || null;
+    return session?.temp?.selectedPlan || null;
   };
 
   /* ================== REGISTER ================== */
+
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorMsg.textContent = "";
@@ -46,6 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const password = passwordInput.value;
 
     /* ===== VALIDATION ===== */
+
     if (!isValidEmail(email)) {
       errorMsg.textContent = "❌ Format email tidak valid";
       return;
@@ -62,11 +66,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /* ================== IDS ================== */
+
     const userID = generateID("USER");
     const restoID = generateID("RESTO");
 
     /* ================== PLAN ================== */
-    const selectedPlan = await safeGetSelectedPlan();
+
+    const selectedPlan = await getSelectedPlanFromSession();
     const now = new Date();
 
     let premiumPlan = "trial";
@@ -74,8 +80,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let isPaid = false;
     let premiumExpire = addDays(now, 14);
 
-    if (selectedPlan?.type) {
-      premiumPlan = selectedPlan.type;
+    if (selectedPlan) {
+      premiumPlan = selectedPlan;
       subscriptionStatus = "pending";
 
       if (premiumPlan === "monthly") {
@@ -87,7 +93,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    /* ================== USER ================== */
+    /* ================== USER OBJECT ================== */
+
     const newUser = {
       userID,
       email,
@@ -102,7 +109,8 @@ document.addEventListener("DOMContentLoaded", () => {
       createdAt: now.toISOString()
     };
 
-    /* ================== RESTO ================== */
+    /* ================== RESTO OBJECT ================== */
+
     const resto = {
       id: restoID,
       ownerID: userID,
@@ -111,28 +119,38 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     try {
+
       await saveUser(newUser);
       await saveResto(resto);
 
-      // 🔥 Hapus selectedPlan dari session setelah dipakai
+      /* ================== CLEAN TEMP SESSION ================== */
+
       const session = await MENUVA_DB.getSession();
-      if (session?.selectedPlan) {
-        delete session.selectedPlan;
-        await MENUVA_DB.setSession(session);
+
+      if (session?.temp?.selectedPlan) {
+        const cleanedSession = {
+          ...session,
+          temp: {}
+        };
+        await MENUVA_DB.setSession(cleanedSession);
       }
+
+      /* ================== FLOW CONTROL ================== */
 
       if (premiumPlan === "trial") {
         alert("✅ Trial 14 hari aktif.\nSilakan login.");
         location.href = "login.html";
       } else {
-        // 🔥 Simpan pending plan user ke SESSION (bukan localStorage)
+
         await MENUVA_DB.setSession({
+          id: "active",
           email,
           restoID,
           role: "owner",
-          selectedPlan: premiumPlan,
-          createdAt: now.toISOString(),
-          status: "pending_payment"
+          temp: {
+            pendingPaymentPlan: premiumPlan
+          },
+          createdAt: now.toISOString()
         });
 
         alert("🧾 Akun berhasil dibuat.\nSilakan lanjutkan pembayaran.");
@@ -146,9 +164,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /* ================== 👁️ TOGGLE PASSWORD ================== */
+
   togglePassword?.addEventListener("click", () => {
     const show = passwordInput.type === "password";
     passwordInput.type = show ? "text" : "password";
     togglePassword.textContent = show ? "🙈" : "👁️";
   });
+
 });
