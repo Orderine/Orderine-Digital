@@ -206,58 +206,101 @@
   </div>
 </div>
 
+<script src="db-core.js"></script>
 <script>
-  // ====================== PLAN SELECTION ======================
-  const planButtons = document.querySelectorAll('.plan button');
-  planButtons.forEach(btn => {
-    btn.addEventListener('click', function() {
-      let plan = this.id === "trialBtn" ? "trial" : this.dataset.plan || "";
-      if (plan) {
-        localStorage.setItem("selectedPlan", plan);
-        console.log("✅ Plan selected:", plan);
-        location.href = "register.html"; // arahkan ke register
-      }
-    });
-  });
+  // =====================================================
+  // ORDERINE – INDEX PAGE (DB-CLEAN VERSION)
+  // Patuh penuh ke MENUVA_DB
+  // =====================================================
 
-  // ====================== COUNTDOWN HANDLING ======================
+  let activeSession = null;
   const countdownEl = document.getElementById("countdown");
   const trialBtn = document.getElementById("trialBtn");
-  let activeUser = JSON.parse(localStorage.getItem("activeUser") || "null");
 
-  function updateCountdown() {
-    if (!activeUser) {
-      if (countdownEl) countdownEl.textContent = "";
+  /* ====================== INIT ====================== */
+  document.addEventListener("DOMContentLoaded", async () => {
+    activeSession = await MENUVA_DB.getSession();
+
+    initPlanButtons();
+    startCountdownWatcher();
+  });
+
+  /* ====================== PLAN SELECTION ====================== */
+  function initPlanButtons() {
+    const planButtons = document.querySelectorAll(".plan button");
+
+    planButtons.forEach(btn => {
+      btn.addEventListener("click", async function () {
+
+        const plan =
+          this.id === "trialBtn"
+            ? "trial"
+            : this.dataset.plan || null;
+
+        if (!plan) return;
+
+        const durationMap = {
+          trial: 0,
+          monthly: 1,
+          "6month": 6,
+          yearly: 12
+        };
+
+        await MENUVA_DB.setSession({
+          ...(activeSession || {}),
+          selectedPlan: {
+            type: plan,
+            durationMonth: durationMap[plan] || 0,
+            selectedAt: new Date().toISOString()
+          }
+        });
+
+        console.log("✅ Plan selected:", plan);
+
+        location.href = "register.html";
+      });
+    });
+  }
+
+  /* ====================== COUNTDOWN ====================== */
+  async function startCountdownWatcher() {
+    if (!countdownEl) return;
+
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
+  }
+
+  async function updateCountdown() {
+    const session = await MENUVA_DB.getSession();
+    if (!session || !session.email) {
+      countdownEl.textContent = "";
       return;
     }
 
-    // Hilangkan tombol trial jika sudah dipakai
-    if (activeUser.trialUsed && trialBtn) {
+    const user = await MENUVA_DB.get("users", session.email);
+    if (!user || !user.premiumExpire) {
+      countdownEl.textContent = "";
+      return;
+    }
+
+    // Hide trial button if trial already used
+    if (user.premiumPlan === "trial" && trialBtn) {
       trialBtn.style.display = "none";
     }
 
-    // Cek expiry date
-    if (!activeUser.premiumExpire) {
-      if (countdownEl) countdownEl.textContent = "";
-      return;
-    }
-
     const now = new Date();
-    const endTime = new Date(activeUser.premiumExpire);
+    const endTime = new Date(user.premiumExpire);
     const diff = endTime - now;
 
     if (diff <= 0) {
-      if (countdownEl) countdownEl.textContent = "⏰ Your plan has expired";
+      countdownEl.textContent = "⏰ Your plan has expired";
 
-      // Reset premium info
-      activeUser.premiumExpire = null;
-      localStorage.setItem("activeUser", JSON.stringify(activeUser));
-
-      // Redirect ke login
-      setTimeout(() => {
-        alert("❌ Your subscription has expired. Please renew to continue.");
+      setTimeout(async () => {
+        alert("❌ Subscription expired. Please renew.");
+        await MENUVA_DB.clearSession();
         location.href = "login.html";
       }, 3000);
+
       return;
     }
 
@@ -266,22 +309,20 @@
     const minutes = Math.floor((diff / (1000 * 60)) % 60);
     const seconds = Math.floor((diff / 1000) % 60);
 
-    if (countdownEl) {
-      countdownEl.textContent = `⏳ Time left: ${days}d ${hours}h ${minutes}m ${seconds}s`;
-    }
+    countdownEl.textContent =
+      `⏳ Time left: ${days}d ${hours}h ${minutes}m ${seconds}s`;
   }
 
-  setInterval(updateCountdown, 1000);
-  updateCountdown();
-
-  function logout() {
-    localStorage.removeItem("activeUser");
-    localStorage.setItem("isLoggedIn", "false");
+  /* ====================== LOGOUT ====================== */
+  async function logout() {
+    await MENUVA_DB.clearSession();
     alert("✅ You have logged out.");
     location.href = "login.html";
   }
+
+  /* ====================== NAVIGATION ====================== */
   function goToPage(page) {
-    window.location.href = page;
+    location.href = page;
   }
 </script>
 
@@ -298,6 +339,7 @@
 
 </body>
 </html>
+
 
 
 
