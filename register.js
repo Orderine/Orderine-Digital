@@ -34,10 +34,10 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   /* ================== GET SELECTED PLAN FROM SESSION ================== */
-  const getSelectedPlanFromSession = async () => {
-    const session = await MENUVA_DB.getSession();
-    return session?.temp?.selectedPlan || null;
-  };
+ const getSelectedPlanFromSession = async () => {
+  const session = await MENUVA_DB.getSession();
+  return session?.selectedPlan?.type || null;
+};
 
   /* ================== REGISTER ================== */
 
@@ -172,3 +172,4 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
 });
+
