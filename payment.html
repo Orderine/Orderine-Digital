@@ -46,36 +46,29 @@
 
 <script type="module">
 /* =====================================================
-   ORDERINE – PAYMENT PAGE (FINAL & SYNC)
-   USE pendingPlanUser ONLY
+   ORDERINE – PAYMENT PAGE (FINAL & DB SYNC)
+   SESSION BASED – NO localStorage
    ===================================================== */
 
 import { getUserByEmail, saveUser } from "./db.js";
+import { MENUVA_DB } from "./db-core.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const planInfo = document.getElementById("planInfo");
   const payBtn = document.getElementById("payBtn");
 
-  /* ================== LOAD CONTEXT ================== */
-  const pendingRaw = localStorage.getItem("pendingPlanUser");
+  /* ================== LOAD SESSION ================== */
+  const session = await MENUVA_DB.getSession();
 
-  if (!pendingRaw) {
-    block("⚠️ Session not found", "Please register or choose a plan again.");
+  if (!session || !session.selectedPlan) {
+    block("⚠️ Session not found", "Please choose a plan again.");
     return;
   }
 
-  let pendingUser;
-  try {
-    pendingUser = JSON.parse(pendingRaw);
-  } catch {
+  const { email, selectedPlan } = session;
+
+  if (!email) {
     block("⚠️ Invalid session", "Please login again.");
-    return;
-  }
-
-  const { email, restoID, selectedPlan } = pendingUser;
-
-  if (!email || !selectedPlan) {
-    block("⚠️ Invalid payment context", "Please choose a plan again.");
     return;
   }
 
@@ -84,7 +77,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (!user) {
     alert("❌ User not found. Please login again.");
-    localStorage.removeItem("pendingPlanUser");
+    await MENUVA_DB.clearSession();
     location.href = "login.html";
     return;
   }
@@ -93,20 +86,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const now = new Date();
   let expire = new Date(now);
 
-  if (selectedPlan === "monthly") {
-    expire.setMonth(expire.getMonth() + 1);
-  } else if (selectedPlan === "6month") {
-    expire.setMonth(expire.getMonth() + 6);
-  } else if (selectedPlan === "yearly") {
-    expire.setMonth(expire.getMonth() + 12);
-  } else {
-    block("⚠️ Unknown plan", "Please select a valid plan.");
+  const duration = selectedPlan.durationMonth;
+
+  if (!duration) {
+    block("⚠️ Invalid plan configuration", "Please select a valid plan.");
     return;
   }
 
+  expire.setMonth(expire.getMonth() + duration);
+
   /* ================== DISPLAY ================== */
   planInfo.textContent = `
-📦 Plan: ${selectedPlan.toUpperCase()}
+📦 Plan: ${selectedPlan.type.toUpperCase()}
 ⏱ Expire: ${expire.toLocaleDateString()}
 Status: Pending Payment ❌
   `;
@@ -116,7 +107,7 @@ Status: Pending Payment ❌
     try {
       const updatedUser = {
         ...user,
-        premiumPlan: selectedPlan,
+        premiumPlan: selectedPlan.type,
         premiumStart: now.toISOString(),
         premiumExpire: expire.toISOString(),
         subscriptionStatus: "active",
@@ -126,11 +117,15 @@ Status: Pending Payment ❌
 
       await saveUser(updatedUser);
 
-      // cleanup payment state
-      localStorage.removeItem("pendingPlanUser");
-      localStorage.removeItem("selectedPlan");
+      // 🔥 Update session without selectedPlan
+      await MENUVA_DB.setSession({
+        ...session,
+        premiumPlan: selectedPlan.type
+      });
 
       alert("✅ Payment successful!\nPlease login to continue.");
+
+      await MENUVA_DB.clearSession();
       location.href = "login.html";
 
     } catch (err) {
@@ -154,5 +149,7 @@ function block(title, message) {
 }
 </script>
 
+
 </body>
 </html>
+
