@@ -183,10 +183,11 @@
     🔄 Update / Renew Plan
   </button>
 </div>
-<script src="db-core.js"></script>
+
+  <script src="db-core.js"></script>
 <script type="module">
-// ==================== LOGIN SCRIPT (MODULE, INDEXEDDB) ====================
-import { getUserByEmail, setSession } from "./db.js";
+// ==================== LOGIN SCRIPT (MODULE, ENTERPRISE CLEAN) ====================
+import { getUserByEmail } from "./db.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("loginForm");
@@ -226,7 +227,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      // ==================== LOAD USER FROM INDEXEDDB ====================
+      // ==================== LOAD USER ====================
       const user = await getUserByEmail(email);
 
       if (!user) {
@@ -239,7 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // ==================== SUBSCRIPTION CHECK (UI SIDE) ====================
+      // ==================== SUBSCRIPTION CHECK ====================
       const now = Date.now();
 
       if (
@@ -253,21 +254,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (renewBtn) renewBtn.style.display = "block";
 
-        localStorage.setItem(
-          "pendingPlanUser",
-          JSON.stringify({
-            email: user.email,
-            restoID: user.restoID,
-            role: user.role,
-            currentPlan: user.premiumPlan || null
-          })
-        );
+        // Simpan sementara di SESSION (bukan localStorage)
+        await MENUVA_DB.setSession({
+          email: user.email,
+          restoID: user.restoID,
+          role: user.role,
+          currentPlan: user.premiumPlan || null,
+          status: "pending_plan"
+        });
 
         return;
       }
 
-      // ==================== SET SESSION (SINGLE SOURCE) ====================
-      await setSession({
+      // ==================== SET SESSION (SINGLE SOURCE OF TRUTH) ====================
+      await MENUVA_DB.setSession({
         email: user.email,
         role: user.role || "owner",
         restoID: user.restoID,
@@ -283,30 +283,8 @@ document.addEventListener("DOMContentLoaded", () => {
         isPaid: user.isPaid === true
       });
 
-            // ==================== MIRROR CURRENT USER (STEP 2 FIX) ====================
-      const sessionUser = {
-        email: user.email,
-        role: user.role || "owner",
-        restoID: user.restoID,
-
-        adminType: user.adminType || null,
-        permissions: user.permissions || [],
-
-        premiumPlan: user.premiumPlan || null,
-        premiumExpire: user.premiumExpire || null,
-        subscriptionStatus: user.subscriptionStatus || null,
-        isPaid: user.isPaid === true
-      };
-
-      // global runtime (auth-guard / admin.html)
-      window.currentUser = sessionUser;
-
-      // persistent fallback (reload / new tab)
-      localStorage.setItem("activeUser", JSON.stringify(sessionUser));
-      localStorage.setItem("isLoggedIn", "true");
-
-
-      localStorage.removeItem("pendingPlanUser");
+      // runtime only (boleh untuk halaman aktif)
+      window.currentUser = await MENUVA_DB.getSession();
 
       // ==================== REDIRECT ====================
       if (user.role === "owner") {
@@ -331,6 +309,3 @@ window.goToPlans = function () {
 
 </body>
 </html>
-
-
-
