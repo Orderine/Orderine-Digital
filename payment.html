@@ -43,7 +43,7 @@
     <p id="planInfo">Checking your subscription...</p>
     <button id="payBtn">✅ Simulate Payment Success</button>
   </div>
-
+<script src="db-core.js"></script>
 <script type="module">
 /* =====================================================
    ORDERINE – PAYMENT PAGE (FINAL & DB SYNC)
@@ -51,7 +51,7 @@
    ===================================================== */
 
 import { getUserByEmail, saveUser } from "./db.js";
-import { MENUVA_DB } from "./db-core.js";
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   const planInfo = document.getElementById("planInfo");
@@ -152,4 +152,5 @@ function block(title, message) {
 
 </body>
 </html>
+
 
