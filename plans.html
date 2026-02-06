@@ -60,33 +60,31 @@
     </button>
   </div>
 
+<script src="db-core.js"></script>
 <script>
   // =====================================================
-  // ORDERINE – PLANS PAGE (STABLE & PRODUCTION SAFE)
+  // ORDERINE – PLANS PAGE (ENTERPRISE CLEAN)
   // =====================================================
 
-  let pendingPlanUser = null;
-  let activeUser = null;
   let userContext = null;
   let isBlocked = false;
 
   // ================== LOAD USER CONTEXT ==================
-  try {
-    pendingPlanUser = JSON.parse(localStorage.getItem("pendingPlanUser"));
-    activeUser = JSON.parse(localStorage.getItem("activeUser"));
-  } catch (e) {
-    console.warn("⚠️ Failed to parse user context", e);
-  }
+  document.addEventListener("DOMContentLoaded", async () => {
+    const session = await MENUVA_DB.getSession();
 
-  // ================== PRIORITY ==================
-  // expired / trial end > active login
-  userContext = pendingPlanUser || activeUser;
+    if (!session) {
+      blockAccess();
+      return;
+    }
 
-  // ================== FINAL GUARD ==================
-  if (!userContext) {
+    userContext = session;
+  });
+
+  function blockAccess() {
     isBlocked = true;
 
-    console.warn("⛔ Plans access blocked: no user context");
+    console.warn("⛔ Plans access blocked: no session");
 
     document.body.innerHTML = `
       <div style="
@@ -111,8 +109,8 @@
   }
 
   // ================== SELECT PLAN ==================
-  function selectPlan(plan) {
-    if (isBlocked) {
+  async function selectPlan(plan) {
+    if (isBlocked || !userContext) {
       alert("Session expired. Please login again.");
       location.href = "login.html";
       return;
@@ -130,15 +128,16 @@
     }
 
     const selectedPlan = {
-      email: userContext.email,
-      restoID: userContext.restoID,
-      role: userContext.role,
-      plan,
+      type: plan,
       durationMonth: durationMap[plan],
       selectedAt: new Date().toISOString()
     };
 
-    localStorage.setItem("selectedPlan", JSON.stringify(selectedPlan));
+    // 🔥 Simpan ke SESSION (bukan localStorage)
+    await MENUVA_DB.setSession({
+      ...userContext,
+      selectedPlan
+    });
 
     console.log("✅ Plan selected:", selectedPlan);
 
@@ -146,10 +145,12 @@
   }
 
   // ================== LOGOUT ==================
-  function logout() {
-    localStorage.clear();
+  async function logout() {
+    await MENUVA_DB.clearSession();
     location.href = "login.html";
   }
 </script>
+
 </body>
 </html>
+
