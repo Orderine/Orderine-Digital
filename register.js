@@ -1,6 +1,6 @@
 // =====================================================
 // ORDERINE – REGISTER PAGE (ES MODULE)
-// FINAL – SYNC WITH DB-CORE + AUTH-GUARD
+// FINAL – SYNC WITH DB-CORE + AUTH-GUARD (ENTERPRISE CLEAN)
 // =====================================================
 
 import {
@@ -31,20 +31,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return d;
   };
 
-  const safeGetSelectedPlan = () => {
-    const raw = localStorage.getItem("selectedPlan");
-    if (!raw) return null;
-
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed?.type) return parsed;
-    } catch {}
-
-    if (typeof raw === "string") {
-      return { type: raw };
-    }
-
-    return null;
+  // 🔥 FIX: Ambil selectedPlan dari SESSION (bukan localStorage)
+  const safeGetSelectedPlan = async () => {
+    const session = await MENUVA_DB.getSession();
+    return session?.selectedPlan || null;
   };
 
   /* ================== REGISTER ================== */
@@ -76,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const restoID = generateID("RESTO");
 
     /* ================== PLAN ================== */
-    const selectedPlan = safeGetSelectedPlan();
+    const selectedPlan = await safeGetSelectedPlan();
     const now = new Date();
 
     let premiumPlan = "trial";
@@ -113,32 +103,37 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     /* ================== RESTO ================== */
-  const resto = {
-  id: restoID,        // 🔥 FIX UTAMA
-  ownerID: userID,
-  restoName: "My Restaurant",
-  createdAt: now.toISOString()
-};
+    const resto = {
+      id: restoID,
+      ownerID: userID,
+      restoName: "My Restaurant",
+      createdAt: now.toISOString()
+    };
+
     try {
       await saveUser(newUser);
       await saveResto(resto);
 
-      localStorage.removeItem("selectedPlan");
+      // 🔥 Hapus selectedPlan dari session setelah dipakai
+      const session = await MENUVA_DB.getSession();
+      if (session?.selectedPlan) {
+        delete session.selectedPlan;
+        await MENUVA_DB.setSession(session);
+      }
 
       if (premiumPlan === "trial") {
         alert("✅ Trial 14 hari aktif.\nSilakan login.");
         location.href = "login.html";
       } else {
-        localStorage.setItem(
-          "pendingPlanUser",
-          JSON.stringify({
-            email,
-            restoID,
-            role: "owner",
-            selectedPlan: premiumPlan,
-            createdAt: now.toISOString()
-          })
-        );
+        // 🔥 Simpan pending plan user ke SESSION (bukan localStorage)
+        await MENUVA_DB.setSession({
+          email,
+          restoID,
+          role: "owner",
+          selectedPlan: premiumPlan,
+          createdAt: now.toISOString(),
+          status: "pending_payment"
+        });
 
         alert("🧾 Akun berhasil dibuat.\nSilakan lanjutkan pembayaran.");
         location.href = "plans.html";
@@ -157,4 +152,3 @@ document.addEventListener("DOMContentLoaded", () => {
     togglePassword.textContent = show ? "🙈" : "👁️";
   });
 });
-
