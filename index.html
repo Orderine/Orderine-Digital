@@ -230,30 +230,45 @@
     const planButtons = document.querySelectorAll(".plan button");
 
     planButtons.forEach(btn => {
-      btn.addEventListener("click", async function () {
+     btn.addEventListener("click", async function () {
 
-        const plan =
-          this.id === "trialBtn"
-            ? "trial"
-            : this.dataset.plan || null;
+  const plan =
+    this.id === "trialBtn"
+      ? "trial"
+      : this.dataset.plan || null;
 
-        if (!plan) return;
+  if (!plan) return;
 
-        const durationMap = {
-          trial: 0,
-          monthly: 1,
-          "6month": 6,
-          yearly: 12
-        };
+  const durationMap = {
+    trial: 0,
+    monthly: 1,
+    "6month": 6,
+    yearly: 12
+  };
 
-        await MENUVA_DB.setSession({
-          ...(activeSession || {}),
-          selectedPlan: {
-            type: plan,
-            durationMonth: durationMap[plan] || 0,
-            selectedAt: new Date().toISOString()
-          }
-        });
+  try {
+
+    await MENUVA_DB.setSession({
+      ...(activeSession || {}),
+      selectedPlan: {
+        type: plan,
+        durationMonth: durationMap[plan] || 0,
+        selectedAt: new Date().toISOString()
+      }
+    });
+
+    console.log("✅ Plan saved to session:", plan);
+
+    // 🔥 IMPORTANT: beri waktu transaction settle
+    setTimeout(() => {
+      location.href = "register.html";
+    }, 50);
+
+  } catch (err) {
+    console.error("❌ Failed to store session:", err);
+    alert("System busy. Please try again.");
+  }
+});
 
         console.log("✅ Plan selected:", plan);
 
@@ -336,6 +351,7 @@ function updateCountdownLocal() {
 
 </body>
 </html>
+
 
 
 
