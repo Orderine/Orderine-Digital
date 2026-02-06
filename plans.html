@@ -61,96 +61,107 @@
   </div>
 
 <script src="db-core.js"></script>
+
 <script>
-  // =====================================================
-  // ORDERINE – PLANS PAGE (ENTERPRISE CLEAN)
-  // =====================================================
+/* =====================================================
+   ORDERINE – PLANS PAGE (ENTERPRISE CLEAN)
+   100% IndexedDB – NO localStorage
+===================================================== */
 
-  let userContext = null;
-  let isBlocked = false;
+let userContext = null;
+let isBlocked = false;
 
-  // ================== LOAD USER CONTEXT ==================
-  document.addEventListener("DOMContentLoaded", async () => {
-    const session = await MENUVA_DB.getSession();
+/* ================== INIT ================== */
+document.addEventListener("DOMContentLoaded", async () => {
 
-    if (!session) {
-      blockAccess();
-      return;
-    }
+  const session = await MENUVA_DB.getSession();
 
-    userContext = session;
-  });
-
-  function blockAccess() {
-    isBlocked = true;
-
-    console.warn("⛔ Plans access blocked: no session");
-
-    document.body.innerHTML = `
-      <div style="
-        padding:40px;
-        text-align:center;
-        font-family:system-ui, -apple-system, BlinkMacSystemFont;
-      ">
-        <h2>⚠️ Session not found</h2>
-        <p>Please login to continue.</p>
-        <button
-          style="
-            padding:10px 20px;
-            margin-top:16px;
-            cursor:pointer;
-          "
-          onclick="location.href='login.html'"
-        >
-          ⬅️ Back to Login
-        </button>
-      </div>
-    `;
+  if (!session) {
+    blockAccess();
+    return;
   }
 
-  // ================== SELECT PLAN ==================
-  async function selectPlan(plan) {
-    if (isBlocked || !userContext) {
-      alert("Session expired. Please login again.");
-      location.href = "login.html";
-      return;
-    }
+  userContext = session;
+});
 
-    const durationMap = {
-      monthly: 1,
-      "6month": 6,
-      yearly: 12
-    };
+/* ================== BLOCK ACCESS ================== */
+function blockAccess() {
+  isBlocked = true;
 
-    if (!durationMap[plan]) {
-      alert("Invalid plan selected");
-      return;
-    }
+  console.warn("⛔ Plans access blocked: no session");
 
-    const selectedPlan = {
-      type: plan,
-      durationMonth: durationMap[plan],
-      selectedAt: new Date().toISOString()
-    };
+  document.body.innerHTML = `
+    <div style="
+      padding:40px;
+      text-align:center;
+      font-family:system-ui;
+    ">
+      <h2>⚠️ Session not found</h2>
+      <p>Please login to continue.</p>
+      <button
+        style="
+          padding:10px 20px;
+          margin-top:16px;
+          cursor:pointer;
+        "
+        onclick="location.href='login.html'"
+      >
+        ⬅️ Back to Login
+      </button>
+    </div>
+  `;
+}
 
-    // 🔥 Simpan ke SESSION (bukan localStorage)
-    await MENUVA_DB.setSession({
-      ...userContext,
-      selectedPlan
-    });
+/* ================== SELECT PLAN ================== */
+async function selectPlan(plan) {
 
-    console.log("✅ Plan selected:", selectedPlan);
-
-    location.href = "payment.html";
-  }
-
-  // ================== LOGOUT ==================
-  async function logout() {
-    await MENUVA_DB.clearSession();
+  if (isBlocked || !userContext) {
+    alert("Session expired. Please login again.");
     location.href = "login.html";
+    return;
   }
+
+  const durationMap = {
+    monthly: 1,
+    "6month": 6,
+    yearly: 12
+  };
+
+  if (!durationMap[plan]) {
+    alert("Invalid plan selected");
+    return;
+  }
+
+  const selectedPlan = {
+    type: plan,
+    durationMonth: durationMap[plan],
+    selectedAt: new Date().toISOString()
+  };
+
+  /* 🔥 ENTERPRISE WAY:
+     simpan di session.temp.selectedPlan
+     jangan sentuh struktur root */
+  const updatedSession = {
+    ...userContext,
+    temp: {
+      ...(userContext.temp || {}),
+      selectedPlan
+    }
+  };
+
+  await MENUVA_DB.setSession(updatedSession);
+
+  console.log("✅ Plan stored in session.temp:", selectedPlan);
+
+  location.href = "payment.html";
+}
+
+/* ================== LOGOUT ================== */
+async function logout() {
+  await MENUVA_DB.clearSession();
+  location.href = "login.html";
+}
 </script>
 
 </body>
 </html>
-
