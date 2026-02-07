@@ -2721,14 +2721,11 @@ function fallbackCopy(text) {
 }
 
 async function getCustomerUrl() {
-  const inputId = document.getElementById("restoId")?.value;
+  const id = document.getElementById("restoId")?.value;
+  if (!id) return null;
 
-  let restoId = inputId;
-  if (!restoId) return null;
-
-  return `${location.origin}/menu.html?resto=${encodeURIComponent(restoId)}`;
+  return `menu.html?resto=${encodeURIComponent(id)}`;
 }
-
 
 async function prepareCustomerShare() {
   const url = await getCustomerUrl();
@@ -2947,5 +2944,6 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
