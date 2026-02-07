@@ -473,17 +473,18 @@ function renderFlipbookGallery(id, images = [], warnId) {
 async function initMenuPage() {
   console.log("▶️ initMenuPage");
 
-  const restoId = getRestoId();
-  if (!restoId) return;
+  const restoId = await getRestoId();   // ✅ FIX
+  if (!restoId) {
+    console.warn("❌ Resto ID tidak ditemukan");
+    return;
+  }
 
-  // 🔑 ambil data resto (SUMBER UTAMA)
   const resto = await MENUVA_DB.get("restos", restoId);
   if (!resto) {
     showFallbackUI("Menu belum tersedia");
     return;
   }
 
-  // ================= RENDER =================
   renderHeader(resto);
 
   renderPromo(Array.isArray(resto.menuPromo) ? resto.menuPromo : []);
@@ -506,6 +507,7 @@ async function initMenuPage() {
 
   console.log("✅ Menu ready");
 }
+
 
 /* =======================
    START
@@ -534,5 +536,6 @@ async function goToPage(page) {
 
 </body>
 </html>
+
 
 
