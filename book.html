@@ -447,17 +447,35 @@ footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);paddin
     return { locale, currency };
   }
 
-  function getActiveLocaleCurrency() {
-    const saved = localStorage.getItem(LOCALE_KEY) || 'auto';
-    const parsed = parseLocaleCurrency(saved);
-    if (parsed.mode === 'auto') return detectBrowserLocaleCurrency();
-    return {
-      locale: parsed.locale || detectBrowserLocaleCurrency().locale,
-      currency: parsed.currency || detectBrowserLocaleCurrency().currency
-    };
-  }
+ async function getActiveLocaleCurrency() {
+  const savedObj = await MENUVA_DB.get("session", LOCALE_KEY);
+  const saved = savedObj?.value || "auto";
 
-  function saveLocaleChoice(value) { localStorage.setItem(LOCALE_KEY, value); }
+  const parsed = parseLocaleCurrency(saved);
+  if (parsed.mode === "auto") return detectBrowserLocaleCurrency();
+
+  const detected = detectBrowserLocaleCurrency();
+
+  return {
+    locale: parsed.locale || detected.locale,
+    currency: parsed.currency || detected.currency
+  };
+}
+
+async function saveLocaleChoice(value) {
+  await MENUVA_DB.add("session", {
+    id: LOCALE_KEY,
+    value
+  });
+}
+
+
+ async function saveLocaleChoice(value) {
+  await MENUVA_DB.add("session", {
+    id: LOCALE_KEY,
+    value: value
+  });
+}
 
   function formatPrice(amount, currency, locale) {
     if (!isFinite(Number(amount))) amount = 0;
@@ -600,21 +618,28 @@ function renderCart() {
 }
 
 
-  /* ------------------ CART PERSISTENCE ------------------- */
-function saveCartToStorage() {
-  localStorage.setItem("menuva_cart", JSON.stringify(cart));
+async function saveCartToStorage() {
+  await MENUVA_DB.add("session", {
+    id: "menuva_cart",
+    value: cart
+  });
 }
 
-function loadCartFromStorage() {
+async function loadCartFromStorage() {
   try {
-    const data = JSON.parse(localStorage.getItem("menuva_cart") || "[]");
-    if (Array.isArray(data)) cart = data;
-  } catch(e) {
+    const data = await MENUVA_DB.get("session", "menuva_cart");
+    if (Array.isArray(data?.value)) {
+      cart = data.value;
+    } else {
+      cart = [];
+    }
+  } catch {
     cart = [];
   }
 }
 
-function saveCustomerForm() {
+
+async function saveCustomerForm() {
   const formData = {
     name: document.getElementById('custName')?.value || '',
     table: document.getElementById('custTable')?.value || '',
@@ -622,19 +647,26 @@ function saveCustomerForm() {
     time: document.getElementById('custTime')?.value || '',
     note: document.getElementById('custNote')?.value || ''
   };
-  localStorage.setItem("menuva_customer", JSON.stringify(formData));
+
+  await MENUVA_DB.add("session", {
+    id: "menuva_customer",
+    value: formData
+  });
 }
 
-function loadCustomerForm() {
+async function loadCustomerForm() {
   try {
-    const data = JSON.parse(localStorage.getItem("menuva_customer") || "{}");
-    if (!data) return;
-    if (data.name) document.getElementById('custName').value = data.name;
-    if (data.table) document.getElementById('custTable').value = data.table;
-    if (data.date) document.getElementById('custDate').value = data.date;
-    if (data.time) document.getElementById('custTime').value = data.time;
-    if (data.note) document.getElementById('custNote').value = data.note;
-  } catch(e) {}
+    const data = await MENUVA_DB.get("session", "menuva_customer");
+    if (!data?.value) return;
+
+    const v = data.value;
+
+    if (v.name) document.getElementById('custName').value = v.name;
+    if (v.table) document.getElementById('custTable').value = v.table;
+    if (v.date) document.getElementById('custDate').value = v.date;
+    if (v.time) document.getElementById('custTime').value = v.time;
+    if (v.note) document.getElementById('custNote').value = v.note;
+  } catch {}
 }
 
   function addToCartObj(name, price) {
@@ -651,16 +683,16 @@ function loadCustomerForm() {
     renderCart();
   }
 
- function removeFromCart(index) {
+async function removeFromCart(index) {
   if (!cart[index]) return;
+
   cart.splice(index, 1);
   renderCart();
-  saveCartToStorage(); // pastikan tersimpan ulang
+  await saveCartToStorage();
 
-  // kalau cart kosong, bersihkan voucher juga
   if (cart.length === 0) {
     activeVoucherData = null;
-    localStorage.removeItem('menuva_voucher');
+    await MENUVA_DB.delete("session", "menuva_voucher");
     applyVoucherAndUpdateSummary();
   }
 }
@@ -883,22 +915,30 @@ function applyVoucherAndUpdateSummary() {
   }
 }
 
-function saveVoucherToStorage() {
+async function saveVoucherToStorage() {
   if (!activeVoucherData) {
-    localStorage.removeItem("menuva_voucher");
+    await MENUVA_DB.delete("session", "menuva_voucher");
     return;
   }
+
   const toSave = activeVoucherData._raw || activeVoucherData;
-  localStorage.setItem("menuva_voucher", JSON.stringify(toSave));
+
+  await MENUVA_DB.add("session", {
+    id: "menuva_voucher",
+    value: toSave
+  });
 }
 
-function restoreVoucherFromStorage() {
-  const saved = localStorage.getItem("menuva_voucher");
-  if (!saved) return;
-  let parsed;
-  try { parsed = JSON.parse(saved); } catch(e){ return; }
-  const candidate = Array.isArray(parsed) ? parsed[0] : parsed;
+async function restoreVoucherFromStorage() {
+  const saved = await MENUVA_DB.get("session", "menuva_voucher");
+  if (!saved?.value) return;
+
+  const candidate = Array.isArray(saved.value)
+    ? saved.value[0]
+    : saved.value;
+
   if (!candidate) return;
+
   activeVoucherData = normalizeVoucher(candidate);
   applyVoucherAndUpdateSummary?.();
 }
@@ -908,13 +948,13 @@ function restoreVoucherFromStorage() {
 ========================== */
 
 async function loadVoucherList(restoId) {
-  if (!restoId) return loadVoucherFromLocalStorage();
+  if (!restoId) return [];
 
   try {
     const restoData = await MENUVA_DB.get("restos", restoId);
 
     if (!restoData || !Array.isArray(restoData.menuVoucher)) {
-      return loadVoucherFromLocalStorage();
+      return [];
     }
 
     return restoData.menuVoucher
@@ -923,20 +963,6 @@ async function loadVoucherList(restoId) {
 
   } catch (err) {
     console.error("❌ loadVoucherList error:", err);
-    return loadVoucherFromLocalStorage();
-  }
-}
-
-
-function loadVoucherFromLocalStorage() {
-  try {
-    const raw = localStorage.getItem("menuva_vouchers");
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.map(normalizeVoucher).filter(Boolean)
-      : [];
-  } catch {
     return [];
   }
 }
@@ -1049,17 +1075,27 @@ input.addEventListener("input", async () => {
 }
 
   /* ------------------ LOCALE UI ------------------------- */
-  function initLocaleSelect(){
-    const sel = document.getElementById('localeSelect');
-    if (!sel) return;
-    const saved = localStorage.getItem(LOCALE_KEY) || 'auto';
+ async function initLocaleSelect() {
+  const sel = document.getElementById('localeSelect');
+  if (!sel) return;
+
+  try {
+    const stored = await MENUVA_DB.get("session", LOCALE_KEY);
+    const saved = stored?.value || 'auto';
+
     sel.value = saved;
-    sel.addEventListener('change', ()=>{
-      saveLocaleChoice(sel.value);
+
+    sel.addEventListener('change', async () => {
+      await saveLocaleChoice(sel.value);
       refreshAllPriceDisplays();
       renderCart();
     });
+
+  } catch (err) {
+    console.error("❌ initLocaleSelect error:", err);
+    sel.value = 'auto';
   }
+}
 
   function refreshAllPriceDisplays(){
     document.querySelectorAll('.menu-price').forEach(el=>{
@@ -1208,13 +1244,16 @@ function playSound(type) {
     if (activeTab) activeTab.classList.add('active');
   }
 
-  document.addEventListener("DOMContentLoaded", async () => {
+ document.addEventListener("DOMContentLoaded", async () => {
   console.log("▶️ book.html init start");
 
   try {
+    // ===== OPEN DB FIRST =====
+    await window.MENUVA_DB.openDB();
+
     // ===== INIT UI =====
-    initDarkMode();
-    initLocaleSelect();
+    await initDarkMode();
+    await initLocaleSelect();
     initVoucherInput();
 
     // ===== INIT DB & LOAD DATA =====
@@ -1312,92 +1351,127 @@ cachedVoucherList = Array.isArray(normalized.menuVoucher)
   window.switchTab = switchTab;
 
 
- /* ------------------ CLEAR CUSTOMER DATA (replace old handler) ------------------ */
+/* ------------------ CLEAR CUSTOMER DATA (IndexedDB Version) ------------------ */
 async function clearCustomerData(confirmRequired = true) {
   if (confirmRequired) {
-    if (!confirm('Yakin mau hapus semua data pesanan di halaman ini?')) return;
+    const ok = confirm('Yakin mau hapus semua data pesanan di halaman ini?');
+    if (!ok) return;
   }
 
   try {
-    // 1) Kosongkan runtime state
+    // =============================
+    // 1️⃣ Reset runtime state
+    // =============================
     cart = [];
     activeVoucherData = null;
 
-    // 2) Hapus semua key localStorage yang berkaitan dengan customer-side
-    localStorage.removeItem('menuva_cart');
-    localStorage.removeItem('menuva_customer');
-    localStorage.removeItem('menuva_voucher');
-    localStorage.removeItem('voucher');
+    // =============================
+    // 2️⃣ Hapus semua session keys
+    // =============================
+    await MENUVA_DB.delete("session", "menuva_cart");
+    await MENUVA_DB.delete("session", "menuva_customer");
+    await MENUVA_DB.delete("session", "menuva_voucher");
+    await MENUVA_DB.delete("session", "voucher");
 
-    // 3) Reset form fields di DOM (jangan lupa set default date/time lagi)
+    // =============================
+    // 3️⃣ Reset form fields
+    // =============================
     const idsToClear = ['custName', 'custTable', 'custNote'];
     idsToClear.forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
 
-    // reset date/time to "now" in same format used on init
+    // Reset date & time ke sekarang
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
+
     const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
     const dateInput = document.getElementById('custDate');
     const timeInput = document.getElementById('custTime');
+
     if (dateInput) dateInput.value = dateStr;
     if (timeInput) timeInput.value = timeStr;
 
-    // 4) Persist the cleared state so reload isn't required (important)
-    saveCartToStorage();     // will write empty cart
-    saveCustomerForm();      // will save cleared customer form
-    saveVoucherToStorage();  // will remove menuva_voucher if activeVoucherData is null
+    // =============================
+    // 4️⃣ Persist empty state
+    // =============================
+    await MENUVA_DB.add("session", {
+      id: "menuva_cart",
+      value: []
+    });
 
-    // 5) Update UI immediately
-    renderCart();                    // rebuild cart UI (will show empty)
-    applyVoucherAndUpdateSummary();  // update totals / discount rows
-    renderMenu();                    // (optional) refresh menu price display/badges
-    renderPromo(menuPromo);          // re-render promo area (keeps promo visible)
-    updateCartCount();
+    await MENUVA_DB.add("session", {
+      id: "menuva_customer",
+      value: {
+        name: '',
+        table: '',
+        date: dateStr,
+        time: timeStr,
+        note: ''
+      }
+    });
 
-    // 6) Notify other tabs (if any) so they can sync/clear UI too
+    await MENUVA_DB.delete("session", "menuva_voucher");
+
+    // =============================
+    // 5️⃣ Update UI instantly
+    // =============================
+    renderCart();
+    applyVoucherAndUpdateSummary?.();
+    renderMenu?.();
+    renderPromo?.(menuPromo);
+    updateCartCount?.();
+
+    // =============================
+    // 6️⃣ Notify other tabs
+    // =============================
     try {
       const notifyBc = new BroadcastChannel('menuvaOrders');
       notifyBc.postMessage({ type: 'customer_cleared' });
       notifyBc.close();
     } catch (e) {
-      // ignore if BC not available
+      // ignore
     }
 
-    // 7) UX feedback
-    showToast('🧹 Semua data pesanan Anda telah dihapus.', 'success', 'top');
-    playSound('delete');
+    // =============================
+    // 7️⃣ UX Feedback
+    // =============================
+    showToast?.('🧹 Semua data pesanan Anda telah dihapus.', 'success', 'top');
+    playSound?.('delete');
 
   } catch (err) {
     console.error('❌ clearCustomerData error:', err);
-    showToast('❌ Gagal menghapus data. Coba lagi.', 'error');
+    showToast?.('❌ Gagal menghapus data. Coba lagi.', 'error');
   }
 }
 
-/* pasang ke tombol (gantikan handler lama) */
-const clearBtn = document.getElementById('clearDataBtn');
+  const clearBtn = document.getElementById('clearDataBtn');
+
 if (clearBtn) {
-  // remove any previous listeners just in case
-  clearBtn.replaceWith(clearBtn.cloneNode(true));
-  const newBtn = document.getElementById('clearDataBtn');
-  newBtn.addEventListener('click', () => clearCustomerData(true));
+  const newBtn = clearBtn.cloneNode(true);
+  clearBtn.parentNode.replaceChild(newBtn, clearBtn);
+
+  newBtn.addEventListener('click', () => {
+    clearCustomerData(true);
+  });
 }
-})(); 
+
 </script>
 <script>
 /* ======================
    DARK MODE HANDLER
    ====================== */
-function initDarkMode() {
+async function initDarkMode() {
   const toggleBtn = document.getElementById('darkToggle');
   if (!toggleBtn) return;
 
-  // 🔹 Baca preferensi user dari localStorage
-  const savedTheme = localStorage.getItem('menuva_theme');
-  if (savedTheme === 'dark') {
+  const saved = await MENUVA_DB.get("session", "menuva_theme");
+  const theme = saved?.value || "light";
+
+  if (theme === "dark") {
     document.body.classList.add('dark-mode');
     toggleBtn.textContent = '☀️';
   } else {
@@ -1405,15 +1479,19 @@ function initDarkMode() {
     toggleBtn.textContent = '🌙';
   }
 
-  // 🔹 Event klik toggle
-  toggleBtn.addEventListener('click', () => {
+  toggleBtn.addEventListener('click', async () => {
     const isDark = document.body.classList.toggle('dark-mode');
-    localStorage.setItem('menuva_theme', isDark ? 'dark' : 'light');
+
+    await MENUVA_DB.add("session", {
+      id: "menuva_theme",
+      value: isDark ? "dark" : "light"
+    });
+
     toggleBtn.textContent = isDark ? '☀️' : '🌙';
   });
 }
 
+
 </script>
 </body>
 </html>
-
