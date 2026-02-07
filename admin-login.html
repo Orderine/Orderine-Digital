@@ -110,88 +110,83 @@
   </form>
 </div>
 
-<script>
-/* 👁️ Toggle Password */
-document.getElementById("togglePassword").onclick = () => {
-  const pwd = document.getElementById("password");
-  pwd.type = pwd.type === "password" ? "text" : "password";
-};
+<!-- 1️⃣ Mother DB WAJIB PALING ATAS -->
+<script src="db-core.js"></script>
 
-/* 🔐 LOGIN ADMIN (ROLE AWARE) */
-document.getElementById("loginForm").addEventListener("submit", e => {
-  e.preventDefault();
-
-  const emailInput = document.getElementById("email");
-  const passwordInput = document.getElementById("password");
-  const errorMsg = document.getElementById("errorMsg");
-
-  const email = emailInput.value.trim().toLowerCase();
-  const password = passwordInput.value.trim();
-
-  errorMsg.textContent = "";
-
-  const admins = JSON.parse(localStorage.getItem("orderine_admins")) || [];
-
-  const admin = admins.find(a =>
-    a.email === email &&
-    a.password === password &&
-    a.status === "active"
-  );
-
-  if (!admin) {
-    errorMsg.textContent = "Login gagal.\nEmail atau password salah.";
-    return;
-  }
-
-  /* 💾 SESSION ADMIN (WAJIB LENGKAP) */
-  const activeUser = {
-    role: "admin",
-    adminType: admin.adminType || "cashier",     // 🔥 DEFAULT CASHIER
-    email: admin.email,
-    restoID: admin.restoID,
-    permissions: admin.permissions || [],
-    redirect: admin.redirect || "recieves.html", // 🔥 ROLE BASED
-    loginAt: Date.now()
-  };
-
-  localStorage.setItem("isLoggedIn", "true");
-  localStorage.setItem("activeUser", JSON.stringify(activeUser));
-
-  /* 🚀 ROLE BASED REDIRECT */
-  location.replace(activeUser.redirect);
-});
-</script>
+<!-- 2️⃣ Baru script login (module) -->
 <script type="module">
 import { getUserByEmail, setSession } from "./db.js";
 
-const form = document.getElementById("loginForm");
+document.addEventListener("DOMContentLoaded", async () => {
 
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
+  // 🔥 WAJIB buka Mother dulu
+  await window.MENUVA_DB.openDB();
 
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
+  /* 👁️ Toggle Password */
+  document.getElementById("togglePassword").onclick = () => {
+    const pwd = document.getElementById("password");
+    pwd.type = pwd.type === "password" ? "text" : "password";
+  };
 
-  const user = await getUserByEmail(email);
+  const form = document.getElementById("loginForm");
+  const errorMsg = document.getElementById("errorMsg");
 
-  if (!user) {
-    alert("❌ Admin tidak ditemukan");
-    return;
-  }
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorMsg.textContent = "";
 
-  if (user.role !== "admin") {
-    alert("⛔ Bukan akun admin");
-    return;
-  }
+    const email = document.getElementById("email").value.trim().toLowerCase();
+    const password = document.getElementById("password").value.trim();
 
-  // sementara password belum dipakai (offline mode)
-  await setSession(user);
+    if (!email || !password) {
+      errorMsg.textContent = "Email dan password wajib diisi.";
+      return;
+    }
 
-  alert("✅ Login admin berhasil");
-  location.href = "admin.html";
+    try {
+      const user = await getUserByEmail(email);
+
+      if (!user) {
+        errorMsg.textContent = "❌ Admin tidak ditemukan.";
+        return;
+      }
+
+      if (user.role !== "admin") {
+        errorMsg.textContent = "⛔ Bukan akun admin.";
+        return;
+      }
+
+      if (user.status !== "active") {
+        errorMsg.textContent = "⛔ Akun belum aktif.";
+        return;
+      }
+
+      if (user.password !== password) {
+        errorMsg.textContent = "❌ Password salah.";
+        return;
+      }
+
+      const activeUser = {
+        role: "admin",
+        adminType: user.adminType || "cashier",
+        email: user.email,
+        restoID: user.restoID,
+        permissions: user.permissions || [],
+        redirect: user.redirect || "recieves.html",
+        loginAt: Date.now()
+      };
+
+      await setSession(activeUser);
+
+      location.replace(activeUser.redirect);
+
+    } catch (err) {
+      console.error("Login error:", err);
+      errorMsg.textContent = "Terjadi kesalahan sistem.";
+    }
+  });
 });
 </script>
 
 </body>
 </html>
-
