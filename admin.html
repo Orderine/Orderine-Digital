@@ -1760,11 +1760,11 @@ async function simpanData() {
     alert("✅ All Data Successfully Saved!");
 
     showCustomerShareUI?.();
-    await MENUVA_DB.set("appMeta", {
+
+    await MENUVA_DB.add("session", {
   id: "customerShareReady",
   value: "1"
 });
-
 
   } catch (err) {
     console.error("❌ simpanData fatal:", err);
@@ -2819,7 +2819,7 @@ function prepareCustomerShare() {
 }
 
  async function markDirty() {
-  await MENUVA_DB.delete("appMeta", "customerShareReady");
+ await MENUVA_DB.delete("session", "customerShareReady");
 }
 
   let audioUnlocked = false;
@@ -2952,3 +2952,4 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
