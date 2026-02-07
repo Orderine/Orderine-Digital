@@ -952,15 +952,16 @@ window.startSubscriptionWatcher = function () {
   }, 10000);
 };
 
-window.handleSubscriptionExpired = function () {
+window.handleSubscriptionExpired = async function () {
   alert("⏱ Subscription expired. Please renew to continue.");
 
-  localStorage.removeItem("activeUser");
-  localStorage.removeItem("isLoggedIn");
+  await MENUVA_DB.delete("session", "activeUser");
+  await MENUVA_DB.delete("session", "isLoggedIn");
 
   window.activeUser = null;
   location.href = "plans.html";
 };
+
 </script>
 <script>
 /* ================= RESTO ID CORE ================= */
@@ -979,8 +980,8 @@ window.generateRestoIdFromEmail = function (email) {
   return "RESTO_" + hashEmail(email.toLowerCase());
 };
 
-window.ensureRestoId = function () {
-  let restoId = localStorage.getItem("restoId");
+window.ensureRestoId = async function () {
+  let restoId = await MENUVA_DB.get("appMeta", "restoId");
   if (restoId) return restoId;
 
   const email = window.activeUser?.email;
@@ -990,10 +991,16 @@ window.ensureRestoId = function () {
   }
 
   restoId = generateRestoIdFromEmail(email);
-  localStorage.setItem("restoId", restoId);
+
+  await MENUVA_DB.set("appMeta", {
+    id: "restoId",
+    value: restoId
+  });
+
   console.log("✅ restoId generated:", restoId);
   return restoId;
 };
+
 </script>
 <script>
 
@@ -1753,7 +1760,11 @@ async function simpanData() {
     alert("✅ All Data Successfully Saved!");
 
     showCustomerShareUI?.();
-    localStorage.setItem("customerShareReady", "1");
+    await MENUVA_DB.set("appMeta", {
+  id: "customerShareReady",
+  value: "1"
+});
+
 
   } catch (err) {
     console.error("❌ simpanData fatal:", err);
@@ -2491,17 +2502,25 @@ function domReady() {
   });
 }
 
-function getBool(key, defaultVal = true) {
-  const val = localStorage.getItem(key);
-  if (val === null) {
-    localStorage.setItem(key, String(defaultVal));
+async function getBool(key, defaultVal = true) {
+  const data = await MENUVA_DB.get("appMeta", key);
+
+  if (!data) {
+    await MENUVA_DB.set("appMeta", {
+      id: key,
+      value: String(defaultVal)
+    });
     return defaultVal;
   }
-  return val === "true";
+
+  return data.value === "true";
 }
 
-function setBool(key, val) {
-  localStorage.setItem(key, String(val));
+async function setBool(key, val) {
+  await MENUVA_DB.set("appMeta", {
+    id: key,
+    value: String(val)
+  });
 }
 
 async function initPageToggles() {
@@ -2701,10 +2720,14 @@ function fallbackCopy(text) {
   alert(`✅ Kode "${text}" disalin`);
 }
 
-  function getCustomerUrl() {
-  const restoId =
-    document.getElementById("restoId")?.value ||
-    localStorage.getItem("restoId");
+ async function getCustomerUrl() {
+  const inputId = document.getElementById("restoId")?.value;
+
+  let restoId = inputId;
+  if (!restoId) {
+    const stored = await MENUVA_DB.get("appMeta", "restoId");
+    restoId = stored?.value;
+  }
 
   if (!restoId) return null;
 
@@ -2795,8 +2818,8 @@ function prepareCustomerShare() {
   document.getElementById("btnPrintQR")?.style.setProperty("display", "inline-block");
 }
 
-  function markDirty() {
-  localStorage.removeItem("customerShareReady");
+ async function markDirty() {
+  await MENUVA_DB.delete("appMeta", "customerShareReady");
 }
 
   let audioUnlocked = false;
@@ -2912,13 +2935,15 @@ function markViewedAndGo() {
 /* ============================================================
    7. OWNER UI (INVITE ADMIN)
 ============================================================ */
-function initOwnerUI() {
-  const user = JSON.parse(localStorage.getItem("activeUser") || "null");
+async function initOwnerUI() {
+  const user = await MENUVA_DB.get("session", "activeUser");
+
   if (!user || user.role !== "owner") return;
 
   const btn = document.getElementById("inviteAdminBtn");
   if (btn) btn.style.display = "flex";
 }
+
 
 function openInviteAdmin() {
   window.location.href = "invite-admin.html";
@@ -2927,10 +2952,3 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
