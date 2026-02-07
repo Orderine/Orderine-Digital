@@ -14,114 +14,127 @@
   const DB_NAME = "MenuvaDB";
   const DB_VERSION = 18;
 
+  let dbOpeningPromise = null;
   let dbInstance = null;
 
   /* ======================================================
      OPEN DB (INTERNAL ONLY)
   ====================================================== */
-  function openDB() {
-    return new Promise((resolve, reject) => {
-      if (dbInstance) return resolve(dbInstance);
+function openDB() {
+  if (dbInstance) return Promise.resolve(dbInstance);
+  if (dbOpeningPromise) return dbOpeningPromise;
 
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
+  dbOpeningPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-      request.onerror = () => reject(request.error);
+    request.onerror = () => {
+      dbOpeningPromise = null;
+      reject(request.error);
+    };
 
-      request.onupgradeneeded = (e) => {
-        const db = e.target.result;
-        console.warn(`🔁 MenuvaDB upgrade → v${DB_VERSION}`);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      console.warn(`🔁 MenuvaDB upgrade → v${DB_VERSION}`);
 
-        /* ========== CORE ========== */
-        if (!db.objectStoreNames.contains("users")) {
-          db.createObjectStore("users", { keyPath: "email" });
-        }
+      if (!db.objectStoreNames.contains("users"))
+        db.createObjectStore("users", { keyPath: "email" });
 
-        if (!db.objectStoreNames.contains("session")) {
-          db.createObjectStore("session", { keyPath: "id" });
-        }
+      if (!db.objectStoreNames.contains("session"))
+        db.createObjectStore("session", { keyPath: "id" });
 
-        if (!db.objectStoreNames.contains("restos")) {
-          db.createObjectStore("restos", { keyPath: "id" });
-        }
+      if (!db.objectStoreNames.contains("restos"))
+        db.createObjectStore("restos", { keyPath: "id" });
 
-        /* ========== ADMIN & SECURITY ========== */
-        if (!db.objectStoreNames.contains("admin_invites")) {
-          db.createObjectStore("admin_invites", { keyPath: "id" });
-        }
+      if (!db.objectStoreNames.contains("admin_invites"))
+        db.createObjectStore("admin_invites", { keyPath: "id" });
 
-        if (!db.objectStoreNames.contains("admins")) {
-          db.createObjectStore("admins", { keyPath: "id" });
-        }
+      if (!db.objectStoreNames.contains("admins"))
+        db.createObjectStore("admins", { keyPath: "id" });
 
-        if (!db.objectStoreNames.contains("void_logs")) {
-          const v = db.createObjectStore("void_logs", { keyPath: "id" });
-          v.createIndex("type", "type", { unique: false });
-          v.createIndex("createdAt", "createdAt", { unique: false });
-        }
+      if (!db.objectStoreNames.contains("void_logs")) {
+        const v = db.createObjectStore("void_logs", { keyPath: "id" });
+        v.createIndex("type", "type", { unique: false });
+        v.createIndex("createdAt", "createdAt", { unique: false });
+      }
 
-        /* ========== OPERATIONAL ========== */
-        if (!db.objectStoreNames.contains("menuData")) {
-          const menu = db.createObjectStore("menuData", {
-            keyPath: "id",
-            autoIncrement: true
-          });
-          menu.createIndex("category", "category", { unique: false });
-          menu.createIndex("active", "active", { unique: false });
-        }
+      if (!db.objectStoreNames.contains("menuData")) {
+        const menu = db.createObjectStore("menuData", {
+          keyPath: "id",
+          autoIncrement: true
+        });
+        menu.createIndex("category", "category", { unique: false });
+        menu.createIndex("active", "active", { unique: false });
+      }
 
-        if (!db.objectStoreNames.contains("ordersData")) {
-          const orders = db.createObjectStore("ordersData", {
-            keyPath: "id",
-            autoIncrement: true
-          });
-          orders.createIndex("status", "status", { unique: false });
-          orders.createIndex("orderTime", "orderTime", { unique: false });
-        }
+      if (!db.objectStoreNames.contains("ordersData")) {
+        const orders = db.createObjectStore("ordersData", {
+          keyPath: "id",
+          autoIncrement: true
+        });
+        orders.createIndex("status", "status", { unique: false });
+        orders.createIndex("orderTime", "orderTime", { unique: false });
+      }
 
-        if (!db.objectStoreNames.contains("promoData")) {
-          db.createObjectStore("promoData", {
-            keyPath: "id",
-            autoIncrement: true
-          });
-        }
+      if (!db.objectStoreNames.contains("promoData"))
+        db.createObjectStore("promoData", {
+          keyPath: "id",
+          autoIncrement: true
+        });
 
-        if (!db.objectStoreNames.contains("flipbookData")) {
-          const flip = db.createObjectStore("flipbookData", {
-            keyPath: "id",
-            autoIncrement: true
-          });
-          flip.createIndex("type", "type", { unique: false });
-          flip.createIndex("refId", "refId", { unique: false });
-        }
+      if (!db.objectStoreNames.contains("flipbookData")) {
+        const flip = db.createObjectStore("flipbookData", {
+          keyPath: "id",
+          autoIncrement: true
+        });
+        flip.createIndex("type", "type", { unique: false });
+        flip.createIndex("refId", "refId", { unique: false });
+      }
 
-        console.log("✅ MenuvaDB schema ensured");
+      console.log("✅ MenuvaDB schema ensured");
+    };
+
+    request.onsuccess = (e) => {
+      dbInstance = e.target.result;
+      dbOpeningPromise = null;
+
+      dbInstance.onversionchange = () => {
+        dbInstance.close();
+        dbInstance = null;
+        console.warn("🔁 DB version changed → reload");
+        location.reload();
       };
 
-      request.onsuccess = (e) => {
-        dbInstance = e.target.result;
-        window.__MENUVA_INTERNAL__ = false;
+      resolve(dbInstance);
+    };
+  });
 
-        dbInstance.onversionchange = () => {
-          dbInstance.close();
-          console.warn("🔁 DB version changed → reload");
-          location.reload();
-        };
-
-        console.log("✅ MenuvaDB ready v" + DB_VERSION);
-        resolve(dbInstance);
-      };
-    });
-  }
+  return dbOpeningPromise;
+}
 
   /* ======================================================
      SAFE STORE ACCESS
   ====================================================== */
-  async function withStore(storeName, mode, callback) {
-    if (!MENUVA_DB.STORES.includes(storeName)) {
-      throw new Error(`🚫 Illegal store access: ${storeName}`);
-    }
+ async function withStore(storeName, mode, callback) {
+  if (!MENUVA_DB.STORES.includes(storeName)) {
+    throw new Error(`🚫 Illegal store access: ${storeName}`);
+  }
 
-    const db = await openDB();
+  let db = await openDB();
+
+  try {
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, mode);
+      const store = tx.objectStore(storeName);
+      const request = callback(store);
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.warn("⚠️ DB retrying due to error:", err);
+
+    dbInstance = null; // force reopen
+    db = await openDB();
 
     return new Promise((resolve, reject) => {
       const tx = db.transaction(storeName, mode);
@@ -132,6 +145,7 @@
       request.onerror = () => reject(request.error);
     });
   }
+}
 
   /* ======================================================
      PUBLIC API (ONLY THIS IS ALLOWED)
@@ -214,4 +228,5 @@
   });
 
 })();
+
 
