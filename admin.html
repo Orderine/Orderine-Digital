@@ -2720,27 +2720,18 @@ function fallbackCopy(text) {
   alert(`✅ Kode "${text}" disalin`);
 }
 
- async function getCustomerUrl() {
+async function getCustomerUrl() {
   const inputId = document.getElementById("restoId")?.value;
 
   let restoId = inputId;
-  if (!restoId) {
-    const stored = await MENUVA_DB.get("appMeta", "restoId");
-    restoId = stored?.value;
-  }
-
   if (!restoId) return null;
 
-  const base = location.pathname.substring(
-    0,
-    location.pathname.lastIndexOf("/")
-  );
-
-  return `${location.origin}${base}/menu.html?resto=${encodeURIComponent(restoId)}`;
+  return `${location.origin}/menu.html?resto=${encodeURIComponent(restoId)}`;
 }
 
-function prepareCustomerShare() {
-  const url = getCustomerUrl();
+
+async function prepareCustomerShare() {
+  const url = await getCustomerUrl();
   if (!url) return;
 
   // ===== COPY LINK =====
@@ -2800,15 +2791,19 @@ function prepareCustomerShare() {
   }
 }
 
- function openCustomerPage() {
+async function openCustomerPage() {
   try {
-    prepareCustomerShare();
-    window.open(getCustomerUrl(), "_blank");
+    const url = await getCustomerUrl();
+    if (!url) return alert("Resto ID tidak ditemukan.");
+
+    window.open(url, "_blank");
+
   } catch (e) {
     console.error("❌ openCustomerPage error:", e);
     alert("Gagal membuka customer page.");
   }
 }
+
 
   function showCustomerShareUI() {
   document.getElementById("btnOpenCustomer")?.style.setProperty("display", "inline-block");
@@ -2952,4 +2947,5 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
