@@ -291,23 +291,22 @@
 /* =======================
    RESTO ID
 ======================= */
-function getRestoId() {
+async function getRestoId() {
   const params = new URLSearchParams(location.search);
-  const urlId = params.get("resto");
+  const resto = params.get("resto");
 
-  if (urlId) {
-    localStorage.setItem("restoId", urlId);
-    console.log("🔑 Resto ID from URL:", urlId);
-    return urlId;
+  if (resto) {
+    await MENUVA_DB.add("session", {
+      id: "activeResto",
+      value: resto
+    });
+    return resto;
   }
 
-  const stored = localStorage.getItem("restoId");
-  if (stored) return stored;
-
-  document.body.innerHTML =
-    "<h2 style='text-align:center'>Resto tidak ditemukan</h2>";
-  return null;
+  const stored = await MENUVA_DB.get("session", "activeResto");
+  return stored?.value || null;
 }
+
 
 /* =======================
    LOAD MENU PAGE DATA (FINAL)
@@ -524,17 +523,16 @@ function showFallbackUI(msg) {
     `<div style="text-align:center;padding:40px">${msg}</div>`;
 }
 
-function goToPage(page) {
-  const id = localStorage.getItem("restoId");
+async function goToPage(page) {
+  const stored = await MENUVA_DB.get("session", "activeResto");
+  const id = stored?.value;
+
   location.href = id ? `${page}?resto=${id}` : page;
 }
+
 </script>
 
 </body>
 </html>
-
-
-
-
 
 
