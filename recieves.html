@@ -950,21 +950,21 @@ if (e.target.classList.contains("btn-submit")) {
   loadOrders(); // refresh list
 }
 
-  // ================= PAID =================
-  if (e.target.classList.contains("btn-paid")) {
+ // ================= PAID =================
+if (e.target.classList.contains("btn-paid")) {
 
-    const orderId = e.target.dataset.order;
-    const order = await MENUVA_DB.get("orders", orderId);
-    if (!order) return alert("Order tidak ditemukan");
+  const orderId = Number(e.target.dataset.order);
 
-    order.status = "paid";
-    order.paidTime = Date.now();
+  const order = await MENUVA_DB.get("ordersData", orderId);
+  if (!order) return alert("Order tidak ditemukan");
 
-    await MENUVA_DB.put("orders", order);
+  order.status = "paid";
+  order.paidTime = Date.now();
 
-    window.location.href = `paid-manager.html?id=${orderId}`;
-  }
+  await MENUVA_DB.add("ordersData", order);
 
+  window.location.href = `paid-manager.html?id=${orderId}`;
+}
 });
 
 
@@ -1029,5 +1029,6 @@ MENUVA_DB.openDB().then(()=>{
 
 </body>
 </html>
+
 
 
