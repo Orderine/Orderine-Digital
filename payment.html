@@ -58,14 +58,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const payBtn = document.getElementById("payBtn");
 
   /* ================== LOAD SESSION ================== */
-  const session = await MENUVA_DB.getSession();
+  if (!session || !session.temp?.selectedPlan) {
+  block("⚠️ Session not found", "Please choose a plan again.");
+  return;
+}
 
-  if (!session || !session.selectedPlan) {
-    block("⚠️ Session not found", "Please choose a plan again.");
-    return;
-  }
-
-  const { email, selectedPlan } = session;
+const email = session.email;
+const selectedPlan = session?.temp?.selectedPlan;
 
   if (!email) {
     block("⚠️ Invalid session", "Please login again.");
@@ -152,5 +151,6 @@ function block(title, message) {
 
 </body>
 </html>
+
 
 
