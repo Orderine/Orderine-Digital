@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const payBtn = document.getElementById("payBtn");
 
   /* ================== LOAD SESSION ================== */
-  const session = await MENUVA_DB.get("session");
+  const session = await MENUVA_DB.getSession();
 
   if (!session || !session.temp?.selectedPlan) {
     block("⚠️ Session not found", "Please choose a plan again.");
@@ -153,6 +153,7 @@ function block(title, message) {
 
 </body>
 </html>
+
 
 
 
