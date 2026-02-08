@@ -118,7 +118,6 @@ Status: Pending Payment ❌
 
       await saveUser(updatedUser);
 
-      // 🔥 Update session without selectedPlan
       await MENUVA_DB.setSession({
         ...session,
         premiumPlan: selectedPlan.type
@@ -134,6 +133,7 @@ Status: Pending Payment ❌
       alert("❌ Payment failed. Please try again.");
     }
   });
+
 });
 
 /* ================== BLOCK UI ================== */
@@ -153,6 +153,7 @@ function block(title, message) {
 
 </body>
 </html>
+
 
 
 
