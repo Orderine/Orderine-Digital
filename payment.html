@@ -52,24 +52,28 @@
 
 import { getUserByEmail, saveUser } from "./db.js";
 
-
 document.addEventListener("DOMContentLoaded", async () => {
+
   const planInfo = document.getElementById("planInfo");
   const payBtn = document.getElementById("payBtn");
 
   /* ================== LOAD SESSION ================== */
-  if (!session || !session.temp?.selectedPlan) {
-  block("⚠️ Session not found", "Please choose a plan again.");
-  return;
-}
+  const session = await MENUVA_DB.get("session");
 
-const email = session.email;
-const selectedPlan = session?.temp?.selectedPlan;
+  if (!session || !session.temp?.selectedPlan) {
+    block("⚠️ Session not found", "Please choose a plan again.");
+    return;
+  }
+
+  const email = session.email;
+  const selectedPlan = session.temp.selectedPlan;
 
   if (!email) {
     block("⚠️ Invalid session", "Please login again.");
     return;
   }
+
+});
 
   /* ================== LOAD USER FROM DB ================== */
   const user = await getUserByEmail(email);
@@ -151,6 +155,7 @@ function block(title, message) {
 
 </body>
 </html>
+
 
 
 
