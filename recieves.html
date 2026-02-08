@@ -539,11 +539,20 @@ function renderOrdersByDate(data, date) {
 async function authorizeVoid(pin) {
   const hash = await hashPIN(pin);
   const admins = await MENUVA_DB.getAll("admins");
+
+  const allowedRoles = [
+    "supervisor",
+    "manager",
+    "general manager",
+    "owner"
+  ];
+
   return admins.find(a =>
-    ["supervisor","manager"].includes(a.role) &&
+    allowedRoles.includes((a.role || "").toLowerCase()) &&
     a.voidPinHash === hash
   );
 }
+
 
 /* ================== VOID ACTION ================== */
 async function voidOrderItem(orderId, itemIndex, admin, reason) {
@@ -649,4 +658,5 @@ MENUVA_DB.openDB().then(()=>{
 
 </body>
 </html>
+
 
