@@ -540,27 +540,23 @@ async function authorizeVoid(pin) {
   const hash = await hashPIN(pin);
   const admins = await MENUVA_DB.getAll("admins");
 
-  console.log("INPUT PIN:", pin);
-  console.log("HASH INPUT:", hash);
-  console.log("ADMINS DB:", admins);
-
   const allowedRoles = [
     "supervisor",
     "manager",
-    "general manager",
+    "general_manager",
     "owner"
   ];
 
-  const found = admins.find(a => {
-    console.log("CHECKING ADMIN:", a.username, a.role, a.voidPinHash);
-    return (
-      allowedRoles.includes((a.role || "").toLowerCase()) &&
-      a.voidPinHash === hash
-    );
-  });
+  return admins.find(a => {
+    const role = (a.role || "").toLowerCase();
 
-  console.log("FOUND:", found);
-  return found;
+    const pinMatch =
+      a.voidPinHash === hash ||
+      a.pinHash === hash ||
+      a.pin === pin; // fallback kalau ternyata disimpan plain
+
+    return allowedRoles.includes(role) && pinMatch;
+  });
 }
 
 
@@ -668,6 +664,7 @@ MENUVA_DB.openDB().then(()=>{
 
 </body>
 </html>
+
 
 
 
