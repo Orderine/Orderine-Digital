@@ -408,6 +408,37 @@ header{
   font-weight: 800;
 }
 
+.order-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+}
+
+.btn-submit {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: #fff;
+}
+
+.btn-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(39,174,96,.4);
+}
+
+.btn-paid {
+  background: linear-gradient(135deg, #3498db, #1f70ff);
+  color: #fff;
+}
+
+.btn-paid:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(52,152,219,.4);
+}
+
+  .status-sent {
+  background: #3498db;
+  color: white;
+}
+
 
 </style>
 </head>
@@ -723,9 +754,13 @@ function renderOrdersByDate(data, date) {
     let status = "OPEN";
     let statusClass = "status-open";
 
-  if (order.status === "paid") {
+ if (order.status === "paid") {
   status = "PAID";
   statusClass = "status-paid";
+}
+else if (order.status === "sent") {
+  status = "SENT";
+  statusClass = "status-sent";
 }
 else if (voidedItems === totalItems && totalItems > 0) {
   status = "VOIDED";
@@ -801,6 +836,26 @@ else if (voidedItems > 0) {
 
         <strong>Total: ${formatHarga(order.grandTotal)}</strong>
       </div>
+
+      <div class="order-actions">
+
+  ${order.status !== "sent" && order.status !== "paid" ? `
+    <button 
+      class="btn btn-submit"
+      data-order="${order.id}">
+      🚀 Submit Order
+    </button>
+  ` : ""}
+
+  ${order.status !== "paid" ? `
+    <button 
+      class="btn btn-paid"
+      data-order="${order.id}">
+      💰 Paid
+    </button>
+  ` : ""}
+
+</div>
     `;
 
     list.appendChild(div);
@@ -866,15 +921,51 @@ function closeVoidModal() {
 }
 
 /* ================== EVENTS ================== */
-document.addEventListener("click",e=>{
+document.addEventListener("click", async (e) => {
+
+  // ================= VOID ITEM =================
   if (e.target.classList.contains("void-item-btn")) {
     openVoidModal({
-      type:"item",
-      orderId:Number(e.target.dataset.order),
-      itemIndex:Number(e.target.dataset.index)
+      type: "item",
+      orderId: e.target.dataset.order,
+      itemIndex: Number(e.target.dataset.index)
     });
   }
+
+  // ================= SUBMIT ORDER =================
+  if (e.target.classList.contains("btn-submit")) {
+
+    const orderId = e.target.dataset.order;
+    const order = await MENUVA_DB.get("orders", orderId);
+    if (!order) return alert("Order tidak ditemukan");
+
+    order.status = "sent";
+    order.sentTime = Date.now();
+
+    await MENUVA_DB.put("orders", order);
+
+    alert("Order berhasil dikirim ke kitchen & bar 🚀");
+
+    loadOrders(); // refresh list
+  }
+
+  // ================= PAID =================
+  if (e.target.classList.contains("btn-paid")) {
+
+    const orderId = e.target.dataset.order;
+    const order = await MENUVA_DB.get("orders", orderId);
+    if (!order) return alert("Order tidak ditemukan");
+
+    order.status = "paid";
+    order.paidTime = Date.now();
+
+    await MENUVA_DB.put("orders", order);
+
+    window.location.href = `paid-manager.html?id=${orderId}`;
+  }
+
 });
+
 
 voidConfirmBtn.onclick = async ()=>{
   const pin = voidPinInput.value.trim();
@@ -937,3 +1028,4 @@ MENUVA_DB.openDB().then(()=>{
 
 </body>
 </html>
+
