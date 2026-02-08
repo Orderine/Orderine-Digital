@@ -381,6 +381,33 @@ header{
 .status-voided { background:#ffebee; color:#c62828; }
 .status-paid { background:#e8f5e9; color:#2e7d32; }
 
+  .revenue-dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.rev-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.rev-title {
+  font-size: 12px;
+  opacity: .6;
+  margin-bottom: 6px;
+}
+
+.rev-value {
+  font-size: 18px;
+  font-weight: 800;
+}
+
 
 </style>
 </head>
@@ -402,6 +429,29 @@ header{
 
   </div>
 </header>
+
+  <div class="revenue-dashboard">
+  <div class="rev-card">
+    <div class="rev-title">Revenue</div>
+    <div class="rev-value" id="revTotal">Rp 0</div>
+  </div>
+
+  <div class="rev-card">
+    <div class="rev-title">Orders</div>
+    <div class="rev-value" id="revOrders">0</div>
+  </div>
+
+  <div class="rev-card">
+    <div class="rev-title">OPEN</div>
+    <div class="rev-value" id="revOpen">0</div>
+  </div>
+
+  <div class="rev-card">
+    <div class="rev-title">PAID</div>
+    <div class="rev-value" id="revPaid">0</div>
+  </div>
+</div>
+
 
 <main class="container">
   <h2 style="margin-bottom:16px">📥 Incoming Orders</h2>
@@ -466,6 +516,30 @@ async function hashPIN(pin) {
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
 }
+
+  function updateRevenueDashboard(orders, date) {
+
+  const todayOrders = orders.filter(o => o.date === date);
+
+  let totalRevenue = 0;
+  let open = 0;
+  let paid = 0;
+
+  todayOrders.forEach(order => {
+    if (order.status === "paid") {
+      totalRevenue += Number(order.grandTotal) || 0;
+      paid++;
+    } else {
+      open++;
+    }
+  });
+
+  document.getElementById("revTotal").textContent = formatHarga(totalRevenue);
+  document.getElementById("revOrders").textContent = todayOrders.length;
+  document.getElementById("revOpen").textContent = open;
+  document.getElementById("revPaid").textContent = paid;
+}
+
 
 function getTodayDate() {
   const d = new Date();
@@ -608,7 +682,7 @@ function renderOrdersByDate(data, date) {
   }
 
   filtered.forEach(order => {
-
+  
     /* ================= SAFETY NORMALIZATION ================= */
     order.items = Array.isArray(order.items) ? order.items : [];
     order.discountPercent = Number(order.discountPercent) || 0;
@@ -731,6 +805,7 @@ else if (voidedItems > 0) {
 
     list.appendChild(div);
   });
+  updateRevenueDashboard(data, date);
 }
 
 /* ================== VOID AUTH ================== */
@@ -862,13 +937,3 @@ MENUVA_DB.openDB().then(()=>{
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
