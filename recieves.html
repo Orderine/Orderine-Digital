@@ -368,6 +368,20 @@ header{
   color: #721c24;
 }
 
+  .status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .5px;
+}
+
+.status-open { background:#e3f2fd; color:#1976d2; }
+.status-partial { background:#fff3e0; color:#f57c00; }
+.status-voided { background:#ffebee; color:#c62828; }
+.status-paid { background:#e8f5e9; color:#2e7d32; }
+
+
 </style>
 </head>
 <body>
@@ -635,18 +649,18 @@ function renderOrdersByDate(data, date) {
     let status = "OPEN";
     let statusClass = "status-open";
 
-    if (order.status === "paid") {
-      status = "PAID";
-      statusClass = "status-paid";
-    }
-    else if (voidedItems > 0 && voidedItems < totalItems) {
-      status = "PARTIAL";
-      statusClass = "status-partial";
-    }
-    else if (voidedItems === totalItems && totalItems > 0) {
-      status = "VOIDED";
-      statusClass = "status-voided";
-    }
+  if (order.status === "paid") {
+  status = "PAID";
+  statusClass = "status-paid";
+}
+else if (voidedItems === totalItems && totalItems > 0) {
+  status = "VOIDED";
+  statusClass = "status-voided";
+}
+else if (voidedItems > 0) {
+  status = "PARTIAL";
+  statusClass = "status-partial";
+}
 
     /* ================= BUILD CARD ================= */
     const div = document.createElement("div");
@@ -848,6 +862,7 @@ MENUVA_DB.openDB().then(()=>{
 
 </body>
 </html>
+
 
 
 
