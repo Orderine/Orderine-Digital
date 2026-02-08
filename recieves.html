@@ -943,7 +943,7 @@ if (e.target.classList.contains("btn-submit")) {
   order.status = "sent";
   order.sentTime = Date.now();
 
-  await MENUVA_DB.put("ordersData", order);
+ await MENUVA_DB.add("ordersData", order);
 
   alert("Order berhasil dikirim ke kitchen & bar 🚀");
 
@@ -1029,6 +1029,7 @@ MENUVA_DB.openDB().then(()=>{
 
 </body>
 </html>
+
 
 
 
