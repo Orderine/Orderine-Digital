@@ -506,31 +506,122 @@ function renderOrders(data) {
 
 function renderOrdersByDate(data, date) {
   const list = document.getElementById("ordersList");
+  if (!list) return;
+
   list.innerHTML = "";
 
-  data.filter(o=>o.date===date).forEach(order=>{
-    const activeItems = order.items.filter(i=>!i.void);
-    order.subtotal = activeItems.reduce((s,i)=>s+(i.total||0),0);
-    order.grandTotal = order.subtotal - (order.discount||0);
+  if (!Array.isArray(data)) return;
 
+  const filtered = data.filter(o => o && o.date === date);
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div style="opacity:.6">Tidak ada order di tanggal ini</div>`;
+    return;
+  }
+
+  filtered.forEach(order => {
+
+    // ================================
+    // 🛡 SAFETY NORMALIZATION
+    // ================================
+    order.items = Array.isArray(order.items) ? order.items : [];
+    order.discountPercent = Number(order.discountPercent) || 0;
+    order.discount = Number(order.discount) || 0;
+    order.subtotal = Number(order.subtotal) || 0;
+    order.grandTotal = Number(order.grandTotal) || 0;
+
+    // ================================
+    // 🎯 FILTER ITEM AKTIF
+    // ================================
+    const activeItems = order.items.filter(i => !i?.void);
+
+    // ================================
+    // 💰 HITUNG ULANG SUBTOTAL
+    // ================================
+    const recalculatedSubtotal = activeItems.reduce((sum, item) => {
+      const itemTotal = Number(item?.total) || 0;
+      return sum + itemTotal;
+    }, 0);
+
+    order.subtotal = recalculatedSubtotal;
+
+    // ================================
+    // 🎟 HITUNG ULANG DISCOUNT
+    // ================================
+    let recalculatedDiscount = 0;
+
+    if (order.discountPercent > 0) {
+      recalculatedDiscount = recalculatedSubtotal * (order.discountPercent / 100);
+    } else {
+      recalculatedDiscount = order.discount;
+    }
+
+    // jangan sampai discount lebih besar dari subtotal
+    if (recalculatedDiscount > recalculatedSubtotal) {
+      recalculatedDiscount = recalculatedSubtotal;
+    }
+
+    order.discount = recalculatedDiscount;
+
+    // ================================
+    // 🧾 GRAND TOTAL FINAL
+    // ================================
+    order.grandTotal = recalculatedSubtotal - recalculatedDiscount;
+
+    if (order.grandTotal < 0) order.grandTotal = 0;
+
+    // ================================
+    // 🖼 RENDER UI
+    // ================================
     const div = document.createElement("div");
-    div.className="order-card";
+    div.className = "order-card";
+
     div.innerHTML = `
-      <h3>Table ${order.table||"-"} - ${order.customer||"-"}</h3>
-      <small>Order #${order.id}</small>
+      <h3>
+        Table ${order.table || "-"} 
+        - ${order.customer || "-"}
+      </h3>
+      <small>Order #${order.id || "-"}</small>
+
+      ${order.note && order.note !== "-" ? `
+        <div class="order-note">
+          📝 Note: ${order.note}
+        </div>
+      ` : ""}
 
       <div class="order-items">
-        ${order.items.map((i,idx)=>`
-          <div class="order-item" ${i.void?'style="opacity:.5;text-decoration:line-through"':''}>
-            <span>${i.nama} ×${i.qty}</span>
-            <span>${formatHarga(i.total)}</span>
-            ${!i.void?`<button class="void-item-btn" data-order="${order.id}" data-index="${idx}">❌ Void</button>`:""}
+        ${order.items.map((item, idx) => `
+          <div class="order-item" 
+               ${item?.void ? 'style="opacity:.5;text-decoration:line-through"' : ''}>
+            <span>${item?.nama || "-"} ×${Number(item?.qty) || 0}</span>
+            <span>${formatHarga(Number(item?.total) || 0)}</span>
+            ${!item?.void ? `
+              <button 
+                class="void-item-btn"
+                data-order="${order.id}"
+                data-index="${idx}">
+                ❌ Void
+              </button>
+            ` : ""}
           </div>
         `).join("")}
       </div>
 
-      <strong>Total: ${formatHarga(order.grandTotal)}</strong>
+      <div class="order-summary">
+        <div>Subtotal: ${formatHarga(order.subtotal)}</div>
+
+        ${order.discount > 0 ? `
+          <div style="color:red;">
+            Discount 
+            ${order.discountPercent > 0 ? `(${order.discountPercent}%)` : ""}:
+            - ${formatHarga(order.discount)}
+          </div>
+        ` : ""}
+
+        <strong>Total: ${formatHarga(order.grandTotal)}</strong>
+      </div>
     `;
+
     list.appendChild(div);
   });
 }
@@ -664,6 +755,7 @@ MENUVA_DB.openDB().then(()=>{
 
 </body>
 </html>
+
 
 
 
