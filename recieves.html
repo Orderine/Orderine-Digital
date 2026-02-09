@@ -1150,15 +1150,19 @@ async function renderVoidSummary() {
     html || "No void data";
 }
 
-async function renderDailySales() { ... }
-async function renderWeeklySales() { ... }
-async function renderMonthlySales() { ... }
+async function renderDailySales() {
+  const orders = await MENUVA_DB.getAll("ordersData");
+  const today = new Date().toISOString().slice(0,10);
 
-function goBackToAdmin() {
-  window.location.href = "admin.html";
+  const todayOrders = orders.filter(o => o.date === today);
+  const total = todayOrders.reduce((sum,o)=>sum+o.grandTotal,0);
+
+  document.getElementById("summaryContent").innerHTML = `
+    <div><strong>${formatHarga(total)}</strong></div>
+    <div>${todayOrders.length} Orders</div>
+  `;
 }
-
-
+   
 // ================= DOM READY =================
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -1199,14 +1203,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 });
 
-
   function goBackToAdmin() {
     window.location.href = "admin.html";
   }
 </script>
 
-
 </body>
 </html>
-
-
