@@ -1175,6 +1175,49 @@ function closeSummaryPage() {
 
 document.addEventListener("DOMContentLoaded", async () => {
 
+  // ===== VOID ELEMENTS (WAJIB ADA) =====
+  const voidConfirmBtn = document.getElementById("voidConfirmBtn");
+  const voidCancelBtn = document.getElementById("voidCancelBtn");
+  const voidPinInput = document.getElementById("voidPinInput");
+  const voidReasonSelect = document.getElementById("voidReasonSelect");
+  const voidReasonOther = document.getElementById("voidReasonOther");
+  const voidAuthModal = document.getElementById("voidAuthModal");
+
+  // ===== VOID BUTTON EVENTS =====
+  if (voidConfirmBtn) {
+    voidConfirmBtn.onclick = async () => {
+      const pin = voidPinInput.value.trim();
+      if (!pin) return alert("PIN wajib");
+
+      const admin = await authorizeVoid(pin);
+      if (!admin) return alert("PIN salah / tidak berwenang");
+
+      const reason = voidReasonSelect.value === "Lainnya"
+        ? voidReasonOther.value.trim()
+        : voidReasonSelect.value;
+
+      if (!reason) return alert("Alasan wajib");
+
+      if (pendingVoidAction?.type === "item") {
+        await voidOrderItem(
+          pendingVoidAction.orderId,
+          pendingVoidAction.itemIndex,
+          admin,
+          reason
+        );
+      }
+
+      voidAuthModal.classList.add("hidden");
+    };
+  }
+
+  if (voidCancelBtn) {
+    voidCancelBtn.onclick = () => {
+      voidAuthModal.classList.add("hidden");
+    };
+  }
+
+  // ===== SESSION CHECK =====
   const btn = document.getElementById("btnBackToAdmin");
 
   try {
@@ -1182,32 +1225,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     const role = session?.role;
 
     if (role === "manager" || role === "owner") {
-      btn.style.display = "inline-block";
-      btn.onclick = goBackToAdmin;
+      if (btn) {
+        btn.style.display = "inline-block";
+        btn.onclick = goBackToAdmin;
+      }
     } else {
-      btn.remove();
+      if (btn) btn.remove();
     }
 
   } catch (err) {
     console.error("❌ gagal ambil session", err);
-    btn?.remove();
+    if (btn) btn.remove();
   }
-
-  // 🔥 PASANG TAB LISTENER DI SINI
-  document.querySelectorAll(".summary-tab").forEach(tab => {
-    tab.addEventListener("click", () => {
-
-      document.querySelectorAll(".summary-tab")
-        .forEach(t => t.classList.remove("active"));
-
-      tab.classList.add("active");
-
-      renderSummary(tab.dataset.mode);
-    });
-  });
-
-  // 🔥 INIT DEFAULT TAB
-  renderSummary("void");
 
 });
 
@@ -1218,3 +1247,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
