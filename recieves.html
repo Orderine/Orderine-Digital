@@ -1072,7 +1072,8 @@ let activeSummaryMode = "void";
 
   async function getAllOrders() {
   try {
-    const orders = await MENUVA_DB.getAll("orders");
+    const orders = await MENUVA_DB.getAll("ordersData"
+);
     return orders || [];
   } catch (err) {
     console.error("Failed load orders:", err);
@@ -1417,4 +1418,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
