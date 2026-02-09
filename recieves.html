@@ -515,11 +515,7 @@ header{
       <div class="rev-value" id="revPaid">0</div>
     </div>
 
-    <!-- 🔥 SUMMARY BUTTON -->
-    <div class="rev-card" onclick="openSummaryPage()" style="cursor:pointer;">
-      <div class="rev-title">Reports</div>
-      <div class="rev-value">📊 View</div>
-    </div>
+   <button onclick="renderSummaryPage()">📊 Summary</button>
 
   </div>
 
@@ -527,20 +523,6 @@ header{
     <h2 style="margin-bottom:16px">📥 Incoming Orders</h2>
     <div id="ordersBox"></div>
   </main>
-
-</div>
-
-
-<!-- 🔥 SUMMARY PAGE -->
-<div id="summaryPage" class="hidden">
-
-  <button onclick="closeSummaryPage()">⬅ Back</button>
-
-  <div id="summaryTabs" style="margin:16px 0;"></div>
-
-  <div id="summaryPagination" style="margin-bottom:16px;"></div>
-
-  <div id="summaryDetail"></div>
 
 </div>
 
@@ -1053,99 +1035,142 @@ MENUVA_DB.openDB().then(()=>{
 
 </script>
 <script>
-function openSummaryPage() {
-  document.getElementById("mainReceives").classList.add("hidden");
-  document.getElementById("summaryPage").classList.remove("hidden");
-  renderSummaryTabs();
-}
+  
+let activeSummaryMode = "void";
 
-function closeSummaryPage() {
-  document.getElementById("summaryPage").classList.add("hidden");
-  document.getElementById("mainReceives").classList.remove("hidden");
-}
+async function renderSummaryPage() {
+  const box = document.getElementById("ordersBox");
 
-  function renderSummaryTabs() {
+  box.innerHTML = `
+    <div class="filter-bar summary-filter">
+      <button class="summary-btn ${activeSummaryMode==="void"?"active":""}" data-mode="void">Void</button>
+      <button class="summary-btn ${activeSummaryMode==="daily"?"active":""}" data-mode="daily">Daily</button>
+      <button class="summary-btn ${activeSummaryMode==="weekly"?"active":""}" data-mode="weekly">Weekly</button>
+      <button class="summary-btn ${activeSummaryMode==="monthly"?"active":""}" data-mode="monthly">Monthly</button>
+    </div>
 
-  const html = `
-    <button onclick="loadSummaryMode('void')">Void</button>
-    <button onclick="loadSummaryMode('daily')">Daily</button>
-    <button onclick="loadSummaryMode('weekly')">Weekly</button>
-    <button onclick="loadSummaryMode('monthly')">Monthly</button>
+    <div id="summaryContent"></div>
   `;
 
-  document.getElementById("summaryTabs").innerHTML = html;
+  document.querySelectorAll(".summary-btn").forEach(btn=>{
+    btn.onclick = ()=>{
+      activeSummaryMode = btn.dataset.mode;
+      renderSummaryPage();
+    };
+  });
 
-  loadSummaryMode("void");
+  renderSummaryDetail(activeSummaryMode);
 }
 
-  function loadSummaryMode(mode) {
+  async function renderSummaryDetail(mode) {
 
-  document.getElementById("summaryPagination").innerHTML = "";
-  document.getElementById("summaryDetail").innerHTML = "";
+  const container = document.getElementById("summaryContent");
+  container.innerHTML = "Loading...";
 
-  if (mode === "void") renderVoidDatePagination();
-  if (mode === "daily") renderDailyDatePagination();
+  if (mode === "void") {
+    renderVoidSummary();
+  }
+
+  if (mode === "daily") {
+    renderDailySummary();
+  }
+
+  if (mode === "weekly") {
+    renderWeeklySummary();
+  }
+
+  if (mode === "monthly") {
+    renderMonthlySummary();
+  }
 }
 
-  async function renderVoidDatePagination() {
+  async function renderVoidSummary() {
 
-  const voids = await getAllVoidItems();
+  const voidsRaw = await getAllVoidItems();
+  const voids = await attachRolesToVoids(voidsRaw);
+
+  const container = document.getElementById("summaryContent");
+
+  if (!voids.length) {
+    container.innerHTML = "<p style='opacity:.6'>Tidak ada void data</p>";
+    return;
+  }
 
   const dates = [...new Set(
     voids.map(v => new Date(v.voidAt).toISOString().slice(0,10))
-  )].reverse();
+  )].sort().reverse();
 
-  const html = dates.map(d => `
-    <button onclick="renderVoidDetail('${d}')">
-      ${d}
-    </button>
-  `).join("");
+  let activeVoidDate = dates[0];
 
-  document.getElementById("summaryPagination").innerHTML = html;
+  container.innerHTML = `
+    <div class="filter-bar">
+      ${dates.map(d=>`
+        <button class="void-date-btn ${d===activeVoidDate?'active':''}" data-date="${d}">
+          ${d}
+        </button>
+      `).join("")}
+    </div>
+
+    <div id="voidList"></div>
+  `;
+
+  document.querySelectorAll(".void-date-btn").forEach(btn=>{
+    btn.onclick = ()=>{
+      activeVoidDate = btn.dataset.date;
+      renderVoidList(voids, activeVoidDate);
+      document.querySelectorAll(".void-date-btn")
+        .forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+    };
+  });
+
+  renderVoidList(voids, activeVoidDate);
 }
 
-  async function renderVoidDetail(date) {
+  function renderVoidList(voids, date) {
 
-  const voids = await getAllVoidItems();
-  const admins = await MENUVA_DB.getAll("admins");
+  const list = document.getElementById("voidList");
 
   const filtered = voids.filter(v =>
     new Date(v.voidAt).toISOString().slice(0,10) === date
   );
 
-  const html = filtered.map(v => {
+  if (!filtered.length) {
+    list.innerHTML = "<div style='opacity:.6'>Tidak ada void di tanggal ini</div>";
+    return;
+  }
 
-    const admin = admins.find(a => a.username === v.by);
-
-    return `
-      <div class="order-card">
-        <div><strong>${v.itemName}</strong> ×${v.qty}</div>
-        <div>${formatHarga(v.amount)}</div>
-        <div>By: ${v.by} (${admin?.role || "-"})</div>
-        <div>${v.reason}</div>
-        <div>${new Date(v.voidAt).toLocaleString()}</div>
+  list.innerHTML = filtered.map(v=>`
+    <div class="order-card">
+      <div class="order-header">
+        <h3>${v.itemName}</h3>
+        <div class="status-badge status-voided">VOID</div>
       </div>
-    `;
-  }).join("");
 
-  document.getElementById("summaryDetail").innerHTML = html;
-}
-
-  async function renderDailyDatePagination() {
-
-  const orders = await MENUVA_DB.getAll("ordersData");
-
-  const dates = [...new Set(orders.map(o => o.date))].reverse();
-
-  const html = dates.map(d => `
-    <button onclick="renderDailyDetail('${d}')">
-      ${d}
-    </button>
+      <div>Qty: ${v.qty}</div>
+      <div>Amount: ${formatHarga(v.amount)}</div>
+      <div>By: ${v.by} (${v.role})</div>
+      <div>Reason: ${v.reason}</div>
+    </div>
   `).join("");
-
-  document.getElementById("summaryPagination").innerHTML = html;
 }
 
+  async function renderDailySummary(){
+  document.getElementById("summaryContent").innerHTML =
+    "<div class='order-card'>Daily Summary Coming Soon</div>";
+}
+
+async function renderWeeklySummary(){
+  document.getElementById("summaryContent").innerHTML =
+    "<div class='order-card'>Weekly Summary Coming Soon</div>";
+}
+
+async function renderMonthlySummary(){
+  document.getElementById("summaryContent").innerHTML =
+    "<div class='order-card'>Monthly Summary Coming Soon</div>";
+}
+
+  
 // ================= DOM READY =================
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -1222,5 +1247,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
