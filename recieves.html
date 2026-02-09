@@ -351,6 +351,47 @@ header{
   color:#555;
 }
 
+  /* ================= SUMMARY DATE PAGINATION ================= */
+
+#summaryPage .date-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* Hover */
+#summaryPage .date-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* Active Elegan */
+#summaryPage .date-btn.active {
+  background: linear-gradient(135deg, #2a5298, #1e3c72);
+  color: #fff;
+  border: 1px solid transparent;
+  box-shadow: 0 6px 18px rgba(30,60,114,0.35);
+}
+#summaryPage .date-btn.active {
+  position: relative;
+}
+
+#summaryPage .date-btn.active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  box-shadow: 0 0 12px rgba(31,112,255,0.4);
+  pointer-events: none;
+}
+
 </style>
 
 </head>
@@ -1173,6 +1214,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
