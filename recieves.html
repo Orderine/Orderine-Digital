@@ -1233,7 +1233,6 @@ async function renderSummaryPage() {
 }
 
 async function renderDailySummary() {
-
   const orders = await getAllOrders();
 
   const paidOrders = orders.filter(o =>
@@ -1243,9 +1242,7 @@ async function renderDailySummary() {
   const grouped = {};
 
   paidOrders.forEach(order => {
-    if (!order.createdAt) return;
-
-    const date = new Date(order.createdAt).toISOString().slice(0, 10);
+    const date = new Date(order.createdAt).toISOString().slice(0,10);
 
     if (!grouped[date]) {
       grouped[date] = {
@@ -1258,20 +1255,26 @@ async function renderDailySummary() {
     grouped[date].revenue += order.grandTotal || 0;
     grouped[date].orders += 1;
 
-    // ===== ITEM GROUPING =====
-    const list = order.items || order.cart || [];
+    const items = order.items || [];
 
-    list.forEach(it => {
-      const name = it.name || it.title || "Unknown";
-      const qty = it.qty || it.quantity || 1;
-      const price = it.price || it.harga || 0;
+    items.forEach(it => {
+
+      // 🚫 SKIP VOID ITEM
+      if (it.void === true) return;
+
+      const name = it.nama || "Unknown";
+      const qty = it.qty || 1;
+      const price = it.harga || 0;
 
       if (!grouped[date].items[name]) {
-        grouped[date].items[name] = { qty: 0, total: 0 };
+        grouped[date].items[name] = {
+          qty: 0,
+          total: 0
+        };
       }
 
       grouped[date].items[name].qty += qty;
-      grouped[date].items[name].total += qty * price;
+      grouped[date].items[name].total += price * qty;
     });
   });
 
@@ -1285,32 +1288,33 @@ async function renderDailySummary() {
 
   container.innerHTML = sortedDates.map(date => {
 
-    const itemRows = Object.entries(grouped[date].items)
-      .map(([name, val]) => `
-        <div class="item-row">
-          <span>${name} ${val.qty} porsi</span>
-          <span>${formatHarga(val.total)}</span>
-        </div>
-      `).join("");
+    const g = grouped[date];
+
+    const itemHtml = Object.entries(g.items).map(([name, data]) => `
+      <div style="display:flex;justify-content:space-between;font-size:14px;opacity:.9">
+        <div>${name} ${data.qty} porsi</div>
+        <div>${formatHarga(data.total)}</div>
+      </div>
+    `).join("");
 
     return `
       <div class="order-card">
         <div class="order-header">
           <h3>${date}</h3>
-          <div>${grouped[date].orders} Orders</div>
+          <div>${g.orders} Orders</div>
         </div>
 
-        <div><b>Total Revenue: ${formatHarga(grouped[date].revenue)}</b></div>
-
-        <div class="item-group">
-          ${itemRows || "<i>Tidak ada item</i>"}
+        <div style="margin:8px 0">
+          ${itemHtml || "<div style='opacity:.6'>No Items</div>"}
         </div>
+
+        <div><b>Total Revenue: ${formatHarga(g.revenue)}</b></div>
       </div>
     `;
   }).join("");
 }
 
- async function renderWeeklySummary() {
+async function renderWeeklySummary() {
 
   const orders = await getAllOrders();
 
@@ -1339,12 +1343,16 @@ async function renderDailySummary() {
     grouped[key].revenue += order.grandTotal || 0;
     grouped[key].orders += 1;
 
-    const list = order.items || order.cart || [];
+    const items = order.items || [];
 
-    list.forEach(it => {
-      const name = it.name || it.title || "Unknown";
-      const qty = it.qty || it.quantity || 1;
-      const price = it.price || it.harga || 0;
+    items.forEach(it => {
+
+      // 🚫 SKIP VOID
+      if (it.void === true) return;
+
+      const name = it.nama || "Unknown";
+      const qty = it.qty || 1;
+      const price = it.harga || 0;
 
       if (!grouped[key].items[name]) {
         grouped[key].items[name] = { qty: 0, total: 0 };
@@ -1365,26 +1373,27 @@ async function renderDailySummary() {
 
   container.innerHTML = sorted.map(week => {
 
-    const itemRows = Object.entries(grouped[week].items)
-      .map(([name, val]) => `
-        <div class="item-row">
-          <span>${name} ${val.qty} porsi</span>
-          <span>${formatHarga(val.total)}</span>
-        </div>
-      `).join("");
+    const g = grouped[week];
+
+    const itemRows = Object.entries(g.items).map(([name, val]) => `
+      <div style="display:flex;justify-content:space-between;font-size:14px;opacity:.9">
+        <span>${name} ${val.qty} porsi</span>
+        <span>${formatHarga(val.total)}</span>
+      </div>
+    `).join("");
 
     return `
       <div class="order-card">
         <div class="order-header">
           <h3>${week}</h3>
-          <div>${grouped[week].orders} Orders</div>
+          <div>${g.orders} Orders</div>
         </div>
 
-        <div><b>Total Revenue: ${formatHarga(grouped[week].revenue)}</b></div>
-
-        <div class="item-group">
-          ${itemRows || "<i>Tidak ada item</i>"}
+        <div style="margin:8px 0">
+          ${itemRows || "<i style='opacity:.6'>Tidak ada item</i>"}
         </div>
+
+        <div><b>Total Revenue: ${formatHarga(g.revenue)}</b></div>
       </div>
     `;
   }).join("");
@@ -1399,7 +1408,7 @@ async function renderDailySummary() {
   return Math.ceil((((temp - yearStart) / 86400000) + 1)/7);
 }
 
-  async function renderMonthlySummary() {
+ async function renderMonthlySummary() {
 
   const orders = await getAllOrders();
 
@@ -1413,7 +1422,7 @@ async function renderDailySummary() {
     if (!order.createdAt) return;
 
     const d = new Date(order.createdAt);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 
     if (!grouped[key]) {
       grouped[key] = {
@@ -1426,12 +1435,16 @@ async function renderDailySummary() {
     grouped[key].revenue += order.grandTotal || 0;
     grouped[key].orders += 1;
 
-    const list = order.items || order.cart || [];
+    const items = order.items || [];
 
-    list.forEach(it => {
-      const name = it.name || it.title || "Unknown";
-      const qty = it.qty || it.quantity || 1;
-      const price = it.price || it.harga || 0;
+    items.forEach(it => {
+
+      // 🚫 SKIP VOID
+      if (it.void === true) return;
+
+      const name = it.nama || "Unknown";
+      const qty = it.qty || 1;
+      const price = it.harga || 0;
 
       if (!grouped[key].items[name]) {
         grouped[key].items[name] = { qty: 0, total: 0 };
@@ -1452,26 +1465,27 @@ async function renderDailySummary() {
 
   container.innerHTML = sorted.map(month => {
 
-    const itemRows = Object.entries(grouped[month].items)
-      .map(([name, val]) => `
-        <div class="item-row">
-          <span>${name} ${val.qty} porsi</span>
-          <span>${formatHarga(val.total)}</span>
-        </div>
-      `).join("");
+    const g = grouped[month];
+
+    const itemRows = Object.entries(g.items).map(([name, val]) => `
+      <div style="display:flex;justify-content:space-between;font-size:14px;opacity:.9">
+        <span>${name} ${val.qty} porsi</span>
+        <span>${formatHarga(val.total)}</span>
+      </div>
+    `).join("");
 
     return `
       <div class="order-card">
         <div class="order-header">
           <h3>${month}</h3>
-          <div>${grouped[month].orders} Orders</div>
+          <div>${g.orders} Orders</div>
         </div>
 
-        <div><b>Total Revenue: ${formatHarga(grouped[month].revenue)}</b></div>
-
-        <div class="item-group">
-          ${itemRows || "<i>Tidak ada item</i>"}
+        <div style="margin:8px 0">
+          ${itemRows || "<i style='opacity:.6'>Tidak ada item</i>"}
         </div>
+
+        <div><b>Total Revenue: ${formatHarga(g.revenue)}</b></div>
       </div>
     `;
   }).join("");
@@ -1554,6 +1568,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
