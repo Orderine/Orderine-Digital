@@ -514,17 +514,7 @@ header{
   </div>
 </div>
 
-  <div class="rev-card rev-summary-card">
-  <div class="rev-title">Summary</div>
-
-  <div class="summary-tabs">
-    <button class="summary-tab active" data-mode="void">Void</button>
-    <button class="summary-tab" data-mode="daily">Daily</button>
-    <button class="summary-tab" data-mode="weekly">Weekly</button>
-    <button class="summary-tab" data-mode="monthly">Monthly</button>
-  </div>
-
-  <div id="summaryContent" class="summary-content"></div>
+<div id="reportContainer" style="margin-top:20px;"></div>
 </div>
 
 <main class="container">
@@ -1113,55 +1103,82 @@ MENUVA_DB.openDB().then(()=>{
 // ================= FUNCTIONS =================
 
 async function renderSummary(mode) {
-  if (mode === "void") renderVoidSummary();
-  if (mode === "daily") renderDailySales();
-  if (mode === "weekly") renderWeeklySales();
-  if (mode === "monthly") renderMonthlySales();
+
+  const container = document.getElementById("reportContainer");
+
+  if (mode === "void") {
+    container.innerHTML = "<h3>Loading Void...</h3>";
+    await renderVoidPage();
+  }
+
+  if (mode === "daily") {
+    container.innerHTML = "<h3>Loading Daily Report...</h3>";
+    await renderDailyPage();
+  }
+
+  if (mode === "weekly") {
+    container.innerHTML = "<h3>Loading Weekly Report...</h3>";
+    await renderWeeklyPage();
+  }
+
+  if (mode === "monthly") {
+    container.innerHTML = "<h3>Loading Monthly Report...</h3>";
+    await renderMonthlyPage();
+  }
 }
 
-async function renderVoidSummary() {
+
+async function renderVoidPage() {
+
   const voids = await getAllVoidItems();
   const admins = await MENUVA_DB.getAll("admins");
+  const container = document.getElementById("reportContainer");
 
-  const enriched = voids.slice(-5).reverse().map(v => {
+  if (!voids.length) {
+    container.innerHTML = "<h3>Void Report</h3><p>No void data</p>";
+    return;
+  }
+
+  const html = voids.reverse().map(v => {
+
     const admin = admins.find(a => a.username === v.by);
-    return {
-  orderId: v.orderId,
-  itemName: v.itemName,
-  qty: v.qty,
-  amount: v.amount,
-  by: v.by,
-  reason: v.reason,
-  voidAt: v.voidAt,
-  role: admin && admin.role ? admin.role : "-"
-};
 
-  });
+    const role = admin && admin.role ? admin.role : "-";
 
-  const html = enriched.map(v => `
-    <div style="margin-bottom:6px;">
-      ❌ ${v.itemName} (${v.qty})<br>
-      ${formatHarga(v.amount)}<br>
-      <small>${v.by} - ${v.role}</small>
-    </div>
-  `).join("");
+    return `
+      <div class="order-card">
+        <div><strong>${v.itemName}</strong> ×${v.qty}</div>
+        <div>${formatHarga(v.amount)}</div>
+        <div>Order ID: ${v.orderId}</div>
+        <div>By: ${v.by} (${role})</div>
+        <div>Reason: ${v.reason}</div>
+        <div>${new Date(v.voidAt).toLocaleString()}</div>
+      </div>
+    `;
+  }).join("");
 
-  document.getElementById("summaryContent").innerHTML =
-    html || "No void data";
+  container.innerHTML = `
+    <h3>Void Report</h3>
+    ${html}
+  `;
 }
 
-async function renderDailySales() {
+async function renderDailyPage() {
+
   const orders = await MENUVA_DB.getAll("ordersData");
   const today = new Date().toISOString().slice(0,10);
+  const container = document.getElementById("reportContainer");
 
   const todayOrders = orders.filter(o => o.date === today);
   const total = todayOrders.reduce((sum,o)=>sum+o.grandTotal,0);
 
-  document.getElementById("summaryContent").innerHTML = `
+  container.innerHTML = `
+    <h3>Daily Report (${today})</h3>
     <div><strong>${formatHarga(total)}</strong></div>
     <div>${todayOrders.length} Orders</div>
   `;
 }
+
    
 // ================= DOM READY =================
 
@@ -1210,3 +1227,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
