@@ -1070,6 +1070,17 @@ MENUVA_DB.openDB().then(()=>{
   
 let activeSummaryMode = "void";
 
+  async function getAllOrders() {
+  try {
+    const orders = await MENUVA_DB.getAll("orders");
+    return orders || [];
+  } catch (err) {
+    console.error("Failed load orders:", err);
+    return [];
+  }
+}
+
+
 async function renderSummaryPage() {
 
   // toggle halaman
@@ -1406,3 +1417,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
