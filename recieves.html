@@ -890,6 +890,9 @@ async function authorizeVoid(pin) {
 
 /* ================== VOID ACTION ================== */
 async function voidOrderItem(orderId, itemIndex, admin, reason) {
+
+  orderId = Number(orderId); // 🔥 WAJIB convert ke number
+
   const order = await MENUVA_DB.get("ordersData", orderId);
   if (!order) return alert("Order not found");
 
@@ -902,10 +905,12 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
   item.voidBy = admin.username;
   item.voidAt = Date.now();
 
-  await MENUVA_DB.add("ordersData", order);
+  await MENUVA_DB.add("ordersData", order); // tetap pakai add kalau memang itu update di sistem lu
+
   notifyOrdersUpdated();
   loadOrders();
 }
+
 
 /* ================== MODAL ================== */
 function openVoidModal(action) {
@@ -1029,6 +1034,7 @@ MENUVA_DB.openDB().then(()=>{
 
 </body>
 </html>
+
 
 
 
