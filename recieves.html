@@ -1223,7 +1223,9 @@ async function renderDailySummary() {
 
   const orders = await getAllOrders();
 
-  const paidOrders = orders.filter(o => o.status === "PAID");
+  const paidOrders = orders.filter(o =>
+  (o.status || "").toUpperCase() === "PAID"
+);
 
   const grouped = {};
 
@@ -1264,7 +1266,9 @@ async function renderDailySummary() {
   async function renderWeeklySummary() {
 
   const orders = await getAllOrders();
-  const paidOrders = orders.filter(o => o.status === "PAID");
+  const paidOrders = orders.filter(o =>
+  (o.status || "").toUpperCase() === "PAID"
+);
 
   const grouped = {};
 
@@ -1310,7 +1314,10 @@ async function renderDailySummary() {
   async function renderMonthlySummary() {
 
   const orders = await getAllOrders();
-  const paidOrders = orders.filter(o => o.status === "PAID");
+  const paidOrders = orders.filter(o =>
+  (o.status || "").toUpperCase() === "PAID"
+);
+
 
   const grouped = {};
 
@@ -1418,5 +1425,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
