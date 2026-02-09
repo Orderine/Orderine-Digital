@@ -440,13 +440,34 @@ header{
 }
 
 .rev-summary-card {
-  min-width: 220px;
+  min-width: 260px;
 }
 
-#summaryContent {
+.summary-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.summary-tab {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: none;
+  cursor: pointer;
+  background: #eee;
+  border-radius: 6px;
+}
+
+.summary-tab.active {
+  background: #222;
+  color: white;
+}
+
+.summary-content {
   margin-top: 8px;
   font-size: 13px;
-  max-height: 140px;
+  max-height: 150px;
   overflow-y: auto;
 }
 
@@ -496,17 +517,15 @@ header{
   <div class="rev-card rev-summary-card">
   <div class="rev-title">Summary</div>
 
-  <select id="summaryMode">
-    <option value="void">Void List</option>
-    <option value="daily">Daily Report</option>
-    <option value="weekly">Weekly Report</option>
-    <option value="monthly">Monthly Report</option>
-  </select>
+  <div class="summary-tabs">
+    <button class="summary-tab active" data-mode="void">Void</button>
+    <button class="summary-tab" data-mode="daily">Daily</button>
+    <button class="summary-tab" data-mode="weekly">Weekly</button>
+    <button class="summary-tab" data-mode="monthly">Monthly</button>
+  </div>
 
-  <div id="summaryContent"></div>
+  <div id="summaryContent" class="summary-content"></div>
 </div>
-
-
 
 <main class="container">
   <h2 style="margin-bottom:16px">📥 Incoming Orders</h2>
@@ -1090,77 +1109,86 @@ MENUVA_DB.openDB().then(()=>{
 
 </script>
  <script>
-  document.addEventListener("DOMContentLoaded", async () => {
-    const btn = document.getElementById("btnBackToAdmin");
 
-    try {
-      const session = await MENUVA_DB.getSession();
-      const role = session?.role;
+// ================= FUNCTIONS =================
 
-      // hanya manager & owner
-      if (role === "manager" || role === "owner") {
-        btn.style.display = "inline-block";
-        btn.onclick = goBackToAdmin;
-      } else {
-        btn.remove();
-      }
-    } catch (err) {
-      console.error("❌ gagal ambil session", err);
-      btn?.remove();
-    }
-  });
-
-   document.getElementById("summaryMode").addEventListener("change", renderSummary);
-
-   
-async function renderSummary() {
-  const mode = document.getElementById("summaryMode").value;
-
-  if (mode === "void") {
-    renderVoidSummary();
-  }
-
-  if (mode === "daily") {
-    renderDailySales();
-  }
-
-  if (mode === "weekly") {
-    renderWeeklySales();
-  }
-
-  if (mode === "monthly") {
-    renderMonthlySales();
-  }
+async function renderSummary(mode) {
+  if (mode === "void") renderVoidSummary();
+  if (mode === "daily") renderDailySales();
+  if (mode === "weekly") renderWeeklySales();
+  if (mode === "monthly") renderMonthlySales();
 }
 
-   async function renderVoidSummary() {
+async function renderVoidSummary() {
   const voids = await getAllVoidItems();
+  const admins = await MENUVA_DB.getAll("admins");
 
-  const html = voids.slice(-5).reverse().map(v => `
-    <div>
-      ❌ ${v.itemName} - ${formatHarga(v.amount)}<br>
-      <small>${v.by} (${v.role})</small>
+  const enriched = voids.slice(-5).reverse().map(v => {
+    const admin = admins.find(a => a.username === v.by);
+    return { ...v, role: admin?.role || "-" };
+  });
+
+  const html = enriched.map(v => `
+    <div style="margin-bottom:6px;">
+      ❌ ${v.itemName} (${v.qty})<br>
+      ${formatHarga(v.amount)}<br>
+      <small>${v.by} - ${v.role}</small>
     </div>
   `).join("");
 
-  document.getElementById("summaryContent").innerHTML = html || "No void data";
+  document.getElementById("summaryContent").innerHTML =
+    html || "No void data";
 }
 
-   async function renderDailySales() {
-  const orders = await MENUVA_DB.getAll("ordersData");
+async function renderDailySales() { ... }
+async function renderWeeklySales() { ... }
+async function renderMonthlySales() { ... }
 
-  const today = new Date().toISOString().slice(0,10);
-
-  const todayOrders = orders.filter(o => o.date === today);
-
-  const total = todayOrders.reduce((sum,o)=>sum+o.grandTotal,0);
-
-  document.getElementById("summaryContent").innerHTML = `
-    <div>Total Sales:</div>
-    <strong>${formatHarga(total)}</strong>
-    <div>${todayOrders.length} Orders</div>
-  `;
+function goBackToAdmin() {
+  window.location.href = "admin.html";
 }
+
+
+// ================= DOM READY =================
+
+document.addEventListener("DOMContentLoaded", async () => {
+
+  const btn = document.getElementById("btnBackToAdmin");
+
+  try {
+    const session = await MENUVA_DB.getSession();
+    const role = session?.role;
+
+    if (role === "manager" || role === "owner") {
+      btn.style.display = "inline-block";
+      btn.onclick = goBackToAdmin;
+    } else {
+      btn.remove();
+    }
+
+  } catch (err) {
+    console.error("❌ gagal ambil session", err);
+    btn?.remove();
+  }
+
+  // 🔥 PASANG TAB LISTENER DI SINI
+  document.querySelectorAll(".summary-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+
+      document.querySelectorAll(".summary-tab")
+        .forEach(t => t.classList.remove("active"));
+
+      tab.classList.add("active");
+
+      renderSummary(tab.dataset.mode);
+    });
+  });
+
+  // 🔥 INIT DEFAULT TAB
+  renderSummary("void");
+
+});
+
 
   function goBackToAdmin() {
     window.location.href = "admin.html";
@@ -1170,3 +1198,4 @@ async function renderSummary() {
 
 </body>
 </html>
+
