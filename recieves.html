@@ -526,41 +526,63 @@ header{
 
 <div id="mainReceives">
 
-  <div class="revenue-dashboard">
-    <div class="rev-card">
-      <div class="rev-title">Revenue</div>
-      <div class="rev-value" id="revTotal">Rp 0</div>
+  <!-- ================= ORDER PAGE ================= -->
+  <div id="orderPage">
+
+    <div class="revenue-dashboard">
+      <div class="rev-card">
+        <div class="rev-title">Revenue</div>
+        <div class="rev-value" id="revTotal">Rp 0</div>
+      </div>
+
+      <div class="rev-card">
+        <div class="rev-title">Orders</div>
+        <div class="rev-value" id="revOrders">0</div>
+      </div>
+
+      <div class="rev-card">
+        <div class="rev-title">OPEN</div>
+        <div class="rev-value" id="revOpen">0</div>
+      </div>
+
+      <div class="rev-card">
+        <div class="rev-title">PAID</div>
+        <div class="rev-value" id="revPaid">0</div>
+      </div>
     </div>
 
-    <div class="rev-card">
-      <div class="rev-title">Orders</div>
-      <div class="rev-value" id="revOrders">0</div>
+    <!-- Card ke Summary -->
+    <div class="menu-card" onclick="renderSummaryPage()">
+      <div class="card-icon">📊</div>
+      <div class="card-title">Summary</div>
+      <div class="card-desc">Lihat ringkasan laporan</div>
     </div>
 
-    <div class="rev-card">
-      <div class="rev-title">OPEN</div>
-      <div class="rev-value" id="revOpen">0</div>
-    </div>
+    <main class="container">
+      <h2 style="margin-bottom:16px">📥 Incoming Orders</h2>
+      <div id="ordersBox"></div>
+    </main>
 
-    <div class="rev-card">
-      <div class="rev-title">PAID</div>
-      <div class="rev-value" id="revPaid">0</div>
-    </div>
   </div>
 
-  <div class="menu-card" onclick="renderSummaryPage()">
-  <div class="card-icon">📊</div>
-  <div class="card-title">Summary</div>
-  <div class="card-desc">Lihat ringkasan laporan</div>
+
+  <!-- ================= SUMMARY PAGE ================= -->
+  <div id="summaryPage" style="display:none;">
+
+    <main class="container">
+      <h2 style="margin-bottom:16px">📊 Summary</h2>
+
+      <div id="summaryContent"></div>
+
+      <button onclick="backToOrders()" style="margin-top:20px;">
+        ⬅ Kembali ke Orders
+      </button>
+    </main>
+
+  </div>
+
 </div>
 
-
-  <main class="container">
-    <h2 style="margin-bottom:16px">📥 Incoming Orders</h2>
-    <div id="ordersBox"></div>
-  </main>
-
-</div>
 
 <script src="db-core.js"></script>
 <script>
@@ -1075,19 +1097,34 @@ MENUVA_DB.openDB().then(()=>{
 let activeSummaryMode = "void";
 
 async function renderSummaryPage() {
-  const box = document.getElementById("ordersBox");
 
-  box.innerHTML = `
-    <div class="filter-bar summary-filter">
-      <button class="summary-btn ${activeSummaryMode==="void"?"active":""}" data-mode="void">Void</button>
-      <button class="summary-btn ${activeSummaryMode==="daily"?"active":""}" data-mode="daily">Daily</button>
-      <button class="summary-btn ${activeSummaryMode==="weekly"?"active":""}" data-mode="weekly">Weekly</button>
-      <button class="summary-btn ${activeSummaryMode==="monthly"?"active":""}" data-mode="monthly">Monthly</button>
-    </div>
+  // toggle halaman
+  document.getElementById("orderPage").style.display = "none";
+  document.getElementById("summaryPage").style.display = "block";
 
-    <div id="summaryContent"></div>
+  const summaryPage = document.getElementById("summaryPage");
+
+  summaryPage.innerHTML = `
+    <main class="container">
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2>📊 Summary</h2>
+        <button onclick="backToOrders()">⬅ Back</button>
+      </div>
+
+      <div class="filter-bar summary-filter">
+        <button class="summary-btn ${activeSummaryMode==="void"?"active":""}" data-mode="void">Void</button>
+        <button class="summary-btn ${activeSummaryMode==="daily"?"active":""}" data-mode="daily">Daily</button>
+        <button class="summary-btn ${activeSummaryMode==="weekly"?"active":""}" data-mode="weekly">Weekly</button>
+        <button class="summary-btn ${activeSummaryMode==="monthly"?"active":""}" data-mode="monthly">Monthly</button>
+      </div>
+
+      <div id="summaryContent"></div>
+
+    </main>
   `;
 
+  // event filter
   document.querySelectorAll(".summary-btn").forEach(btn=>{
     btn.onclick = ()=>{
       activeSummaryMode = btn.dataset.mode;
@@ -1096,6 +1133,11 @@ async function renderSummaryPage() {
   });
 
   renderSummaryDetail(activeSummaryMode);
+}
+
+  function backToOrders() {
+  document.getElementById("summaryPage").style.display = "none";
+  document.getElementById("orderPage").style.display = "block";
 }
 
   async function renderSummaryDetail(mode) {
@@ -1283,6 +1325,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
