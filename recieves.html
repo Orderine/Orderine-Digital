@@ -471,6 +471,38 @@ header{
   overflow-y: auto;
 }
 
+  .menu-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  width: 180px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.menu-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+}
+
+.card-icon {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+
+.card-title {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.card-desc {
+  font-size: 13px;
+  color: #666;
+  margin-top: 4px;
+}
+
 </style>
 </head>
 <body>
@@ -514,10 +546,14 @@ header{
       <div class="rev-title">PAID</div>
       <div class="rev-value" id="revPaid">0</div>
     </div>
-
-   <button onclick="renderSummaryPage()">📊 Summary</button>
-
   </div>
+
+  <div class="menu-card" onclick="renderSummaryPage()">
+  <div class="card-icon">📊</div>
+  <div class="card-title">Summary</div>
+  <div class="card-desc">Lihat ringkasan laporan</div>
+</div>
+
 
   <main class="container">
     <h2 style="margin-bottom:16px">📥 Incoming Orders</h2>
@@ -1247,6 +1283,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
