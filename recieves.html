@@ -1207,22 +1207,129 @@ async function renderSummaryPage() {
   `).join("");
 }
 
-  async function renderDailySummary(){
-  document.getElementById("summaryContent").innerHTML =
-    "<div class='order-card'>Daily Summary Coming Soon</div>";
+async function renderDailySummary() {
+
+  const orders = await getAllOrders();
+
+  const paidOrders = orders.filter(o => o.status === "PAID");
+
+  const grouped = {};
+
+  paidOrders.forEach(order => {
+    const date = new Date(order.createdAt).toISOString().slice(0,10);
+
+    if (!grouped[date]) {
+      grouped[date] = {
+        revenue: 0,
+        orders: 0
+      };
+    }
+
+    grouped[date].revenue += order.grandTotal || 0;
+    grouped[date].orders += 1;
+  });
+
+  const sortedDates = Object.keys(grouped).sort().reverse();
+
+  const container = document.getElementById("summaryContent");
+
+  if (!sortedDates.length) {
+    container.innerHTML = "<div class='order-card'>Belum ada transaksi</div>";
+    return;
+  }
+
+  container.innerHTML = sortedDates.map(date => `
+    <div class="order-card">
+      <div class="order-header">
+        <h3>${date}</h3>
+        <div>${grouped[date].orders} Orders</div>
+      </div>
+      <div>Total Revenue: ${formatHarga(grouped[date].revenue)}</div>
+    </div>
+  `).join("");
 }
 
-async function renderWeeklySummary(){
-  document.getElementById("summaryContent").innerHTML =
-    "<div class='order-card'>Weekly Summary Coming Soon</div>";
+  async function renderWeeklySummary() {
+
+  const orders = await getAllOrders();
+  const paidOrders = orders.filter(o => o.status === "PAID");
+
+  const grouped = {};
+
+  paidOrders.forEach(order => {
+    const d = new Date(order.createdAt);
+
+    const year = d.getFullYear();
+    const week = getWeekNumber(d);
+
+    const key = `${year}-W${week}`;
+
+    if (!grouped[key]) {
+      grouped[key] = { revenue: 0, orders: 0 };
+    }
+
+    grouped[key].revenue += order.grandTotal || 0;
+    grouped[key].orders += 1;
+  });
+
+  const sorted = Object.keys(grouped).sort().reverse();
+
+  const container = document.getElementById("summaryContent");
+
+  container.innerHTML = sorted.map(week => `
+    <div class="order-card">
+      <div class="order-header">
+        <h3>${week}</h3>
+        <div>${grouped[week].orders} Orders</div>
+      </div>
+      <div>Total Revenue: ${formatHarga(grouped[week].revenue)}</div>
+    </div>
+  `).join("");
 }
 
-async function renderMonthlySummary(){
-  document.getElementById("summaryContent").innerHTML =
-    "<div class='order-card'>Monthly Summary Coming Soon</div>";
+   function getWeekNumber(date) {
+  const temp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = temp.getUTCDay() || 7;
+  temp.setUTCDate(temp.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(temp.getUTCFullYear(),0,1));
+  return Math.ceil((((temp - yearStart) / 86400000) + 1)/7);
 }
 
-  
+  async function renderMonthlySummary() {
+
+  const orders = await getAllOrders();
+  const paidOrders = orders.filter(o => o.status === "PAID");
+
+  const grouped = {};
+
+  paidOrders.forEach(order => {
+    const d = new Date(order.createdAt);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+
+    if (!grouped[key]) {
+      grouped[key] = { revenue: 0, orders: 0 };
+    }
+
+    grouped[key].revenue += order.grandTotal || 0;
+    grouped[key].orders += 1;
+  });
+
+  const sorted = Object.keys(grouped).sort().reverse();
+
+  const container = document.getElementById("summaryContent");
+
+  container.innerHTML = sorted.map(month => `
+    <div class="order-card">
+      <div class="order-header">
+        <h3>${month}</h3>
+        <div>${grouped[month].orders} Orders</div>
+      </div>
+      <div>Total Revenue: ${formatHarga(grouped[month].revenue)}</div>
+    </div>
+  `).join("");
+}
+
+ 
 // ================= DOM READY =================
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -1299,14 +1406,3 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
