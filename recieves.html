@@ -1125,7 +1125,17 @@ async function renderVoidSummary() {
 
   const enriched = voids.slice(-5).reverse().map(v => {
     const admin = admins.find(a => a.username === v.by);
-    return { ...v, role: admin?.role || "-" };
+    return {
+  orderId: v.orderId,
+  itemName: v.itemName,
+  qty: v.qty,
+  amount: v.amount,
+  by: v.by,
+  reason: v.reason,
+  voidAt: v.voidAt,
+  role: admin && admin.role ? admin.role : "-"
+};
+
   });
 
   const html = enriched.map(v => `
@@ -1198,4 +1208,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
