@@ -587,27 +587,40 @@ async function hashPIN(pin) {
     .join("");
 }
 
-  function updateRevenueDashboard(orders, date) {
+ function updateRevenueDashboard(orders, date) {
 
   const todayOrders = orders.filter(o => o.date === date);
 
-  let totalRevenue = 0;
+  let gross = 0;
+  let discount = 0;
+  let net = 0;
   let open = 0;
   let paid = 0;
 
   todayOrders.forEach(order => {
+
     if (order.status === "paid") {
-      totalRevenue += Number(order.grandTotal) || 0;
+      gross += Number(order.subtotal) || 0;
+      discount += Number(order.discount) || 0;
+      net += Number(order.grandTotal) || 0;
       paid++;
     } else {
       open++;
     }
+
   });
 
-  document.getElementById("revTotal").textContent = formatHarga(totalRevenue);
+  document.getElementById("revTotal").textContent = formatHarga(net);
   document.getElementById("revOrders").textContent = todayOrders.length;
   document.getElementById("revOpen").textContent = open;
   document.getElementById("revPaid").textContent = paid;
+
+  // OPTIONAL kalau ada UI
+  if (document.getElementById("revGross"))
+    document.getElementById("revGross").textContent = formatHarga(gross);
+
+  if (document.getElementById("revDiscount"))
+    document.getElementById("revDiscount").textContent = formatHarga(discount);
 }
 
 
@@ -757,34 +770,37 @@ function renderOrdersByDate(data, date) {
     order.items = Array.isArray(order.items) ? order.items : [];
     order.discountPercent = Number(order.discountPercent) || 0;
     order.discount = Number(order.discount) || 0;
+    order.subtotal = Number(order.subtotal) || 0;
+    order.grandTotal = Number(order.grandTotal) || 0;
 
-    /* ================= SUBTOTAL RECALC ================= */
-    const activeItems = order.items.filter(i => !i?.void);
+    /* ================= RECALC ONLY IF NOT PAID ================= */
+    if ((order.status || "").toLowerCase() !== "paid") {
 
-    const subtotal = activeItems.reduce((sum, item) => {
-      return sum + (Number(item?.total) || 0);
-    }, 0);
+      const activeItems = order.items.filter(i => !i?.void);
 
-    order.subtotal = subtotal;
+      const subtotal = activeItems.reduce((sum, item) => {
+        return sum + (Number(item?.total) || 0);
+      }, 0);
 
-    /* ================= DISCOUNT RECALC ================= */
-    let discount = 0;
+      order.subtotal = subtotal;
 
-    if (order.discountPercent > 0) {
-      discount = subtotal * (order.discountPercent / 100);
-    } else {
-      discount = order.discount;
+      let discount = 0;
+
+      if (order.discountPercent > 0) {
+        discount = subtotal * (order.discountPercent / 100);
+      } else {
+        discount = order.discount;
+      }
+
+      if (discount > subtotal) discount = subtotal;
+
+      order.discount = discount;
+
+      let grandTotal = subtotal - discount;
+      if (grandTotal < 0) grandTotal = 0;
+
+      order.grandTotal = grandTotal;
     }
-
-    if (discount > subtotal) discount = subtotal;
-
-    order.discount = discount;
-
-    /* ================= GRAND TOTAL ================= */
-    let grandTotal = subtotal - discount;
-    if (grandTotal < 0) grandTotal = 0;
-
-    order.grandTotal = grandTotal;
 
     /* ================= STATUS ENGINE ================= */
     const totalItems = order.items.length;
@@ -793,22 +809,22 @@ function renderOrdersByDate(data, date) {
     let status = "OPEN";
     let statusClass = "status-open";
 
- if (order.status === "paid") {
-  status = "PAID";
-  statusClass = "status-paid";
-}
-else if (order.status === "sent") {
-  status = "SENT";
-  statusClass = "status-sent";
-}
-else if (voidedItems === totalItems && totalItems > 0) {
-  status = "VOIDED";
-  statusClass = "status-voided";
-}
-else if (voidedItems > 0) {
-  status = "PARTIAL";
-  statusClass = "status-partial";
-}
+    if (order.status === "paid") {
+      status = "PAID";
+      statusClass = "status-paid";
+    }
+    else if (order.status === "sent") {
+      status = "SENT";
+      statusClass = "status-sent";
+    }
+    else if (voidedItems === totalItems && totalItems > 0) {
+      status = "VOIDED";
+      statusClass = "status-voided";
+    }
+    else if (voidedItems > 0) {
+      status = "PARTIAL";
+      statusClass = "status-partial";
+    }
 
     /* ================= BUILD CARD ================= */
     const div = document.createElement("div");
@@ -879,17 +895,13 @@ else if (voidedItems > 0) {
       <div class="order-actions">
 
   ${order.status !== "sent" && order.status !== "paid" ? `
-    <button 
-      class="btn btn-submit"
-      data-order="${order.id}">
+    <button class="btn btn-submit" data-order="${order.id}">
       🚀 Submit Order
     </button>
   ` : ""}
 
   ${order.status !== "paid" ? `
-    <button 
-      class="btn btn-paid"
-      data-order="${order.id}">
+    <button class="btn btn-paid" data-order="${order.id}">
       💰 Paid
     </button>
   ` : ""}
@@ -899,6 +911,7 @@ else if (voidedItems > 0) {
 
     list.appendChild(div);
   });
+
   updateRevenueDashboard(data, date);
 }
 
@@ -1054,16 +1067,19 @@ if (e.target.classList.contains("btn-submit")) {
   loadOrders(); // refresh list
 }
 
- // ================= PAID =================
 if (e.target.classList.contains("btn-paid")) {
 
   const orderId = Number(e.target.dataset.order);
-
   const order = await MENUVA_DB.get("ordersData", orderId);
   if (!order) return alert("Order tidak ditemukan");
 
+  order.subtotal = Number(order.subtotal) || 0;
+  order.discount = Number(order.discount) || 0;
+  order.grandTotal = Number(order.grandTotal) || 0;
+
   order.status = "paid";
   order.paidTime = Date.now();
+  order.locked = true; // 🔥 KUNCI
 
   await MENUVA_DB.add("ordersData", order);
 
@@ -1242,39 +1258,44 @@ async function renderDailySummary() {
   const grouped = {};
 
   paidOrders.forEach(order => {
-    const date = new Date(order.createdAt).toISOString().slice(0,10);
+    if (!order.createdAt) return;
+
+    const date = new Date(order.createdAt).toISOString().slice(0, 10);
 
     if (!grouped[date]) {
       grouped[date] = {
-        revenue: 0,
+        gross: 0,
+        discount: 0,
+        net: 0,
         orders: 0,
         items: {}
       };
     }
 
-    grouped[date].revenue += order.grandTotal || 0;
-    grouped[date].orders += 1;
+    const g = grouped[date];
 
+    // ================= MONEY ENGINE =================
+    g.gross += Number(order.subtotal) || 0;
+    g.discount += Number(order.discount) || 0;
+    g.net += Number(order.grandTotal) || 0;
+    g.orders += 1;
+
+    // ================= ITEMS ENGINE =================
     const items = order.items || [];
 
     items.forEach(it => {
-
-      // 🚫 SKIP VOID ITEM
       if (it.void === true) return;
 
       const name = it.nama || "Unknown";
-      const qty = it.qty || 1;
-      const price = it.harga || 0;
+      const qty = Number(it.qty) || 1;
+      const price = Number(it.harga) || 0;
 
-      if (!grouped[date].items[name]) {
-        grouped[date].items[name] = {
-          qty: 0,
-          total: 0
-        };
+      if (!g.items[name]) {
+        g.items[name] = { qty: 0, total: 0 };
       }
 
-      grouped[date].items[name].qty += qty;
-      grouped[date].items[name].total += price * qty;
+      g.items[name].qty += qty;
+      g.items[name].total += qty * price;
     });
   });
 
@@ -1287,7 +1308,6 @@ async function renderDailySummary() {
   }
 
   container.innerHTML = sortedDates.map(date => {
-
     const g = grouped[date];
 
     const itemHtml = Object.entries(g.items).map(([name, data]) => `
@@ -1308,14 +1328,15 @@ async function renderDailySummary() {
           ${itemHtml || "<div style='opacity:.6'>No Items</div>"}
         </div>
 
-        <div><b>Total Revenue: ${formatHarga(g.revenue)}</b></div>
+        <div>Gross: ${formatHarga(g.gross)}</div>
+        <div style="color:red">Discount: -${formatHarga(g.discount)}</div>
+        <div><b>Net: ${formatHarga(g.net)}</b></div>
       </div>
     `;
   }).join("");
 }
 
 async function renderWeeklySummary() {
-
   const orders = await getAllOrders();
 
   const paidOrders = orders.filter(o =>
@@ -1334,32 +1355,36 @@ async function renderWeeklySummary() {
 
     if (!grouped[key]) {
       grouped[key] = {
-        revenue: 0,
+        gross: 0,
+        discount: 0,
+        net: 0,
         orders: 0,
         items: {}
       };
     }
 
-    grouped[key].revenue += order.grandTotal || 0;
-    grouped[key].orders += 1;
+    const g = grouped[key];
+
+    g.gross += Number(order.subtotal) || 0;
+    g.discount += Number(order.discount) || 0;
+    g.net += Number(order.grandTotal) || 0;
+    g.orders += 1;
 
     const items = order.items || [];
 
     items.forEach(it => {
-
-      // 🚫 SKIP VOID
       if (it.void === true) return;
 
       const name = it.nama || "Unknown";
-      const qty = it.qty || 1;
-      const price = it.harga || 0;
+      const qty = Number(it.qty) || 1;
+      const price = Number(it.harga) || 0;
 
-      if (!grouped[key].items[name]) {
-        grouped[key].items[name] = { qty: 0, total: 0 };
+      if (!g.items[name]) {
+        g.items[name] = { qty: 0, total: 0 };
       }
 
-      grouped[key].items[name].qty += qty;
-      grouped[key].items[name].total += qty * price;
+      g.items[name].qty += qty;
+      g.items[name].total += qty * price;
     });
   });
 
@@ -1372,7 +1397,6 @@ async function renderWeeklySummary() {
   }
 
   container.innerHTML = sorted.map(week => {
-
     const g = grouped[week];
 
     const itemRows = Object.entries(g.items).map(([name, val]) => `
@@ -1393,12 +1417,13 @@ async function renderWeeklySummary() {
           ${itemRows || "<i style='opacity:.6'>Tidak ada item</i>"}
         </div>
 
-        <div><b>Total Revenue: ${formatHarga(g.revenue)}</b></div>
+        <div>Gross: ${formatHarga(g.gross)}</div>
+        <div style="color:red">Discount: -${formatHarga(g.discount)}</div>
+        <div><b>Net: ${formatHarga(g.net)}</b></div>
       </div>
     `;
   }).join("");
 }
-
 
    function getWeekNumber(date) {
   const temp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -1408,8 +1433,7 @@ async function renderWeeklySummary() {
   return Math.ceil((((temp - yearStart) / 86400000) + 1)/7);
 }
 
- async function renderMonthlySummary() {
-
+async function renderMonthlySummary() {
   const orders = await getAllOrders();
 
   const paidOrders = orders.filter(o =>
@@ -1422,36 +1446,40 @@ async function renderWeeklySummary() {
     if (!order.createdAt) return;
 
     const d = new Date(order.createdAt);
-    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
     if (!grouped[key]) {
       grouped[key] = {
-        revenue: 0,
+        gross: 0,
+        discount: 0,
+        net: 0,
         orders: 0,
         items: {}
       };
     }
 
-    grouped[key].revenue += order.grandTotal || 0;
-    grouped[key].orders += 1;
+    const g = grouped[key];
+
+    g.gross += Number(order.subtotal) || 0;
+    g.discount += Number(order.discount) || 0;
+    g.net += Number(order.grandTotal) || 0;
+    g.orders += 1;
 
     const items = order.items || [];
 
     items.forEach(it => {
-
-      // 🚫 SKIP VOID
       if (it.void === true) return;
 
       const name = it.nama || "Unknown";
-      const qty = it.qty || 1;
-      const price = it.harga || 0;
+      const qty = Number(it.qty) || 1;
+      const price = Number(it.harga) || 0;
 
-      if (!grouped[key].items[name]) {
-        grouped[key].items[name] = { qty: 0, total: 0 };
+      if (!g.items[name]) {
+        g.items[name] = { qty: 0, total: 0 };
       }
 
-      grouped[key].items[name].qty += qty;
-      grouped[key].items[name].total += qty * price;
+      g.items[name].qty += qty;
+      g.items[name].total += qty * price;
     });
   });
 
@@ -1464,7 +1492,6 @@ async function renderWeeklySummary() {
   }
 
   container.innerHTML = sorted.map(month => {
-
     const g = grouped[month];
 
     const itemRows = Object.entries(g.items).map(([name, val]) => `
@@ -1485,7 +1512,9 @@ async function renderWeeklySummary() {
           ${itemRows || "<i style='opacity:.6'>Tidak ada item</i>"}
         </div>
 
-        <div><b>Total Revenue: ${formatHarga(g.revenue)}</b></div>
+        <div>Gross: ${formatHarga(g.gross)}</div>
+        <div style="color:red">Discount: -${formatHarga(g.discount)}</div>
+        <div><b>Net: ${formatHarga(g.net)}</b></div>
       </div>
     `;
   }).join("");
@@ -1568,6 +1597,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
