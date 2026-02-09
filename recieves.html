@@ -443,6 +443,39 @@ header{
   box-shadow: 0 4px 12px rgba(184,134,11,0.4);
 }
 
+.void-item-btn {
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,77,79,0.4);
+
+  background: linear-gradient(135deg, #ff4d4f, #c62828);
+  color: #fff;
+
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  cursor: pointer;
+
+  box-shadow:
+    0 4px 12px rgba(198,40,40,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+
+  transition: all 0.2s ease;
+}
+
+/* Hover */
+.void-item-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 18px rgba(198,40,40,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.35);
+}
+
+/* Active Click */
+.void-item-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 3px 8px rgba(198,40,40,0.4);
+}
 
 </style>
 
@@ -1266,6 +1299,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
