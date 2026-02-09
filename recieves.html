@@ -492,77 +492,56 @@ header{
   </div>
 </header>
 
+<div id="mainReceives">
+
   <div class="revenue-dashboard">
-  <div class="rev-card">
-    <div class="rev-title">Revenue</div>
-    <div class="rev-value" id="revTotal">Rp 0</div>
-  </div>
-
-  <div class="rev-card">
-    <div class="rev-title">Orders</div>
-    <div class="rev-value" id="revOrders">0</div>
-  </div>
-
-  <div class="rev-card">
-    <div class="rev-title">OPEN</div>
-    <div class="rev-value" id="revOpen">0</div>
-  </div>
-
-  <div class="rev-card">
-    <div class="rev-title">PAID</div>
-    <div class="rev-value" id="revPaid">0</div>
-  </div>
-</div>
-
-<div id="reportContainer" style="margin-top:20px;"></div>
-</div>
-
-<main class="container">
-  <h2 style="margin-bottom:16px">📥 Incoming Orders</h2>
-  <div id="ordersBox"></div>
-</main>
-  
-<!-- Tombol kembali -->
-<button id="btnBackToAdmin" style="display:none;">
-  ⬅ Back to Admin
-</button>
-
-
-  <div id="voidAuthModal" class="modal hidden">
-  <div class="modal-box">
-    <h3>🔐 Otorisasi Void</h3>
-    <p>Masukkan PIN Supervisor</p>
-
-    <input
-      type="password"
-      id="voidPinInput"
-      placeholder="PIN Supervisor"
-      autocomplete="off"
-    />
-
-    <div id="voidPinMsg" class="text-red"></div>
-
-
-    <select id="voidReasonSelect">
-  <option value="">-- Pilih Alasan Void --</option>
-  <option value="Salah input">Salah input</option>
-  <option value="Cancel customer">Cancel customer</option>
-  <option value="Menu habis">Menu habis</option>
-  <option value="Lainnya">Lainnya</option>
-</select>
-
-<input
-  type="text"
-  id="voidReasonOther"
-  placeholder="Tulis alasan void..."
-  style="display:none"
-/>
-
-    <div class="modal-actions">
-      <button id="voidCancelBtn">❌ Cancel</button>
-      <button id="voidConfirmBtn">✅ Lanjut</button>
+    <div class="rev-card">
+      <div class="rev-title">Revenue</div>
+      <div class="rev-value" id="revTotal">Rp 0</div>
     </div>
+
+    <div class="rev-card">
+      <div class="rev-title">Orders</div>
+      <div class="rev-value" id="revOrders">0</div>
+    </div>
+
+    <div class="rev-card">
+      <div class="rev-title">OPEN</div>
+      <div class="rev-value" id="revOpen">0</div>
+    </div>
+
+    <div class="rev-card">
+      <div class="rev-title">PAID</div>
+      <div class="rev-value" id="revPaid">0</div>
+    </div>
+
+    <!-- 🔥 SUMMARY BUTTON -->
+    <div class="rev-card" onclick="openSummaryPage()" style="cursor:pointer;">
+      <div class="rev-title">Reports</div>
+      <div class="rev-value">📊 View</div>
+    </div>
+
   </div>
+
+  <main class="container">
+    <h2 style="margin-bottom:16px">📥 Incoming Orders</h2>
+    <div id="ordersBox"></div>
+  </main>
+
+</div>
+
+
+<!-- 🔥 SUMMARY PAGE -->
+<div id="summaryPage" class="hidden">
+
+  <button onclick="closeSummaryPage()">⬅ Back</button>
+
+  <div id="summaryTabs" style="margin:16px 0;"></div>
+
+  <div id="summaryPagination" style="margin-bottom:16px;"></div>
+
+  <div id="summaryDetail"></div>
+
 </div>
 
 <script src="db-core.js"></script>
@@ -1098,88 +1077,100 @@ MENUVA_DB.openDB().then(()=>{
 });
 
 </script>
- <script>
-
-// ================= FUNCTIONS =================
-
-async function renderSummary(mode) {
-
-  const container = document.getElementById("reportContainer");
-
-  if (mode === "void") {
-    container.innerHTML = "<h3>Loading Void...</h3>";
-    await renderVoidPage();
-  }
-
-  if (mode === "daily") {
-    container.innerHTML = "<h3>Loading Daily Report...</h3>";
-    await renderDailyPage();
-  }
-
-  if (mode === "weekly") {
-    container.innerHTML = "<h3>Loading Weekly Report...</h3>";
-    await renderWeeklyPage();
-  }
-
-  if (mode === "monthly") {
-    container.innerHTML = "<h3>Loading Monthly Report...</h3>";
-    await renderMonthlyPage();
-  }
+<script>
+function openSummaryPage() {
+  document.getElementById("mainReceives").classList.add("hidden");
+  document.getElementById("summaryPage").classList.remove("hidden");
+  renderSummaryTabs();
 }
 
+function closeSummaryPage() {
+  document.getElementById("summaryPage").classList.add("hidden");
+  document.getElementById("mainReceives").classList.remove("hidden");
+}
 
-async function renderVoidPage() {
+  function renderSummaryTabs() {
+
+  const html = `
+    <button onclick="loadSummaryMode('void')">Void</button>
+    <button onclick="loadSummaryMode('daily')">Daily</button>
+    <button onclick="loadSummaryMode('weekly')">Weekly</button>
+    <button onclick="loadSummaryMode('monthly')">Monthly</button>
+  `;
+
+  document.getElementById("summaryTabs").innerHTML = html;
+
+  loadSummaryMode("void");
+}
+
+  function loadSummaryMode(mode) {
+
+  document.getElementById("summaryPagination").innerHTML = "";
+  document.getElementById("summaryDetail").innerHTML = "";
+
+  if (mode === "void") renderVoidDatePagination();
+  if (mode === "daily") renderDailyDatePagination();
+}
+
+  async function renderVoidDatePagination() {
+
+  const voids = await getAllVoidItems();
+
+  const dates = [...new Set(
+    voids.map(v => new Date(v.voidAt).toISOString().slice(0,10))
+  )].reverse();
+
+  const html = dates.map(d => `
+    <button onclick="renderVoidDetail('${d}')">
+      ${d}
+    </button>
+  `).join("");
+
+  document.getElementById("summaryPagination").innerHTML = html;
+}
+
+  async function renderVoidDetail(date) {
 
   const voids = await getAllVoidItems();
   const admins = await MENUVA_DB.getAll("admins");
-  const container = document.getElementById("reportContainer");
 
-  if (!voids.length) {
-    container.innerHTML = "<h3>Void Report</h3><p>No void data</p>";
-    return;
-  }
+  const filtered = voids.filter(v =>
+    new Date(v.voidAt).toISOString().slice(0,10) === date
+  );
 
-  const html = voids.reverse().map(v => {
+  const html = filtered.map(v => {
 
     const admin = admins.find(a => a.username === v.by);
-
-    const role = admin && admin.role ? admin.role : "-";
 
     return `
       <div class="order-card">
         <div><strong>${v.itemName}</strong> ×${v.qty}</div>
         <div>${formatHarga(v.amount)}</div>
-        <div>Order ID: ${v.orderId}</div>
-        <div>By: ${v.by} (${role})</div>
-        <div>Reason: ${v.reason}</div>
+        <div>By: ${v.by} (${admin?.role || "-"})</div>
+        <div>${v.reason}</div>
         <div>${new Date(v.voidAt).toLocaleString()}</div>
       </div>
     `;
   }).join("");
 
-  container.innerHTML = `
-    <h3>Void Report</h3>
-    ${html}
-  `;
+  document.getElementById("summaryDetail").innerHTML = html;
 }
 
-async function renderDailyPage() {
+  async function renderDailyDatePagination() {
 
   const orders = await MENUVA_DB.getAll("ordersData");
-  const today = new Date().toISOString().slice(0,10);
-  const container = document.getElementById("reportContainer");
 
-  const todayOrders = orders.filter(o => o.date === today);
-  const total = todayOrders.reduce((sum,o)=>sum+o.grandTotal,0);
+  const dates = [...new Set(orders.map(o => o.date))].reverse();
 
-  container.innerHTML = `
-    <h3>Daily Report (${today})</h3>
-    <div><strong>${formatHarga(total)}</strong></div>
-    <div>${todayOrders.length} Orders</div>
-  `;
+  const html = dates.map(d => `
+    <button onclick="renderDailyDetail('${d}')">
+      ${d}
+    </button>
+  `).join("");
+
+  document.getElementById("summaryPagination").innerHTML = html;
 }
 
-   
 // ================= DOM READY =================
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -1227,4 +1218,3 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
-
