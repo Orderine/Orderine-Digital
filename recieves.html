@@ -1045,31 +1045,6 @@ if (e.target.classList.contains("btn-paid")) {
 });
 
 
-voidConfirmBtn.onclick = async ()=>{
-  const pin = voidPinInput.value.trim();
-  if (!pin) return alert("PIN wajib");
-
-  const admin = await authorizeVoid(pin);
-  if (!admin) return alert("PIN salah / tidak berwenang");
-
-  const reason = voidReasonSelect.value==="Lainnya"
-    ? voidReasonOther.value.trim()
-    : voidReasonSelect.value;
-  if (!reason) return alert("Alasan wajib");
-
-  if (pendingVoidAction?.type==="item") {
-    await voidOrderItem(
-      pendingVoidAction.orderId,
-      pendingVoidAction.itemIndex,
-      admin,
-      reason
-    );
-  }
-  closeVoidModal();
-};
-
-voidCancelBtn.onclick = closeVoidModal;
-
 /* ================== INIT ================== */
 MENUVA_DB.openDB().then(()=>{
   loadRestoInfo();
@@ -1247,4 +1222,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
