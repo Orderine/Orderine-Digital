@@ -412,20 +412,37 @@ header{
   pointer-events: none;
 }
 
-  .back-btn {
-  background: linear-gradient(135deg, #c9a227, #a67c00);
-  box-shadow: 0 4px 14px rgba(201,162,39,0.4);
+ .back-btn {
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.2);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .5px;
+
+  background: linear-gradient(135deg, #d4af37, #b8860b);
+  color: #1f1f1f;
+
+  box-shadow:
+    0 6px 18px rgba(184,134,11,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.4);
+
+  transition: all 0.25s ease;
 }
 
-
 .back-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(34,74,190,0.45);
+  transform: translateY(-3px);
+  box-shadow:
+    0 10px 24px rgba(184,134,11,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.6);
 }
 
 .back-btn:active {
-  transform: scale(0.97);
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 4px 12px rgba(184,134,11,0.4);
 }
+
 
 </style>
 
@@ -1249,6 +1266,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
