@@ -439,6 +439,16 @@ header{
   color: white;
 }
 
+.rev-summary-card {
+  min-width: 220px;
+}
+
+#summaryContent {
+  margin-top: 8px;
+  font-size: 13px;
+  max-height: 140px;
+  overflow-y: auto;
+}
 
 </style>
 </head>
@@ -482,6 +492,20 @@ header{
     <div class="rev-value" id="revPaid">0</div>
   </div>
 </div>
+
+  <div class="rev-card rev-summary-card">
+  <div class="rev-title">Summary</div>
+
+  <select id="summaryMode">
+    <option value="void">Void List</option>
+    <option value="daily">Daily Report</option>
+    <option value="weekly">Weekly Report</option>
+    <option value="monthly">Monthly Report</option>
+  </select>
+
+  <div id="summaryContent"></div>
+</div>
+
 
 
 <main class="container">
@@ -900,6 +924,7 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
   if (!item || item.void) return;
 
   item.void = true;
+  item.totalBeforeVoid = item.total; // simpan nilai asli
   item.total = 0;
   item.voidReason = reason;
   item.voidBy = admin.username;
@@ -911,6 +936,65 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
   loadOrders();
 }
 
+  async function getAllVoidItems() {
+  const orders = await MENUVA_DB.getAll("ordersData");
+  const voids = [];
+
+  orders.forEach(order => {
+    order.items.forEach(item => {
+      if (item.void) {
+        voids.push({
+          orderId: order.id,
+          itemName: item.nama || "-",
+          qty: item.qty || 0,
+          amount: Number(item.totalBeforeVoid || 0),
+          by: item.voidBy || "Unknown",
+          reason: item.voidReason || "-",
+          voidAt: item.voidAt,
+          date: new Date(item.voidAt)
+        });
+      }
+    });
+  });
+
+  return voids;
+}
+
+  async function attachRolesToVoids(voids) {
+  const admins = await MENUVA_DB.getAll("admins");
+
+  return voids.map(v => {
+    const admin = admins.find(a => a.username === v.by);
+    return {
+      ...v,
+      role: admin?.role || "Unknown"
+    };
+  });
+}
+
+  async function renderDailyVoidTable() {
+  const voidsRaw = await getAllVoidItems();
+  const voidsWithRole = await attachRolesToVoids(voidsRaw);
+
+  const today = new Date().toISOString().slice(0,10);
+
+  const todayVoids = voidsWithRole.filter(v =>
+    new Date(v.voidAt).toISOString().slice(0,10) === today
+  );
+
+  const container = document.getElementById("dailyVoidTable");
+
+  container.innerHTML = todayVoids.map(v => `
+    <tr>
+      <td>${v.itemName}</td>
+      <td>${v.qty}</td>
+      <td>${formatHarga(v.amount)}</td>
+      <td>${v.by}</td>
+      <td>${v.role}</td>
+      <td>${v.reason}</td>
+    </tr>
+  `).join("");
+}
 
 /* ================== MODAL ================== */
 function openVoidModal(action) {
@@ -1026,6 +1110,58 @@ MENUVA_DB.openDB().then(()=>{
     }
   });
 
+   document.getElementById("summaryMode").addEventListener("change", renderSummary);
+
+   
+async function renderSummary() {
+  const mode = document.getElementById("summaryMode").value;
+
+  if (mode === "void") {
+    renderVoidSummary();
+  }
+
+  if (mode === "daily") {
+    renderDailySales();
+  }
+
+  if (mode === "weekly") {
+    renderWeeklySales();
+  }
+
+  if (mode === "monthly") {
+    renderMonthlySales();
+  }
+}
+
+   async function renderVoidSummary() {
+  const voids = await getAllVoidItems();
+
+  const html = voids.slice(-5).reverse().map(v => `
+    <div>
+      ❌ ${v.itemName} - ${formatHarga(v.amount)}<br>
+      <small>${v.by} (${v.role})</small>
+    </div>
+  `).join("");
+
+  document.getElementById("summaryContent").innerHTML = html || "No void data";
+}
+
+   async function renderDailySales() {
+  const orders = await MENUVA_DB.getAll("ordersData");
+
+  const today = new Date().toISOString().slice(0,10);
+
+  const todayOrders = orders.filter(o => o.date === today);
+
+  const total = todayOrders.reduce((sum,o)=>sum+o.grandTotal,0);
+
+  document.getElementById("summaryContent").innerHTML = `
+    <div>Total Sales:</div>
+    <strong>${formatHarga(total)}</strong>
+    <div>${todayOrders.length} Orders</div>
+  `;
+}
+
   function goBackToAdmin() {
     window.location.href = "admin.html";
   }
@@ -1034,8 +1170,3 @@ MENUVA_DB.openDB().then(()=>{
 
 </body>
 </html>
-
-
-
-
-
