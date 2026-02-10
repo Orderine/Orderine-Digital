@@ -1520,18 +1520,24 @@ async function renderMonthlySummary() {
   }).join("");
 }
 
- 
+ let voidConfirmBtn,
+    voidCancelBtn,
+    voidPinInput,
+    voidReasonSelect,
+    voidReasonOther,
+    voidAuthModal;
+
 // ================= DOM READY =================
 
 document.addEventListener("DOMContentLoaded", async () => {
 
   // ===== VOID ELEMENTS (WAJIB ADA) =====
-  const voidConfirmBtn = document.getElementById("voidConfirmBtn");
-  const voidCancelBtn = document.getElementById("voidCancelBtn");
-  const voidPinInput = document.getElementById("voidPinInput");
-  const voidReasonSelect = document.getElementById("voidReasonSelect");
-  const voidReasonOther = document.getElementById("voidReasonOther");
-  const voidAuthModal = document.getElementById("voidAuthModal");
+  voidConfirmBtn = document.getElementById("voidConfirmBtn");
+  voidCancelBtn = document.getElementById("voidCancelBtn");
+  voidPinInput = document.getElementById("voidPinInput");
+  voidReasonSelect = document.getElementById("voidReasonSelect");
+  voidReasonOther = document.getElementById("voidReasonOther");
+  voidAuthModal = document.getElementById("voidAuthModal");
 
   // ===== VOID BUTTON EVENTS =====
   if (voidConfirmBtn) {
@@ -1597,6 +1603,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
