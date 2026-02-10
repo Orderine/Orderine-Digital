@@ -1156,15 +1156,15 @@ function openVoidModal(action) {
 
       const admin = await authorizeVoid(pin);
 
-         if (!admin) {
-          voidPinInput.classList.remove("input-success");
-          voidPinInput.classList.add("input-error");
-         return;
-         }
+// RESET dulu
+voidPinInput.classList.remove("input-error", "input-success");
 
-        voidPinInput.classList.remove("input-error");
-        voidPinInput.classList.add("input-success");
+if (!admin) {
+  voidPinInput.classList.add("input-error");
+  return; // stop di sini
+}
 
+voidPinInput.classList.add("input-success");
 
       const reason = voidReasonSelect.value === "Lainnya"
         ? voidReasonOther.value.trim()
@@ -1736,6 +1736,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
