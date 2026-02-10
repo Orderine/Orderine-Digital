@@ -1402,7 +1402,7 @@ async function renderSummaryPage() {
   async function renderVoidSummary() {
 
   const voidsRaw = await getAllVoidItems();
-  const voids = await attachRolesToVoids(voidsRaw);
+  const voidsWithRole = voidsRaw;
 
   const container = document.getElementById("summaryContent");
 
@@ -1778,6 +1778,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
