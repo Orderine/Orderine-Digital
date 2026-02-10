@@ -535,6 +535,16 @@ header{
   background:#0f2a18;
 }
 
+  .void-detail {
+  margin-top: 8px;
+  padding: 10px;
+  background: rgba(179,0,0,0.08);
+  border-left: 4px solid #b30000;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 </style>
 
 </head>
@@ -1031,29 +1041,36 @@ async function authorizeVoid(pin) {
 
 /* ================== VOID ACTION ================== */
 async function voidOrderItem(orderId, itemIndex, admin, reason) {
-
-  orderId = Number(orderId); // 🔥 WAJIB convert ke number
-
   const order = await MENUVA_DB.get("ordersData", orderId);
-  if (!order) return alert("Order not found");
+  if (!order) return;
 
   const item = order.items[itemIndex];
-  if (!item || item.void) return;
+  if (!item) return;
 
+  const voidData = {
+    type: "VOID",
+    qty: item.qty,
+    amount: item.price * item.qty,
+    reason: reason,
+    voidedBy: {
+      id: admin.id,
+      email: admin.email,
+      role: admin.role
+    },
+    voidedAt: Date.now()
+  };
+
+  // tandai item sebagai void
   item.void = true;
-  item.totalBeforeVoid = item.total; // simpan nilai asli
-  item.total = 0;
-  item.voidReason = reason;
-  item.voidBy = admin.username;
-  item.voidAt = Date.now();
+  item.voidInfo = voidData;
 
-  await MENUVA_DB.add("ordersData", order); // tetap pakai add kalau memang itu update di sistem lu
+  await MENUVA_DB.put("ordersData", order);
 
-  notifyOrdersUpdated();
-  loadOrders();
+  renderOrders(); // refresh UI
 }
 
-  async function getAllVoidItems() {
+
+async function getAllVoidItems() {
   const orders = await MENUVA_DB.getAll("ordersData");
   const voids = [];
 
@@ -1065,10 +1082,9 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
           itemName: item.nama || "-",
           qty: item.qty || 0,
           amount: Number(item.totalBeforeVoid || 0),
-          by: item.voidBy || "Unknown",
           reason: item.voidReason || "-",
-          voidAt: item.voidAt,
-          date: new Date(item.voidAt)
+          voidedAt: item.voidedAt || item.voidAt || null,
+          voidedBy: item.voidedBy || null
         });
       }
     });
@@ -1077,40 +1093,36 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
   return voids;
 }
 
-  async function attachRolesToVoids(voids) {
-  const admins = await MENUVA_DB.getAll("admins");
-
-  return voids.map(v => {
-    const admin = admins.find(a => a.username === v.by);
-    return {
-      ...v,
-      role: admin?.role || "Unknown"
-    };
-  });
-}
-
-  async function renderDailyVoidTable() {
+ async function renderDailyVoidTable() {
   const voidsRaw = await getAllVoidItems();
-  const voidsWithRole = await attachRolesToVoids(voidsRaw);
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = new Date().toISOString().slice(0, 10);
 
-  const todayVoids = voidsWithRole.filter(v =>
-    new Date(v.voidAt).toISOString().slice(0,10) === today
+  const todayVoids = voidsRaw.filter(v =>
+    new Date(v.voidedAt).toISOString().slice(0, 10) === today
   );
 
   const container = document.getElementById("dailyVoidTable");
 
-  container.innerHTML = todayVoids.map(v => `
-    <tr>
-      <td>${v.itemName}</td>
-      <td>${v.qty}</td>
-      <td>${formatHarga(v.amount)}</td>
-      <td>${v.by}</td>
-      <td>${v.role}</td>
-      <td>${v.reason}</td>
-    </tr>
-  `).join("");
+  container.innerHTML = todayVoids.map(v => {
+    const date = new Date(v.voidedAt);
+    const timeFormatted = date.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+    return `
+      <tr>
+        <td>${v.itemName}</td>
+        <td>${v.qty}</td>
+        <td>${formatHarga(v.amount)}</td>
+        <td>${v.voidedBy?.email || "Unknown"}</td>
+        <td>${v.voidedBy?.role || "Unknown"}</td>
+        <td>${timeFormatted}</td>
+        <td>${v.reason}</td>
+      </tr>
+    `;
+  }).join("");
 }
 
    let voidConfirmBtn,
@@ -1766,6 +1778,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
