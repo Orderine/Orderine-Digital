@@ -1031,17 +1031,10 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
     voidReasonOther,
     voidAuthModal;
 
-/* ================== MODAL ================== */
 function openVoidModal(action) {
   pendingVoidAction = action;
 
-  // query ulang setiap buka modal
-  const voidPinInput = document.getElementById("voidPinInput");
-  const voidReasonSelect = document.getElementById("voidReasonSelect");
-  const voidReasonOther = document.getElementById("voidReasonOther");
-  const voidAuthModal = document.getElementById("voidAuthModal");
-
-  initVoidModalElements(); // <-- INI PENTING
+  initVoidModalElements(); // ambil ulang element global
 
   if (!voidAuthModal) {
     console.error("Void modal tidak ditemukan");
@@ -1099,9 +1092,12 @@ function openVoidModal(action) {
 
 
 function closeVoidModal() {
-  pendingVoidAction=null;
-  voidAuthModal.classList.add("hidden");
+  pendingVoidAction = null;
+  if (voidAuthModal) {
+    voidAuthModal.classList.add("hidden");
+  }
 }
+
 
 /* ================== EVENTS ================== */
 document.addEventListener("click", async (e) => {
@@ -1621,6 +1617,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
