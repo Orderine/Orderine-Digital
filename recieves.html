@@ -1135,8 +1135,7 @@ function openVoidModal(action) {
   voidAuthModal.classList.remove("hidden");
 }
 
-
- function initVoidModalElements() {
+  function initVoidModalElements() {
 
   voidConfirmBtn = document.getElementById("voidConfirmBtn");
   voidCancelBtn = document.getElementById("voidCancelBtn");
@@ -1147,7 +1146,34 @@ function openVoidModal(action) {
 
   if (!voidAuthModal) return;
 
-  // ===== CONFIRM =====
+  /* ================= PIN REALTIME VALIDATION ================= */
+
+  if (voidPinInput) {
+
+    // Reset warna saat user ngetik
+    voidPinInput.oninput = () => {
+      voidPinInput.classList.remove("input-error", "input-success");
+    };
+
+    // Validasi saat keluar dari input
+    voidPinInput.onblur = async () => {
+      const pin = voidPinInput.value.trim();
+      if (!pin) return;
+
+      const admin = await authorizeVoid(pin);
+
+      voidPinInput.classList.remove("input-error", "input-success");
+
+      if (admin) {
+        voidPinInput.classList.add("input-success");
+      } else {
+        voidPinInput.classList.add("input-error");
+      }
+    };
+  }
+
+  /* ================= CONFIRM ================= */
+
   if (voidConfirmBtn) {
     voidConfirmBtn.onclick = async () => {
 
@@ -1156,15 +1182,14 @@ function openVoidModal(action) {
 
       const admin = await authorizeVoid(pin);
 
-// RESET dulu
-voidPinInput.classList.remove("input-error", "input-success");
+      voidPinInput.classList.remove("input-error", "input-success");
 
-if (!admin) {
-  voidPinInput.classList.add("input-error");
-  return; // stop di sini
-}
+      if (!admin) {
+        voidPinInput.classList.add("input-error");
+        return alert("PIN salah / tidak berwenang");
+      }
 
-voidPinInput.classList.add("input-success");
+      voidPinInput.classList.add("input-success");
 
       const reason = voidReasonSelect.value === "Lainnya"
         ? voidReasonOther.value.trim()
@@ -1183,7 +1208,10 @@ voidPinInput.classList.add("input-success");
 
       // 🔥 RESET & CLOSE
       pendingVoidAction = null;
+
       voidPinInput.value = "";
+      voidPinInput.classList.remove("input-error", "input-success");
+
       voidReasonSelect.value = "";
       voidReasonOther.value = "";
 
@@ -1191,12 +1219,16 @@ voidPinInput.classList.add("input-success");
     };
   }
 
-  // ===== CANCEL =====
+  /* ================= CANCEL ================= */
+
   if (voidCancelBtn) {
     voidCancelBtn.onclick = () => {
+
       pendingVoidAction = null;
 
       voidPinInput.value = "";
+      voidPinInput.classList.remove("input-error", "input-success");
+
       voidReasonSelect.value = "";
       voidReasonOther.value = "";
 
@@ -1204,8 +1236,6 @@ voidPinInput.classList.add("input-success");
     };
   }
 }
-
-
 
 function closeVoidModal() {
   pendingVoidAction = null;
@@ -1736,19 +1766,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
