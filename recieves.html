@@ -570,6 +570,59 @@ header{
 
 </div>
 
+  <!-- ================= VOID AUTH MODAL ================= -->
+<div id="voidAuthModal" class="hidden" style="
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+">
+
+  <div style="
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    width: 320px;
+  ">
+
+    <h3 style="margin-bottom:12px;">🔐 Authorize Void</h3>
+
+    <input 
+      type="password"
+      id="voidPinInput"
+      placeholder="Masukkan PIN"
+      style="width:100%; margin-bottom:10px; padding:8px;"
+    />
+
+    <select 
+      id="voidReasonSelect"
+      style="width:100%; margin-bottom:10px; padding:8px;"
+    >
+      <option value="">Pilih Alasan</option>
+      <option value="Salah Input">Salah Input</option>
+      <option value="Customer Batal">Customer Batal</option>
+      <option value="Lainnya">Lainnya</option>
+    </select>
+
+    <input 
+      type="text"
+      id="voidReasonOther"
+      placeholder="Alasan lainnya..."
+      style="width:100%; margin-bottom:10px; padding:8px;"
+    />
+
+    <div style="display:flex; justify-content:space-between;">
+      <button id="voidCancelBtn">Batal</button>
+      <button id="voidConfirmBtn">Confirm</button>
+    </div>
+
+  </div>
+</div>
+
+
 
 <script src="db-core.js"></script>
 <script>
@@ -1617,6 +1670,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
