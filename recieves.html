@@ -1441,32 +1441,53 @@ async function renderVoidSummary() {
   renderVoidList(voids, activeVoidDate);
 }
 
-  function renderVoidList(voids, date) {
+ function renderVoidList(voids, date) {
 
   const list = document.getElementById("voidList");
 
-  const filtered = voids.filter(v =>
-    new Date(v.voidAt).toISOString().slice(0,10) === date
-  );
+  const filtered = voids.filter(v => {
+    const rawDate = v.voidedAt || v.voidAt;
+    if (!rawDate) return false;
+
+    const d = new Date(rawDate);
+    if (isNaN(d.getTime())) return false;
+
+    return d.toISOString().slice(0,10) === date;
+  });
 
   if (!filtered.length) {
     list.innerHTML = "<div style='opacity:.6'>Tidak ada void di tanggal ini</div>";
     return;
   }
 
-  list.innerHTML = filtered.map(v=>`
-    <div class="order-card">
-      <div class="order-header">
-        <h3>${v.itemName}</h3>
-        <div class="status-badge status-voided">VOID</div>
-      </div>
+  list.innerHTML = filtered.map(v => {
 
-      <div>Qty: ${v.qty}</div>
-      <div>Amount: ${formatHarga(v.amount)}</div>
-      <div>By: ${v.by} (${v.role})</div>
-      <div>Reason: ${v.reason}</div>
-    </div>
-  `).join("");
+    const rawDate = v.voidedAt || v.voidAt;
+    const time = rawDate
+      ? new Date(rawDate).toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit"
+        })
+      : "-";
+
+    const email = v.voidedBy?.email || v.by || "Unknown";
+    const role = v.voidedBy?.role || v.role || "Unknown";
+
+    return `
+      <div class="order-card">
+        <div class="order-header">
+          <h3>${v.itemName}</h3>
+          <div class="status-badge status-voided">VOID</div>
+        </div>
+
+        <div>Qty: ${v.qty}</div>
+        <div>Amount: ${formatHarga(v.amount)}</div>
+        <div>Time: ${time}</div>
+        <div>By: ${email} (${role})</div>
+        <div>Reason: ${v.reason}</div>
+      </div>
+    `;
+  }).join("");
 }
 
 async function renderDailySummary() {
@@ -1777,6 +1798,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
