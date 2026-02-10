@@ -1024,14 +1024,80 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
   `).join("");
 }
 
+   let voidConfirmBtn,
+    voidCancelBtn,
+    voidPinInput,
+    voidReasonSelect,
+    voidReasonOther,
+    voidAuthModal;
+
 /* ================== MODAL ================== */
 function openVoidModal(action) {
   pendingVoidAction = action;
-  voidPinInput.value="";
-  voidReasonSelect.value="";
-  voidReasonOther.value="";
+
+  // query ulang setiap buka modal
+  const voidPinInput = document.getElementById("voidPinInput");
+  const voidReasonSelect = document.getElementById("voidReasonSelect");
+  const voidReasonOther = document.getElementById("voidReasonOther");
+  const voidAuthModal = document.getElementById("voidAuthModal");
+
+  initVoidModalElements(); // <-- INI PENTING
+
+  if (!voidAuthModal) {
+    console.error("Void modal tidak ditemukan");
+    return;
+  }
+
+  if (voidPinInput) voidPinInput.value = "";
+  if (voidReasonSelect) voidReasonSelect.value = "";
+  if (voidReasonOther) voidReasonOther.value = "";
+
   voidAuthModal.classList.remove("hidden");
 }
+
+  function initVoidModalElements() {
+  voidConfirmBtn = document.getElementById("voidConfirmBtn");
+  voidCancelBtn = document.getElementById("voidCancelBtn");
+  voidPinInput = document.getElementById("voidPinInput");
+  voidReasonSelect = document.getElementById("voidReasonSelect");
+  voidReasonOther = document.getElementById("voidReasonOther");
+  voidAuthModal = document.getElementById("voidAuthModal");
+
+  if (voidConfirmBtn) {
+    voidConfirmBtn.onclick = async () => {
+      const pin = voidPinInput.value.trim();
+      if (!pin) return alert("PIN wajib");
+
+      const admin = await authorizeVoid(pin);
+      if (!admin) return alert("PIN salah / tidak berwenang");
+
+      const reason = voidReasonSelect.value === "Lainnya"
+        ? voidReasonOther.value.trim()
+        : voidReasonSelect.value;
+
+      if (!reason) return alert("Alasan wajib");
+
+      if (pendingVoidAction?.type === "item") {
+        await voidOrderItem(
+          pendingVoidAction.orderId,
+          pendingVoidAction.itemIndex,
+          admin,
+          reason
+        );
+      }
+
+      voidAuthModal.classList.add("hidden");
+    };
+  }
+
+  if (voidCancelBtn) {
+    voidCancelBtn.onclick = () => {
+      voidAuthModal.classList.add("hidden");
+    };
+  }
+}
+
+
 function closeVoidModal() {
   pendingVoidAction=null;
   voidAuthModal.classList.add("hidden");
@@ -1520,58 +1586,10 @@ async function renderMonthlySummary() {
   }).join("");
 }
 
- let voidConfirmBtn,
-    voidCancelBtn,
-    voidPinInput,
-    voidReasonSelect,
-    voidReasonOther,
-    voidAuthModal;
 
 // ================= DOM READY =================
 
 document.addEventListener("DOMContentLoaded", async () => {
-
-  // ===== VOID ELEMENTS (WAJIB ADA) =====
-  voidConfirmBtn = document.getElementById("voidConfirmBtn");
-  voidCancelBtn = document.getElementById("voidCancelBtn");
-  voidPinInput = document.getElementById("voidPinInput");
-  voidReasonSelect = document.getElementById("voidReasonSelect");
-  voidReasonOther = document.getElementById("voidReasonOther");
-  voidAuthModal = document.getElementById("voidAuthModal");
-
-  // ===== VOID BUTTON EVENTS =====
-  if (voidConfirmBtn) {
-    voidConfirmBtn.onclick = async () => {
-      const pin = voidPinInput.value.trim();
-      if (!pin) return alert("PIN wajib");
-
-      const admin = await authorizeVoid(pin);
-      if (!admin) return alert("PIN salah / tidak berwenang");
-
-      const reason = voidReasonSelect.value === "Lainnya"
-        ? voidReasonOther.value.trim()
-        : voidReasonSelect.value;
-
-      if (!reason) return alert("Alasan wajib");
-
-      if (pendingVoidAction?.type === "item") {
-        await voidOrderItem(
-          pendingVoidAction.orderId,
-          pendingVoidAction.itemIndex,
-          admin,
-          reason
-        );
-      }
-
-      voidAuthModal.classList.add("hidden");
-    };
-  }
-
-  if (voidCancelBtn) {
-    voidCancelBtn.onclick = () => {
-      voidAuthModal.classList.add("hidden");
-    };
-  }
 
   // ===== SESSION CHECK =====
   const btn = document.getElementById("btnBackToAdmin");
@@ -1603,6 +1621,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
