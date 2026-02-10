@@ -587,14 +587,19 @@ header{
   z-index: 9999;
 ">
 
-  <div style="
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    width: 320px;
-  ">
+ <div style="
+  background: #2b0f0f;
+  color: white;
+  padding: 24px;
+  border-radius: 16px;
+  width: 340px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  border: 1px solid #5a1a1a;
+">
 
-    <h3 style="margin-bottom:12px;">🔐 Authorize Void</h3>
+    <h3 style="margin-bottom:16px; color:#ff4d4d;">
+  🔐 Void Authorization
+  </h3>
 
     <input 
       type="password"
@@ -620,15 +625,34 @@ header{
       style="width:100%; margin-bottom:10px; padding:8px;"
     />
 
-    <div style="display:flex; justify-content:space-between;">
-      <button id="voidCancelBtn">Batal</button>
-      <button id="voidConfirmBtn">Confirm</button>
-    </div>
+    <div style="display:flex; gap:10px; margin-top:12px;">
+  <button id="voidCancelBtn" style="
+    flex:1;
+    padding:10px;
+    border:none;
+    border-radius:8px;
+    background:#444;
+    color:white;
+    cursor:pointer;
+  ">
+    Cancel
+  </button>
 
-  </div>
+  <button id="voidConfirmBtn" style="
+    flex:1;
+    padding:10px;
+    border:none;
+    border-radius:8px;
+    background:#b30000;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+  ">
+    Confirm
+  </button>
 </div>
-
-
+</div>
+</div>
 
 <script src="db-core.js"></script>
 <script>
@@ -1154,6 +1178,8 @@ function closeVoidModal() {
   pendingVoidAction = null;
   if (voidAuthModal) {
     voidAuthModal.classList.remove("show");
+    pendingVoidAction = null;
+
   }
 }
 
@@ -1676,6 +1702,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
