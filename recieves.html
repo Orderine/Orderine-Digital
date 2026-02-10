@@ -489,14 +489,6 @@ header{
   padding-top:6px;
 }
 
-#voidAuthModal {
-  display: none;
-}
-
-#voidAuthModal.show {
-  display: flex;
-}
-
 </style>
 
 </head>
@@ -578,40 +570,25 @@ header{
 </div>
 
   <!-- ================= VOID AUTH MODAL ================= -->
-<div id="voidAuthModal" class="hidden" style="
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-">
+<div id="voidAuthModal" class="modal hidden">
 
- <div style="
-  background: #2b0f0f;
-  color: white;
-  padding: 24px;
-  border-radius: 16px;
-  width: 340px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-  border: 1px solid #5a1a1a;
-">
+  <div class="modal-box" style="
+    background: #2b0f0f;
+    color: white;
+    border: 1px solid #5a1a1a;
+  ">
 
     <h3 style="margin-bottom:16px; color:#ff4d4d;">
-  🔐 Void Authorization
-  </h3>
+      🔐 Void Authorization
+    </h3>
 
     <input 
       type="password"
       id="voidPinInput"
       placeholder="Masukkan PIN"
-      style="width:100%; margin-bottom:10px; padding:8px;"
     />
 
-    <select 
-      id="voidReasonSelect"
-      style="width:100%; margin-bottom:10px; padding:8px;"
-    >
+    <select id="voidReasonSelect">
       <option value="">Pilih Alasan</option>
       <option value="Salah Input">Salah Input</option>
       <option value="Customer Batal">Customer Batal</option>
@@ -622,36 +599,20 @@ header{
       type="text"
       id="voidReasonOther"
       placeholder="Alasan lainnya..."
-      style="width:100%; margin-bottom:10px; padding:8px;"
     />
 
-    <div style="display:flex; gap:10px; margin-top:12px;">
-  <button id="voidCancelBtn" style="
-    flex:1;
-    padding:10px;
-    border:none;
-    border-radius:8px;
-    background:#444;
-    color:white;
-    cursor:pointer;
-  ">
-    Cancel
-  </button>
+    <div class="modal-actions">
+      <button type="button" id="voidCancelBtn">Cancel</button>
+      <button type="button" id="voidConfirmBtn" style="
+        background:#b30000;
+        color:white;
+        font-weight:bold;
+      ">
+        Confirm
+      </button>
+    </div>
 
-  <button id="voidConfirmBtn" style="
-    flex:1;
-    padding:10px;
-    border:none;
-    border-radius:8px;
-    background:#b30000;
-    color:white;
-    font-weight:bold;
-    cursor:pointer;
-  ">
-    Confirm
-  </button>
-</div>
-</div>
+  </div>
 </div>
 
 <script src="db-core.js"></script>
@@ -1117,21 +1078,21 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
 function openVoidModal(action) {
   pendingVoidAction = action;
 
-  initVoidModalElements(); // ambil ulang element global
-
   if (!voidAuthModal) {
     console.error("Void modal tidak ditemukan");
     return;
   }
 
-  if (voidPinInput) voidPinInput.value = "";
-  if (voidReasonSelect) voidReasonSelect.value = "";
-  if (voidReasonOther) voidReasonOther.value = "";
+  voidPinInput.value = "";
+  voidReasonSelect.value = "";
+  voidReasonOther.value = "";
 
-  voidAuthModal.classList.add("show");
+  voidAuthModal.classList.remove("hidden");
 }
 
-  function initVoidModalElements() {
+
+ function initVoidModalElements() {
+
   voidConfirmBtn = document.getElementById("voidConfirmBtn");
   voidCancelBtn = document.getElementById("voidCancelBtn");
   voidPinInput = document.getElementById("voidPinInput");
@@ -1139,8 +1100,12 @@ function openVoidModal(action) {
   voidReasonOther = document.getElementById("voidReasonOther");
   voidAuthModal = document.getElementById("voidAuthModal");
 
+  if (!voidAuthModal) return;
+
+  // ===== CONFIRM =====
   if (voidConfirmBtn) {
     voidConfirmBtn.onclick = async () => {
+
       const pin = voidPinInput.value.trim();
       if (!pin) return alert("PIN wajib");
 
@@ -1162,22 +1127,36 @@ function openVoidModal(action) {
         );
       }
 
+      // 🔥 RESET & CLOSE
+      pendingVoidAction = null;
+      voidPinInput.value = "";
+      voidReasonSelect.value = "";
+      voidReasonOther.value = "";
+
       voidAuthModal.classList.add("hidden");
     };
   }
 
+  // ===== CANCEL =====
   if (voidCancelBtn) {
     voidCancelBtn.onclick = () => {
+      pendingVoidAction = null;
+
+      voidPinInput.value = "";
+      voidReasonSelect.value = "";
+      voidReasonOther.value = "";
+
       voidAuthModal.classList.add("hidden");
     };
   }
 }
 
 
+
 function closeVoidModal() {
   pendingVoidAction = null;
   if (voidAuthModal) {
-    voidAuthModal.classList.remove("show");
+    voidAuthModal.classList.add("hidden");
     pendingVoidAction = null;
 
   }
@@ -1186,7 +1165,7 @@ function closeVoidModal() {
 
 /* ================== EVENTS ================== */
 document.addEventListener("click", async (e) => {
-
+  
   // ================= VOID ITEM =================
   if (e.target.classList.contains("void-item-btn")) {
     openVoidModal({
@@ -1671,6 +1650,7 @@ async function renderMonthlySummary() {
 // ================= DOM READY =================
 
 document.addEventListener("DOMContentLoaded", async () => {
+  initVoidModalElements();
 
   // ===== SESSION CHECK =====
   const btn = document.getElementById("btnBackToAdmin");
@@ -1702,6 +1682,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
