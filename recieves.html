@@ -1399,10 +1399,9 @@ async function renderSummaryPage() {
   }
 }
 
-  async function renderVoidSummary() {
+async function renderVoidSummary() {
 
-  const voidsRaw = await getAllVoidItems();
-  const voidsWithRole = voidsRaw;
+  const voids = await getAllVoidItems(); // ✅ pakai satu variable saja
 
   const container = document.getElementById("summaryContent");
 
@@ -1412,7 +1411,7 @@ async function renderSummaryPage() {
   }
 
   const dates = [...new Set(
-    voids.map(v => new Date(v.voidAt).toISOString().slice(0,10))
+    voids.map(v => new Date(v.voidedAt).toISOString().slice(0,10))
   )].sort().reverse();
 
   let activeVoidDate = dates[0];
@@ -1778,6 +1777,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
