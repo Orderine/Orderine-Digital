@@ -1048,33 +1048,33 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
   if (!item) return;
 
   const voidData = {
-    type: "VOID",
-    qty: item.qty,
-    amount: (item.price || 0) * (item.qty || 0),
-    reason: reason,
-    voidedBy: {
-      id: admin.id,
-      email: admin.email,
-      role: admin.role
-    },
-    voidedAt: Date.now()
-  };
+  type: "VOID",
+  qty: Number(item.qty) || 0,
+  amount: Number(item.total) || 0,
+  reason: reason,
+  voidedBy: {
+    id: admin.id,
+    email: admin.email,
+    role: admin.role
+  },
+  voidedAt: Date.now()
+};
 
   // simpan nilai sebelum void
   item.totalBeforeVoid = voidData.amount;
 
   // kosongkan qty & harga
   item.qty = 0;
-  item.price = 0;
   item.total = 0;
 
   item.void = true;
   item.voidInfo = voidData;
 
   // 🔥 RECALCULATE
-  order.subtotal = order.items.reduce((sum, i) => {
-    return sum + ((i.price || 0) * (i.qty || 0));
-  }, 0);
+ order.subtotal = order.items.reduce((sum, i) => {
+  if (i.void) return sum;
+  return sum + (Number(i.total) || 0);
+}, 0);
 
   order.grandTotal = order.subtotal - (order.discount || 0);
   if (order.grandTotal < 0) order.grandTotal = 0;
@@ -1817,5 +1817,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
