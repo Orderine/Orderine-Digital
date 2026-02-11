@@ -1039,7 +1039,6 @@ async function authorizeVoid(pin) {
 }
 
 
-/* ================== VOID ACTION ================== */
 async function voidOrderItem(orderId, itemIndex, admin, reason) {
   const order = await MENUVA_DB.get("ordersData", orderId);
   if (!order) return;
@@ -1060,13 +1059,27 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
     voidedAt: Date.now()
   };
 
-  // tandai item sebagai void
+  // simpan nilai sebelum void
+  item.totalBeforeVoid = item.price * item.qty;
+
+  // nolkan qty & harga
+  item.qty = 0;
+  item.price = 0;
+  item.total = 0;
+
   item.void = true;
   item.voidInfo = voidData;
 
+  // 🔥 RECALCULATE TOTAL
+  order.subtotal = order.items.reduce((sum, i) => {
+    return sum + ((i.price || 0) * (i.qty || 0));
+  }, 0);
+
+  order.grandTotal = order.subtotal - (order.discount || 0);
+
   await MENUVA_DB.put("ordersData", order);
 
-  renderOrders(); // refresh UI
+  renderOrders();
 }
 
 
@@ -1082,9 +1095,10 @@ async function getAllVoidItems() {
           itemName: item.nama || "-",
           qty: item.qty || 0,
           amount: Number(item.totalBeforeVoid || 0),
-          reason: item.voidReason || "-",
-          voidedAt: item.voidedAt || item.voidAt || null,
-          voidedBy: item.voidedBy || null
+         reason: item.voidInfo?.reason || "-",
+         voidedAt: item.voidInfo?.voidedAt || null,
+         voidedBy: item.voidInfo?.voidedBy || null
+
         });
       }
     });
@@ -1798,6 +1812,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
