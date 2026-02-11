@@ -1095,13 +1095,22 @@ async function getAllVoidItems() {
 
         const voidInfo = item.voidInfo || {};
 
+        // ===== NORMALIZE TIMESTAMP =====
+        let voidedAt = null;
+
+        if (voidInfo.voidedAt) {
+          voidedAt = new Date(Number(voidInfo.voidedAt)).toISOString();
+        } else if (order.createdAt) {
+          voidedAt = new Date(Number(order.createdAt)).toISOString();
+        }
+
         voids.push({
           orderId: order.id,
           itemName: item.nama || "-",
-          qty: voidInfo.qty || 0,              // ✅ pakai data sebelum void
-          amount: Number(voidInfo.amount || 0),// ✅ pakai amount asli
-          reason: voidInfo.reason || "-",
-          voidedAt: voidInfo.voidedAt || null,
+          qty: voidInfo.qty ?? item.qty ?? 0,
+          amount: Number(voidInfo.amount ?? item.harga * (item.qty || 1) ?? 0),
+          reason: voidInfo.reason || "Void (old system)",
+          voidedAt,
           voidedBy: voidInfo.voidedBy || null
         });
 
@@ -1836,6 +1845,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
