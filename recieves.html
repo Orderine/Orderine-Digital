@@ -1085,8 +1085,6 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
   await loadOrders(); // reload dari DB
 }
 
-
-
 async function getAllVoidItems() {
   const orders = await MENUVA_DB.getAll("ordersData");
   const voids = [];
@@ -1094,16 +1092,19 @@ async function getAllVoidItems() {
   orders.forEach(order => {
     order.items.forEach(item => {
       if (item.void) {
+
+        const voidInfo = item.voidInfo || {};
+
         voids.push({
           orderId: order.id,
           itemName: item.nama || "-",
-          qty: item.qty || 0,
-          amount: Number(item.totalBeforeVoid || 0),
-         reason: item.voidInfo?.reason || "-",
-         voidedAt: item.voidInfo?.voidedAt || null,
-         voidedBy: item.voidInfo?.voidedBy || null
-
+          qty: voidInfo.qty || 0,              // ✅ pakai data sebelum void
+          amount: Number(voidInfo.amount || 0),// ✅ pakai amount asli
+          reason: voidInfo.reason || "-",
+          voidedAt: voidInfo.voidedAt || null,
+          voidedBy: voidInfo.voidedBy || null
         });
+
       }
     });
   });
@@ -1816,4 +1817,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
