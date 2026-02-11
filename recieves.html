@@ -1420,8 +1420,7 @@ async function renderSummaryPage() {
 
 async function renderVoidSummary() {
 
-  const voids = await getAllVoidItems(); // ✅ pakai satu variable saja
-
+  const voids = await getAllVoidItems();
   const container = document.getElementById("summaryContent");
 
   if (!voids.length) {
@@ -1429,9 +1428,26 @@ async function renderVoidSummary() {
     return;
   }
 
+  // ✅ Ambil semua tanggal unik pakai LOCAL timezone
   const dates = [...new Set(
-    voids.map(v => new Date(v.voidedAt).toISOString().slice(0,10))
+    voids
+      .map(v => {
+        const rawDate = v.voidedAt || v.voidAt;
+        if (!rawDate) return null;
+
+        const d = new Date(rawDate);
+        if (isNaN(d.getTime())) return null;
+
+        // format YYYY-MM-DD tapi LOCAL (bukan UTC)
+        return d.toLocaleDateString("sv-SE");
+      })
+      .filter(Boolean)
   )].sort().reverse();
+
+  if (!dates.length) {
+    container.innerHTML = "<p style='opacity:.6'>Tidak ada tanggal valid</p>";
+    return;
+  }
 
   let activeVoidDate = dates[0];
 
@@ -1450,9 +1466,12 @@ async function renderVoidSummary() {
   document.querySelectorAll(".void-date-btn").forEach(btn=>{
     btn.onclick = ()=>{
       activeVoidDate = btn.dataset.date;
+
       renderVoidList(voids, activeVoidDate);
+
       document.querySelectorAll(".void-date-btn")
         .forEach(b=>b.classList.remove("active"));
+
       btn.classList.add("active");
     };
   });
@@ -1471,7 +1490,7 @@ async function renderVoidSummary() {
     const d = new Date(rawDate);
     if (isNaN(d.getTime())) return false;
 
-    return d.toISOString().slice(0,10) === date;
+    return d.toLocaleDateString("sv-SE") === date;
   });
 
   if (!filtered.length) {
@@ -1817,6 +1836,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
