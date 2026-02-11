@@ -547,13 +547,11 @@ header{
 
 /* ===== MAIN CONTAINER ===== */
 .modern-dashboard-container {
-  background: linear-gradient(145deg, #1e293b, #0f172a);
-  padding: 25px;
-  border-radius: 18px;
-  margin: 20px;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.25);
-  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
+
 
 /* ===== TOP FLEX AREA ===== */
 .dashboard-top {
@@ -679,6 +677,77 @@ header{
   font-size: 15px;
 }
 
+  .dashboard-wrapper {
+  max-width: 1300px;
+  margin: auto;
+  padding: 20px;
+}
+
+/* TOP */
+.dashboard-top {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 20px;
+  align-items: stretch;
+  margin-bottom: 25px;
+}
+
+/* Revenue grid */
+.revenue-dashboard {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+.rev-card {
+  background: #111;
+  padding: 20px;
+  border-radius: 14px;
+}
+
+/* Live info */
+.live-info-container {
+  background: #111;
+  padding: 20px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+}
+
+/* MIDDLE */
+.dashboard-middle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.modern-summary-card {
+  padding: 25px;
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+.insight-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.quick-stats-card,
+.mini-chart-card {
+  background: #111;
+  padding: 20px;
+  border-radius: 16px;
+}
+
+/* Orders */
+.orders-section {
+  max-width: 1300px;
+  margin: auto;
+  padding: 0 20px 40px 20px;
+}
+
 </style>
 
 </head>
@@ -701,140 +770,104 @@ header{
   </div>
 </header>
 
-<div id="mainReceives">
+<div id="orderPage">
 
-  <!-- ================= ORDER PAGE ================= -->
-  <div id="orderPage">
+  <!-- ===== DASHBOARD WRAPPER ===== -->
+  <div class="dashboard-wrapper">
 
-    <!-- ===== MAIN DASHBOARD CONTAINER ===== -->
-    <div class="modern-dashboard-container">
+    <!-- ================= TOP AREA ================= -->
+    <section class="dashboard-top">
 
-      <!-- ===== TOP DASHBOARD AREA ===== -->
-      <section class="dashboard-top">
-
-        <!-- Revenue Cards -->
-        <div class="revenue-dashboard">
-          <div class="rev-card">
-            <div class="rev-title">Revenue</div>
-            <div class="rev-value" id="revTotal">Rp 0</div>
-          </div>
-
-          <div class="rev-card">
-            <div class="rev-title">Orders</div>
-            <div class="rev-value" id="revOrders">0</div>
-          </div>
-
-          <div class="rev-card">
-            <div class="rev-title">OPEN</div>
-            <div class="rev-value" id="revOpen">0</div>
-          </div>
-
-          <div class="rev-card">
-            <div class="rev-title">PAID</div>
-            <div class="rev-value" id="revPaid">0</div>
-          </div>
+      <div class="revenue-dashboard">
+        <div class="rev-card">
+          <div class="rev-title">Revenue</div>
+          <div class="rev-value" id="revTotal">Rp 0</div>
         </div>
 
-        <!-- Live Info Panel -->
-        <div class="live-info-container">
-          <div class="live-info">
-            <div class="clock-line">
-              <span class="clock-icon">🕒</span>
-              <span id="liveClock">00:00:00</span>
-            </div>
-            <div class="shift-line">
-              <span id="shiftInfo">Shift: -</span>
-            </div>
-            <div class="user-line">
-              <span id="userInfo">User: -</span>
-            </div>
-          </div>
+        <div class="rev-card">
+          <div class="rev-title">Orders</div>
+          <div class="rev-value" id="revOrders">0</div>
         </div>
 
-      </section>
+        <div class="rev-card">
+          <div class="rev-title">OPEN</div>
+          <div class="rev-value" id="revOpen">0</div>
+        </div>
 
-      <!-- Summary Card -->
+        <div class="rev-card">
+          <div class="rev-title">PAID</div>
+          <div class="rev-value" id="revPaid">0</div>
+        </div>
+      </div>
+
+      <div class="live-info-container">
+        <div class="live-info">
+          <div class="clock-line">
+            <span>🕒</span>
+            <span id="liveClock">00:00:00</span>
+          </div>
+          <div id="shiftInfo">Shift: -</div>
+          <div id="userInfo">User: -</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= MIDDLE AREA ================= -->
+    <section class="dashboard-middle">
+
+      <!-- Summary -->
       <div class="menu-card modern-summary-card" onclick="renderSummaryPage()">
         <div class="card-icon">📊</div>
         <div class="card-title">Summary</div>
         <div class="card-desc">Lihat ringkasan laporan</div>
       </div>
 
-      <!-- ===== Right Insight Panel ===== -->
-<div class="insight-panel">
+      <!-- Insight -->
+      <div class="insight-panel">
 
-  <!-- Quick Stats -->
-  <div class="quick-stats-card">
-    <h3 class="insight-title">📈 Today Insight</h3>
+        <div class="quick-stats-card">
+          <h3>📈 Today Insight</h3>
 
-    <div class="stat-item">
-      <span>🧾 Today Orders</span>
-      <strong id="todayOrdersStat">0</strong>
-    </div>
+          <div class="stat-item">
+            <span>🧾 Today Orders</span>
+            <strong id="todayOrdersStat">0</strong>
+          </div>
 
-    <div class="stat-item">
-      <span>💰 Avg Order</span>
-      <strong id="avgOrderStat">Rp 0</strong>
-    </div>
+          <div class="stat-item">
+            <span>💰 Avg Order</span>
+            <strong id="avgOrderStat">Rp 0</strong>
+          </div>
 
-    <div class="stat-item">
-      <span>⏳ Avg Prep Time</span>
-      <strong id="avgPrepStat">0 min</strong>
-    </div>
+          <div class="stat-item">
+            <span>⏳ Avg Prep Time</span>
+            <strong id="avgPrepStat">0 min</strong>
+          </div>
 
-    <div class="stat-item">
-      <span>🔥 Top Item</span>
-      <strong id="topItemStat">-</strong>
-    </div>
-  </div>
-
-  <!-- Mini Chart -->
-  <div class="mini-chart-card">
-    <h3 class="insight-title">📊 Revenue Today</h3>
-    <canvas id="miniRevenueChart" height="120"></canvas>
-  </div>
-
-</div>
-</div>
-
-    <!-- ===== Orders Section (HARUS DI DALAM orderPage) ===== -->
-    <main class="container">
-      <h2 style="margin-bottom:16px">📥 Incoming Orders</h2>
-      <div id="ordersBox"></div>
-    </main>
-
-  </div> <!-- ✅ END orderPage -->
-
-
-  <!-- ================= SUMMARY PAGE ================= -->
-  <div id="summaryPage" style="display:none;">
-
-    <!-- User Info -->
-    <aside class="live-info-panel">
-      <div class="live-info">
-        <div class="clock-line">
-          <span class="clock-icon">🕒</span>
-          <span id="liveClockSummary">00:00:00</span>
+          <div class="stat-item">
+            <span>🔥 Top Item</span>
+            <strong id="topItemStat">-</strong>
+          </div>
         </div>
-        <div class="shift-line">
-          <span id="shiftInfoSummary">Shift: -</span>
+
+        <div class="mini-chart-card">
+          <h3>📊 Revenue Today</h3>
+          <canvas id="miniRevenueChart" height="120"></canvas>
         </div>
-        <div class="user-line">
-          <span id="userInfoSummary">User: -</span>
-        </div>
+
       </div>
-    </aside>
 
-    <main class="container">
-      <h2 style="margin-bottom:16px">📊 Summary</h2>
-      <div id="summaryContent"></div>
+    </section>
 
-      <button class="back-btn" onclick="backToOrders()">⬅ Back</button>
-    </main>
+  </div> <!-- END dashboard-wrapper -->
 
-  </div> <!-- ✅ END summaryPage -->
+  <!-- ================= ORDERS SECTION ================= -->
+  <main class="orders-section">
+    <h2>📥 Incoming Orders</h2>
+    <div id="ordersBox"></div>
+  </main>
 
-</div> <!-- ✅ END mainReceives -->
+</div>
 
   <!-- ================= VOID AUTH MODAL ================= -->
 <div id="voidAuthModal" class="modal hidden">
@@ -2213,3 +2246,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
