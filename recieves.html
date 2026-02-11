@@ -642,6 +642,43 @@ header{
   box-shadow: 0 8px 20px rgba(0,0,0,0.25);
 }
 
+  .modern-dashboard-container {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 20px;
+}
+
+.insight-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.quick-stats-card,
+.mini-chart-card {
+  background: linear-gradient(145deg, #1e1e2f, #25253a);
+  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+
+.insight-title {
+  margin-bottom: 15px;
+  font-size: 15px;
+  opacity: .8;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.stat-item strong {
+  font-size: 15px;
+}
+
 </style>
 
 </head>
@@ -723,7 +760,42 @@ header{
         <div class="card-desc">Lihat ringkasan laporan</div>
       </div>
 
+      <!-- ===== Right Insight Panel ===== -->
+<div class="insight-panel">
+
+  <!-- Quick Stats -->
+  <div class="quick-stats-card">
+    <h3 class="insight-title">📈 Today Insight</h3>
+
+    <div class="stat-item">
+      <span>🧾 Today Orders</span>
+      <strong id="todayOrdersStat">0</strong>
     </div>
+
+    <div class="stat-item">
+      <span>💰 Avg Order</span>
+      <strong id="avgOrderStat">Rp 0</strong>
+    </div>
+
+    <div class="stat-item">
+      <span>⏳ Avg Prep Time</span>
+      <strong id="avgPrepStat">0 min</strong>
+    </div>
+
+    <div class="stat-item">
+      <span>🔥 Top Item</span>
+      <strong id="topItemStat">-</strong>
+    </div>
+  </div>
+
+  <!-- Mini Chart -->
+  <div class="mini-chart-card">
+    <h3 class="insight-title">📊 Revenue Today</h3>
+    <canvas id="miniRevenueChart" height="120"></canvas>
+  </div>
+
+</div>
+</div>
 
     <!-- ===== Orders Section (HARUS DI DALAM orderPage) ===== -->
     <main class="container">
@@ -1955,6 +2027,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   initVoidModalElements();
   initClock();
   initUserInfo();
+  updateTodayInsights();
+
 
 
   // ===== SESSION CHECK =====
@@ -2047,15 +2121,95 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 }
 
+  async function updateTodayInsights() {
+  const orders = await MENUVA_DB.getAll("ordersData");
+
+  const today = new Date().toISOString().slice(0,10);
+
+  const todayOrders = orders.filter(o => {
+    const d = new Date(Number(o.createdAt))
+      .toISOString().slice(0,10);
+    return d === today;
+  });
+
+  const totalOrders = todayOrders.length;
+
+  let totalRevenue = 0;
+  let itemCount = 0;
+  const itemMap = {};
+
+  todayOrders.forEach(order => {
+    totalRevenue += Number(order.total || 0);
+
+    order.items?.forEach(item => {
+      if (!item.void) {
+        itemCount += item.qty || 1;
+
+        itemMap[item.nama] = 
+          (itemMap[item.nama] || 0) + (item.qty || 1);
+      }
+    });
+  });
+
+  const avgOrder = totalOrders 
+    ? Math.round(totalRevenue / totalOrders)
+    : 0;
+
+  const topItem = Object.entries(itemMap)
+    .sort((a,b)=>b[1]-a[1])[0]?.[0] || "-";
+
+  document.getElementById("todayOrdersStat").textContent = totalOrders;
+  document.getElementById("avgOrderStat").textContent = 
+    "Rp " + avgOrder.toLocaleString("id-ID");
+  document.getElementById("avgPrepStat").textContent = 
+    "12 min"; // nanti bisa kita buat dinamis
+  document.getElementById("topItemStat").textContent = topItem;
+
+  renderMiniChart(todayOrders);
+}
+
+  function renderMiniChart(todayOrders) {
+
+  const ctx = document
+    .getElementById("miniRevenueChart")
+    .getContext("2d");
+
+  const hourlyRevenue = Array(24).fill(0);
+
+  todayOrders.forEach(order => {
+    const hour = new Date(Number(order.createdAt)).getHours();
+    hourlyRevenue[hour] += Number(order.total || 0);
+  });
+
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [...Array(24).keys()],
+      datasets: [{
+        data: hourlyRevenue,
+        borderColor: "#4e9eff",
+        backgroundColor: "rgba(78,158,255,0.1)",
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }},
+      scales: {
+        x: { display: false },
+        y: { display: false }
+      }
+    }
+  });
+}
 
   function goBackToAdmin() {
     window.location.href = "admin.html";
   }
 </script>
+  
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </body>
 </html>
-
-
-
-
