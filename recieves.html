@@ -800,6 +800,34 @@ header{
   padding: 0 25px;
 }
 
+  /* SUMMARY CARD BUTTON EFFECT */
+.summary-card {
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Hover Effect */
+.summary-card:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(37,99,235,0.4);
+}
+
+/* Text berubah saat hover */
+.summary-card:hover .card-title,
+.summary-card:hover .card-desc,
+.summary-card:hover .card-icon {
+  color: #ffffff;
+}
+
+/* Click effect */
+.summary-card:active {
+  transform: scale(0.97);
+  box-shadow: 0 5px 15px rgba(37,99,235,0.3);
+}
+
 </style>
 
 </head>
@@ -2305,6 +2333,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
