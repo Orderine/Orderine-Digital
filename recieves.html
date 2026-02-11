@@ -721,7 +721,9 @@ header{
   display: grid;
   grid-template-columns: 380px 1fr;
   gap: 20px;
+  margin-bottom: 25px; /* 🔥 kasih jarak antar row */
 }
+
 
 /* ===== CARD BASE ===== */
 .card-square,
@@ -745,6 +747,17 @@ header{
 .card-rectangle {
   min-height: 220px;
 }
+
+  .card-square,
+.card-rectangle {
+  color: #e2e8f0; /* 🔥 text terang */
+}
+
+  .card-rectangle h3 {
+  color: #38bdf8;
+  margin-bottom: 15px;
+}
+
 
 /* TEXT */
 .card-title {
@@ -2292,6 +2305,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
