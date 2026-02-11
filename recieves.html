@@ -545,6 +545,32 @@ header{
   line-height: 1.5;
 }
 
+  .live-info {
+  text-align: right;
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+.clock-line {
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.shift-line,
+.user-line {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.clock-icon {
+  font-size: 14px;
+}
+
 </style>
 
 </head>
@@ -624,6 +650,20 @@ header{
   </div>
 
 </div>
+
+  <div class="live-info">
+  <div class="clock-line">
+    <span class="clock-icon">🕒</span>
+    <span id="liveClock">00:00:00</span>
+  </div>
+  <div class="shift-line">
+    <span id="shiftInfo">Shift: -</span>
+  </div>
+  <div class="user-line">
+    <span id="userInfo">User: -</span>
+  </div>
+</div>
+
 
   <!-- ================= VOID AUTH MODAL ================= -->
 <div id="voidAuthModal" class="modal hidden">
@@ -1814,6 +1854,10 @@ async function renderMonthlySummary() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   initVoidModalElements();
+  startLiveClock();
+  detectShift();
+  setUserInfo(currentUser);
+
 
   // ===== SESSION CHECK =====
   const btn = document.getElementById("btnBackToAdmin");
@@ -1838,6 +1882,45 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 });
 
+  function startLiveClock() {
+  const clockEl = document.getElementById("liveClock");
+
+  function updateClock() {
+    const now = new Date();
+
+    const time = now.toLocaleTimeString("id-ID", {
+      hour12: false
+    });
+
+    clockEl.textContent = time;
+  }
+
+  updateClock();
+  setInterval(updateClock, 1000);
+}
+
+  function detectShift() {
+  const hour = new Date().getHours();
+  let shift = "Morning";
+
+  if (hour >= 6 && hour < 14) shift = "Morning";
+  else if (hour >= 14 && hour < 22) shift = "Afternoon";
+  else shift = "Night";
+
+  document.getElementById("shiftInfo").textContent = 
+    "Shift: " + shift;
+}
+
+  function setUserInfo(user) {
+  if (!user) return;
+
+  const roleLabel = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+
+  document.getElementById("userInfo").textContent =
+    `User: ${user.name} (${roleLabel})`;
+}
+
+
   function goBackToAdmin() {
     window.location.href = "admin.html";
   }
@@ -1845,6 +1928,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
