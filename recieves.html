@@ -1079,7 +1079,9 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
 
   await MENUVA_DB.put("ordersData", order);
 
-  renderOrders();
+await loadOrders();   // ← INI YANG BENAR
+notifyOrdersUpdated();
+
 }
 
 
@@ -1296,7 +1298,7 @@ if (e.target.classList.contains("btn-submit")) {
   order.status = "sent";
   order.sentTime = Date.now();
 
- await MENUVA_DB.add("ordersData", order);
+ await MENUVA_DB.put("ordersData", order);
 
   alert("Order berhasil dikirim ke kitchen & bar 🚀");
 
@@ -1317,7 +1319,7 @@ if (e.target.classList.contains("btn-paid")) {
   order.paidTime = Date.now();
   order.locked = true; // 🔥 KUNCI
 
-  await MENUVA_DB.add("ordersData", order);
+  await MENUVA_DB.put("ordersData", order);
 
   window.location.href = `paid-manager.html?id=${orderId}`;
 }
@@ -1812,11 +1814,3 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
