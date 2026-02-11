@@ -725,46 +725,44 @@ header{
 
     </div>
 
-  </div>
-</div>
+    <!-- ===== Orders Section (HARUS DI DALAM orderPage) ===== -->
+    <main class="container">
+      <h2 style="margin-bottom:16px">📥 Incoming Orders</h2>
+      <div id="ordersBox"></div>
+    </main>
+
+  </div> <!-- ✅ END orderPage -->
 
 
-  <!-- ===== Orders Section ===== -->
-  <main class="container">
-    <h2 style="margin-bottom:16px">📥 Incoming Orders</h2>
-    <div id="ordersBox"></div>
-  </main>
+  <!-- ================= SUMMARY PAGE ================= -->
+  <div id="summaryPage" style="display:none;">
 
-</div>
-
-
-<!-- ================= SUMMARY PAGE ================= -->
-<div id="summaryPage" style="display:none;">
-
-  <!-- ===== User Info Tetap Tampil ===== -->
-  <aside class="live-info-panel">
-    <div class="live-info">
-      <div class="clock-line">
-        <span class="clock-icon">🕒</span>
-        <span id="liveClockSummary">00:00:00</span>
+    <!-- User Info -->
+    <aside class="live-info-panel">
+      <div class="live-info">
+        <div class="clock-line">
+          <span class="clock-icon">🕒</span>
+          <span id="liveClockSummary">00:00:00</span>
+        </div>
+        <div class="shift-line">
+          <span id="shiftInfoSummary">Shift: -</span>
+        </div>
+        <div class="user-line">
+          <span id="userInfoSummary">User: -</span>
+        </div>
       </div>
-      <div class="shift-line">
-        <span id="shiftInfoSummary">Shift: -</span>
-      </div>
-      <div class="user-line">
-        <span id="userInfoSummary">User: -</span>
-      </div>
-    </div>
-  </aside>
+    </aside>
 
-  <main class="container">
-    <h2 style="margin-bottom:16px">📊 Summary</h2>
-    <div id="summaryContent"></div>
+    <main class="container">
+      <h2 style="margin-bottom:16px">📊 Summary</h2>
+      <div id="summaryContent"></div>
 
-    <button class="back-btn" onclick="backToOrders()">⬅ Back</button>
-  </main>
+      <button class="back-btn" onclick="backToOrders()">⬅ Back</button>
+    </main>
 
-</div>
+  </div> <!-- ✅ END summaryPage -->
+
+</div> <!-- ✅ END mainReceives -->
 
   <!-- ================= VOID AUTH MODAL ================= -->
 <div id="voidAuthModal" class="modal hidden">
@@ -2057,6 +2055,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
