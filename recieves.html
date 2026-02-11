@@ -545,6 +545,102 @@ header{
   line-height: 1.5;
 }
 
+/* ===== MAIN CONTAINER ===== */
+.modern-dashboard-container {
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  padding: 25px;
+  border-radius: 18px;
+  margin: 20px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+  color: #fff;
+}
+
+/* ===== TOP FLEX AREA ===== */
+.dashboard-top {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+/* ===== REVENUE CARDS ===== */
+.revenue-dashboard {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  flex: 3;
+}
+
+.rev-card {
+  background: rgba(255,255,255,0.05);
+  padding: 18px;
+  border-radius: 14px;
+  min-width: 140px;
+  flex: 1;
+  backdrop-filter: blur(10px);
+  transition: 0.3s ease;
+}
+
+.rev-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255,255,255,0.08);
+}
+
+.rev-title {
+  font-size: 13px;
+  opacity: 0.7;
+  margin-bottom: 6px;
+}
+
+.rev-value {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* ===== LIVE INFO PANEL ===== */
+.live-info-container {
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  padding: 20px;
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.live-info {
+  text-align: center;
+}
+
+.clock-line {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.shift-line,
+.user-line {
+  font-size: 14px;
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+
+/* ===== SUMMARY CARD MODERN ===== */
+.modern-summary-card {
+  margin-top: 25px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-radius: 14px;
+  padding: 20px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.modern-summary-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
 
 </style>
 
@@ -570,59 +666,68 @@ header{
 
 <div id="mainReceives">
 
-<!-- ================= ORDER PAGE ================= -->
-<div id="orderPage">
+  <!-- ================= ORDER PAGE ================= -->
+  <div id="orderPage">
 
-  <!-- ===== DASHBOARD WRAPPER ===== -->
-  <section class="dashboard-wrapper">
+    <!-- ===== MAIN DASHBOARD CONTAINER ===== -->
+    <div class="modern-dashboard-container">
 
-    <!-- ===== Revenue Cards ===== -->
-    <div class="revenue-dashboard">
-      <div class="rev-card">
-        <div class="rev-title">Revenue</div>
-        <div class="rev-value" id="revTotal">Rp 0</div>
+      <!-- ===== TOP DASHBOARD AREA ===== -->
+      <section class="dashboard-top">
+
+        <!-- Revenue Cards -->
+        <div class="revenue-dashboard">
+          <div class="rev-card">
+            <div class="rev-title">Revenue</div>
+            <div class="rev-value" id="revTotal">Rp 0</div>
+          </div>
+
+          <div class="rev-card">
+            <div class="rev-title">Orders</div>
+            <div class="rev-value" id="revOrders">0</div>
+          </div>
+
+          <div class="rev-card">
+            <div class="rev-title">OPEN</div>
+            <div class="rev-value" id="revOpen">0</div>
+          </div>
+
+          <div class="rev-card">
+            <div class="rev-title">PAID</div>
+            <div class="rev-value" id="revPaid">0</div>
+          </div>
+        </div>
+
+        <!-- Live Info Panel -->
+        <div class="live-info-container">
+          <div class="live-info">
+            <div class="clock-line">
+              <span class="clock-icon">🕒</span>
+              <span id="liveClock">00:00:00</span>
+            </div>
+            <div class="shift-line">
+              <span id="shiftInfo">Shift: -</span>
+            </div>
+            <div class="user-line">
+              <span id="userInfo">User: -</span>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Summary Card -->
+      <div class="menu-card modern-summary-card" onclick="renderSummaryPage()">
+        <div class="card-icon">📊</div>
+        <div class="card-title">Summary</div>
+        <div class="card-desc">Lihat ringkasan laporan</div>
       </div>
 
-      <div class="rev-card">
-        <div class="rev-title">Orders</div>
-        <div class="rev-value" id="revOrders">0</div>
-      </div>
-
-      <div class="rev-card">
-        <div class="rev-title">OPEN</div>
-        <div class="rev-value" id="revOpen">0</div>
-      </div>
-
-      <div class="rev-card">
-        <div class="rev-title">PAID</div>
-        <div class="rev-value" id="revPaid">0</div>
-      </div>
     </div>
 
-    <!-- ===== User Live Info Panel ===== -->
-    <aside class="live-info-panel">
-      <div class="live-info">
-        <div class="clock-line">
-          <span class="clock-icon">🕒</span>
-          <span id="liveClock">00:00:00</span>
-        </div>
-        <div class="shift-line">
-          <span id="shiftInfo">Shift: -</span>
-        </div>
-        <div class="user-line">
-          <span id="userInfo">User: -</span>
-        </div>
-      </div>
-    </aside>
-
-  </section>
-
-  <!-- ===== Summary Card ===== -->
-  <div class="menu-card" onclick="renderSummaryPage()">
-    <div class="card-icon">📊</div>
-    <div class="card-title">Summary</div>
-    <div class="card-desc">Lihat ringkasan laporan</div>
   </div>
+</div>
+
 
   <!-- ===== Orders Section ===== -->
   <main class="container">
@@ -1952,5 +2057,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
