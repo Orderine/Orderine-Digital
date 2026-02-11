@@ -571,6 +571,35 @@ header{
   font-size: 14px;
 }
 
+  .dashboard-wrapper {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.live-info-panel {
+  min-width: 200px;
+}
+
+.live-info {
+  background: #111;
+  color: #fff;
+  padding: 15px;
+  border-radius: 12px;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.live-info div {
+  margin-bottom: 6px;
+}
+
+.clock-line {
+  font-weight: bold;
+  font-size: 16px;
+}
+
 </style>
 
 </head>
@@ -595,9 +624,13 @@ header{
 
 <div id="mainReceives">
 
-  <!-- ================= ORDER PAGE ================= -->
-  <div id="orderPage">
+<!-- ================= ORDER PAGE ================= -->
+<div id="orderPage">
 
+  <!-- ===== DASHBOARD WRAPPER ===== -->
+  <section class="dashboard-wrapper">
+
+    <!-- ===== Revenue Cards ===== -->
     <div class="revenue-dashboard">
       <div class="rev-card">
         <div class="rev-title">Revenue</div>
@@ -620,50 +653,67 @@ header{
       </div>
     </div>
 
-    <!-- Card ke Summary -->
-    <div class="menu-card" onclick="renderSummaryPage()">
-      <div class="card-icon">📊</div>
-      <div class="card-title">Summary</div>
-      <div class="card-desc">Lihat ringkasan laporan</div>
-    </div>
+    <!-- ===== User Live Info Panel ===== -->
+    <aside class="live-info-panel">
+      <div class="live-info">
+        <div class="clock-line">
+          <span class="clock-icon">🕒</span>
+          <span id="liveClock">00:00:00</span>
+        </div>
+        <div class="shift-line">
+          <span id="shiftInfo">Shift: -</span>
+        </div>
+        <div class="user-line">
+          <span id="userInfo">User: -</span>
+        </div>
+      </div>
+    </aside>
 
-    <main class="container">
-      <h2 style="margin-bottom:16px">📥 Incoming Orders</h2>
-      <div id="ordersBox"></div>
-    </main>
+  </section>
 
+  <!-- ===== Summary Card ===== -->
+  <div class="menu-card" onclick="renderSummaryPage()">
+    <div class="card-icon">📊</div>
+    <div class="card-title">Summary</div>
+    <div class="card-desc">Lihat ringkasan laporan</div>
   </div>
 
+  <!-- ===== Orders Section ===== -->
+  <main class="container">
+    <h2 style="margin-bottom:16px">📥 Incoming Orders</h2>
+    <div id="ordersBox"></div>
+  </main>
 
-  <!-- ================= SUMMARY PAGE ================= -->
-  <div id="summaryPage" style="display:none;">
+</div>
 
-    <main class="container">
-      <h2 style="margin-bottom:16px">📊 Summary</h2>
 
-      <div id="summaryContent"></div>
+<!-- ================= SUMMARY PAGE ================= -->
+<div id="summaryPage" style="display:none;">
+
+  <!-- ===== User Info Tetap Tampil ===== -->
+  <aside class="live-info-panel">
+    <div class="live-info">
+      <div class="clock-line">
+        <span class="clock-icon">🕒</span>
+        <span id="liveClockSummary">00:00:00</span>
+      </div>
+      <div class="shift-line">
+        <span id="shiftInfoSummary">Shift: -</span>
+      </div>
+      <div class="user-line">
+        <span id="userInfoSummary">User: -</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="container">
+    <h2 style="margin-bottom:16px">📊 Summary</h2>
+    <div id="summaryContent"></div>
 
     <button class="back-btn" onclick="backToOrders()">⬅ Back</button>
-
-    </main>
-
-  </div>
+  </main>
 
 </div>
-
-  <div class="live-info">
-  <div class="clock-line">
-    <span class="clock-icon">🕒</span>
-    <span id="liveClock">00:00:00</span>
-  </div>
-  <div class="shift-line">
-    <span id="shiftInfo">Shift: -</span>
-  </div>
-  <div class="user-line">
-    <span id="userInfo">User: -</span>
-  </div>
-</div>
-
 
   <!-- ================= VOID AUTH MODAL ================= -->
 <div id="voidAuthModal" class="modal hidden">
@@ -1854,9 +1904,8 @@ async function renderMonthlySummary() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   initVoidModalElements();
-  startLiveClock();
-  detectShift();
-  setUserInfo(currentUser);
+  initClock();
+  initUserInfo();
 
 
   // ===== SESSION CHECK =====
@@ -1911,13 +1960,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     "Shift: " + shift;
 }
 
-  function setUserInfo(user) {
-  if (!user) return;
+ async function initUserInfo() {
+  try {
+    const session = await MENUVA_DB.getSession();
 
-  const roleLabel = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+    if (!session) {
+      document.getElementById("userInfo").textContent =
+        "User: Unknown";
+      return;
+    }
 
-  document.getElementById("userInfo").textContent =
-    `User: ${user.name} (${roleLabel})`;
+    const name = session.name || session.email || "User";
+    const role = session.role || "-";
+
+    document.getElementById("userInfo").textContent =
+      `User: ${name} (${role})`;
+
+  } catch (err) {
+    console.error("Gagal ambil session:", err);
+  }
 }
 
 
@@ -1928,9 +1989,3 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
-
-
-
-
-
-
