@@ -282,7 +282,7 @@ header{
   <div class="page-container">
 
     <!-- ================= TOP REVENUE ================= -->
-    <section class="dashboard-top">
+    <section class="revenue-dashboard">
       <div class="rev-card">
         <div class="rev-title">Revenue</div>
         <div class="rev-value" id="revTotal">Rp 0</div>
@@ -1681,7 +1681,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const itemMap = {};
 
   todayOrders.forEach(order => {
-    totalRevenue += Number(order.total || 0);
+  totalRevenue += Number(order.grandTotal || 0);
 
     order.items?.forEach(item => {
       if (!item.void) {
@@ -1710,11 +1710,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderMiniChart(todayOrders);
 }
 
-  function renderMiniChart(todayOrders) {
+ function renderMiniChart(todayOrders) {
 
-  const ctx = document
-    .getElementById("miniRevenueChart")
-    .getContext("2d");
+  const canvas = document.getElementById("revenueTrendChart");
+  if (!canvas) {
+    console.warn("Chart canvas tidak ditemukan");
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
 
   const hourlyRevenue = Array(24).fill(0);
 
@@ -1752,6 +1756,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 </script>
   
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div id="summaryPage" style="display:none;"></div>
 
 </body>
 </html>
