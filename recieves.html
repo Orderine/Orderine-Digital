@@ -1877,21 +1877,38 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 });
 
-  function startLiveClock() {
-  const clockEl = document.getElementById("liveClock");
+ function initClock() {
 
-  function updateClock() {
+  const clockEl = document.getElementById("liveClock");
+  const clockElSummary = document.getElementById("liveClockSummary");
+  const shiftEl = document.getElementById("shiftInfo");
+
+  function updateAll() {
     const now = new Date();
 
-    const time = now.toLocaleTimeString("id-ID", {
-      hour12: false
-    });
+    // ===== CLOCK =====
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
 
-    clockEl.textContent = time;
+    const timeString = `${hours}:${minutes}:${seconds}`;
+
+    if (clockEl) clockEl.textContent = timeString;
+    if (clockElSummary) clockElSummary.textContent = timeString;
+
+    // ===== SHIFT =====
+    const hour = now.getHours();
+    let shift = "Morning";
+
+    if (hour >= 6 && hour < 14) shift = "Morning";
+    else if (hour >= 14 && hour < 22) shift = "Afternoon";
+    else shift = "Night";
+
+    if (shiftEl) shiftEl.textContent = "Shift: " + shift;
   }
 
-  updateClock();
-  setInterval(updateClock, 1000);
+  updateAll();
+  setInterval(updateAll, 1000);
 }
 
   function detectShift() {
@@ -1935,4 +1952,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
