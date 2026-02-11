@@ -1040,16 +1040,17 @@ async function authorizeVoid(pin) {
 
 
 async function voidOrderItem(orderId, itemIndex, admin, reason) {
-  const order = await MENUVA_DB.get("ordersData", orderId);
+
+  const order = await MENUVA_DB.get("ordersData", Number(orderId));
   if (!order) return;
 
-  const item = order.items[itemIndex];
+  const item = order.items?.[itemIndex];
   if (!item) return;
 
   const voidData = {
     type: "VOID",
     qty: item.qty,
-    amount: item.price * item.qty,
+    amount: (item.price || 0) * (item.qty || 0),
     reason: reason,
     voidedBy: {
       id: admin.id,
@@ -1060,9 +1061,9 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
   };
 
   // simpan nilai sebelum void
-  item.totalBeforeVoid = item.price * item.qty;
+  item.totalBeforeVoid = voidData.amount;
 
-  // nolkan qty & harga
+  // kosongkan qty & harga
   item.qty = 0;
   item.price = 0;
   item.total = 0;
@@ -1070,19 +1071,20 @@ async function voidOrderItem(orderId, itemIndex, admin, reason) {
   item.void = true;
   item.voidInfo = voidData;
 
-  // 🔥 RECALCULATE TOTAL
+  // 🔥 RECALCULATE
   order.subtotal = order.items.reduce((sum, i) => {
     return sum + ((i.price || 0) * (i.qty || 0));
   }, 0);
 
   order.grandTotal = order.subtotal - (order.discount || 0);
+  if (order.grandTotal < 0) order.grandTotal = 0;
 
-  await MENUVA_DB.put("ordersData", order);
+  // ✅ PAKAI add BUKAN put
+  await MENUVA_DB.add("ordersData", order);
 
-await loadOrders();   // ← INI YANG BENAR
-notifyOrdersUpdated();
-
+  await loadOrders(); // reload dari DB
 }
+
 
 
 async function getAllVoidItems() {
@@ -1298,7 +1300,7 @@ if (e.target.classList.contains("btn-submit")) {
   order.status = "sent";
   order.sentTime = Date.now();
 
- await MENUVA_DB.put("ordersData", order);
+ await MENUVA_DB.add("ordersData", order);
 
   alert("Order berhasil dikirim ke kitchen & bar 🚀");
 
@@ -1319,7 +1321,7 @@ if (e.target.classList.contains("btn-paid")) {
   order.paidTime = Date.now();
   order.locked = true; // 🔥 KUNCI
 
-  await MENUVA_DB.put("ordersData", order);
+  await MENUVA_DB.add("ordersData", order);
 
   window.location.href = `paid-manager.html?id=${orderId}`;
 }
@@ -1814,3 +1816,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
