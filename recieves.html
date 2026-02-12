@@ -726,42 +726,36 @@ header{
 }
 
 /* ===== CARD BASE ===== */
-/* semua card */
 .card-square,
 .card-rectangle {
-  background: #fff;
-  border-radius: 12px;
+  background: linear-gradient(145deg, #111111, #1a1a1a);
+  color: #f1f1f1;
+
+  border-radius: 14px;
   padding: 18px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+
+  border: 1px solid rgba(255,255,255,0.06);
 
   display: flex;
   flex-direction: column;
 
   height: 100%;
-  min-height: 220px; /* tinggi minimum stabil */
-}
-/* FIX SIZE KOTAK */
-.card-square {
-  height: 220px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-/* PERSEGI PANJANG */
-.card-rectangle {
   min-height: 220px;
+
+  transition: all 0.25s ease;
 }
 
-  .card-square,
-.card-rectangle {
-  color: #e2e8f0; /* 🔥 text terang */
-}
-
-  .card-rectangle h3 {
-  color: #38bdf8;
-  margin-bottom: 15px;
+/* hover effect elegan */
+.card-square:hover,
+.card-rectangle:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 8px 20px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
 
@@ -833,6 +827,24 @@ header{
   transform: scale(0.97);
   box-shadow: 0 5px 15px rgba(37,99,235,0.3);
 }
+
+  .card-square h3,
+.card-rectangle h3 {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+#liveClock {
+  font-size: 28px;
+  font-weight: bold;
+  color: #4fd1c5; /* aksen elegan (cyan premium) */
+}
+
+#shiftInfo,
+#userInfo {
+  color: #bbbbbb;
+}
+
 
 /* live card center */
 .live-card {
@@ -2367,6 +2379,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
