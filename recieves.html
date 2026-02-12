@@ -717,11 +717,12 @@ header{
 
 
 /* ===== ROW GRID ===== */
+/* container row */
 .dashboard-row {
   display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: 20px;
-  margin-bottom: 25px; /* 🔥 kasih jarak antar row */
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: stretch; /* penting: semua card sama tinggi */
 }
 
 
@@ -828,6 +829,36 @@ header{
   box-shadow: 0 5px 15px rgba(37,99,235,0.3);
 }
 
+  /* live card isi ditengah */
+.live-card {
+  justify-content: center;
+}
+
+/* chart card */
+.revenue-chart-card {
+  height: 100%; /* paksa ikut tinggi grid */
+}
+
+/* wrapper canvas */
+.revenue-chart-card canvas {
+  width: 100% !important;
+  height: 100% !important;
+  flex-grow: 1;
+}
+
+/* TABLET portrait */
+@media (max-width: 1024px) {
+  .dashboard-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* MOBILE */
+@media (max-width: 640px) {
+  .dashboard-row {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
 
 </head>
@@ -2333,6 +2364,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
