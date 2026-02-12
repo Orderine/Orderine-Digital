@@ -1901,7 +1901,8 @@ if (e.target.classList.contains("btn-paid")) {
 
   await MENUVA_DB.add("ordersData", order);
 
-  window.location.href = `paid-manager.html?id=${orderId}`;
+  openCashModal(orderId);
+
 }
 });
 
@@ -2678,3 +2679,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
