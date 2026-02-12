@@ -893,6 +893,61 @@ header{
   }
 }
 
+  /* OVERLAY */
+.modal-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.7);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+
+/* MODAL BOX */
+.cash-modal{
+  background:#111;
+  color:#fff;
+  padding:20px;
+  border-radius:12px;
+  width:320px;
+  box-shadow:0 0 20px rgba(0,0,0,0.5);
+}
+
+/* HEADER */
+.modal-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:15px;
+}
+
+/* BODY */
+.payment-row{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:12px;
+  align-items:center;
+}
+
+.payment-row input{
+  width:140px;
+  padding:6px;
+  background:#222;
+  border:1px solid #444;
+  color:#fff;
+  border-radius:6px;
+}
+
+/* CLOSE BUTTON */
+.modal-close{
+  background:none;
+  border:none;
+  color:#fff;
+  font-size:18px;
+  cursor:pointer;
+}
+
 </style>
 
 </head>
@@ -1057,6 +1112,49 @@ header{
     Confirm
   </button>
 </div>
+
+  </div>
+</div>
+
+  <!-- =========================
+MODAL PEMBAYARAN CASH
+========================= -->
+<div id="cashPaymentModal" class="modal-overlay" style="display:none;">
+  <div class="modal-content cash-modal">
+
+    <div class="modal-header">
+      <h3>💰 Pembayaran Cash</h3>
+      <button id="closeCashModal" class="modal-close">✕</button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="payment-row">
+        <span>Total Tagihan</span>
+        <strong id="cashTotal">Rp 0</strong>
+      </div>
+
+      <div class="payment-row">
+        <span>Uang Diterima</span>
+        <input 
+          type="number" 
+          id="cashReceived"
+          placeholder="Masukkan jumlah uang"
+        />
+      </div>
+
+      <div class="payment-row">
+        <span>Kembalian</span>
+        <strong id="cashChange">Rp 0</strong>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button id="confirmCashBtn" class="btn btn-paid">
+        ✔ Konfirmasi Pembayaran
+      </button>
+    </div>
 
   </div>
 </div>
@@ -2494,12 +2592,82 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.location.href = "admin.html";
   }
 </script>
+<script>
+let selectedOrder = null;
+
+// buka modal saat klik tombol Paid
+document.addEventListener("click", async (e)=>{
+
+  const btn = e.target.closest(".btn-paid");
+  if(!btn) return;
+
+  const orderId = btn.dataset.order;
+
+  const order = await MENUVA_DB.get("ordersData", orderId);
+
+  selectedOrder = order;
+
+  document.getElementById("cashTotal").textContent =
+    "Rp " + Number(order.grandTotal).toLocaleString("id-ID");
+
+  document.getElementById("cashReceived").value = "";
+  document.getElementById("cashChange").textContent = "Rp 0";
+
+  document.getElementById("cashPaymentModal").style.display="flex";
+
+});
+
+  document.getElementById("cashReceived").addEventListener("input",(e)=>{
+
+  const received = Number(e.target.value || 0);
+  const total = Number(selectedOrder.grandTotal);
+
+  const change = received - total;
+
+  document.getElementById("cashChange").textContent =
+    "Rp " + Math.max(0, change).toLocaleString("id-ID");
+
+});
+
+  document.getElementById("confirmCashBtn")
+.addEventListener("click", async ()=>{
+
+  const received =
+    Number(document.getElementById("cashReceived").value);
+
+  if(received < selectedOrder.grandTotal){
+    alert("Uang tidak cukup!");
+    return;
+  }
+
+  selectedOrder.status = "paid";
+  selectedOrder.paidAt = Date.now();
+  selectedOrder.paymentMethod = "cash";
+  selectedOrder.cashReceived = received;
+  selectedOrder.cashChange =
+    received - selectedOrder.grandTotal;
+
+  await MENUVA_DB.put("ordersData", selectedOrder);
+
+  document.getElementById("cashPaymentModal").style.display="none";
+
+  loadOrders(); // refresh list
+
+});
+
+  document.getElementById("closeCashModal")
+.addEventListener("click", ()=>{
+  document.getElementById("cashPaymentModal").style.display="none";
+});
+
+</script>
   
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <div id="summaryPage" style="display:none;"></div>
 
 </body>
 </html>
+
 
 
 
