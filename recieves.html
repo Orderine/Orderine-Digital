@@ -634,12 +634,22 @@ header{
   padding: 20px;
   cursor: pointer;
   transition: 0.3s ease;
+
+  /* CENTER CONTENT */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;  /* vertical center */
+  align-items: center;      /* horizontal center */
+  text-align: center;       /* center text */
+
+  min-height: 120px;        /* optional: biar center kelihatan jelas */
 }
 
 .modern-summary-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(0,0,0,0.25);
 }
+
 
   .modern-dashboard-container {
   display: grid;
@@ -2388,6 +2398,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
