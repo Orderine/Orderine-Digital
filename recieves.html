@@ -834,22 +834,31 @@ header{
   font-weight: 600;
 }
 
-#liveClock {
-  font-size: 28px;
-  font-weight: bold;
-  color: #4fd1c5; /* aksen elegan (cyan premium) */
+  /* container isi live card */
+.live-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  text-align: center;
+  gap: 6px;
 }
 
+/* clock */
+#liveClock {
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: bold;
+  color: #4fd1c5;
+  line-height: 1.2;
+}
+
+/* shift & user */
 #shiftInfo,
 #userInfo {
   color: #bbbbbb;
-}
-
-
-/* live card center */
-.live-card {
-  justify-content: center;
-  align-items: center;
+  font-size: clamp(13px, 2vw, 16px);
+  line-height: 1.3;
 }
 
 /* chart wrapper */
@@ -2379,6 +2388,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
