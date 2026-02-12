@@ -721,20 +721,25 @@ header{
 .dashboard-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  align-items: stretch; /* penting: semua card sama tinggi */
+  gap: 20px; /* ini jarak antar card */
+  margin-bottom: 20px;
 }
-
 
 /* ===== CARD BASE ===== */
+/* semua card */
 .card-square,
 .card-rectangle {
-  background: #1e293b;
-  border-radius: 18px;
-  padding: 20px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-}
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 
+  display: flex;
+  flex-direction: column;
+
+  height: 100%;
+  min-height: 220px; /* tinggi minimum stabil */
+}
 /* FIX SIZE KOTAK */
 .card-square {
   height: 220px;
@@ -829,36 +834,34 @@ header{
   box-shadow: 0 5px 15px rgba(37,99,235,0.3);
 }
 
-  /* live card isi ditengah */
+/* live card center */
 .live-card {
   justify-content: center;
+  align-items: center;
 }
 
-/* chart card */
-.revenue-chart-card {
-  height: 100%; /* paksa ikut tinggi grid */
-}
-
-/* wrapper canvas */
+/* chart wrapper */
 .revenue-chart-card canvas {
   width: 100% !important;
-  height: 100% !important;
+  height: auto !important;
   flex-grow: 1;
 }
 
-/* TABLET portrait */
+/* tablet portrait */
 @media (max-width: 1024px) {
   .dashboard-row {
     grid-template-columns: 1fr 1fr;
+    gap: 16px;
   }
 }
 
-/* MOBILE */
+/* mobile */
 @media (max-width: 640px) {
   .dashboard-row {
     grid-template-columns: 1fr;
   }
 }
+
 </style>
 
 </head>
@@ -2364,6 +2367,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
