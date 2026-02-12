@@ -2200,7 +2200,125 @@ async function renderMonthlySummary() {
   }).join("");
 }
 
+function renderRevenueTrendChart(allOrders) {
 
+  const canvas = document.getElementById("revenueTrendChart");
+  if (!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+
+  // fungsi ambil key tanggal lokal
+  function getLocalDateKey(timestamp) {
+    const d = new Date(Number(timestamp));
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  // ambil 7 hari terakhir berdasarkan tanggal lokal
+  const labels = [];
+  const revenueMap = {};
+
+  for (let i = 6; i >= 0; i--) {
+
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+
+    const key = getLocalDateKey(d.getTime());
+
+    labels.push(
+      d.toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "short"
+      })
+    );
+
+    revenueMap[key] = 0;
+  }
+
+  // jumlahkan revenue per tanggal
+  allOrders.forEach(order => {
+
+    if (!order.createdAt) return;
+
+    const key = getLocalDateKey(order.createdAt);
+
+    if (revenueMap.hasOwnProperty(key)) {
+
+      revenueMap[key] += Number(order.grandTotal || 0);
+
+    }
+
+  });
+
+  const data = Object.values(revenueMap);
+
+  console.log("RevenueMap:", revenueMap); // debug
+
+  // destroy chart lama
+  if (window.revenueChartInstance) {
+    window.revenueChartInstance.destroy();
+  }
+
+  // render chart
+  window.revenueChartInstance = new Chart(ctx, {
+
+    type: "line",
+
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        borderColor: "#4fd1c5",
+        backgroundColor: "rgba(79,209,197,0.15)",
+        tension: 0.4,
+        fill: true,
+        pointRadius: 5,
+        pointHoverRadius: 7
+      }]
+    },
+
+    options: {
+
+      responsive: true,
+      maintainAspectRatio: false,
+
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx =>
+              "Rp " + ctx.raw.toLocaleString("id-ID")
+          }
+        }
+      },
+
+      scales: {
+
+        x: {
+          ticks: { color: "#aaa" },
+          grid: { color: "rgba(255,255,255,0.05)" }
+        },
+
+        y: {
+          ticks: {
+            color: "#aaa",
+            callback: v =>
+              "Rp " + v.toLocaleString("id-ID")
+          },
+          grid: { color: "rgba(255,255,255,0.05)" }
+        }
+
+      }
+
+    }
+
+  });
+
+}
+
+  
 document.addEventListener("DOMContentLoaded", async () => {
 
   initVoidModalElements();
@@ -2372,106 +2490,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 }
 
-function renderRevenueTrendChart(allOrders) {
-
-  const canvas = document.getElementById("revenueTrendChart");
-  if (!canvas) {
-    console.warn("Chart canvas tidak ditemukan");
-    return;
-  }
-
-  const ctx = canvas.getContext("2d");
-
-  // ambil tanggal 7 hari terakhir
-  const labels = [];
-  const revenueMap = {};
-
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setHours(0,0,0,0);
-    d.setDate(d.getDate() - i);
-
-    const key = d.toISOString().slice(0,10);
-    labels.push(d.toLocaleDateString("id-ID", { weekday: "short" }));
-    revenueMap[key] = 0;
-  }
-
-  // hitung revenue per hari
-  allOrders.forEach(order => {
-
-    if (!order.createdAt) return;
-
-    const d = new Date(Number(order.createdAt));
-    d.setHours(0,0,0,0);
-
-    const key = d.toISOString().slice(0,10);
-
-    if (revenueMap.hasOwnProperty(key)) {
-      revenueMap[key] += Number(order.total || 0);
-    }
-
-  });
-
-  const data = Object.values(revenueMap);
-
-  // destroy chart lama kalau ada
-  if (window.revenueChartInstance) {
-    window.revenueChartInstance.destroy();
-  }
-
-  // buat chart baru
-  window.revenueChartInstance = new Chart(ctx, {
-
-    type: "line",
-
-    data: {
-      labels: labels,
-      datasets: [{
-        label: "Revenue",
-        data: data,
-
-        borderColor: "#4fd1c5",
-        backgroundColor: "rgba(79,209,197,0.15)",
-
-        tension: 0.4,
-        fill: true,
-        pointRadius: 4,
-        pointHoverRadius: 6
-      }]
-    },
-
-    options: {
-
-      responsive: true,
-      maintainAspectRatio: false,
-
-      plugins: {
-        legend: { display: false }
-      },
-
-      scales: {
-
-        x: {
-          ticks: { color: "#aaa" },
-          grid: { color: "rgba(255,255,255,0.05)" }
-        },
-
-        y: {
-          ticks: {
-            color: "#aaa",
-            callback: value => "Rp " + value.toLocaleString("id-ID")
-          },
-          grid: { color: "rgba(255,255,255,0.05)" }
-        }
-
-      }
-
-    }
-
-  });
-
-}
-
   function goBackToAdmin() {
     window.location.href = "admin.html";
   }
@@ -2482,5 +2500,6 @@ function renderRevenueTrendChart(allOrders) {
 
 </body>
 </html>
+
 
 
