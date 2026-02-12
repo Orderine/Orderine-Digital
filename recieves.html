@@ -2201,15 +2201,30 @@ async function renderMonthlySummary() {
 }
 
 
-// ================= DOM READY =================
-
 document.addEventListener("DOMContentLoaded", async () => {
+
   initVoidModalElements();
   initClock();
   initUserInfo();
-  updateTodayInsights();
 
+  // ambil semua order dari DB
+  let allOrders = [];
 
+  try {
+
+    allOrders = await MENUVA_DB.getAllOrders(); // ← pastikan fungsi ini ada
+
+    // render insights
+    updateTodayInsights(allOrders);
+
+    // render revenue trend 7 hari
+    renderRevenueTrendChart(allOrders);
+
+  } catch (err) {
+
+    console.error("❌ gagal load orders:", err);
+
+  }
 
   // ===== SESSION CHECK =====
   const btn = document.getElementById("btnBackToAdmin");
@@ -2233,6 +2248,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
 });
+
 
  function initClock() {
 
@@ -2348,7 +2364,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderMiniChart(todayOrders);
 }
 
- function renderMiniChart(todayOrders) {
+function renderRevenueTrendChart(allOrders) {
 
   const canvas = document.getElementById("revenueTrendChart");
   if (!canvas) {
@@ -2358,34 +2374,94 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const ctx = canvas.getContext("2d");
 
-  const hourlyRevenue = Array(24).fill(0);
+  // ambil tanggal 7 hari terakhir
+  const labels = [];
+  const revenueMap = {};
 
-  todayOrders.forEach(order => {
-    const hour = new Date(Number(order.createdAt)).getHours();
-    hourlyRevenue[hour] += Number(order.total || 0);
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setHours(0,0,0,0);
+    d.setDate(d.getDate() - i);
+
+    const key = d.toISOString().slice(0,10);
+    labels.push(d.toLocaleDateString("id-ID", { weekday: "short" }));
+    revenueMap[key] = 0;
+  }
+
+  // hitung revenue per hari
+  allOrders.forEach(order => {
+
+    if (!order.createdAt) return;
+
+    const d = new Date(Number(order.createdAt));
+    d.setHours(0,0,0,0);
+
+    const key = d.toISOString().slice(0,10);
+
+    if (revenueMap.hasOwnProperty(key)) {
+      revenueMap[key] += Number(order.total || 0);
+    }
+
   });
 
-  new Chart(ctx, {
+  const data = Object.values(revenueMap);
+
+  // destroy chart lama kalau ada
+  if (window.revenueChartInstance) {
+    window.revenueChartInstance.destroy();
+  }
+
+  // buat chart baru
+  window.revenueChartInstance = new Chart(ctx, {
+
     type: "line",
+
     data: {
-      labels: [...Array(24).keys()],
+      labels: labels,
       datasets: [{
-        data: hourlyRevenue,
-        borderColor: "#4e9eff",
-        backgroundColor: "rgba(78,158,255,0.1)",
+        label: "Revenue",
+        data: data,
+
+        borderColor: "#4fd1c5",
+        backgroundColor: "rgba(79,209,197,0.15)",
+
         tension: 0.4,
-        fill: true
+        fill: true,
+        pointRadius: 4,
+        pointHoverRadius: 6
       }]
     },
+
     options: {
+
       responsive: true,
-      plugins: { legend: { display: false }},
+      maintainAspectRatio: false,
+
+      plugins: {
+        legend: { display: false }
+      },
+
       scales: {
-        x: { display: false },
-        y: { display: false }
+
+        x: {
+          ticks: { color: "#aaa" },
+          grid: { color: "rgba(255,255,255,0.05)" }
+        },
+
+        y: {
+          ticks: {
+            color: "#aaa",
+            callback: value => "Rp " + value.toLocaleString("id-ID")
+          },
+          grid: { color: "rgba(255,255,255,0.05)" }
+        }
+
       }
+
     }
+
   });
+
 }
 
   function goBackToAdmin() {
@@ -2398,15 +2474,3 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
