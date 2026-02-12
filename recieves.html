@@ -1151,7 +1151,7 @@ MODAL PEMBAYARAN CASH
     </div>
 
     <div class="modal-footer">
-      <button id="confirmCashBtn" class="btn btn-paid">
+      <button id="confirmCashBtn" class="btn btn-confirm">
         ✔ Konfirmasi Pembayaran
       </button>
     </div>
@@ -1601,66 +1601,52 @@ document.getElementById("cashReceived").oninput = (e) => {
 
 
 /* ================= CONFIRM PAYMENT ================= */
-document.getElementById("confirmCashBtn").onclick = async (e) => {
+const confirmBtn = document.getElementById("confirmCashBtn");
+
+// hapus onclick lama jika ada
+confirmBtn.onclick = null;
+
+// pasang handler baru
+confirmBtn.addEventListener("click", async function(e) {
 
   e.stopPropagation();
+  e.preventDefault();
 
-  try {
-
-    if (!activeCashOrder) {
-      console.error("Confirm gagal: activeCashOrder kosong");
-      return;
-    }
-
-    const received =
-      Number(document.getElementById("cashReceived").value) || 0;
-
-    const total =
-      Number(activeCashOrder.grandTotal) || 0;
-
-    if (received < total) {
-      alert("Uang diterima kurang");
-      return;
-    }
-
-    // update order
-    activeCashOrder.status = "paid";
-    activeCashOrder.paidTime = Date.now();
-    activeCashOrder.paymentMethod = "cash";
-    activeCashOrder.cashReceived = received;
-    activeCashOrder.cashChange = received - total;
-    activeCashOrder.locked = true;
-
-    // simpan ke DB (pakai ADD sesuai mother DB)
-    await MENUVA_DB.add("ordersData", activeCashOrder);
-
-    // tutup modal
-    document.getElementById("cashPaymentModal").style.display = "none";
-
-    // reset state
-    activeCashOrder = null;
-
-    // refresh UI
-    if (typeof loadOrders === "function") {
-      await loadOrders();
-    }
-
-    if (typeof notifyOrdersUpdated === "function") {
-      notifyOrdersUpdated();
-    }
-
-    console.log("Pembayaran cash berhasil");
-
-  }
-  catch (err) {
-
-    console.error("Gagal simpan pembayaran:", err);
-
-    alert("Gagal menyimpan pembayaran");
-
+  if (!activeCashOrder) {
+    console.error("Active order kosong");
+    return;
   }
 
-};
+  const received =
+    Number(document.getElementById("cashReceived").value) || 0;
+
+  const total =
+    Number(activeCashOrder.grandTotal) || 0;
+
+  if (received < total) {
+    alert("Uang kurang");
+    return;
+  }
+
+  activeCashOrder.status = "paid";
+  activeCashOrder.paidTime = Date.now();
+  activeCashOrder.paymentMethod = "cash";
+  activeCashOrder.cashReceived = received;
+  activeCashOrder.cashChange = received - total;
+  activeCashOrder.locked = true;
+
+  await MENUVA_DB.add("ordersData", activeCashOrder);
+
+  document.getElementById("cashPaymentModal").style.display = "none";
+
+  activeCashOrder = null;
+
+  await loadOrders();
+
+  if (typeof notifyOrdersUpdated === "function")
+    notifyOrdersUpdated();
+
+});
 
 /* ================== VOID AUTH ================== */
 async function authorizeVoid(pin) {
@@ -2796,6 +2782,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
