@@ -2207,44 +2207,46 @@ document.addEventListener("DOMContentLoaded", async () => {
   initClock();
   initUserInfo();
 
-  // ambil semua order dari DB
-  let allOrders = [];
-
   try {
 
-    allOrders = await MENUVA_DB.getAllOrders(); // ← pastikan fungsi ini ada
+    const allOrders = await updateTodayInsights();
 
-    // render insights
-    updateTodayInsights(allOrders);
-
-    // render revenue trend 7 hari
     renderRevenueTrendChart(allOrders);
 
   } catch (err) {
 
-    console.error("❌ gagal load orders:", err);
+    console.error("❌ gagal load dashboard:", err);
 
   }
 
   // ===== SESSION CHECK =====
+
   const btn = document.getElementById("btnBackToAdmin");
 
   try {
+
     const session = await MENUVA_DB.getSession();
     const role = session?.role;
 
     if (role === "manager" || role === "owner") {
+
       if (btn) {
         btn.style.display = "inline-block";
         btn.onclick = goBackToAdmin;
       }
+
     } else {
+
       if (btn) btn.remove();
+
     }
 
   } catch (err) {
+
     console.error("❌ gagal ambil session", err);
+
     if (btn) btn.remove();
+
   }
 
 });
@@ -2362,6 +2364,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("topItemStat").textContent = topItem;
 
   renderMiniChart(todayOrders);
+
+  return orders;
 }
 
 function renderRevenueTrendChart(allOrders) {
@@ -2474,3 +2478,4 @@ function renderRevenueTrendChart(allOrders) {
 
 </body>
 </html>
+
