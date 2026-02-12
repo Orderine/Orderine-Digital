@@ -1501,7 +1501,86 @@ function renderOrdersByDate(data, date) {
   });
 
   updateRevenueDashboard(data, date);
+  // setelah semua order dirender
+  attachPaidButtonEvents();
+
 }
+
+  function attachPaidButtonEvents() {
+
+  document.querySelectorAll(".btn-paid").forEach(btn => {
+
+    btn.onclick = () => {
+
+      const orderId = btn.dataset.order;
+
+      const order = cachedOrders.find(o => o.id == orderId);
+
+      if (!order) {
+        console.error("Order tidak ditemukan:", orderId);
+        return;
+      }
+
+      openCashPaymentModal(order);
+
+    };
+
+  });
+
+}
+
+  let activeCashOrder = null;
+
+function openCashPaymentModal(order) {
+
+  activeCashOrder = order;
+
+  document.getElementById("cashTotal").textContent =
+    formatHarga(order.grandTotal);
+
+  document.getElementById("cashReceived").value = "";
+  document.getElementById("cashChange").textContent = formatHarga(0);
+
+  document.getElementById("cashPaymentModal").style.display = "flex";
+
+}
+
+  document.getElementById("closeCashModal").onclick = () => {
+  document.getElementById("cashPaymentModal").style.display = "none";
+};
+
+  document.getElementById("cashReceived").oninput = () => {
+
+  const received =
+    Number(document.getElementById("cashReceived").value) || 0;
+
+  const total =
+    Number(activeCashOrder?.grandTotal) || 0;
+
+  const change = received - total;
+
+  document.getElementById("cashChange").textContent =
+    formatHarga(change > 0 ? change : 0);
+
+};
+
+  document.getElementById("confirmCashBtn").onclick = async () => {
+
+  if (!activeCashOrder) return;
+
+  activeCashOrder.status = "paid";
+  activeCashOrder.paidTime = Date.now();
+  activeCashOrder.paymentMethod = "cash";
+
+  await MENUVA_DB.put("ordersData", activeCashOrder);
+
+  document.getElementById("cashPaymentModal").style.display = "none";
+
+  loadOrders();
+  notifyOrdersUpdated();
+
+};
+
 
 /* ================== VOID AUTH ================== */
 async function authorizeVoid(pin) {
@@ -2592,82 +2671,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.location.href = "admin.html";
   }
 </script>
-<script>
-let selectedOrder = null;
 
-// buka modal saat klik tombol Paid
-document.addEventListener("click", async (e)=>{
-
-  const btn = e.target.closest(".btn-paid");
-  if(!btn) return;
-
-  const orderId = btn.dataset.order;
-
-  const order = await MENUVA_DB.get("ordersData", orderId);
-
-  selectedOrder = order;
-
-  document.getElementById("cashTotal").textContent =
-    "Rp " + Number(order.grandTotal).toLocaleString("id-ID");
-
-  document.getElementById("cashReceived").value = "";
-  document.getElementById("cashChange").textContent = "Rp 0";
-
-  document.getElementById("cashPaymentModal").style.display="flex";
-
-});
-
-  document.getElementById("cashReceived").addEventListener("input",(e)=>{
-
-  const received = Number(e.target.value || 0);
-  const total = Number(selectedOrder.grandTotal);
-
-  const change = received - total;
-
-  document.getElementById("cashChange").textContent =
-    "Rp " + Math.max(0, change).toLocaleString("id-ID");
-
-});
-
-  document.getElementById("confirmCashBtn")
-.addEventListener("click", async ()=>{
-
-  const received =
-    Number(document.getElementById("cashReceived").value);
-
-  if(received < selectedOrder.grandTotal){
-    alert("Uang tidak cukup!");
-    return;
-  }
-
-  selectedOrder.status = "paid";
-  selectedOrder.paidAt = Date.now();
-  selectedOrder.paymentMethod = "cash";
-  selectedOrder.cashReceived = received;
-  selectedOrder.cashChange =
-    received - selectedOrder.grandTotal;
-
-  await MENUVA_DB.put("ordersData", selectedOrder);
-
-  document.getElementById("cashPaymentModal").style.display="none";
-
-  loadOrders(); // refresh list
-
-});
-
-  document.getElementById("closeCashModal")
-.addEventListener("click", ()=>{
-  document.getElementById("cashPaymentModal").style.display="none";
-});
-
-</script>
   
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <div id="summaryPage" style="display:none;"></div>
 
 </body>
 </html>
-
-
-
-
