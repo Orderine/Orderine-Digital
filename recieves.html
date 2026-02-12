@@ -1529,33 +1529,68 @@ function renderOrdersByDate(data, date) {
 
 }
 
+/* ================= CASH PAYMENT MODAL ENGINE ================= */
+
 let activeCashOrder = null;
 
+
+/* ================= OPEN MODAL ================= */
 function openCashPaymentModal(order) {
+
+  if (!order) {
+    console.error("openCashPaymentModal: order kosong");
+    return;
+  }
 
   activeCashOrder = order;
 
-  document.getElementById("cashTotal").textContent =
-    formatHarga(order.grandTotal);
+  const modal = document.getElementById("cashPaymentModal");
+  const totalEl = document.getElementById("cashTotal");
+  const receivedInput = document.getElementById("cashReceived");
+  const changeEl = document.getElementById("cashChange");
 
-  document.getElementById("cashReceived").value = "";
-  document.getElementById("cashChange").textContent = formatHarga(0);
+  if (!modal || !totalEl || !receivedInput || !changeEl) {
+    console.error("Elemen cash modal tidak lengkap");
+    return;
+  }
 
-  document.getElementById("cashPaymentModal").style.display = "flex";
+  totalEl.textContent = formatHarga(order.grandTotal || 0);
 
+  receivedInput.value = "";
+
+  changeEl.textContent = formatHarga(0);
+
+  modal.style.display = "flex";
+
+  // auto focus biar kasir cepat input
+  setTimeout(() => receivedInput.focus(), 50);
 }
 
-  document.getElementById("closeCashModal").onclick = () => {
+
+/* ================= CLOSE MODAL ================= */
+document.getElementById("closeCashModal").onclick = (e) => {
+
+  e.stopPropagation();
+
   document.getElementById("cashPaymentModal").style.display = "none";
+
+  activeCashOrder = null;
+
 };
 
-  document.getElementById("cashReceived").oninput = () => {
+
+/* ================= HITUNG KEMBALIAN REALTIME ================= */
+document.getElementById("cashReceived").oninput = (e) => {
+
+  e.stopPropagation();
+
+  if (!activeCashOrder) return;
 
   const received =
-    Number(document.getElementById("cashReceived").value) || 0;
+    Number(e.target.value) || 0;
 
   const total =
-    Number(activeCashOrder?.grandTotal) || 0;
+    Number(activeCashOrder.grandTotal) || 0;
 
   const change = received - total;
 
@@ -1564,23 +1599,68 @@ function openCashPaymentModal(order) {
 
 };
 
-  document.getElementById("confirmCashBtn").onclick = async () => {
 
-  if (!activeCashOrder) return;
+/* ================= CONFIRM PAYMENT ================= */
+document.getElementById("confirmCashBtn").onclick = async (e) => {
 
-  activeCashOrder.status = "paid";
-  activeCashOrder.paidTime = Date.now();
-  activeCashOrder.paymentMethod = "cash";
+  e.stopPropagation();
 
-  await MENUVA_DB.add("ordersData", activeCashOrder);
+  try {
 
-  document.getElementById("cashPaymentModal").style.display = "none";
+    if (!activeCashOrder) {
+      console.error("Confirm gagal: activeCashOrder kosong");
+      return;
+    }
 
-  loadOrders();
-  notifyOrdersUpdated();
+    const received =
+      Number(document.getElementById("cashReceived").value) || 0;
+
+    const total =
+      Number(activeCashOrder.grandTotal) || 0;
+
+    if (received < total) {
+      alert("Uang diterima kurang");
+      return;
+    }
+
+    // update order
+    activeCashOrder.status = "paid";
+    activeCashOrder.paidTime = Date.now();
+    activeCashOrder.paymentMethod = "cash";
+    activeCashOrder.cashReceived = received;
+    activeCashOrder.cashChange = received - total;
+    activeCashOrder.locked = true;
+
+    // simpan ke DB (pakai ADD sesuai mother DB)
+    await MENUVA_DB.add("ordersData", activeCashOrder);
+
+    // tutup modal
+    document.getElementById("cashPaymentModal").style.display = "none";
+
+    // reset state
+    activeCashOrder = null;
+
+    // refresh UI
+    if (typeof loadOrders === "function") {
+      await loadOrders();
+    }
+
+    if (typeof notifyOrdersUpdated === "function") {
+      notifyOrdersUpdated();
+    }
+
+    console.log("Pembayaran cash berhasil");
+
+  }
+  catch (err) {
+
+    console.error("Gagal simpan pembayaran:", err);
+
+    alert("Gagal menyimpan pembayaran");
+
+  }
 
 };
-
 
 /* ================== VOID AUTH ================== */
 async function authorizeVoid(pin) {
@@ -2716,5 +2796,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
