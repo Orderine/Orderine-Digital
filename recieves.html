@@ -2251,7 +2251,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 });
 
-
  function initClock() {
 
   const clockEl = document.getElementById("liveClock");
@@ -2319,7 +2318,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 }
 
-  async function updateTodayInsights() {
+ async function updateTodayInsights() {
+
   const orders = await MENUVA_DB.getAll("ordersData");
 
   const today = new Date().toISOString().slice(0,10);
@@ -2333,23 +2333,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   const totalOrders = todayOrders.length;
 
   let totalRevenue = 0;
-  let itemCount = 0;
   const itemMap = {};
 
   todayOrders.forEach(order => {
-  totalRevenue += Number(order.grandTotal || 0);
+
+    totalRevenue += Number(order.grandTotal || 0);
 
     order.items?.forEach(item => {
-      if (!item.void) {
-        itemCount += item.qty || 1;
 
-        itemMap[item.nama] = 
+      if (!item.void) {
+
+        itemMap[item.nama] =
           (itemMap[item.nama] || 0) + (item.qty || 1);
+
       }
+
     });
+
   });
 
-  const avgOrder = totalOrders 
+  const avgOrder = totalOrders
     ? Math.round(totalRevenue / totalOrders)
     : 0;
 
@@ -2357,15 +2360,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     .sort((a,b)=>b[1]-a[1])[0]?.[0] || "-";
 
   document.getElementById("todayOrdersStat").textContent = totalOrders;
-  document.getElementById("avgOrderStat").textContent = 
+
+  document.getElementById("avgOrderStat").textContent =
     "Rp " + avgOrder.toLocaleString("id-ID");
-  document.getElementById("avgPrepStat").textContent = 
-    "12 min"; // nanti bisa kita buat dinamis
+
+  document.getElementById("avgPrepStat").textContent = "12 min";
+
   document.getElementById("topItemStat").textContent = topItem;
 
-  renderMiniChart(todayOrders);
+  return orders; // ← penting untuk chart 7 hari
 
-  return orders;
 }
 
 function renderRevenueTrendChart(allOrders) {
@@ -2478,4 +2482,5 @@ function renderRevenueTrendChart(allOrders) {
 
 </body>
 </html>
+
 
