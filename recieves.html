@@ -1529,7 +1529,7 @@ function renderOrdersByDate(data, date) {
 
 }
 
-  let activeCashOrder = null;
+let activeCashOrder = null;
 
 function openCashPaymentModal(order) {
 
@@ -1572,7 +1572,7 @@ function openCashPaymentModal(order) {
   activeCashOrder.paidTime = Date.now();
   activeCashOrder.paymentMethod = "cash";
 
-  await MENUVA_DB.put("ordersData", activeCashOrder);
+  await MENUVA_DB.add("ordersData", activeCashOrder);
 
   document.getElementById("cashPaymentModal").style.display = "none";
 
@@ -1859,51 +1859,88 @@ function closeVoidModal() {
 document.addEventListener("click", async (e) => {
   
   // ================= VOID ITEM =================
-  if (e.target.classList.contains("void-item-btn")) {
+  const voidBtn = e.target.closest(".void-item-btn");
+  if (voidBtn) {
+
+    const orderId = Number(voidBtn.dataset.order);
+    const itemIndex = Number(voidBtn.dataset.index);
+
+    if (isNaN(orderId)) {
+      console.error("Order ID invalid");
+      return;
+    }
+
     openVoidModal({
       type: "item",
-      orderId: e.target.dataset.order,
-      itemIndex: Number(e.target.dataset.index)
+      orderId: orderId,
+      itemIndex: itemIndex
     });
+
+    return;
   }
 
-// ================= SUBMIT ORDER =================
-if (e.target.classList.contains("btn-submit")) {
 
-  const orderId = Number(e.target.dataset.order);
+  // ================= SUBMIT ORDER =================
+  const submitBtn = e.target.closest(".btn-submit");
+  if (submitBtn) {
 
-  const order = await MENUVA_DB.get("ordersData", orderId);
-  if (!order) return alert("Order tidak ditemukan");
+    const orderId = Number(submitBtn.dataset.order);
 
-  order.status = "sent";
-  order.sentTime = Date.now();
+    if (isNaN(orderId)) {
+      alert("Order ID tidak valid");
+      return;
+    }
 
- await MENUVA_DB.add("ordersData", order);
+    const order = await MENUVA_DB.get("ordersData", orderId);
 
-  alert("Order berhasil dikirim ke kitchen & bar 🚀");
+    if (!order) {
+      alert("Order tidak ditemukan");
+      return;
+    }
 
-  loadOrders(); // refresh list
-}
+    order.status = "sent";
+    order.sentTime = Date.now();
 
-if (e.target.classList.contains("btn-paid")) {
+    // gunakan ADD sesuai mother DB lo
+    await MENUVA_DB.add("ordersData", order);
 
-  const orderId = Number(e.target.dataset.order);
-  const order = await MENUVA_DB.get("ordersData", orderId);
-  if (!order) return alert("Order tidak ditemukan");
+    alert("Order berhasil dikirim ke kitchen & bar 🚀");
 
-  order.subtotal = Number(order.subtotal) || 0;
-  order.discount = Number(order.discount) || 0;
-  order.grandTotal = Number(order.grandTotal) || 0;
+    loadOrders();
 
-  order.status = "paid";
-  order.paidTime = Date.now();
-  order.locked = true; // 🔥 KUNCI
+    return;
+  }
 
-  await MENUVA_DB.add("ordersData", order);
 
-  openCashModal(orderId);
+  // ================= PAID ORDER =================
+  const paidBtn = e.target.closest(".btn-paid");
+  if (paidBtn) {
 
-}
+    const orderId = Number(paidBtn.dataset.order);
+
+    if (isNaN(orderId)) {
+      alert("Order ID tidak valid");
+      return;
+    }
+
+    const order = await MENUVA_DB.get("ordersData", orderId);
+
+    if (!order) {
+      console.error("Order tidak ditemukan:", orderId);
+      alert("Order tidak ditemukan");
+      return;
+    }
+
+    order.subtotal = Number(order.subtotal) || 0;
+    order.discount = Number(order.discount) || 0;
+    order.grandTotal = Number(order.grandTotal) || 0;
+
+    // buka modal dulu
+    openCashPaymentModal(order);
+
+    return;
+  }
+
 });
 
 
@@ -2679,4 +2716,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
