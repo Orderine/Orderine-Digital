@@ -2101,7 +2101,6 @@ let activeSummaryMode = "void";
   }
 }
 
-
 async function renderSummaryPage() {
 
   // toggle halaman
@@ -2110,7 +2109,6 @@ async function renderSummaryPage() {
 
   const summaryPage = document.getElementById("summaryPage");
 
-  // ambil tanggal hari ini (default)
   const today = new Date().toISOString().slice(0,10);
 
   summaryPage.innerHTML = `
@@ -2121,24 +2119,18 @@ async function renderSummaryPage() {
         <button class="back-btn" onclick="backToOrders()">⬅ Back</button>
       </div>
 
-      <!-- FILTER BAR + CUSTOM RANGE -->
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
 
-        <!-- LEFT: pagination filter -->
+        <!-- LEFT: FILTER -->
         <div class="filter-bar summary-filter">
           <button class="summary-btn ${activeSummaryMode==="void"?"active":""}" data-mode="void">Void</button>
-
           <button class="summary-btn ${activeSummaryMode==="daily"?"active":""}" data-mode="daily">Daily</button>
-
           <button class="summary-btn ${activeSummaryMode==="weekly"?"active":""}" data-mode="weekly">Weekly</button>
-
           <button class="summary-btn ${activeSummaryMode==="monthly"?"active":""}" data-mode="monthly">Monthly</button>
         </div>
 
         <!-- RIGHT: CUSTOM RANGE -->
-        <div style="display:flex;gap:6px;align-items:center;background:var(--card-bg,#fff);padding:6px 8px;border-radius:8px;border:1px solid rgba(0,0,0,.08);">
-
-          <span style="font-size:12px;opacity:.7">📅</span>
+        <div style="display:flex;gap:6px;align-items:center;background:#fff;padding:6px 8px;border-radius:8px;border:1px solid rgba(0,0,0,.08);">
 
           <input 
             type="date" 
@@ -2156,57 +2148,36 @@ async function renderSummaryPage() {
             style="font-size:12px;padding:4px;border-radius:6px;border:1px solid rgba(0,0,0,.15);"
           >
 
+          <button 
+            class="summary-btn"
+            id="customRangeBtn"
+            style="padding:4px 10px;font-size:12px;">
+            View
+          </button>
+
         </div>
 
       </div>
 
-      <!-- CONTENT -->
       <div id="summaryContent"></div>
 
     </main>
   `;
 
-  <!-- RIGHT: CUSTOM RANGE -->
-<div style="display:flex;gap:6px;align-items:center;background:#fff;padding:6px 8px;border-radius:8px;border:1px solid rgba(0,0,0,.08);">
-
-  <input 
-    type="date" 
-    id="customStart"
-    value="${today}"
-    style="font-size:12px;padding:4px;border-radius:6px;border:1px solid rgba(0,0,0,.15);"
-  >
-
-  <span style="opacity:.5;font-size:12px;">→</span>
-
-  <input 
-    type="date" 
-    id="customEnd"
-    value="${today}"
-    style="font-size:12px;padding:4px;border-radius:6px;border:1px solid rgba(0,0,0,.15);"
-  >
-
-  <button 
-    class="summary-btn"
-    onclick="handleCustomRange()"
-    style="padding:4px 10px;font-size:12px;">
-    View
-  </button>
-
-</div>
-
-
-  // event filter (TIDAK DIUBAH)
-  document.querySelectorAll(".summary-btn").forEach(btn=>{
+  // filter mode buttons
+  document.querySelectorAll(".summary-btn[data-mode]").forEach(btn=>{
     btn.onclick = ()=>{
       activeSummaryMode = btn.dataset.mode;
       renderSummaryPage();
     };
   });
 
+  // custom range button
+  document.getElementById("customRangeBtn").onclick = handleCustomRange;
+
   renderSummaryDetail(activeSummaryMode);
 
 }
-
 
   function backToOrders() {
   document.getElementById("summaryPage").style.display = "none";
@@ -3142,4 +3113,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
