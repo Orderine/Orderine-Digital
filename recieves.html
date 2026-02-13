@@ -1166,6 +1166,8 @@ MODAL PEMBAYARAN CASH
 
     <button onclick="closeReportModal()">✕</button>
 
+    <button onclick="handleCustomRange()">View</button>
+
     <h2>Revenue Report</h2>
 
     <div id="reportSummary"></div>
@@ -2335,6 +2337,19 @@ async function renderSummaryPage() {
 
 }
 
+  function handleCustomRange() {
+  const start = document.getElementById("startDate").value;
+  const end = document.getElementById("endDate").value;
+
+  if (!start || !end) {
+    alert("Pilih tanggal dulu bro");
+    return;
+  }
+
+  openReportModal();
+  renderReportAnalytics(start, end);
+}
+
 
 async function renderVoidSummary() {
 
@@ -3019,6 +3034,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
