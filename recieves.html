@@ -1159,6 +1159,26 @@ MODAL PEMBAYARAN CASH
   </div>
 </div>
 
+  <!-- ================= REPORT MODAL ================= -->
+  <div id="reportModal" class="report-modal hidden">
+
+  <div class="report-container">
+
+    <button onclick="closeReportModal()">✕</button>
+
+    <h2>Revenue Report</h2>
+
+    <div id="reportSummary"></div>
+
+    <canvas id="reportChart"></canvas>
+
+    <button onclick="exportReport()">Export CSV</button>
+
+  </div>
+
+</div>
+
+
 <script src="db-core.js"></script>
 <script>
 /* =====================================================
@@ -2041,27 +2061,70 @@ async function renderSummaryPage() {
 
   const summaryPage = document.getElementById("summaryPage");
 
+  // ambil tanggal hari ini (default)
+  const today = new Date().toISOString().slice(0,10);
+
   summaryPage.innerHTML = `
     <main class="container">
 
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <h2>📊 Summary</h2>
-       <button class="back-btn" onclick="backToOrders()">⬅ Back</button>
+        <button class="back-btn" onclick="backToOrders()">⬅ Back</button>
       </div>
 
-      <div class="filter-bar summary-filter">
-        <button class="summary-btn ${activeSummaryMode==="void"?"active":""}" data-mode="void">Void</button>
-        <button class="summary-btn ${activeSummaryMode==="daily"?"active":""}" data-mode="daily">Daily</button>
-        <button class="summary-btn ${activeSummaryMode==="weekly"?"active":""}" data-mode="weekly">Weekly</button>
-        <button class="summary-btn ${activeSummaryMode==="monthly"?"active":""}" data-mode="monthly">Monthly</button>
+      <!-- FILTER BAR + CUSTOM RANGE -->
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+
+        <!-- LEFT: pagination filter -->
+        <div class="filter-bar summary-filter">
+          <button class="summary-btn ${activeSummaryMode==="void"?"active":""}" data-mode="void">Void</button>
+
+          <button class="summary-btn ${activeSummaryMode==="daily"?"active":""}" data-mode="daily">Daily</button>
+
+          <button class="summary-btn ${activeSummaryMode==="weekly"?"active":""}" data-mode="weekly">Weekly</button>
+
+          <button class="summary-btn ${activeSummaryMode==="monthly"?"active":""}" data-mode="monthly">Monthly</button>
+        </div>
+
+        <!-- RIGHT: CUSTOM RANGE -->
+        <div style="display:flex;gap:6px;align-items:center;background:var(--card-bg,#fff);padding:6px 8px;border-radius:8px;border:1px solid rgba(0,0,0,.08);">
+
+          <span style="font-size:12px;opacity:.7">📅</span>
+
+          <input 
+            type="date" 
+            id="customStart"
+            value="${today}"
+            style="font-size:12px;padding:4px;border-radius:6px;border:1px solid rgba(0,0,0,.15);"
+          >
+
+          <span style="opacity:.5;font-size:12px;">→</span>
+
+          <input 
+            type="date" 
+            id="customEnd"
+            value="${today}"
+            style="font-size:12px;padding:4px;border-radius:6px;border:1px solid rgba(0,0,0,.15);"
+          >
+
+          <button 
+            class="summary-btn active"
+            onclick="applyCustomRange()"
+            style="padding:4px 10px;font-size:12px;">
+            View
+          </button>
+
+        </div>
+
       </div>
 
+      <!-- CONTENT -->
       <div id="summaryContent"></div>
 
     </main>
   `;
 
-  // event filter
+  // event filter (TIDAK DIUBAH)
   document.querySelectorAll(".summary-btn").forEach(btn=>{
     btn.onclick = ()=>{
       activeSummaryMode = btn.dataset.mode;
@@ -2072,16 +2135,28 @@ async function renderSummaryPage() {
   renderSummaryDetail(activeSummaryMode);
 }
 
+
   function backToOrders() {
   document.getElementById("summaryPage").style.display = "none";
   document.getElementById("orderPage").style.display = "block";
 }
 
-  async function renderSummaryDetail(mode) {
+ async function renderSummaryDetail(mode, customRange = null) {
 
   const container = document.getElementById("summaryContent");
   container.innerHTML = "Loading...";
 
+  // ================================
+  // CUSTOM RANGE MODE (PRIORITY)
+  // ================================
+  if (customRange && customRange.start && customRange.end) {
+    renderCustomRangeSummary(customRange.start, customRange.end);
+    return;
+  }
+
+  // ================================
+  // EXISTING MODES (TIDAK DIUBAH)
+  // ================================
   if (mode === "void") {
     renderVoidSummary();
   }
@@ -2097,7 +2172,169 @@ async function renderSummaryPage() {
   if (mode === "monthly") {
     renderMonthlySummary();
   }
+
 }
+
+  async function renderCustomRangeSummary(startDate, endDate) {
+
+  const orders = await getAllOrders();
+
+  const paidOrders = orders.filter(o => {
+
+    if ((o.status || "").toUpperCase() !== "PAID")
+      return false;
+
+    if (!o.createdAt)
+      return false;
+
+    const d =
+      new Date(o.createdAt)
+      .toISOString()
+      .slice(0,10);
+
+    return d >= startDate && d <= endDate;
+
+  });
+
+  const grouped = {};
+
+  paidOrders.forEach(order => {
+
+    const date =
+      new Date(order.createdAt)
+      .toISOString()
+      .slice(0,10);
+
+    if (!grouped[date]) {
+      grouped[date] = {
+        gross: 0,
+        discount: 0,
+        net: 0,
+        orders: 0,
+        items: {}
+      };
+    }
+
+    const g = grouped[date];
+
+    g.gross += Number(order.subtotal) || 0;
+    g.discount += Number(order.discount) || 0;
+    g.net += Number(order.grandTotal) || 0;
+    g.orders += 1;
+
+    (order.items || []).forEach(it => {
+
+      if (it.void === true) return;
+
+      const name = it.nama || "Unknown";
+      const qty = Number(it.qty) || 1;
+      const price = Number(it.harga) || 0;
+
+      if (!g.items[name]) {
+        g.items[name] = { qty: 0, total: 0 };
+      }
+
+      g.items[name].qty += qty;
+      g.items[name].total += qty * price;
+
+    });
+
+  });
+
+  const sortedDates =
+    Object.keys(grouped).sort().reverse();
+
+  const container =
+    document.getElementById("summaryContent");
+
+  if (!sortedDates.length) {
+    container.innerHTML =
+      "<div class='order-card'>Tidak ada transaksi di range ini</div>";
+    return;
+  }
+
+  container.innerHTML = `
+
+    <div class="order-card" style="background:#f8fafc;">
+      <b>Custom Range:</b> ${startDate} → ${endDate}
+    </div>
+
+    ${sortedDates.map(date => {
+
+      const g = grouped[date];
+
+      const itemHtml =
+        Object.entries(g.items).map(([name, data])=>`
+          <div style="display:flex;justify-content:space-between;font-size:14px;opacity:.9">
+            <div>${name} ${data.qty} porsi</div>
+            <div>${formatHarga(data.total)}</div>
+          </div>
+        `).join("");
+
+      return `
+        <div class="order-card">
+
+          <div class="order-header">
+            <h3>${date}</h3>
+            <div>${g.orders} Orders</div>
+          </div>
+
+          <div style="margin:8px 0">
+            ${itemHtml || "<div style='opacity:.6'>No Items</div>"}
+          </div>
+
+          <div>Gross: ${formatHarga(g.gross)}</div>
+          <div style="color:red">Discount: -${formatHarga(g.discount)}</div>
+          <div><b>Net: ${formatHarga(g.net)}</b></div>
+
+        </div>
+      `;
+
+    }).join("")}
+
+  `;
+
+}
+
+  function applyCustomRange() {
+
+  const start =
+    document.getElementById("customStart").value;
+
+  const end =
+    document.getElementById("customEnd").value;
+
+  if (!start || !end) {
+    alert("Pilih tanggal dulu bro");
+    return;
+  }
+
+  renderSummaryDetail(null, {
+    start: start,
+    end: end
+  });
+
+}
+
+  function openReportModal(orders, start, end) {
+
+  const modal =
+    document.getElementById("reportModal");
+
+  modal.classList.remove("hidden");
+
+  renderReportAnalytics(orders, start, end);
+
+}
+
+  function closeReportModal() {
+
+  document
+    .getElementById("reportModal")
+    .classList.add("hidden");
+
+}
+
 
 async function renderVoidSummary() {
 
@@ -2782,6 +3019,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
