@@ -1072,6 +1072,10 @@ header{
   box-shadow: 0 0 20px rgba(5,150,105,.6);
 }
 
+.hidden {
+display: none !important;
+}
+
 </style>
 
 </head>
@@ -2454,13 +2458,8 @@ async function renderSummaryDetail(mode) {
 
 }
 
-
-  function closeReportModal() {
-
-  document
-    .getElementById("reportModal")
-    .classList.add("hidden");
-
+function closeReportModal() {
+  document.getElementById("reportModal").classList.add("hidden");
 }
 
 function handleCustomRange() {
@@ -2497,40 +2496,20 @@ async function renderReportAnalytics(startDate, endDate) {
     return d >= startDate && d <= endDate;
   });
 
-  const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
+  const totalRevenue = paidOrders
+    .reduce((sum, o) => sum + (o.grandTotal || 0), 0);
 
-  document.getElementById("reportSummary").innerHTML = `
-  <div style="display:grid;gap:12px;margin-top:10px;">
+  /* ===== UPDATE TERMINAL CARDS ===== */
 
-    <div style="background:#f8fafc;padding:12px;border-radius:10px;">
-      <div style="font-size:12px;opacity:.6;">Period</div>
-      <div style="font-weight:600;">
-        ${startDate} → ${endDate}
-      </div>
-    </div>
+  document.getElementById("reportOrders").textContent =
+    paidOrders.length;
 
-    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+  document.getElementById("reportRevenue").textContent =
+    formatHarga(totalRevenue);
 
-      <div style="flex:1;min-width:120px;background:#ecfdf5;padding:12px;border-radius:10px;">
-        <div style="font-size:12px;opacity:.6;">Total Orders</div>
-        <div style="font-size:18px;font-weight:700;">
-          ${paidOrders.length}
-        </div>
-      </div>
-
-      <div style="flex:1;min-width:120px;background:#eef2ff;padding:12px;border-radius:10px;">
-        <div style="font-size:12px;opacity:.6;">Total Revenue</div>
-        <div style="font-size:18px;font-weight:700;">
-          ${formatHarga(totalRevenue)}
-        </div>
-      </div>
-
-    </div>
-
-  </div>
-`;
+  document.getElementById("reportPeriod").textContent =
+    `${startDate} → ${endDate}`;
 }
-
 
 async function renderVoidSummary() {
 
@@ -3215,6 +3194,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
