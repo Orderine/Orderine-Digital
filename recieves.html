@@ -2373,59 +2373,32 @@ function handleCustomRange() {
   renderReportAnalytics(start, end); // ✅ kirim param
 }
 
-async function renderReportAnalytics(orders) {
+async function renderReportAnalytics(startDate, endDate) {
 
-  const container = document.getElementById("reportSummary");
+  const orders = await getAllOrders();
 
-  if (!container) {
-    console.error("reportModalContent not found");
-    return;
-  }
+  const paidOrders = orders.filter(o => {
 
-  container.innerHTML = "Loading report...";
+    if ((o.status || "").toUpperCase() !== "PAID")
+      return false;
 
-  try {
+    if (!o.createdAt)
+      return false;
 
-    const orders = await getAllOrders();
+    const d = new Date(o.createdAt)
+      .toISOString()
+      .slice(0,10);
 
-    const filtered = orders.filter(o => {
+    return d >= startDate && d <= endDate;
+  });
 
-      if (!o.createdAt) return false;
+  const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
 
-      const d = new Date(o.createdAt)
-        .toISOString()
-        .slice(0,10);
-
-      return d >= startDate && d <= endDate;
-
-    });
-
-    let revenue = 0;
-
-    filtered.forEach(o => {
-    revenue += Number(o.grandTotal) || 0;
-    });
-
-    container.innerHTML = `
-      <div style="margin-bottom:15px">
-        <strong>Period:</strong> ${startDate} → ${endDate}
-      </div>
-
-      <div>Total Orders: <strong>${filtered.length}</strong></div>
-
-      <div>Total Revenue: <strong>
-        Rp ${revenue.toLocaleString()}
-      </strong></div>
-    `;
-
-    console.log("Report loaded:", filtered.length);
-
-  } catch(err) {
-
-    console.error(err);
-    container.innerHTML = "Failed load report";
-
-  }
+  document.getElementById("reportSummary").innerHTML = `
+    <p><strong>Period:</strong> ${startDate} → ${endDate}</p>
+    <p><strong>Total Orders:</strong> ${paidOrders.length}</p>
+    <p><strong>Total Revenue:</strong> ${formatHarga(totalRevenue)}</p>
+  `;
 
 }
 
@@ -3113,6 +3086,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
