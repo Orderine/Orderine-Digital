@@ -948,6 +948,53 @@ header{
   cursor:pointer;
 }
 
+  .report-modal {
+
+  position: fixed;
+  inset: 0;
+
+  background: rgba(0,0,0,0.6);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 9999;
+
+}
+
+.report-modal.hidden {
+  display: none;
+}
+
+.report-container {
+
+  background: white;
+
+  width: 95%;
+  height: 90%;
+
+  border-radius: 16px;
+
+  padding: 20px;
+
+  overflow-y: auto;
+
+}
+
+.modal-close-btn {
+
+  float: right;
+
+  border: none;
+  background: none;
+
+  font-size: 20px;
+
+  cursor: pointer;
+
+}
+
 </style>
 
 </head>
@@ -3034,6 +3081,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
