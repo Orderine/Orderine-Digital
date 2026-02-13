@@ -2166,6 +2166,35 @@ async function renderSummaryPage() {
     </main>
   `;
 
+  <!-- RIGHT: CUSTOM RANGE -->
+<div style="display:flex;gap:6px;align-items:center;background:#fff;padding:6px 8px;border-radius:8px;border:1px solid rgba(0,0,0,.08);">
+
+  <input 
+    type="date" 
+    id="customStart"
+    value="${today}"
+    style="font-size:12px;padding:4px;border-radius:6px;border:1px solid rgba(0,0,0,.15);"
+  >
+
+  <span style="opacity:.5;font-size:12px;">→</span>
+
+  <input 
+    type="date" 
+    id="customEnd"
+    value="${today}"
+    style="font-size:12px;padding:4px;border-radius:6px;border:1px solid rgba(0,0,0,.15);"
+  >
+
+  <button 
+    class="summary-btn"
+    onclick="handleCustomRange()"
+    style="padding:4px 10px;font-size:12px;">
+    View
+  </button>
+
+</div>
+
+
   // event filter (TIDAK DIUBAH)
   document.querySelectorAll(".summary-btn").forEach(btn=>{
     btn.onclick = ()=>{
@@ -3113,3 +3142,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
