@@ -2182,7 +2182,6 @@ async function renderSummaryPage() {
   });
 
   renderSummaryDetail(activeSummaryMode);
-  renderSummaryDetail("custom");
 
 }
 
@@ -2382,22 +2381,14 @@ async function renderSummaryPage() {
 
 }
 
-  function handleCustomRange() {
-  const start = document.getElementById("startDate").value;
-  const end = document.getElementById("endDate").value;
+ function handleCustomRange() {
+  const start = document.getElementById("customStart").value;
+  const end = document.getElementById("customEnd").value;
 
-  if (!start || !end) {
-    alert("Pilih tanggal dulu bro");
-    return;
-  }
-
-  openReportModal();
-  renderReportAnalytics(start, end);
-}
 
 async function renderReportAnalytics(startDate, endDate) {
 
-  const container = document.getElementById("reportModalContent");
+  const container = document.getElementById("reportSummary");
 
   if (!container) {
     console.error("reportModalContent not found");
@@ -2425,7 +2416,7 @@ async function renderReportAnalytics(startDate, endDate) {
     let revenue = 0;
 
     filtered.forEach(o => {
-      revenue += o.total || 0;
+    revenue += Number(o.grandTotal) || 0;
     });
 
     container.innerHTML = `
@@ -3135,6 +3126,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
