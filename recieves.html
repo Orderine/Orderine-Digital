@@ -2397,8 +2397,6 @@ async function renderSummaryPage() {
 
 async function renderReportAnalytics(startDate, endDate) {
 
-  console.log("Render report:", startDate, endDate);
-
   const container = document.getElementById("reportModalContent");
 
   if (!container) {
@@ -2406,25 +2404,45 @@ async function renderReportAnalytics(startDate, endDate) {
     return;
   }
 
-  container.innerHTML = "Loading analytics...";
+  container.innerHTML = "Loading report...";
 
   try {
 
-    const orders = await loadOrdersFromDB();
+    const orders = await getAllOrders();
 
-    const filtered = orders.filter(order => {
+    const filtered = orders.filter(o => {
 
-      const d = order.date;
+      if (!o.createdAt) return false;
+
+      const d = new Date(o.createdAt)
+        .toISOString()
+        .slice(0,10);
+
       return d >= startDate && d <= endDate;
 
     });
 
+    let revenue = 0;
+
+    filtered.forEach(o => {
+      revenue += o.total || 0;
+    });
+
     container.innerHTML = `
-      <h3>Report ${startDate} → ${endDate}</h3>
-      <p>Total Orders: ${filtered.length}</p>
+      <div style="margin-bottom:15px">
+        <strong>Period:</strong> ${startDate} → ${endDate}
+      </div>
+
+      <div>Total Orders: <strong>${filtered.length}</strong></div>
+
+      <div>Total Revenue: <strong>
+        Rp ${revenue.toLocaleString()}
+      </strong></div>
     `;
 
-  } catch (err) {
+    console.log("Report loaded:", filtered.length);
+
+  } catch(err) {
 
     console.error(err);
     container.innerHTML = "Failed load report";
@@ -2432,6 +2450,7 @@ async function renderReportAnalytics(startDate, endDate) {
   }
 
 }
+
 
 async function renderVoidSummary() {
 
@@ -3116,6 +3135,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
