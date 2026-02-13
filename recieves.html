@@ -2156,13 +2156,6 @@ async function renderSummaryPage() {
             style="font-size:12px;padding:4px;border-radius:6px;border:1px solid rgba(0,0,0,.15);"
           >
 
-          <button 
-            class="summary-btn active"
-            onclick="applyCustomRange()"
-            style="padding:4px 10px;font-size:12px;">
-            View
-          </button>
-
         </div>
 
       </div>
@@ -2191,36 +2184,25 @@ async function renderSummaryPage() {
   document.getElementById("orderPage").style.display = "block";
 }
 
- async function renderSummaryDetail(mode, customRange = null) {
+async function renderSummaryDetail(mode) {
 
   const container = document.getElementById("summaryContent");
   container.innerHTML = "Loading...";
 
-  // ================================
-  // CUSTOM RANGE MODE (PRIORITY)
-  // ================================
-  if (customRange && customRange.start && customRange.end) {
-    renderCustomRangeSummary(customRange.start, customRange.end);
-    return;
-  }
-
-  // ================================
-  // EXISTING MODES (TIDAK DIUBAH)
-  // ================================
   if (mode === "void") {
-    renderVoidSummary();
+    return renderVoidSummary();
   }
 
   if (mode === "daily") {
-    renderDailySummary();
+    return renderDailySummary();
   }
 
   if (mode === "weekly") {
-    renderWeeklySummary();
+    return renderWeeklySummary();
   }
 
   if (mode === "monthly") {
-    renderMonthlySummary();
+    return renderMonthlySummary();
   }
 
 }
@@ -2346,24 +2328,19 @@ async function renderSummaryPage() {
 
 }
 
-  function applyCustomRange() {
+  async function getPaidOrdersInRange(startDate, endDate) {
+  const orders = await getAllOrders();
 
-  const start =
-    document.getElementById("customStart").value;
+  return orders.filter(o => {
+    if ((o.status || "").toUpperCase() !== "PAID")
+      return false;
 
-  const end =
-    document.getElementById("customEnd").value;
+    const raw = o.createdAt || o.orderTime;
+    if (!raw) return false;
 
-  if (!start || !end) {
-    alert("Pilih tanggal dulu bro");
-    return;
-  }
-
-  renderSummaryDetail(null, {
-    start: start,
-    end: end
+    const d = new Date(Number(raw)).toISOString().slice(0,10);
+    return d >= startDate && d <= endDate;
   });
-
 }
 
  function openReportModal() {
@@ -2381,8 +2358,7 @@ async function renderSummaryPage() {
 
 }
 
-function handleCustomRange() {
-
+async function handleCustomRange() {
   const start = document.getElementById("customStart").value;
   const end = document.getElementById("customEnd").value;
 
@@ -2392,10 +2368,12 @@ function handleCustomRange() {
   }
 
   openReportModal();
-  renderReportAnalytics(start, end);
+
+  const orders = await getPaidOrdersInRange(start, end);
+  renderReportAnalytics(orders);
 }
 
-async function renderReportAnalytics(startDate, endDate) {
+async function renderReportAnalytics(orders) {
 
   const container = document.getElementById("reportSummary");
 
@@ -3135,14 +3113,3 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
