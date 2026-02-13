@@ -2182,6 +2182,8 @@ async function renderSummaryPage() {
   });
 
   renderSummaryDetail(activeSummaryMode);
+  renderSummaryDetail("custom");
+
 }
 
 
@@ -2365,16 +2367,12 @@ async function renderSummaryPage() {
 
 }
 
-  function openReportModal(orders, start, end) {
+ function openReportModal() {
 
-  const modal =
-    document.getElementById("reportModal");
-
-  modal.classList.remove("hidden");
-
-  renderReportAnalytics(orders, start, end);
+  document.getElementById("reportModal").classList.remove("hidden");
 
 }
+
 
   function closeReportModal() {
 
@@ -2397,6 +2395,43 @@ async function renderSummaryPage() {
   renderReportAnalytics(start, end);
 }
 
+async function renderReportAnalytics(startDate, endDate) {
+
+  console.log("Render report:", startDate, endDate);
+
+  const container = document.getElementById("reportModalContent");
+
+  if (!container) {
+    console.error("reportModalContent not found");
+    return;
+  }
+
+  container.innerHTML = "Loading analytics...";
+
+  try {
+
+    const orders = await loadOrdersFromDB();
+
+    const filtered = orders.filter(order => {
+
+      const d = order.date;
+      return d >= startDate && d <= endDate;
+
+    });
+
+    container.innerHTML = `
+      <h3>Report ${startDate} → ${endDate}</h3>
+      <p>Total Orders: ${filtered.length}</p>
+    `;
+
+  } catch (err) {
+
+    console.error(err);
+    container.innerHTML = "Failed load report";
+
+  }
+
+}
 
 async function renderVoidSummary() {
 
@@ -3081,6 +3116,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
