@@ -2395,11 +2395,35 @@ async function renderReportAnalytics(startDate, endDate) {
   const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
 
   document.getElementById("reportSummary").innerHTML = `
-    <p><strong>Period:</strong> ${startDate} → ${endDate}</p>
-    <p><strong>Total Orders:</strong> ${paidOrders.length}</p>
-    <p><strong>Total Revenue:</strong> ${formatHarga(totalRevenue)}</p>
-  `;
+  <div style="display:grid;gap:12px;margin-top:10px;">
 
+    <div style="background:#f8fafc;padding:12px;border-radius:10px;">
+      <div style="font-size:12px;opacity:.6;">Period</div>
+      <div style="font-weight:600;">
+        ${startDate} → ${endDate}
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+
+      <div style="flex:1;min-width:120px;background:#ecfdf5;padding:12px;border-radius:10px;">
+        <div style="font-size:12px;opacity:.6;">Total Orders</div>
+        <div style="font-size:18px;font-weight:700;">
+          ${paidOrders.length}
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:120px;background:#eef2ff;padding:12px;border-radius:10px;">
+        <div style="font-size:12px;opacity:.6;">Total Revenue</div>
+        <div style="font-size:18px;font-weight:700;">
+          ${formatHarga(totalRevenue)}
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+`;
 }
 
 
@@ -3086,6 +3110,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
