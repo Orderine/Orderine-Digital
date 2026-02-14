@@ -2731,6 +2731,10 @@ async function buildReportChartData(startDate, endDate) {
       labels,
      datasets: [
 
+       borderWidth: values.map((v, i) =>
+       i === 0 ? 3 : 1
+       ),
+
   // 🔥 GLOW LAYER (bawah)
   {
     data: values,
@@ -2870,9 +2874,14 @@ async function renderTopItemsChart(startDate, endDate) {
     return;
   }
 
-  const labels = data.map((item, index) =>
-    `#${index + 1} ${item.name}`
-  );
+ const labels = data.map((item, index) => {
+
+  if (index === 0)
+    return `👑 ${item.name}`;
+
+  return `#${index + 1} ${item.name}`;
+
+});
 
   const values = data.map(item => item.qty);
 
@@ -2891,12 +2900,22 @@ async function renderTopItemsChart(startDate, endDate) {
         borderRadius: 10,
         borderSkipped: false,
 
-        backgroundColor: values.map(v => {
-          const intensity = v / maxValue;
-          return `rgba(59,130,246,${0.3 + intensity * 0.7})`;
-        }),
+       backgroundColor: values.map((v, i) => {
 
-        borderColor: "#3b82f6",
+       // 🥇 Top 1 = Gold
+        if (i === 0) {
+        return "rgba(255,215,0,0.95)";
+        }
+
+       // lainnya = neon blue
+        const intensity = v / maxValue;
+        return `rgba(59,130,246,${0.3 + intensity * 0.7})`;
+
+       }),
+
+        borderColor: values.map((v, i) =>
+          i === 0 ? "#FFD700" : "#3b82f6"
+        ),
         borderWidth: 1
       }]
     },
@@ -3609,6 +3628,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
