@@ -2711,96 +2711,186 @@ async function buildReportChartData(startDate, endDate) {
   let reportChartInstance = null;
   let topItemsChartInstance = null;
 
-  function renderReportChart(labels, values) {
+ function renderReportChart(labels, values) {
 
-  const ctx = document
-    .getElementById("reportChart")
-    .getContext("2d");
+  const canvas = document.getElementById("reportChart");
+  if (!canvas) return;
 
-  if (reportChartInstance) {
-    reportChartInstance.destroy();
+  const ctx = canvas.getContext("2d");
+
+  if (window.reportChartInstance instanceof Chart) {
+    window.reportChartInstance.destroy();
   }
 
+  // gradient fill
   const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+
   gradient.addColorStop(0, "rgba(59,130,246,0.6)");
   gradient.addColorStop(1, "rgba(59,130,246,0)");
 
-  reportChartInstance = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels,
-     datasets: [
-  // 🔥 GLOW LAYER (bawah)
-  {
-    data: values,
-    borderColor: "rgba(59,130,246,0.3)",
-    borderWidth: 8,
-    tension: 0,
-    pointRadius: 0,
-    fill: false
-  },
 
-  // 💎 MAIN LINE (atas)
-  {
-    label: "Revenue",
-    data: values,
-    borderColor: "#3b82f6",
-    borderWidth: 3,
-    tension: 0,
-    pointRadius: 4,
-    pointBackgroundColor: "#60a5fa",
-    pointHoverRadius: 7,
-    fill: true,
-    backgroundColor: gradient
-  }]
+
+  // ✅ REAL NEON GLOW PLUGIN
+  const neonGlowPlugin = {
+
+    id: "neonGlowPlugin",
+
+    beforeDatasetsDraw(chart) {
+
+      const { ctx } = chart;
+
+      ctx.save();
+
+      ctx.shadowColor = "#3b82f6";   // warna glow
+
+      ctx.shadowBlur = 25;           // kekuatan glow
+
+      ctx.shadowOffsetX = 0;
+
+      ctx.shadowOffsetY = 0;
     },
+
+    afterDatasetsDraw(chart) {
+
+      chart.ctx.restore();
+    }
+
+  };
+
+
+
+  window.reportChartInstance = new Chart(ctx, {
+
+    type: "line",
+
+    data: {
+
+      labels,
+
+      datasets: [
+
+        // glow base layer
+        {
+          data: values,
+          borderColor: "rgba(59,130,246,0.25)",
+          borderWidth: 10,
+          tension: 0.4,
+          pointRadius: 0,
+          fill: false
+        },
+
+        // main line
+        {
+          label: "Revenue",
+          data: values,
+          borderColor: "#3b82f6",
+          borderWidth: 3,
+          tension: 0.4,
+          pointRadius: 4,
+          pointHoverRadius: 8,
+          pointBackgroundColor: "#60a5fa",
+          fill: true,
+          backgroundColor: gradient
+        }
+
+      ]
+
+    },
+
     options: {
+
       responsive: true,
+
       maintainAspectRatio: false,
+
+      animation: {
+        duration: 1200,
+        easing: "easeOutQuart"
+      },
+
       interaction: {
         mode: "index",
         intersect: false
       },
+
       plugins: {
+
         legend: { display: false },
+
         tooltip: {
+
           backgroundColor: "#0f172a",
+
           borderColor: "#3b82f6",
+
           borderWidth: 1,
+
           titleColor: "#fff",
+
           bodyColor: "#fff",
+
           padding: 12,
+
           callbacks: {
+
             label: function(context) {
-              return "Rp " + context.raw.toLocaleString("id-ID");
+
+              return "Rp " +
+                context.raw.toLocaleString("id-ID");
+
             }
+
           }
+
         }
+
       },
+
       scales: {
+
         x: {
+
           grid: {
             color: "rgba(255,255,255,0.05)"
           },
+
           ticks: {
             color: "#94a3b8"
           }
+
         },
+
         y: {
+
           grid: {
             color: "rgba(255,255,255,0.05)"
           },
+
           ticks: {
+
             color: "#94a3b8",
+
             callback: function(value) {
-              return "Rp " + value.toLocaleString("id-ID");
+
+              return "Rp " +
+                value.toLocaleString("id-ID");
+
             }
+
           }
+
         }
+
       }
-    }
+
+    },
+
+    plugins: [neonGlowPlugin]
+
   });
+
 }
+
 
  async function getTopItems(startDate, endDate) {
 
@@ -2856,6 +2946,8 @@ async function renderTopItemsChart(startDate, endDate) {
 
   if (!data || data.length === 0) return;
 
+  const totalQty = data.reduce((sum, d) => sum + d.qty, 0);
+
   const labels = data.map((d, i) => {
     if (i === 0) return "👑 " + d.name;
     return d.name;
@@ -2863,52 +2955,174 @@ async function renderTopItemsChart(startDate, endDate) {
 
   const values = data.map(d => d.qty);
 
-  const bgColors = values.map((_, i) => {
-    if (i === 0) return "#FFD700";       // Gold
-    if (i === values.length - 1) return "#FF3B30"; // Red
-    return "#2a2f45";                    // Neutral
+  const colors = values.map((_, i) => {
+    if (i === 0) return "#FFD700";       // gold
+    if (i === values.length - 1) return "#FF3B30"; // red
+    return "#3b82f6";                    // neon blue
   });
 
+
+  // 🔥 Plugin custom draw label kanan + badge + arrow
+  const neonLabelPlugin = {
+    id: "neonLabelPlugin",
+
+    afterDatasetsDraw(chart) {
+
+      const {ctx} = chart;
+
+      ctx.save();
+
+      chart.data.datasets[0].data.forEach((value, index) => {
+
+        const meta = chart.getDatasetMeta(0);
+        const bar = meta.data[index];
+
+        if (!bar) return;
+
+        const x = bar.x;
+        const y = bar.y;
+
+        const percent = ((value / totalQty) * 100).toFixed(1);
+
+        // arrow logic
+        const arrow = index === 0 ? "▲" :
+                      index === data.length - 1 ? "▼" : "•";
+
+        const arrowColor =
+          index === 0 ? "#00ffcc" :
+          index === data.length - 1 ? "#ff3b30" :
+          "#94a3b8";
+
+
+        // glow text
+        ctx.shadowColor = arrowColor;
+        ctx.shadowBlur = 10;
+
+        ctx.fillStyle = arrowColor;
+        ctx.font = "12px Segoe UI";
+
+        ctx.fillText(
+          `${arrow} ${value} (${percent}%)`,
+          x + 15,
+          y + 4
+        );
+
+
+        // BEST SELLER badge
+        if (index === 0) {
+
+          ctx.shadowColor = "#FFD700";
+          ctx.shadowBlur = 15;
+
+          ctx.fillStyle = "#FFD700";
+          ctx.font = "bold 11px Segoe UI";
+
+          ctx.fillText(
+            "🏆 BEST SELLER",
+            x + 120,
+            y + 4
+          );
+        }
+
+      });
+
+      ctx.restore();
+    }
+  };
+
+
   window.topItemsChart = new Chart(ctx, {
+
     type: "bar",
+
     data: {
-      labels: labels,
+      labels,
       datasets: [{
+
         data: values,
-        backgroundColor: bgColors,
-        borderRadius: 8,
-        barThickness: 18
+
+        backgroundColor: colors,
+
+        borderRadius: 10,
+
+        barThickness: 18,
+
+        borderWidth: 0
+
       }]
     },
+
     options: {
+
       indexAxis: "y",
+
       responsive: true,
+
       maintainAspectRatio: false,
+
       animation: {
-        duration: 1000,
-        easing: "easeOutQuart"
+
+        duration: 1400,
+
+        easing: "easeOutExpo"
+
       },
+
       plugins: {
+
         legend: { display: false },
+
         tooltip: {
+
           backgroundColor: "#000",
-          titleColor: "#FFD700",
-          bodyColor: "#fff",
-          borderColor: "#FFD700",
-          borderWidth: 1
+
+          borderColor: "#00f0ff",
+
+          borderWidth: 1,
+
+          titleColor: "#00f0ff",
+
+          bodyColor: "#fff"
+
         }
+
       },
+
       scales: {
+
         x: {
-          grid: { color: "rgba(255,255,255,0.05)" },
-          ticks: { color: "#94a3b8" }
+
+          grid: {
+            color: "rgba(0,255,255,0.08)"
+          },
+
+          ticks: {
+            color: "#00f0ff"
+          }
+
         },
+
         y: {
+
           grid: { display: false },
-          ticks: { color: "#e2e8f0" }
+
+          ticks: {
+
+            color: "#fff",
+
+            font: {
+              size: 13
+            }
+
+          }
+
         }
+
       }
-    }
+    },
+
+    plugins: [neonLabelPlugin]
+
   });
 
 }
@@ -3597,6 +3811,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
