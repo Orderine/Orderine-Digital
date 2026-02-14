@@ -2843,96 +2843,80 @@ async function buildReportChartData(startDate, endDate) {
 
 async function renderTopItemsChart(startDate, endDate) {
 
-  const canvas = document.getElementById("topItemsChart");
+  const data = await getTopItems(startDate, endDate);
 
-  if (!canvas) {
-    console.warn("topItemsChart canvas not found");
-    return;
-  }
+  const canvas = document.getElementById("topItemsChart");
+  if (!canvas) return;
 
   const ctx = canvas.getContext("2d");
 
-  // 🔥 DESTROY chart lama dengan aman
-  if (window.topItemsChartInstance instanceof Chart) {
-    window.topItemsChartInstance.destroy();
-    window.topItemsChartInstance = null;
+  // destroy old chart biar tidak overlap
+  if (window.topItemsChart instanceof Chart) {
+    window.topItemsChart.destroy();
   }
 
-  // 🔥 CLEAR canvas manual (VERY IMPORTANT)
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // ambil data
-  const data = await getTopItems(startDate, endDate);
-
-  if (!data || !data.length) {
-    console.warn("Top items empty");
+  if (!data || data.length === 0) {
     return;
   }
 
- const labels = data.map((item, index) => {
+  const labels = data.map(d => d.name);
+  const values = data.map(d => d.qty);
 
-  if (index === 0)
-    return `👑 ${item.name}`;
+  // ✅ generate warna aman sesuai jumlah item
+  const bgColors = [];
+  const borderColors = [];
 
-  return `#${index + 1} ${item.name}`;
+  for (let i = 0; i < labels.length; i++) {
 
-});
+    if (i === 0) {
+      // 🥇 Gold
+      bgColors.push("#FFD700");
+      borderColors.push("#FFD700");
 
-  const values = data.map(item => item.qty);
+    } else if (i === labels.length - 1) {
+      // 🔻 Red (rank terakhir)
+      bgColors.push("#FF3B30");
+      borderColors.push("#FF3B30");
 
-  const maxValue = Math.max(...values);
+    } else {
+      // normal Bloomberg dark
+      bgColors.push("#2a2f45");
+      borderColors.push("#3a3f5a");
+    }
+  }
 
-  // 🔥 delay 1 frame supaya canvas ready (fix timing bug)
-  await new Promise(r => requestAnimationFrame(r));
-
-  window.topItemsChartInstance = new Chart(ctx, {
-    type: "bar",
+  // ✅ create chart
+  window.topItemsChart = new Chart(ctx, {
+    type: "doughnut",
     data: {
-      labels,
+      labels: labels,
       datasets: [{
-        label: "Qty Sold",
         data: values,
-        borderRadius: 10,
-        borderSkipped: false,
-
-       backgroundColor: values.map((v, i) => {
-
-       // 🥇 Top 1 = Gold
-        if (i === 0) {
-        return "rgba(255,215,0,0.95)";
-        }
-
-       // lainnya = neon blue
-        const intensity = v / maxValue;
-        return `rgba(59,130,246,${0.3 + intensity * 0.7})`;
-
-       }),
-
-        borderColor: values.map((v, i) =>
-          i === 0 ? "#FFD700" : "#3b82f6"
-        ),
-        borderWidth: 1
+        backgroundColor: bgColors,
+        borderColor: borderColors,
+        borderWidth: 2,
+        hoverOffset: 8
       }]
     },
     options: {
-      indexAxis: "y",
       responsive: true,
-      maintainAspectRatio: false, // 🔥 WAJIB untuk modal layout
+      maintainAspectRatio: false,
+      cutout: "65%",
       animation: {
-        duration: 800,
+        duration: 1200,
         easing: "easeOutQuart"
       },
       plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        x: {
-          grid: { color: "rgba(255,255,255,.05)" },
-          ticks: { color: "#94a3b8" }
+        legend: {
+          display: false
         },
-        y: {
-          grid: { display: false },
-          ticks: { color: "#e2e8f0" }
+        tooltip: {
+          backgroundColor: "#000",
+          titleColor: "#FFD700",
+          bodyColor: "#fff",
+          borderColor: "#FFD700",
+          borderWidth: 1,
+          padding: 10
         }
       }
     }
@@ -3623,6 +3607,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
