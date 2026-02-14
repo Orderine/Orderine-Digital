@@ -2543,7 +2543,7 @@ async function renderReportAnalytics(startDate, endDate) {
 }
 
 async function buildReportChartData(startDate, endDate) {
-  const orders = await MENUVA_DB.getAll("orders");
+  const orders = await MENUVA_DB.getAll("ordersData");
 
   const revenuePerDay = {};
 
@@ -3326,4 +3326,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
