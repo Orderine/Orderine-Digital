@@ -2635,6 +2635,7 @@ async function buildReportChartData(startDate, endDate) {
 }
 
   let reportChartInstance = null;
+  let topItemsChartInstance = null;
 
   function renderReportChart(labels, values) {
 
@@ -2762,11 +2763,33 @@ async function buildReportChartData(startDate, endDate) {
   return sorted;
 }
 
- async function renderTopItemsChart(startDate, endDate) {
+async function renderTopItemsChart(startDate, endDate) {
 
+  const canvas = document.getElementById("topItemsChart");
+
+  if (!canvas) {
+    console.warn("topItemsChart canvas not found");
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+
+  // 🔥 DESTROY chart lama dengan aman
+  if (window.topItemsChartInstance instanceof Chart) {
+    window.topItemsChartInstance.destroy();
+    window.topItemsChartInstance = null;
+  }
+
+  // 🔥 CLEAR canvas manual (VERY IMPORTANT)
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // ambil data
   const data = await getTopItems(startDate, endDate);
 
-  if (!data.length) return; // 🔥 anti error kalau kosong
+  if (!data || !data.length) {
+    console.warn("Top items empty");
+    return;
+  }
 
   const labels = data.map((item, index) =>
     `#${index + 1} ${item.name}`
@@ -2774,15 +2797,10 @@ async function buildReportChartData(startDate, endDate) {
 
   const values = data.map(item => item.qty);
 
-  const ctx = document
-    .getElementById("topItemsChart")
-    .getContext("2d");
-
-  if (window.topItemsChartInstance) {
-    window.topItemsChartInstance.destroy();
-  }
-
   const maxValue = Math.max(...values);
+
+  // 🔥 delay 1 frame supaya canvas ready (fix timing bug)
+  await new Promise(r => requestAnimationFrame(r));
 
   window.topItemsChartInstance = new Chart(ctx, {
     type: "bar",
@@ -2794,7 +2812,6 @@ async function buildReportChartData(startDate, endDate) {
         borderRadius: 10,
         borderSkipped: false,
 
-        // 🔥 Neon intensity dynamic
         backgroundColor: values.map(v => {
           const intensity = v / maxValue;
           return `rgba(59,130,246,${0.3 + intensity * 0.7})`;
@@ -2807,7 +2824,11 @@ async function buildReportChartData(startDate, endDate) {
     options: {
       indexAxis: "y",
       responsive: true,
-      animation: { duration: 800 },
+      maintainAspectRatio: false, // 🔥 WAJIB untuk modal layout
+      animation: {
+        duration: 800,
+        easing: "easeOutQuart"
+      },
       plugins: {
         legend: { display: false }
       },
@@ -2825,7 +2846,6 @@ async function buildReportChartData(startDate, endDate) {
   });
 
 }
-
 
 async function renderVoidSummary() {
 
@@ -3510,6 +3530,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
