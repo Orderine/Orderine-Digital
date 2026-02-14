@@ -2484,6 +2484,19 @@ async function renderSummaryDetail(mode) {
   });
 }
 
+  // ✅ GLOBAL FUNCTION
+async function openReportModal(startDate = null, endDate = null) {
+
+  const modal = document.getElementById("reportModal");
+
+  modal.style.display = "flex";
+
+  // load chart
+  await loadReportChart(startDate, endDate);
+
+}
+
+
  async function loadReportChart(startDate, endDate) {
 
   // 🔥 Revenue chart
@@ -3465,6 +3478,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
