@@ -939,17 +939,48 @@ header{
   border-radius:6px;
 }
 
-/* ===== OVERLAY ===== */
 .report-overlay {
+
   position: fixed;
   inset: 0;
+
   background: rgba(5,10,25,.85);
   backdrop-filter: blur(6px);
+
   display: flex;
-  align-items: center;
+
+  /* 🔥 INI FIX UTAMA */
+  align-items: flex-start;
+
   justify-content: center;
+
+  overflow-y: auto; /* 🔥 AKTIFKAN SCROLL */
+
+  padding: 40px 20px; /* biar ada ruang atas bawah */
+
   z-index: 9999;
 }
+
+  .report-terminal {
+
+  width: 95%;
+  max-width: 1200px;
+
+  margin: auto; /* bantu center horizontal */
+
+  margin-bottom: 40px; /* ruang bawah */
+
+}
+
+  .report-overlay::-webkit-scrollbar {
+  width: 8px;
+}
+
+.report-overlay::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.2);
+  border-radius: 10px;
+}
+
 
 /* ===== TERMINAL BOX ===== */
 .report-terminal {
@@ -3479,5 +3510,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
