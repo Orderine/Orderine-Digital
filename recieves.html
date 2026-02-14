@@ -1029,6 +1029,17 @@ header{
   box-shadow: 0 0 25px rgba(59,130,246,.3);
 }
 
+  .terminal-card.orders {
+  border: 1px solid rgba(16,185,129,.4);
+  box-shadow: 0 0 20px rgba(16,185,129,.3);
+}
+
+.terminal-card.period {
+  border: 1px solid rgba(124,58,237,.4);
+  box-shadow: 0 0 20px rgba(124,58,237,.3);
+}
+
+
 .card-label {
   font-size: 12px;
   opacity: .6;
@@ -1037,7 +1048,7 @@ header{
 }
 
 .card-value {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: bold;
   letter-spacing: 1px;
 }
@@ -1312,23 +1323,26 @@ MODAL PEMBAYARAN CASH
       </button>
     </div>
 
-    <!-- SUMMARY STATS -->
-    <div class="terminal-stats">
-      <div class="terminal-card">
-        <div class="card-label">TOTAL ORDERS</div>
-        <div class="card-value" id="reportOrders">0</div>
-      </div>
+   <!-- SUMMARY STATS -->
+<div class="terminal-stats">
 
-      <div class="terminal-card highlight">
-        <div class="card-label">TOTAL REVENUE</div>
-        <div class="card-value" id="reportRevenue">Rp 0</div>
-      </div>
+  <div class="terminal-card orders">
+    <div class="card-label">TOTAL ORDERS</div>
+    <div class="card-value" id="reportOrders">0</div>
+  </div>
 
-      <div class="terminal-card">
-        <div class="card-label">PERIOD</div>
-        <div class="card-value" id="reportPeriod">-</div>
-      </div>
-    </div>
+  <div class="terminal-card highlight">
+    <div class="card-label">TOTAL REVENUE</div>
+    <div class="card-value" id="reportRevenue">Rp 0</div>
+  </div>
+
+  <div class="terminal-card period">
+    <div class="card-label">PERIOD</div>
+    <div class="card-value" id="reportPeriod">-</div>
+  </div>
+
+</div>
+
 
     <!-- CHART AREA -->
     <div class="terminal-chart">
@@ -3348,6 +3362,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
