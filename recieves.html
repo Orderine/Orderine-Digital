@@ -2460,6 +2460,15 @@ async function renderSummaryDetail(mode) {
   });
 }
 
+  async function loadReportChart() {
+
+  const { labels, values } =
+    await buildReportChartData();
+
+  renderReportChart(labels, values);
+
+}
+
  async function openReportModal() {
 
   document
@@ -3317,3 +3326,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
