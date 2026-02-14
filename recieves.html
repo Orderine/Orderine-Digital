@@ -3323,28 +3323,41 @@ async function renderTopItemsChart(startDate, endDate) {
 
 }
 
- async function renderCategoryChart(startDate, endDate) {
+async function renderCategoryChart(startDate, endDate) {
 
   const orders = await getAllOrders();
+
+  const categoryMap =
+    await buildMenuCategoryMap();
 
   let food = 0;
   let drink = 0;
 
-  const start = new Date(startDate).setHours(0,0,0,0);
-  const end   = new Date(endDate).setHours(23,59,59,999);
+  const start = new Date(startDate)
+    .setHours(0,0,0,0);
+
+  const end = new Date(endDate)
+    .setHours(23,59,59,999);
 
   orders.forEach(order => {
 
-    const time = new Date(order.date).getTime();
-    if (time < start || time > end) return;
+    const time =
+      new Date(order.date).getTime();
+
+    if (time < start || time > end)
+      return;
 
     order.items.forEach(item => {
 
       if (item.void) return;
 
-      const revenue = item.harga * item.qty;
+      const revenue =
+        item.harga * item.qty;
 
-      if (item.kategori === "Drink")
+      const kategori =
+        categoryMap[item.nama] || "food";
+
+      if (kategori === "drink")
         drink += revenue;
       else
         food += revenue;
@@ -3353,13 +3366,8 @@ async function renderTopItemsChart(startDate, endDate) {
 
   });
 
-  // 🔥 fallback supaya tetap 2 slice
-  if (food === 0 && drink === 0) {
-    food = 1;
-    drink = 1;
-  }
-
-  const ctx = document.getElementById("categoryChart");
+  const ctx =
+    document.getElementById("categoryChart");
 
   if (window.categoryChartInstance)
     window.categoryChartInstance.destroy();
@@ -3374,12 +3382,14 @@ async function renderTopItemsChart(startDate, endDate) {
         labels: ["Food", "Drink"],
 
         datasets: [{
+
           data: [food, drink],
+
           backgroundColor: [
             "#3b82f6",
             "#10b981"
-          ],
-          borderWidth: 0
+          ]
+
         }]
 
       },
@@ -3387,25 +3397,23 @@ async function renderTopItemsChart(startDate, endDate) {
       options: {
 
         responsive: true,
+
         maintainAspectRatio: false,
+
         cutout: "65%",
 
         plugins: {
 
           legend: {
-            position: "bottom",
-            labels: {
-              color: "#cbd5e1"
-            }
-          },
 
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                return context.label + " : Rp " +
-                  context.raw.toLocaleString("id-ID");
-              }
+            position: "bottom",
+
+            labels: {
+
+              color: "#cbd5e1"
+
             }
+
           }
 
         }
@@ -3415,6 +3423,29 @@ async function renderTopItemsChart(startDate, endDate) {
     });
 
 }
+
+
+let menuCategoryMap = null;
+
+async function buildMenuCategoryMap() {
+
+  if (menuCategoryMap) return menuCategoryMap;
+
+  const menu = await getAllMenu(); // ← fungsi dari admin
+
+  menuCategoryMap = {};
+
+  menu.forEach(item => {
+
+    menuCategoryMap[item.nama] =
+      item.kategori.toLowerCase();
+
+  });
+
+  return menuCategoryMap;
+
+}
+
 
 async function renderVoidSummary() {
   const voids = await getAllVoidItems();
@@ -4098,4 +4129,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
