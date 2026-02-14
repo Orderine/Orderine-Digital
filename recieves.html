@@ -1248,6 +1248,25 @@ display: none !important;
 
 }
 
+  .distribution-box {
+  background: #020617;
+  border-radius: 12px;
+  padding: 15px;
+  height: 280px;
+  position: relative;
+  overflow: hidden;   /* 🔥 penting */
+}
+
+.distribution-box canvas {
+  width: 100% !important;
+  height: 220px !important;
+}
+
+.distribution-card {
+  width: 100%;
+  overflow: hidden; /* 🔥 cegah keluar container */
+}
+
 </style>
 
 </head>
@@ -3210,7 +3229,7 @@ async function renderTopItemsChart(startDate, endDate) {
 
 }
 
-  async function renderRevenueShareChart(startDate, endDate) {
+ async function renderRevenueShareChart(startDate, endDate) {
 
   const orders = await getAllOrders();
 
@@ -3222,18 +3241,15 @@ async function renderTopItemsChart(startDate, endDate) {
   orders.forEach(order => {
 
     const time = new Date(order.date).getTime();
-
     if (time < start || time > end) return;
 
     order.items.forEach(item => {
 
       if (item.void) return;
 
-      const name = item.nama;
-
       const revenue = item.harga * item.qty;
 
-      counter[name] = (counter[name] || 0) + revenue;
+      counter[item.nama] = (counter[item.nama] || 0) + revenue;
 
     });
 
@@ -3243,11 +3259,13 @@ async function renderTopItemsChart(startDate, endDate) {
     .sort((a,b)=>b[1]-a[1])
     .slice(0,5);
 
-  const labels = sorted.map(x=>x[0]);
+  const labels = sorted.map(x =>
+    x[0].length > 14 ? x[0].substring(0,14) + "…" : x[0]
+  );
+
   const values = sorted.map(x=>x[1]);
 
-  const ctx = document
-    .getElementById("revenueShareChart");
+  const ctx = document.getElementById("revenueShareChart");
 
   if (window.revenueShareInstance)
     window.revenueShareInstance.destroy();
@@ -3258,13 +3276,9 @@ async function renderTopItemsChart(startDate, endDate) {
       type: "pie",
 
       data: {
-
         labels,
-
         datasets: [{
-
           data: values,
-
           backgroundColor: [
             "#3b82f6",
             "#10b981",
@@ -3272,29 +3286,33 @@ async function renderTopItemsChart(startDate, endDate) {
             "#ef4444",
             "#8b5cf6"
           ],
-
           borderWidth: 0
-
         }]
-
       },
 
       options: {
 
         responsive: true,
-
         maintainAspectRatio: false,
 
         plugins: {
 
           legend: {
-
+            position: "bottom",
             labels: {
-
-              color: "#cbd5e1"
-
+              color: "#cbd5e1",
+              boxWidth: 12,
+              padding: 15
             }
+          },
 
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.label + " : Rp " +
+                  context.raw.toLocaleString("id-ID");
+              }
+            }
           }
 
         }
@@ -3305,7 +3323,7 @@ async function renderTopItemsChart(startDate, endDate) {
 
 }
 
-  async function renderCategoryChart(startDate, endDate) {
+ async function renderCategoryChart(startDate, endDate) {
 
   const orders = await getAllOrders();
 
@@ -3318,7 +3336,6 @@ async function renderTopItemsChart(startDate, endDate) {
   orders.forEach(order => {
 
     const time = new Date(order.date).getTime();
-
     if (time < start || time > end) return;
 
     order.items.forEach(item => {
@@ -3336,8 +3353,13 @@ async function renderTopItemsChart(startDate, endDate) {
 
   });
 
-  const ctx = document
-    .getElementById("categoryChart");
+  // 🔥 fallback supaya tetap 2 slice
+  if (food === 0 && drink === 0) {
+    food = 1;
+    drink = 1;
+  }
+
+  const ctx = document.getElementById("categoryChart");
 
   if (window.categoryChartInstance)
     window.categoryChartInstance.destroy();
@@ -3352,16 +3374,12 @@ async function renderTopItemsChart(startDate, endDate) {
         labels: ["Food", "Drink"],
 
         datasets: [{
-
           data: [food, drink],
-
           backgroundColor: [
             "#3b82f6",
             "#10b981"
           ],
-
           borderWidth: 0
-
         }]
 
       },
@@ -3369,21 +3387,25 @@ async function renderTopItemsChart(startDate, endDate) {
       options: {
 
         responsive: true,
-
         maintainAspectRatio: false,
-
         cutout: "65%",
 
         plugins: {
 
           legend: {
-
+            position: "bottom",
             labels: {
-
               color: "#cbd5e1"
-
             }
+          },
 
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.label + " : Rp " +
+                  context.raw.toLocaleString("id-ID");
+              }
+            }
           }
 
         }
@@ -3394,9 +3416,7 @@ async function renderTopItemsChart(startDate, endDate) {
 
 }
 
-
 async function renderVoidSummary() {
-
   const voids = await getAllVoidItems();
   const container = document.getElementById("summaryContent");
 
@@ -4078,3 +4098,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
