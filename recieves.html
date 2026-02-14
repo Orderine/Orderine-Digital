@@ -1076,6 +1076,14 @@ header{
 display: none !important;
 }
 
+.terminal-chart {
+  background: #111827;
+  padding: 25px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.05);
+  height: 350px;
+}
+
 </style>
 
 </head>
@@ -2452,15 +2460,29 @@ async function renderSummaryDetail(mode) {
   });
 }
 
- function openReportModal() {
+ async function openReportModal() {
 
-  document.getElementById("reportModal").classList.remove("hidden");
+  document
+    .getElementById("reportModal")
+    .classList.remove("hidden");
+
+  await loadReportChart();
 
 }
+
 
 function closeReportModal() {
-  document.getElementById("reportModal").classList.add("hidden");
+
+  document
+    .getElementById("reportModal")
+    .classList.add("hidden");
+
+  if (reportChartInstance) {
+    reportChartInstance.destroy();
+    reportChartInstance = null;
+  }
 }
+
 
 function handleCustomRange() {
 
@@ -2510,6 +2532,107 @@ async function renderReportAnalytics(startDate, endDate) {
   document.getElementById("reportPeriod").textContent =
     `${startDate} → ${endDate}`;
 }
+
+async function buildReportChartData(startDate, endDate) {
+  const orders = await MENUVA_DB.getAll("orders");
+
+  const revenuePerDay = {};
+
+  orders
+    .filter(o => o.status === "paid")
+    .forEach(order => {
+
+      const date = new Date(order.createdAt)
+        .toISOString()
+        .split("T")[0];
+
+      if (startDate && date < startDate) return;
+      if (endDate && date > endDate) return;
+
+      revenuePerDay[date] =
+        (revenuePerDay[date] || 0) + order.total;
+    });
+
+  const labels = Object.keys(revenuePerDay).sort();
+  const values = labels.map(d => revenuePerDay[d]);
+
+  return { labels, values };
+}
+
+  let reportChartInstance = null;
+
+function renderReportChart(labels, values) {
+
+  const ctx = document
+    .getElementById("reportChart")
+    .getContext("2d");
+
+  if (reportChartInstance) {
+    reportChartInstance.destroy();
+  }
+
+  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, "rgba(59,130,246,0.4)");
+  gradient.addColorStop(1, "rgba(59,130,246,0)");
+
+  reportChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "Revenue",
+        data: values,
+        borderColor: "#3b82f6",
+        backgroundColor: gradient,
+        tension: 0.4,
+        fill: true,
+        pointRadius: 3,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#111827",
+          borderColor: "#3b82f6",
+          borderWidth: 1,
+          titleColor: "#fff",
+          bodyColor: "#fff",
+          callbacks: {
+            label: function(context) {
+              return "Rp " + context.raw.toLocaleString("id-ID");
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            color: "rgba(255,255,255,0.05)"
+          },
+          ticks: {
+            color: "#9ca3af"
+          }
+        },
+        y: {
+          grid: {
+            color: "rgba(255,255,255,0.05)"
+          },
+          ticks: {
+            color: "#9ca3af",
+            callback: function(value) {
+              return "Rp " + value.toLocaleString("id-ID");
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
 
 async function renderVoidSummary() {
 
@@ -3194,11 +3317,3 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
