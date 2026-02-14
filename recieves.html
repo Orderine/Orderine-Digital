@@ -2729,8 +2729,9 @@ async function buildReportChartData(startDate, endDate) {
   });
 }
 
-  async function getTopItems(startDate, endDate) {
-  const orders = await getAllOrders(); // fungsi lo yg sudah ada
+ async function getTopItems(startDate, endDate) {
+
+  const orders = await getAllOrders();
 
   const start = new Date(startDate).setHours(0,0,0,0);
   const end   = new Date(endDate).setHours(23,59,59,999);
@@ -2738,27 +2739,31 @@ async function buildReportChartData(startDate, endDate) {
   const counter = {};
 
   orders.forEach(order => {
+
     const orderTime = new Date(order.date).getTime();
 
     if (orderTime >= start && orderTime <= end) {
 
-      order.items.forEach(item => {
+     order.items.forEach(item => {
 
-        if (!counter[item.name]) {
-          counter[item.name] = 0;
-        }
+  if (item.void) return; // skip void item
 
-        counter[item.name] += item.qty;
-      });
+  const itemName = item.nama;
 
-    }
-  });
+  if (!counter[itemName]) {
+    counter[itemName] = 0;
+  }
 
-  // Convert ke array
+  counter[itemName] += item.qty;
+
+});
+ }
+ });
+
   const sorted = Object.entries(counter)
     .map(([name, qty]) => ({ name, qty }))
     .sort((a,b) => b.qty - a.qty)
-    .slice(0,10); // ambil top 10
+    .slice(0,10);
 
   return sorted;
 }
@@ -3530,6 +3535,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
