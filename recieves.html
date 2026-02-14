@@ -1191,6 +1191,63 @@ display: none !important;
   gap: 24px;
 }
 
+  /* DISTRIBUTION CARD */
+.distribution-card {
+
+  background: linear-gradient(145deg,#0f172a,#020617);
+
+  border: 1px solid rgba(59,130,246,.2);
+
+  border-radius: 16px;
+
+  padding: 20px;
+
+}
+
+.distribution-header {
+
+  font-size: 14px;
+
+  letter-spacing: 1px;
+
+  color: #60a5fa;
+
+  margin-bottom: 15px;
+
+}
+
+.distribution-grid {
+
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 20px;
+
+}
+
+.distribution-box {
+
+  background: #020617;
+
+  border-radius: 12px;
+
+  padding: 15px;
+
+  height: 260px;
+
+}
+
+.distribution-title {
+
+  font-size: 11px;
+
+  color: #94a3b8;
+
+  margin-bottom: 10px;
+
+}
+
 </style>
 
 </head>
@@ -1461,6 +1518,32 @@ MODAL PEMBAYARAN CASH
   </div>
 
 </div>
+
+    <!-- ================= SALES DISTRIBUTION CARD ================= -->
+<div class="terminal-card distribution-card">
+
+  <div class="distribution-header">
+    SALES DISTRIBUTION INTELLIGENCE
+  </div>
+
+  <div class="distribution-grid">
+
+    <!-- PIE -->
+    <div class="distribution-box">
+      <div class="distribution-title">Revenue Share</div>
+      <canvas id="revenueShareChart"></canvas>
+    </div>
+
+    <!-- DOUGHNUT -->
+    <div class="distribution-box">
+      <div class="distribution-title">Food vs Drink</div>
+      <canvas id="categoryChart"></canvas>
+    </div>
+
+  </div>
+
+</div>
+
 
     <!-- FOOTER -->
     <div class="terminal-footer">
@@ -2602,20 +2685,20 @@ async function renderSummaryDetail(mode) {
 
 }
 
+async function loadReportChart(startDate, endDate) {
 
- async function loadReportChart(startDate, endDate) {
-
-  // 🔥 Revenue chart
   const { labels, values } =
     await buildReportChartData(startDate, endDate);
 
   renderReportChart(labels, values);
 
-  // 🔥 Top Items chart
   await renderTopItemsChart(startDate, endDate);
 
-}
+  await renderRevenueShareChart(startDate, endDate);
 
+  await renderCategoryChart(startDate, endDate);
+
+}
 
 function closeReportModal() {
 
@@ -3124,6 +3207,190 @@ async function renderTopItemsChart(startDate, endDate) {
     plugins: [neonLabelPlugin]
 
   });
+
+}
+
+  async function renderRevenueShareChart(startDate, endDate) {
+
+  const orders = await getAllOrders();
+
+  const start = new Date(startDate).setHours(0,0,0,0);
+  const end   = new Date(endDate).setHours(23,59,59,999);
+
+  const counter = {};
+
+  orders.forEach(order => {
+
+    const time = new Date(order.date).getTime();
+
+    if (time < start || time > end) return;
+
+    order.items.forEach(item => {
+
+      if (item.void) return;
+
+      const name = item.nama;
+
+      const revenue = item.harga * item.qty;
+
+      counter[name] = (counter[name] || 0) + revenue;
+
+    });
+
+  });
+
+  const sorted = Object.entries(counter)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,5);
+
+  const labels = sorted.map(x=>x[0]);
+  const values = sorted.map(x=>x[1]);
+
+  const ctx = document
+    .getElementById("revenueShareChart");
+
+  if (window.revenueShareInstance)
+    window.revenueShareInstance.destroy();
+
+  window.revenueShareInstance =
+    new Chart(ctx, {
+
+      type: "pie",
+
+      data: {
+
+        labels,
+
+        datasets: [{
+
+          data: values,
+
+          backgroundColor: [
+            "#3b82f6",
+            "#10b981",
+            "#f59e0b",
+            "#ef4444",
+            "#8b5cf6"
+          ],
+
+          borderWidth: 0
+
+        }]
+
+      },
+
+      options: {
+
+        responsive: true,
+
+        maintainAspectRatio: false,
+
+        plugins: {
+
+          legend: {
+
+            labels: {
+
+              color: "#cbd5e1"
+
+            }
+
+          }
+
+        }
+
+      }
+
+    });
+
+}
+
+  async function renderCategoryChart(startDate, endDate) {
+
+  const orders = await getAllOrders();
+
+  let food = 0;
+  let drink = 0;
+
+  const start = new Date(startDate).setHours(0,0,0,0);
+  const end   = new Date(endDate).setHours(23,59,59,999);
+
+  orders.forEach(order => {
+
+    const time = new Date(order.date).getTime();
+
+    if (time < start || time > end) return;
+
+    order.items.forEach(item => {
+
+      if (item.void) return;
+
+      const revenue = item.harga * item.qty;
+
+      if (item.kategori === "Drink")
+        drink += revenue;
+      else
+        food += revenue;
+
+    });
+
+  });
+
+  const ctx = document
+    .getElementById("categoryChart");
+
+  if (window.categoryChartInstance)
+    window.categoryChartInstance.destroy();
+
+  window.categoryChartInstance =
+    new Chart(ctx, {
+
+      type: "doughnut",
+
+      data: {
+
+        labels: ["Food", "Drink"],
+
+        datasets: [{
+
+          data: [food, drink],
+
+          backgroundColor: [
+            "#3b82f6",
+            "#10b981"
+          ],
+
+          borderWidth: 0
+
+        }]
+
+      },
+
+      options: {
+
+        responsive: true,
+
+        maintainAspectRatio: false,
+
+        cutout: "65%",
+
+        plugins: {
+
+          legend: {
+
+            labels: {
+
+              color: "#cbd5e1"
+
+            }
+
+          }
+
+        }
+
+      }
+
+    });
 
 }
 
@@ -3811,14 +4078,3 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
