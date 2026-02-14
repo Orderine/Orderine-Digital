@@ -2573,7 +2573,7 @@ async function buildReportChartData(startDate, endDate) {
 
   let reportChartInstance = null;
 
-function renderReportChart(labels, values) {
+  function renderReportChart(labels, values) {
 
   const ctx = document
     .getElementById("reportChart")
@@ -2583,36 +2583,56 @@ function renderReportChart(labels, values) {
     reportChartInstance.destroy();
   }
 
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-  gradient.addColorStop(0, "rgba(59,130,246,0.4)");
+  const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+  gradient.addColorStop(0, "rgba(59,130,246,0.6)");
   gradient.addColorStop(1, "rgba(59,130,246,0)");
 
   reportChartInstance = new Chart(ctx, {
     type: "line",
     data: {
       labels,
-      datasets: [{
-        label: "Revenue",
-        data: values,
-        borderColor: "#3b82f6",
-        backgroundColor: gradient,
-        tension: 0.4,
-        fill: true,
-        pointRadius: 3,
-        pointHoverRadius: 6
-      }]
+     datasets: [
+
+  // 🔥 GLOW LAYER (bawah)
+  {
+    data: values,
+    borderColor: "rgba(59,130,246,0.3)",
+    borderWidth: 8,
+    tension: 0,
+    pointRadius: 0,
+    fill: false
+  },
+
+  // 💎 MAIN LINE (atas)
+  {
+    label: "Revenue",
+    data: values,
+    borderColor: "#3b82f6",
+    borderWidth: 3,
+    tension: 0,
+    pointRadius: 4,
+    pointBackgroundColor: "#60a5fa",
+    pointHoverRadius: 7,
+    fill: true,
+    backgroundColor: gradient
+  }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "#111827",
+          backgroundColor: "#0f172a",
           borderColor: "#3b82f6",
           borderWidth: 1,
           titleColor: "#fff",
           bodyColor: "#fff",
+          padding: 12,
           callbacks: {
             label: function(context) {
               return "Rp " + context.raw.toLocaleString("id-ID");
@@ -2626,7 +2646,7 @@ function renderReportChart(labels, values) {
             color: "rgba(255,255,255,0.05)"
           },
           ticks: {
-            color: "#9ca3af"
+            color: "#94a3b8"
           }
         },
         y: {
@@ -2634,7 +2654,7 @@ function renderReportChart(labels, values) {
             color: "rgba(255,255,255,0.05)"
           },
           ticks: {
-            color: "#9ca3af",
+            color: "#94a3b8",
             callback: function(value) {
               return "Rp " + value.toLocaleString("id-ID");
             }
@@ -2644,7 +2664,6 @@ function renderReportChart(labels, values) {
     }
   });
 }
-
 
 async function renderVoidSummary() {
 
@@ -3329,6 +3348,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
