@@ -2543,27 +2543,30 @@ async function renderReportAnalytics(startDate, endDate) {
 }
 
 async function buildReportChartData(startDate, endDate) {
+
   const orders = await MENUVA_DB.getAll("ordersData");
 
   const revenuePerDay = {};
 
   orders
-    .filter(o => o.status === "paid")
+    .filter(o => o.status?.toLowerCase() === "paid")
     .forEach(order => {
 
-      const date = new Date(order.createdAt)
-        .toISOString()
-        .split("T")[0];
+      const date = order.date; // langsung pakai field date
 
+      // filter periode jika ada
       if (startDate && date < startDate) return;
       if (endDate && date > endDate) return;
 
       revenuePerDay[date] =
-        (revenuePerDay[date] || 0) + order.total;
+        (revenuePerDay[date] || 0) + (order.grandTotal || 0);
+
     });
 
   const labels = Object.keys(revenuePerDay).sort();
   const values = labels.map(d => revenuePerDay[d]);
+
+  console.log("RevenueMap FINAL:", revenuePerDay);
 
   return { labels, values };
 }
@@ -3326,5 +3329,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
