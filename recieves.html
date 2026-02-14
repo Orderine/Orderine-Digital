@@ -3424,14 +3424,14 @@ async function renderCategoryChart(startDate, endDate) {
 
 }
 
-
 let menuCategoryMap = null;
 
 async function buildMenuCategoryMap() {
 
-  if (menuCategoryMap) return menuCategoryMap;
+  if (menuCategoryMap)
+    return menuCategoryMap;
 
-  const menu = await getAllMenu(); // ← fungsi dari admin
+  const menu = await getAllMenu();
 
   menuCategoryMap = {};
 
@@ -3442,10 +3442,46 @@ async function buildMenuCategoryMap() {
 
   });
 
+  console.log("CategoryMap:", menuCategoryMap);
+
   return menuCategoryMap;
 
 }
 
+
+async function getAllMenu() {
+
+  return new Promise((resolve, reject) => {
+
+    const request =
+      indexedDB.open("MenuvaDB");
+
+    request.onsuccess = function(e) {
+
+      const db = e.target.result;
+
+      const tx =
+        db.transaction("menuData", "readonly");
+
+      const store =
+        tx.objectStore("menuData");
+
+      const getAll = store.getAll();
+
+      getAll.onsuccess =
+        () => resolve(getAll.result);
+
+      getAll.onerror =
+        () => reject(getAll.error);
+
+    };
+
+    request.onerror =
+      () => reject(request.error);
+
+  });
+
+}
 
 async function renderVoidSummary() {
   const voids = await getAllVoidItems();
@@ -4129,5 +4165,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
