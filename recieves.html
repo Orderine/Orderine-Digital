@@ -1362,6 +1362,11 @@ MODAL PEMBAYARAN CASH
 
   </div>
 </div>
+ 
+  <div class="chart-box">
+  <canvas id="topItemsChart"></canvas>
+</div>
+
 
 <script src="db-core.js"></script>
 <script>
@@ -2478,22 +2483,16 @@ async function renderSummaryDetail(mode) {
   });
 }
 
-  async function loadReportChart() {
+ async function loadReportChart(startDate, endDate) {
 
+  // 🔥 Revenue chart
   const { labels, values } =
-    await buildReportChartData();
+    await buildReportChartData(startDate, endDate);
 
   renderReportChart(labels, values);
 
-}
-
- async function openReportModal() {
-
-  document
-    .getElementById("reportModal")
-    .classList.remove("hidden");
-
-  await loadReportChart();
+  // 🔥 Top Items chart
+  await renderTopItemsChart(startDate, endDate);
 
 }
 
@@ -2682,6 +2681,105 @@ async function buildReportChartData(startDate, endDate) {
     }
   });
 }
+
+  async function getTopItems(startDate, endDate) {
+  const orders = await getAllOrders(); // fungsi lo yg sudah ada
+
+  const start = new Date(startDate).setHours(0,0,0,0);
+  const end   = new Date(endDate).setHours(23,59,59,999);
+
+  const counter = {};
+
+  orders.forEach(order => {
+    const orderTime = new Date(order.date).getTime();
+
+    if (orderTime >= start && orderTime <= end) {
+
+      order.items.forEach(item => {
+
+        if (!counter[item.name]) {
+          counter[item.name] = 0;
+        }
+
+        counter[item.name] += item.qty;
+      });
+
+    }
+  });
+
+  // Convert ke array
+  const sorted = Object.entries(counter)
+    .map(([name, qty]) => ({ name, qty }))
+    .sort((a,b) => b.qty - a.qty)
+    .slice(0,10); // ambil top 10
+
+  return sorted;
+}
+
+ async function renderTopItemsChart(startDate, endDate) {
+
+  const data = await getTopItems(startDate, endDate);
+
+  if (!data.length) return; // 🔥 anti error kalau kosong
+
+  const labels = data.map((item, index) =>
+    `#${index + 1} ${item.name}`
+  );
+
+  const values = data.map(item => item.qty);
+
+  const ctx = document
+    .getElementById("topItemsChart")
+    .getContext("2d");
+
+  if (window.topItemsChartInstance) {
+    window.topItemsChartInstance.destroy();
+  }
+
+  const maxValue = Math.max(...values);
+
+  window.topItemsChartInstance = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Qty Sold",
+        data: values,
+        borderRadius: 10,
+        borderSkipped: false,
+
+        // 🔥 Neon intensity dynamic
+        backgroundColor: values.map(v => {
+          const intensity = v / maxValue;
+          return `rgba(59,130,246,${0.3 + intensity * 0.7})`;
+        }),
+
+        borderColor: "#3b82f6",
+        borderWidth: 1
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      animation: { duration: 800 },
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: {
+          grid: { color: "rgba(255,255,255,.05)" },
+          ticks: { color: "#94a3b8" }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: "#e2e8f0" }
+        }
+      }
+    }
+  });
+
+}
+
 
 async function renderVoidSummary() {
 
@@ -3366,6 +3464,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
