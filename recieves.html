@@ -2850,79 +2850,69 @@ async function renderTopItemsChart(startDate, endDate) {
 
   const ctx = canvas.getContext("2d");
 
-  // destroy old chart biar tidak overlap
   if (window.topItemsChart instanceof Chart) {
     window.topItemsChart.destroy();
   }
 
-  if (!data || data.length === 0) {
-    return;
-  }
+  if (!data || data.length === 0) return;
 
-  const labels = data.map(d => d.name);
+  const labels = data.map((d, i) => {
+    if (i === 0) return "👑 " + d.name;
+    return d.name;
+  });
+
   const values = data.map(d => d.qty);
 
-  // ✅ generate warna aman sesuai jumlah item
-  const bgColors = [];
-  const borderColors = [];
+  const bgColors = values.map((_, i) => {
+    if (i === 0) return "#FFD700";       // Gold
+    if (i === values.length - 1) return "#FF3B30"; // Red
+    return "#2a2f45";                    // Neutral
+  });
 
-  for (let i = 0; i < labels.length; i++) {
-
-    if (i === 0) {
-      // 🥇 Gold
-      bgColors.push("#FFD700");
-      borderColors.push("#FFD700");
-
-    } else if (i === labels.length - 1) {
-      // 🔻 Red (rank terakhir)
-      bgColors.push("#FF3B30");
-      borderColors.push("#FF3B30");
-
-    } else {
-      // normal Bloomberg dark
-      bgColors.push("#2a2f45");
-      borderColors.push("#3a3f5a");
-    }
-  }
-
-  // ✅ create chart
   window.topItemsChart = new Chart(ctx, {
-    type: "doughnut",
+    type: "bar",
     data: {
       labels: labels,
       datasets: [{
         data: values,
         backgroundColor: bgColors,
-        borderColor: borderColors,
-        borderWidth: 2,
-        hoverOffset: 8
+        borderRadius: 8,
+        barThickness: 18
       }]
     },
     options: {
+      indexAxis: "y",
       responsive: true,
       maintainAspectRatio: false,
-      cutout: "65%",
       animation: {
-        duration: 1200,
+        duration: 1000,
         easing: "easeOutQuart"
       },
       plugins: {
-        legend: {
-          display: false
-        },
+        legend: { display: false },
         tooltip: {
           backgroundColor: "#000",
           titleColor: "#FFD700",
           bodyColor: "#fff",
           borderColor: "#FFD700",
-          borderWidth: 1,
-          padding: 10
+          borderWidth: 1
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: "rgba(255,255,255,0.05)" },
+          ticks: { color: "#94a3b8" }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: "#e2e8f0" }
         }
       }
     }
   });
 
 }
+
 
 async function renderVoidSummary() {
 
@@ -3607,6 +3597,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
