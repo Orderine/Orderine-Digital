@@ -1589,23 +1589,13 @@ async function saveCategory() {
   const name = document.getElementById("categoryNameInput").value.trim();
   if (!name) return alert("Category name required");
 
-  const newCategory = {
-    id: crypto.randomUUID(),
-    name
-  };
-
-  await MENUVA_DB.add("menuData", newCategory);
-
-  // SET ACTIVE CATEGORY
-  activeCategoryId = newCategory.id;
+  activeCategoryName = name;
 
   closeAddCategory();
 
-  // RENDER ULANG
-  await renderCategoryFilter();
-  await renderMenuPreview(activeCategoryId);
+  renderCategoryFilter();
+  renderMenuPreview(name);
 }
-
 
 function uploadMenuImage(event, inputEl) {
   const file = event.target.files[0];
@@ -3425,6 +3415,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
