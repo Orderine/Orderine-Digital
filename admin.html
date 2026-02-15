@@ -969,22 +969,22 @@ button {
   text-shadow: 0 0 6px rgba(0,255,166,0.6);
 }
 
-   .terminal-panel {
+  .terminal-panel {
   background: #0a0a0a;
-  border: 1px solid #16ff00;
+  border: none; /* wrapper border dihilangkan */
   border-radius: 6px;
   margin-bottom: 20px;
-  box-shadow: 0 0 8px rgba(0,255,0,0.25);
+  box-shadow: 0 0 12px rgba(0,170,255,0.15);
   font-family: Consolas, monospace;
   color: #e5e7eb;
 }
-    
+
 .terminal-status {
-  color: #22c55e;
+  color: #38bdf8; /* biru muda */
 }
 
 .terminal-section h2 {
-  color: #22d3ee;
+  color: #22d3ee; /* cyan neon */
   font-size: 16px;
   margin-bottom: 12px;
 }
@@ -1000,8 +1000,8 @@ button {
 .terminal-panel input[type="file"] {
   width: 100%;
   background: #050505;
-  border: 1px solid #16ff00;
-  color: #16ff00;
+  border: 1px solid #00aaff; /* biru neon */
+  color: #38bdf8; /* teks biru muda */
   padding: 8px;
   border-radius: 4px;
   margin-top: 4px;
@@ -1009,15 +1009,17 @@ button {
 
 .terminal-panel input:focus {
   outline: none;
-  box-shadow: 0 0 6px #16ff00;
+  box-shadow: 0 0 8px rgba(0,170,255,0.8); /* glow biru */
+  border-color: #38bdf8;
 }
 
 #previewLogo {
   max-height: 80px;
   margin-top: 10px;
-  border: 1px solid #16ff00;
+  border: 1px solid #00aaff; /* biru neon */
   background: #000;
   padding: 4px;
+  box-shadow: 0 0 6px rgba(0,170,255,0.4);
 }
 
 .terminal-warning {
@@ -3646,6 +3648,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
