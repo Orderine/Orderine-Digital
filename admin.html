@@ -1453,7 +1453,13 @@ let activeCategoryName = null;
 async function renderCategoryFilter() {
   const menus = await MENUVA_DB.getAll("menuData");
 
-  const uniqueCategories = [...new Set(menus.map(m => m.category))];
+  const uniqueCategories = [
+    ...new Set(
+      menus
+        .map(m => m.category)
+        .filter(c => c && c !== "undefined")
+    )
+  ];
 
   const bar = document.getElementById("categoryFilterBar");
   bar.innerHTML = "";
@@ -1477,10 +1483,14 @@ async function renderCategoryFilter() {
   });
 }
 
- async function renderMenuPreview(categoryName) {
+async function renderMenuPreview(categoryName) {
   const menus = await MENUVA_DB.getAll("menuData");
 
-  const filtered = menus.filter(m => m.category === categoryName);
+  const filtered = menus.filter(m =>
+    m.category === categoryName &&
+    m.name &&
+    typeof m.price !== "undefined"
+  );
 
   const grid = document.getElementById("menuPreviewGrid");
   grid.innerHTML = "";
@@ -1498,7 +1508,7 @@ async function renderCategoryFilter() {
   });
 }
 
- async function saveMenuItem() {
+async function saveMenuItem() {
   if (!activeCategoryName) {
     alert("Select category first");
     return;
@@ -1507,7 +1517,7 @@ async function renderCategoryFilter() {
   const name = document.getElementById("menuNameInput").value.trim();
   const price = parseFloat(document.getElementById("menuPriceInput").value);
 
-  if (!name || !price) return alert("Complete form");
+  if (!name || isNaN(price)) return alert("Complete form");
 
   const newMenu = {
     name,
@@ -1519,6 +1529,10 @@ async function renderCategoryFilter() {
 
   await MENUVA_DB.add("menuData", newMenu);
 
+  document.getElementById("menuNameInput").value = "";
+  document.getElementById("menuPriceInput").value = "";
+
+  renderCategoryFilter();
   renderMenuPreview(activeCategoryName);
 }
 
@@ -3415,6 +3429,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
