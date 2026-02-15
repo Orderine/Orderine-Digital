@@ -1020,7 +1020,8 @@ button {
 
         <input type="text" id="menuNameInput" placeholder="Menu Name" />
         <input type="number" id="menuPriceInput" placeholder="Price" />
-        <input type="text" id="menuImageInput" placeholder="Image URL (src)" />
+        <input type="file" id="menuImageInput" accept="image/*" />
+        <img id="imagePreview" style="width:100%;margin-top:10px;display:none;border:1px solid #00f0ff;" />
 
         <button onclick="saveMenuItem()">SAVE MENU</button>
       </div>
@@ -1559,17 +1560,12 @@ async function renderMenuPreview(categoryName) {
     const card = document.createElement("div");
     card.className = "terminal-menu-card";
 
-   card.innerHTML = `
-  ${menu.image ? `<img src="${menu.image}" class="menu-thumb" />` : ""}
+  card.innerHTML = `
+  ${menu.image ? `<img src="${menu.image}" style="width:100%;height:120px;object-fit:cover;">` : ""}
   <h4>${menu.name}</h4>
-  <p>Rp ${menu.price}</p>
-
-  <div class="menu-actions">
-    <button onclick="deleteMenu(${menu.id})">DELETE</button>
-  </div>
+  <p>Rp ${menu.price.toLocaleString()}</p>
+  <button onclick="deleteMenu(${menu.id})">DELETE</button>
 `;
-
-
     grid.appendChild(card);
   });
 }
@@ -1599,6 +1595,26 @@ async function renderMenuPreview(categoryName) {
   }
 }
 
+  let uploadedImageBase64 = null;
+
+document.getElementById("menuImageInput").addEventListener("change", function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function (event) {
+    uploadedImageBase64 = event.target.result;
+
+    const preview = document.getElementById("imagePreview");
+    preview.src = uploadedImageBase64;
+    preview.style.display = "block";
+  };
+
+  reader.readAsDataURL(file);
+});
+
+
 async function saveMenuItem() {
   if (!activeCategoryName) {
     alert("Select category first");
@@ -1607,14 +1623,16 @@ async function saveMenuItem() {
 
   const name = document.getElementById("menuNameInput").value.trim();
   const price = parseFloat(document.getElementById("menuPriceInput").value);
-  const image = document.getElementById("menuImageInput").value.trim();
 
-  if (!name || isNaN(price)) return alert("Complete form");
+  if (!name || isNaN(price)) {
+    alert("Complete form");
+    return;
+  }
 
   const newMenu = {
     name,
     price,
-    image,
+    image: uploadedImageBase64 || null,
     category: activeCategoryName,
     active: true,
     createdAt: Date.now()
@@ -1622,12 +1640,17 @@ async function saveMenuItem() {
 
   await MENUVA_DB.add("menuData", newMenu);
 
+  // Reset form
   document.getElementById("menuNameInput").value = "";
   document.getElementById("menuPriceInput").value = "";
   document.getElementById("menuImageInput").value = "";
+  uploadedImageBase64 = null;
 
-  renderCategoryFilter();
-  renderMenuPreview(activeCategoryName);
+  const preview = document.getElementById("imagePreview");
+  if (preview) preview.style.display = "none";
+
+  await renderCategoryFilter();
+  await renderMenuPreview(activeCategoryName);
 }
 
 
@@ -3528,6 +3551,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
