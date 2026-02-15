@@ -1045,6 +1045,39 @@ button {
   margin-left: 4px;
 }
 
+    .terminal-panel,
+.terminal-room {
+  max-width: 1100px;
+  margin: 30px auto;
+}
+
+    .terminal-panel .terminal-header {
+  justify-content: center;
+  text-align: center;
+}
+
+    .identity-body {
+  display: flex;
+  justify-content: center;
+}
+
+    .identity-inner {
+  width: 100%;
+  max-width: 420px;
+  background: #081018;
+  padding: 20px 24px;
+  border: 1px solid rgba(0,170,255,0.25);
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(0,170,255,0.15);
+}
+
+    .identity-inner h2,
+.terminal-panel h2 {
+  text-align: center;
+  color: #22d3ee;
+  text-shadow: 0 0 10px rgba(0,170,255,0.7);
+}
+
   </style>
 </head>
 <body>
@@ -1054,29 +1087,17 @@ button {
   <p style="color: white;">Digital Solution For Restaurant, Hotel, & Cafe's</p>
 </div>
 
-<!--  TERMINAL CONTAINER -->
 <div class="terminal-panel">
 
-  <!-- HEADER BAR -->
   <div class="terminal-header">
-    <span>IDENTITY MODULE</span>
-    <span class="terminal-status">ONLINE</span>
+    <h2>BUSINESS IDENTITY</h2>
   </div>
 
-  <!-- CONTENT -->
-  <div class="terminal-body">
+  <div class="terminal-body identity-body">
 
-    <!-- SUBSCRIPTION -->
-    <div id="subscriptionCountdown" class="terminal-warning">
-      ⏳ Subscription time left: <span id="countdownText"></span>
-    </div>
+    <div class="identity-inner">
 
-    <!-- BUSINESS IDENTITY -->
-    <div class="terminal-section">
-
-      <h2>📇 BUSINESS IDENTITY</h2>
-
-      <label for="logoInput">Your Business Logo</label>
+     <label for="logoInput">Your Business Logo</label>
       <input type="file" id="logoInput" name="logoInput" accept="image/*" />
 
       <img id="previewLogo" src="" alt="Logo Restoran" />
@@ -1089,10 +1110,11 @@ button {
 
       <label for="restoPhone">Phone Number</label>
       <input id="restoPhone" name="restoPhone" type="text" placeholder="08xx-xxxx-xxxx" />
-
+      
     </div>
 
   </div>
+
 </div>
 
 
@@ -3660,6 +3682,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
