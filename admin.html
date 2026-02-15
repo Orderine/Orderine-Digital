@@ -1186,9 +1186,14 @@ function tambahMenu(categoryId = "", nama = "", harga = "", image = "") {
     categoryId = CATEGORY_CACHE[0].id;
   }
 
-  const containerId = "menuContainer_" + categoryId;
+  const map = {
+  food: "menuFoodContainer",
+  drink: "menuDrinkContainer",
+  snack: "menuSnackContainer",
+  special: "menuSpecialContainer"
+};
 
-  const container = document.getElementById(containerId);
+const container = document.getElementById(map[categoryId]);
 
   if (!container) {
     console.warn("⚠️ container tidak ditemukan:", containerId);
@@ -2044,9 +2049,6 @@ async function loadData() {
 
     // isi cache dulu
     setCategoryCache(categories);
-
-    // render container kategori dulu
-    renderCategoryContainers(categories);
 
     console.log("📂 Categories loaded:", categories.length);
 
@@ -3095,6 +3097,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
