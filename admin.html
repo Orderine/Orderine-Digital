@@ -855,6 +855,35 @@ button {
   font-size: 11px;
 }
 
+    .admin-container {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 30px;
+  padding: 30px;
+}
+
+.admin-left {
+  border-right: 1px solid #00ffcc22;
+  padding-right: 20px;
+}
+
+.admin-right {
+  padding-left: 10px;
+}
+
+    .terminal-editor {
+  margin-top: 25px;
+}
+
+.terminal-editor input {
+  width: 100%;
+}
+
+.terminal-editor button {
+  width: 100%;
+  margin-top: 5px;
+}
+
   </style>
 </head>
 <body>
@@ -902,32 +931,48 @@ button {
   <button class="btn-orange" onclick="tambahPromo()">+ Add Promo Menu</button>
 </div>
 
-<div id="menuRoot"></div>
-<div id="categoryFilterBar" class="terminal-filter-bar"></div>
+<div class="admin-container">
 
-  <div id="menuEditorPanel" class="terminal-editor">
-  <h3 id="editorTitle">MENU EDITOR</h3>
+  <!-- LEFT PANEL -->
+  <div class="admin-left">
 
-  <input type="text" id="menuNameInput" placeholder="Menu Name" />
-  <input type="number" id="menuPriceInput" placeholder="Price" />
+    <div class="terminal-card add-category-card" onclick="openAddCategory()">
+      <div class="terminal-card-header">
+        <span class="terminal-dot"></span>
+        <span class="terminal-title">CATEGORY SYSTEM</span>
+      </div>
 
-  <button onclick="saveMenuItem()">SAVE MENU</button>
-</div>
+      <div class="terminal-card-body">
+        <h3>+ ADD CATEGORY</h3>
+        <p>Create new menu category</p>
+      </div>
+    </div>
 
- <div id="menuPreviewGrid" class="terminal-grid"></div>
+    <div id="menuEditorPanel" class="terminal-editor">
+      <h3>MENU EDITOR</h3>
 
-<div class="terminal-card add-category-card" onclick="openAddCategory()">
-  <div class="terminal-card-header">
-    <span class="terminal-dot"></span>
-    <span class="terminal-title">CATEGORY SYSTEM</span>
+      <input type="text" id="menuNameInput" placeholder="Menu Name" />
+      <input type="number" id="menuPriceInput" placeholder="Price" />
+
+      <button onclick="saveMenuItem()">SAVE MENU</button>
+    </div>
+
   </div>
 
-  <div class="terminal-card-body">
-    <h3>+ ADD CATEGORY</h3>
-    <p>Create new menu category</p>
+
+  <!-- RIGHT PANEL -->
+  <div class="admin-right">
+
+    <div id="categoryFilterBar" class="terminal-filter-bar"></div>
+
+    <div id="menuPreviewGrid" class="terminal-grid"></div>
+
   </div>
+
 </div>
 
+
+<!-- MODAL -->
 <div id="addCategoryModal" class="terminal-modal">
   <div class="terminal-modal-content">
     <h2>ADD CATEGORY</h2>
@@ -3369,6 +3414,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
