@@ -2021,77 +2021,150 @@ async function loadData() {
   try {
     showLoader?.("Loading data...");
 
-    const restoId = window.activeUser.restoID;
+    const restoId = window.activeUser?.restoID;
     console.log("📦 loadData start → resto:", restoId);
 
-    // ---------------- AMBIL RESTO ----------------
-   const resto = await MENUVA_DB.get("restos", restoId);
+    if (!restoId) {
+      console.warn("⚠️ restoId tidak ditemukan");
+      return;
+    }
 
-if (!resto) {
-  console.warn("⚠️ Resto not found in DB");
-  return;
-}
+    // ================= AMBIL RESTO =================
+    const resto = await MENUVA_DB.get("restos", restoId);
 
-    setCategoryCache(resto.categories);
-    renderCategoryContainers(resto.categories);
+    if (!resto) {
+      console.warn("⚠️ Resto not found in DB");
+      return;
+    }
 
+    // ================= CATEGORY SETUP (WAJIB DULU) =================
+    const categories = Array.isArray(resto.categories)
+      ? resto.categories
+      : [];
+
+    // isi cache dulu
+    setCategoryCache(categories);
+
+    // render container kategori dulu
+    renderCategoryContainers(categories);
+
+    console.log("📂 Categories loaded:", categories.length);
+
+    // ================= RESTO PROFILE =================
     const safeSetVal = (id, val) => {
       const el = document.getElementById(id);
       if (el) el.value = val ?? "";
     };
 
-    // ---------------- RESTO PROFILE ----------------
     safeSetVal("namaRestoran", resto.namaRestoran);
     safeSetVal("restoAddress", resto.restoAddress);
     safeSetVal("restoPhone", resto.restoPhone);
 
-    // ---------------- WA ADMIN ----------------
-   loadWaAdminFromData(resto?.nomorWaAdmin);
+    // ================= WA ADMIN =================
+    try {
+      loadWaAdminFromData?.(resto.nomorWaAdmin || []);
+    } catch (e) {
+      console.warn("⚠️ loadWaAdminFromData error:", e);
+    }
 
+    // ================= LOGO =================
     if (resto.logo) {
       window.__LOGO_BASE64__ = resto.logo;
       const img = document.getElementById("previewLogo");
       if (img) img.src = resto.logo;
     }
 
-    // ---------------- MENU ----------------
-    window.menuList = Array.isArray(resto.menu) ? resto.menu : [];
-    if (typeof clearMenuUI === "function") clearMenuUI();
+    // ================= MENU =================
+    window.menuList = Array.isArray(resto.menu)
+      ? resto.menu
+      : [];
+
+    console.log("🍽️ Menu loaded:", window.menuList.length);
+
+    // clear UI kalau ada
+    if (typeof clearMenuUI === "function") {
+      clearMenuUI();
+    }
+
+    // masukkan menu ke kategori yang benar
     window.menuList.forEach(m => {
-      try { tambahMenu?.(m.categoryId || "", m.nama || "", m.harga || "", m.image || ""); }
-      catch(e) { console.warn("⚠️ tambahMenu error", m, e); }
+      try {
+        const categoryId =
+          m.categoryId ||
+          m.kategori ||
+          categories[0]?.id ||
+          "";
+
+        tambahMenu?.(
+          categoryId,
+          m.nama || "",
+          m.harga || "",
+          m.image || ""
+        );
+      } catch (e) {
+        console.warn("⚠️ tambahMenu error", m, e);
+      }
     });
-    
-   try {
-  renderMenuUI?.(resto.menu || []);
-} catch (e) {
-  console.warn("⚠️ renderMenuUI error:", e);
-}
 
-    // ---------------- PROMO & VOUCHER ----------------
-    window.menuPromo = Array.isArray(resto.menuPromo) ? resto.menuPromo : [];
-    window.menuVoucher = Array.isArray(resto.menuVoucher) ? resto.menuVoucher : [];
+    // ❌ renderMenuUI dihapus karena bikin error
+    // renderMenuUI?.(resto.menu || []);
 
-    try { renderPromoUI?.(); } catch(e){ console.warn("⚠️ renderPromoUI error:", e); }
-    try { renderVoucher?.(window.menuVoucher); } catch(e){ console.warn("⚠️ renderVoucher error:", e); }
+    // ================= PROMO & VOUCHER =================
+    window.menuPromo = Array.isArray(resto.menuPromo)
+      ? resto.menuPromo
+      : [];
 
-    // ---------------- FLIPBOOK ----------------
-    window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages) ? resto.flipbookRuanganImages : [];
-    window.flipbookMenuImages = Array.isArray(resto.flipbookMenuImages) ? resto.flipbookMenuImages : [];
-    window.flipbookList = window.flipbookRuanganImages.concat(window.flipbookMenuImages);
+    window.menuVoucher = Array.isArray(resto.menuVoucher)
+      ? resto.menuVoucher
+      : [];
 
-    window.flipbookRuanganImages.forEach(src => { try { renderImagePreview?.("ruangan", src); } catch(e){console.warn(e);} });
-    window.flipbookMenuImages.forEach(src => { try { renderImagePreview?.("menu", src); } catch(e){console.warn(e);} });
+    try { renderPromoUI?.(); }
+    catch(e){ console.warn("⚠️ renderPromoUI error:", e); }
 
-    try { renderFlipbookUI?.(); } catch(e){ console.warn("⚠️ renderFlipbookUI error:", e); }
+    try { renderVoucher?.(window.menuVoucher); }
+    catch(e){ console.warn("⚠️ renderVoucher error:", e); }
 
-  // ---------------- ROOMS ----------------
-window.rooms = Array.isArray(resto.rooms) ? resto.rooms : [];
-renderRoomsFromDB(window.rooms);
+    // ================= FLIPBOOK =================
+    window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages)
+      ? resto.flipbookRuanganImages
+      : [];
+
+    window.flipbookMenuImages = Array.isArray(resto.flipbookMenuImages)
+      ? resto.flipbookMenuImages
+      : [];
+
+    window.flipbookList = [
+      ...window.flipbookRuanganImages,
+      ...window.flipbookMenuImages
+    ];
+
+    window.flipbookRuanganImages.forEach(src => {
+      try { renderImagePreview?.("ruangan", src); }
+      catch(e){ console.warn(e); }
+    });
+
+    window.flipbookMenuImages.forEach(src => {
+      try { renderImagePreview?.("menu", src); }
+      catch(e){ console.warn(e); }
+    });
+
+    try { renderFlipbookUI?.(); }
+    catch(e){ console.warn("⚠️ renderFlipbookUI error:", e); }
+
+    // ================= ROOMS =================
+    window.rooms = Array.isArray(resto.rooms)
+      ? resto.rooms
+      : [];
+
+    try {
+      renderRoomsFromDB?.(window.rooms);
+    } catch (e) {
+      console.warn("⚠️ renderRoomsFromDB error:", e);
+    }
 
     console.log("✅ loadData FINISHED");
 
-  } catch(err) {
+  } catch (err) {
     console.error("❌ loadData fatal:", err);
   } finally {
     hideLoader?.();
@@ -3022,6 +3095,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
