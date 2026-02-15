@@ -657,6 +657,12 @@ button {
   overflow: hidden;
 }
 
+  .terminal-card {
+  backdrop-filter: blur(6px);
+  border-radius: 8px;
+}
+
+
 .terminal-card:hover {
   transform: translateY(-4px);
   box-shadow:
@@ -710,7 +716,7 @@ button {
   animation: neonPulse 2.5s infinite;
 }
 
-    .terminal-modal {
+  .terminal-modal {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
@@ -944,6 +950,23 @@ button {
   border: 1px solid #00ffcc22;
   margin-bottom: 8px;
   box-shadow: 0 0 8px #00ffcc22;
+}
+
+    #menuEditorPanel h3 {
+  color: #00f0ff;
+  text-transform: uppercase;
+  font-weight: 700;
+  text-shadow: 0 0 10px #00f0ff;
+}
+
+    .terminal-grid h4 {
+  color: #ffffff;
+  text-shadow: 0 0 4px rgba(255,255,255,0.4);
+}
+
+.terminal-grid p {
+  color: #00ffa6;
+  text-shadow: 0 0 6px rgba(0,255,166,0.6);
 }
 
   </style>
@@ -3551,6 +3574,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
