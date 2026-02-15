@@ -643,6 +643,136 @@ button {
   display: block;
 }
 
+    /* ===== TERMINAL BASE ===== */
+body {
+  background: #0a0f14;
+  font-family: 'Courier New', monospace;
+  color: #00ffcc;
+}
+
+/* ===== TERMINAL CARD ===== */
+.terminal-card {
+  background: #0f1720;
+  border: 1px solid #00ffcc33;
+  border-radius: 6px;
+  padding: 18px;
+  width: 280px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 0 10px #00ffcc22;
+  position: relative;
+  overflow: hidden;
+}
+
+.terminal-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 0 8px #00ffcc,
+    0 0 18px #00ffcc88,
+    0 0 28px #00ffcc55;
+  border: 1px solid #00ffcc;
+}
+
+/* Header ala terminal */
+.terminal-card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #00ffaa;
+}
+
+.terminal-dot {
+  width: 8px;
+  height: 8px;
+  background: #00ffcc;
+  border-radius: 50%;
+  margin-right: 8px;
+  box-shadow: 0 0 6px #00ffcc;
+}
+
+/* Body */
+.terminal-card-body h3 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: #00ffcc;
+  text-shadow: 0 0 6px #00ffcc;
+}
+
+.terminal-card-body p {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+/* Neon pulse animation */
+@keyframes neonPulse {
+  0% { box-shadow: 0 0 8px #00ffcc33; }
+  50% { box-shadow: 0 0 20px #00ffcc88; }
+  100% { box-shadow: 0 0 8px #00ffcc33; }
+}
+
+.add-category-card {
+  animation: neonPulse 2.5s infinite;
+}
+
+    .terminal-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.terminal-modal-content {
+  background: #0f1720;
+  padding: 30px;
+  border: 1px solid #00ffcc;
+  box-shadow:
+    0 0 12px #00ffcc,
+    0 0 24px #00ffcc55;
+  width: 320px;
+  border-radius: 6px;
+}
+
+.terminal-modal-content h2 {
+  margin-top: 0;
+  text-shadow: 0 0 8px #00ffcc;
+}
+
+.terminal-modal-content input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 15px;
+  background: #081018;
+  border: 1px solid #00ffcc55;
+  color: #00ffcc;
+  outline: none;
+}
+
+.modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.modal-actions button {
+  background: transparent;
+  border: 1px solid #00ffcc;
+  color: #00ffcc;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.modal-actions button:hover {
+  background: #00ffcc;
+  color: #000;
+  box-shadow: 0 0 12px #00ffcc;
+}
+
   </style>
 </head>
 <body>
@@ -692,10 +822,30 @@ button {
 
 <div id="menuRoot"></div>
 
-<button class="btn-success" onclick="openAddCategory()">
-  + Add Category
-</button>
+<div class="terminal-card add-category-card" onclick="openAddCategory()">
+  <div class="terminal-card-header">
+    <span class="terminal-dot"></span>
+    <span class="terminal-title">CATEGORY SYSTEM</span>
+  </div>
 
+  <div class="terminal-card-body">
+    <h3>+ ADD CATEGORY</h3>
+    <p>Create new menu category</p>
+  </div>
+</div>
+
+<div id="addCategoryModal" class="terminal-modal">
+  <div class="terminal-modal-content">
+    <h2>ADD CATEGORY</h2>
+
+    <input type="text" id="categoryNameInput" placeholder="Category Name..." />
+
+    <div class="modal-actions">
+      <button onclick="saveCategory()">SAVE</button>
+      <button onclick="closeAddCategory()">CANCEL</button>
+    </div>
+  </div>
+</div>
 
 <div class="section-box" id="waContainerBox">
   <h3>📱 Admin WhatsApp Number (Order/Reservation Recipient)</h3>
@@ -1208,6 +1358,24 @@ function tambahMenu(categoryId = "", nama = "", harga = "", image = "") {
   });
 
 }
+
+  function openAddCategory() {
+  document.getElementById("addCategoryModal").style.display = "flex";
+}
+
+function closeAddCategory() {
+  document.getElementById("addCategoryModal").style.display = "none";
+}
+
+function saveCategory() {
+  const name = document.getElementById("categoryNameInput").value.trim();
+  if (!name) return alert("Category name required");
+
+  console.log("Category saved:", name);
+
+  closeAddCategory();
+}
+
 
 function uploadMenuImage(event, inputEl) {
   const file = event.target.files[0];
@@ -3026,6 +3194,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
