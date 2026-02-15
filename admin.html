@@ -690,29 +690,12 @@ button {
   <button class="btn-orange" onclick="tambahPromo()">+ Add Promo Menu</button>
 </div>
 
-<div class="section">
-  <h2>📋 SPECIAL MENU</h2>
-  <div id="menuSpecialContainer"></div>
-  <button class="btn-success" onclick="tambahMenu('special')">+ Add Special Menu</button>
-</div>
+<div id="menuRoot"></div>
 
-<div class="section">
-  <h2>📋 FOOD MENU</h2>
-  <div id="menuFoodContainer"></div>
-  <button class="btn-success" onclick="tambahMenu('food')">+ Add Menu</button>
-</div>
+<button class="btn-success" onclick="openAddCategory()">
+  + Add Category
+</button>
 
-<div class="section">
-  <h2>📋 SNACK & DESSERT</h2>
-  <div id="menuSnackContainer"></div>
-  <button class="btn-success" onclick="tambahMenu('snack')">+ Add Menu</button>
-</div>
-
-<div class="section">
-  <h2>📋 DRINK</h2>
-  <div id="menuDrinkContainer"></div>
-  <button class="btn-success" onclick="tambahMenu('drink')">+ Add Menu</button>
-</div>
 
 <div class="section-box" id="waContainerBox">
   <h3>📱 Admin WhatsApp Number (Order/Reservation Recipient)</h3>
@@ -1176,66 +1159,18 @@ function setCategoryCache(categories = []) {
 
 function tambahMenu(categoryId = "", nama = "", harga = "", image = "") {
 
-  if (!CATEGORY_CACHE.length) {
-    console.warn("⚠️ CATEGORY_CACHE kosong");
-    return;
-  }
+  if (!CATEGORY_CACHE.length) return;
 
-  // gunakan category pertama kalau kosong
-  if (!categoryId) {
-    categoryId = CATEGORY_CACHE[0].id;
-  }
+  if (!categoryId) categoryId = CATEGORY_CACHE[0].id;
 
-  const map = {
-  food: "menuFoodContainer",
-  drink: "menuDrinkContainer",
-  snack: "menuSnackContainer",
-  special: "menuSpecialContainer"
-};
-
-const container = document.getElementById(map[categoryId]);
+  const container = document.getElementById("menuContainer_" + categoryId);
 
   if (!container) {
-    console.warn("⚠️ container tidak ditemukan:", containerId);
+    console.warn("Container not found:", categoryId);
     return;
   }
 
-  const uid = "menu_" + Date.now();
-
-  // generate dropdown options dari CATEGORY_CACHE
-  const options = CATEGORY_CACHE.map(cat => `
-    <option value="${cat.id}" ${cat.id === categoryId ? "selected" : ""}>
-      ${cat.icon || ""} ${cat.name}
-    </option>
-  `).join("");
-
-  const div = document.createElement("div");
-  div.className = "menu-item";
-
-  div.innerHTML = `
-    <input type="text" placeholder="Menu Name" value="${nama}">
-    
-    <input type="number" placeholder="Price" value="${harga}">
-    
-    <select>
-      ${options}
-    </select>
-
-    <input type="file" accept="image/*"
-      onchange="uploadMenuImage(event, this)"
-      data-image="${image}">
-
-    <img class="menuPreview"
-      src="${image}"
-      style="max-height:80px; margin:5px 0; ${image ? "" : "display:none"}">
-
-    <button class="btn-danger"
-      onclick="this.parentElement.remove()">
-      Delete
-    </button>
-  `;
-
-  container.appendChild(div);
+  ...
 }
 
   function renderCategoryContainers(categories = []) {
@@ -1786,8 +1721,7 @@ async function simpanData() {
     }
 
     /* ==================== BUILD SINGLE RESTO OBJECT ==================== */
-    const categories = collectCategoriesFromUI();
-
+  
     const restoPayload = {
       id: restoId,
       ownerId,
@@ -1834,18 +1768,6 @@ async function simpanData() {
   } finally {
     hideLoader?.();
   }
-}
-
-function collectCategoriesFromUI() {
-  const defaultCategories = [
-    { id: "cat_food", name: "Food", icon: "🍽️", order: 1 },
-    { id: "cat_snack", name: "Snack", icon: "🍟", order: 2 },
-    { id: "cat_drink", name: "Drink", icon: "🥤", order: 3 },
-    { id: "cat_special", name: "Special", icon: "⭐", order: 4 },
-    { id: "cat_promo", name: "Promo", icon: "🔥", order: 5 }
-  ];
-
-  return defaultCategories;
 }
 
   function getVal(id) {
@@ -2049,6 +1971,7 @@ async function loadData() {
 
     // isi cache dulu
     setCategoryCache(categories);
+    renderCategoryContainers(categories);
 
     console.log("📂 Categories loaded:", categories.length);
 
@@ -3097,6 +3020,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
