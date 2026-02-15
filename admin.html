@@ -1037,6 +1037,21 @@ button {
 
 </div>
 
+  <!-- ADD CATEGORY MODAL -->
+<div id="addCategoryModal" class="terminal-modal">
+  <div class="terminal-modal-content">
+    <h2>ADD CATEGORY</h2>
+
+    <input type="text" id="categoryNameInput" placeholder="Category Name..." />
+
+    <div class="modal-actions">
+      <button onclick="saveCategory()">SAVE</button>
+      <button onclick="closeAddCategory()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="section-box" id="waContainerBox">
   <h3>📱 Admin WhatsApp Number (Order/Reservation Recipient)</h3>
   <div id="nomorWaContainer">
@@ -1491,12 +1506,6 @@ function ambilPromo() {
   return promos;
 }
 
-
-  function openAddCategory() {
-  console.log("Open Add Category clicked");
-  alert("Modal Add Category belum dibuat 😎");
-}
-
 let activeCategoryId = null;
 let activeCategoryName = null;
 
@@ -1673,16 +1682,21 @@ function tambahMenu(categoryId = "", nama = "", harga = "", image = "") {
   });
 
 }
-
-  
-
-  function openAddCategory() {
-  document.getElementById("addCategoryModal").style.display = "flex";
+function openAddCategory() {
+  const modal = document.getElementById("addCategoryModal");
+  if (!modal) {
+    console.error("❌ addCategoryModal not found");
+    return;
+  }
+  modal.style.display = "flex";
 }
 
 function closeAddCategory() {
-  document.getElementById("addCategoryModal").style.display = "none";
+  const modal = document.getElementById("addCategoryModal");
+  if (!modal) return;
+  modal.style.display = "none";
 }
+
 
 async function saveCategory() {
   const name = document.getElementById("categoryNameInput").value.trim();
@@ -3514,6 +3528,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
