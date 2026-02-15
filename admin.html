@@ -969,6 +969,83 @@ button {
   text-shadow: 0 0 6px rgba(0,255,166,0.6);
 }
 
+    .terminal-panel {
+  background: #0a0a0a;
+  border: 1px solid #16ff00;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  box-shadow: 0 0 8px rgba(0,255,0,0.25);
+  font-family: Consolas, monospace;
+  color: #e5e7eb;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  background: #111;
+  padding: 8px 12px;
+  border-bottom: 1px solid #16ff00;
+  color: #f59e0b;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.terminal-status {
+  color: #22c55e;
+}
+
+.terminal-body {
+  padding: 14px;
+}
+
+.terminal-section h2 {
+  color: #22d3ee;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.terminal-panel label {
+  display: block;
+  margin-top: 10px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.terminal-panel input[type="text"],
+.terminal-panel input[type="file"] {
+  width: 100%;
+  background: #050505;
+  border: 1px solid #16ff00;
+  color: #16ff00;
+  padding: 8px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.terminal-panel input:focus {
+  outline: none;
+  box-shadow: 0 0 6px #16ff00;
+}
+
+#previewLogo {
+  max-height: 80px;
+  margin-top: 10px;
+  border: 1px solid #16ff00;
+  background: #000;
+  padding: 4px;
+}
+
+.terminal-warning {
+  display: none;
+  background: #1a0000;
+  border: 1px solid #ff0000;
+  color: #ff4d4d;
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
   </style>
 </head>
 <body>
@@ -978,37 +1055,47 @@ button {
   <p style="color: white;">Digital Solution For Restaurant, Hotel, & Cafe's</p>
 </div>
 
-  <div id="subscriptionCountdown" style="
-  background: linear-gradient(135deg, #003366, #003366);
-  color: #dc2626;
-  padding:10px 14px;
-  border-radius:8px;
-  font-weight:600;
-  font-size:14px;
-  display:none;
-  margin-bottom:10px;
-">
-  ⏳ Subscription time left: <span id="countdownText"></span>
+<!--  TERMINAL CONTAINER -->
+<div class="terminal-panel">
+
+  <!-- HEADER BAR -->
+  <div class="terminal-header">
+    <span>IDENTITY MODULE</span>
+    <span class="terminal-status">ONLINE</span>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="terminal-body">
+
+    <!-- SUBSCRIPTION -->
+    <div id="subscriptionCountdown" class="terminal-warning">
+      ⏳ Subscription time left: <span id="countdownText"></span>
+    </div>
+
+    <!-- BUSINESS IDENTITY -->
+    <div class="terminal-section">
+
+      <h2>📇 BUSINESS IDENTITY</h2>
+
+      <label for="logoInput">Your Business Logo</label>
+      <input type="file" id="logoInput" name="logoInput" accept="image/*" />
+
+      <img id="previewLogo" src="" alt="Logo Restoran" />
+
+      <label for="namaRestoran">Your Business Name</label>
+      <input type="text" id="namaRestoran" name="namaRestoran" placeholder="Your Business Name" />
+
+      <label for="restoAddress">Your Business Address</label>
+      <input id="restoAddress" name="restoAddress" type="text" placeholder="Jl. Sudirman No. 10, Jakarta" />
+
+      <label for="restoPhone">Phone Number</label>
+      <input id="restoPhone" name="restoPhone" type="text" placeholder="08xx-xxxx-xxxx" />
+
+    </div>
+
+  </div>
 </div>
 
-<div class="section">
-
-  <h2>📇 Business Identity</h2>
-  
-  <label for="logoInput">Your Business Logo</label>
-  <input type="file" id="logoInput" name="logoInput" accept="image/*" />
-
-  <img id="previewLogo" src="" alt="Logo Restoran" style="max-height: 80px; margin-top: 10px;" />
-
-  <label for="namaRestoran">Your Business Name</label>
-  <input type="text" id="namaRestoran" name="namaRestoran" placeholder="Your Business Name" />
-
-  <label for="restoAddress">Your Business Address</label>
-  <input id="restoAddress" name="restoAddress" type="text" placeholder="Jl. Sudirman No. 10, Jakarta" />
-
-  <label for="restoPhone">Phone Number</label>
-  <input id="restoPhone" name="restoPhone" type="text" placeholder="08xx-xxxx-xxxx" />
-</div>
 
 <div class="section">
   <h2>🔥 Menu Promo</h2>
@@ -3574,6 +3661,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
