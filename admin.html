@@ -1454,6 +1454,10 @@ async function renderCategoryFilter() {
   const bar = document.getElementById("categoryFilterBar");
   bar.innerHTML = "";
 
+  if (categories.length && !activeCategoryId) {
+    activeCategoryId = categories[0].id;
+  }
+
   categories.forEach(cat => {
     const btn = document.createElement("div");
     btn.className = "terminal-filter-btn";
@@ -1471,7 +1475,12 @@ async function renderCategoryFilter() {
 
     bar.appendChild(btn);
   });
+
+  if (activeCategoryId) {
+    renderMenuPreview(activeCategoryId);
+  }
 }
+
 
   async function renderMenuPreview(categoryId) {
   const menus = await MENUVA_DB.getAll("menus");
@@ -1516,7 +1525,7 @@ async function renderCategoryFilter() {
     categoryId: activeCategoryId
   };
 
-  await MENUVA_DB.put("menus", newMenu);
+  await MENUVA_DB.add("menus", newMenu);
 
   document.getElementById("menuNameInput").value = "";
   document.getElementById("menuPriceInput").value = "";
@@ -1587,13 +1596,25 @@ function closeAddCategory() {
   document.getElementById("addCategoryModal").style.display = "none";
 }
 
-function saveCategory() {
+async function saveCategory() {
   const name = document.getElementById("categoryNameInput").value.trim();
   if (!name) return alert("Category name required");
 
-  console.log("Category saved:", name);
+  const newCategory = {
+    id: crypto.randomUUID(),
+    name
+  };
+
+  await MENUVA_DB.add("categories", newCategory);
+
+  // SET ACTIVE CATEGORY
+  activeCategoryId = newCategory.id;
 
   closeAddCategory();
+
+  // RENDER ULANG
+  await renderCategoryFilter();
+  await renderMenuPreview(activeCategoryId);
 }
 
 
@@ -2915,6 +2936,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindCustomerButtons();
   loadAdminData?.();
   startRealtimeOrderChecker();
+  await renderCategoryFilter();
 
   try {
     console.log("🚀 Admin Init (CORE)");
@@ -3414,6 +3436,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
