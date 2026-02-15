@@ -884,6 +884,26 @@ button {
   margin-top: 5px;
 }
 
+    .menu-actions {
+  margin-top: 10px;
+}
+
+.menu-actions button {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #ff4d4d;
+  color: #ff4d4d;
+  cursor: pointer;
+  font-size: 11px;
+  transition: 0.2s;
+}
+
+.menu-actions button:hover {
+  background: #ff4d4d;
+  color: #000;
+  box-shadow: 0 0 12px #ff4d4d;
+}
+
   </style>
 </head>
 <body>
@@ -1502,10 +1522,39 @@ async function renderMenuPreview(categoryName) {
     card.innerHTML = `
       <h4>${menu.name}</h4>
       <p>Rp ${menu.price}</p>
+
+      <div class="menu-actions">
+        <button onclick="deleteMenu(${menu.id})">DELETE</button>
+      </div>
     `;
 
     grid.appendChild(card);
   });
+}
+
+ async function deleteMenu(id) {
+  const confirmDelete = confirm("Delete this menu?");
+  if (!confirmDelete) return;
+
+  await MENUVA_DB.delete("menuData", id);
+
+  const menus = await MENUVA_DB.getAll("menuData");
+
+  const stillExists = menus.some(
+    m => m.category === activeCategoryName
+  );
+
+  if (!stillExists) {
+    activeCategoryName = null;
+  }
+
+  await renderCategoryFilter();
+
+  if (activeCategoryName) {
+    await renderMenuPreview(activeCategoryName);
+  } else {
+    document.getElementById("menuPreviewGrid").innerHTML = "";
+  }
 }
 
 async function saveMenuItem() {
@@ -3429,6 +3478,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
