@@ -1168,54 +1168,100 @@ function ambilPromo() {
   return promos;
 }
 
-/* ============================================================
-   MENU
-============================================================ */
-function tambahMenu(kategori = "food", nama = "", harga = "", image = "") {
-  const containerId = {
-    food: "menuFoodContainer",
-    snack: "menuSnackContainer",
-    drink: "menuDrinkContainer",
-    special: "menuSpecialContainer"
-  }[kategori] || "menuFoodContainer";
-
-  const container = document.getElementById(containerId);
-  if (!container) return;
-
-  const uid = "menu_" + Date.now();
-
-  const div = document.createElement("div");
-  div.className = "menu-item";
-  div.innerHTML = `
-    <input type="text" id="${uid}_name" placeholder="Menu Name" value="${nama}">
-    <input type="number" id="${uid}_price" placeholder="Price" value="${harga}">
-    <select id="${uid}_cat">
-      <option value="food" ${kategori === "food" ? "selected" : ""}>Food</option>
-      <option value="snack" ${kategori === "snack" ? "selected" : ""}>Snack</option>
-      <option value="drink" ${kategori === "drink" ? "selected" : ""}>Drink</option>
-      <option value="special" ${kategori === "special" ? "selected" : ""}>Special</option>
-    </select>
-
-    <input type="file" accept="image/*" onchange="uploadMenuImage(event, this)" data-image="${image}">
-    <img class="menuPreview" src="${image}" style="max-height:80px; margin:5px 0; ${image ? "" : "display:none"}">
-
-    <button class="btn-danger" onclick="this.parentElement.remove()">Delete</button>
-  `;
-  container.appendChild(div);
+let CATEGORY_CACHE = [];
+  
+function setCategoryCache(categories = []) {
+  CATEGORY_CACHE = Array.isArray(categories) ? categories : [];
 }
 
-  function renderMenuUI(menuList = []) {
-  if (!Array.isArray(menuList)) {
-    console.warn("⚠️ renderMenuUI: data bukan array", menuList);
+function tambahMenu(categoryId = "", nama = "", harga = "", image = "") {
+
+  if (!CATEGORY_CACHE.length) {
+    console.warn("⚠️ CATEGORY_CACHE kosong");
     return;
   }
 
-  console.log("🍽️ renderMenuUI called:", menuList.length);
+  // gunakan category pertama kalau kosong
+  if (!categoryId) {
+    categoryId = CATEGORY_CACHE[0].id;
+  }
 
-  // TODO: render UI menu di sini
-  // sementara ini cukup noop biar warning hilang
+  const containerId = "menuContainer_" + categoryId;
+
+  const container = document.getElementById(containerId);
+
+  if (!container) {
+    console.warn("⚠️ container tidak ditemukan:", containerId);
+    return;
+  }
+
+  const uid = "menu_" + Date.now();
+
+  // generate dropdown options dari CATEGORY_CACHE
+  const options = CATEGORY_CACHE.map(cat => `
+    <option value="${cat.id}" ${cat.id === categoryId ? "selected" : ""}>
+      ${cat.icon || ""} ${cat.name}
+    </option>
+  `).join("");
+
+  const div = document.createElement("div");
+  div.className = "menu-item";
+
+  div.innerHTML = `
+    <input type="text" placeholder="Menu Name" value="${nama}">
+    
+    <input type="number" placeholder="Price" value="${harga}">
+    
+    <select>
+      ${options}
+    </select>
+
+    <input type="file" accept="image/*"
+      onchange="uploadMenuImage(event, this)"
+      data-image="${image}">
+
+    <img class="menuPreview"
+      src="${image}"
+      style="max-height:80px; margin:5px 0; ${image ? "" : "display:none"}">
+
+    <button class="btn-danger"
+      onclick="this.parentElement.remove()">
+      Delete
+    </button>
+  `;
+
+  container.appendChild(div);
 }
 
+  function renderCategoryContainers(categories = []) {
+
+  const root = document.getElementById("menuRoot");
+
+  if (!root) return;
+
+  root.innerHTML = "";
+
+  categories.forEach(cat => {
+
+    const section = document.createElement("div");
+
+    section.innerHTML = `
+      <h3>${cat.icon || "📁"} ${cat.name}</h3>
+
+      <div id="menuContainer_${cat.id}" class="menu-container"></div>
+
+      <button onclick="tambahMenu('${cat.id}')">
+        + Add ${cat.name}
+      </button>
+
+      <hr>
+    `;
+
+    root.appendChild(section);
+
+  });
+
+}
 
 function uploadMenuImage(event, inputEl) {
   const file = event.target.files[0];
@@ -1239,13 +1285,17 @@ function ambilMenu(containerId) {
   container.querySelectorAll(".menu-item").forEach(item => {
     const nama = item.querySelector("input[type=text]")?.value || "";
     const harga = parseInt(item.querySelector("input[type=number]")?.value || "0");
-    const kategori = item.querySelector("select")?.value || "food";
+    const categoryId = item.querySelector("select")?.value || "";
     const image = item.querySelector("input[type=file]")?.getAttribute("data-image") || "";
 
     if (nama && harga > 0) {
-      result.push({ nama, harga, kategori, image });
-    }
-  });
+     result.push({
+  id: "menu_" + Date.now(),
+  nama,
+  harga,
+  categoryId,
+  image
+});
 
   return result;
 }
@@ -1739,6 +1789,7 @@ async function simpanData() {
       nomorWaAdmin,
 
       // 🔥 ALL ADMIN DATA HERE
+      categories,
       menu,
       rooms,
       menuPromo: promos,
@@ -1774,6 +1825,17 @@ async function simpanData() {
   }
 }
 
+function collectCategoriesFromUI() {
+  const defaultCategories = [
+    { id: "cat_food", name: "Food", icon: "🍽️", order: 1 },
+    { id: "cat_snack", name: "Snack", icon: "🍟", order: 2 },
+    { id: "cat_drink", name: "Drink", icon: "🥤", order: 3 },
+    { id: "cat_special", name: "Special", icon: "⭐", order: 4 },
+    { id: "cat_promo", name: "Promo", icon: "🔥", order: 5 }
+  ];
+
+  return defaultCategories;
+}
 
   function getVal(id) {
   return document.getElementById(id)?.value.trim() || "";
@@ -1785,14 +1847,21 @@ async function simpanData() {
     .filter(Boolean);
 }
 
-  function ambilSemuaMenu() {
-  return [
-    ...(typeof ambilMenu === "function" ? ambilMenu("menuFoodContainer") : []),
-    ...(typeof ambilMenu === "function" ? ambilMenu("menuSnackContainer") : []),
-    ...(typeof ambilMenu === "function" ? ambilMenu("menuDrinkContainer") : []),
-    ...(typeof ambilMenu === "function" ? ambilMenu("menuSpecialContainer") : [])
-  ];
+ function ambilSemuaMenu() {
+
+  const result = [];
+
+  CATEGORY_CACHE.forEach(cat => {
+
+    const containerId = "menuContainer_" + cat.id;
+
+    result.push(...ambilMenu(containerId));
+
+  });
+
+  return result;
 }
+
 
   function syncRestoIdHidden(restoId) {
   let el = document.getElementById("restoId");
@@ -1951,6 +2020,10 @@ async function loadData() {
 
     // ---------------- AMBIL RESTO ----------------
    const resto = await MENUVA_DB.get("restos", restoId);
+
+    setCategoryCache(resto.categories);
+    renderCategoryContainers(resto.categories);
+    
 if (!resto) {
   console.warn("⚠️ Resto not found in DB");
   return;
@@ -2944,6 +3017,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
