@@ -1449,42 +1449,36 @@ function ambilPromo() {
 let activeCategoryId = null;
 
 async function renderCategoryFilter() {
-  const categories = await MENUVA_DB.getAll("categories");
+  const menus = await MENUVA_DB.getAll("menuData");
+
+  const uniqueCategories = [...new Set(menus.map(m => m.category))];
 
   const bar = document.getElementById("categoryFilterBar");
   bar.innerHTML = "";
 
-  if (categories.length && !activeCategoryId) {
-    activeCategoryId = categories[0].id;
-  }
-
-  categories.forEach(cat => {
+  uniqueCategories.forEach(cat => {
     const btn = document.createElement("div");
     btn.className = "terminal-filter-btn";
-    btn.innerText = cat.name;
+    btn.innerText = cat;
 
-    if (cat.id === activeCategoryId) {
+    if (cat === activeCategoryName) {
       btn.classList.add("active");
     }
 
     btn.onclick = () => {
-      activeCategoryId = cat.id;
+      activeCategoryName = cat;
       renderCategoryFilter();
-      renderMenuPreview(cat.id);
+      renderMenuPreview(cat);
     };
 
     bar.appendChild(btn);
   });
-
-  if (activeCategoryId) {
-    renderMenuPreview(activeCategoryId);
-  }
 }
 
+ async function renderMenuPreview(categoryName) {
+  const menus = await MENUVA_DB.getAll("menuData");
 
-  async function renderMenuPreview(categoryId) {
-  const menus = await MENUVA_DB.getAll("menus");
-  const filtered = menus.filter(m => m.categoryId === categoryId);
+  const filtered = menus.filter(m => m.category === categoryName);
 
   const grid = document.getElementById("menuPreviewGrid");
   grid.innerHTML = "";
@@ -1496,19 +1490,14 @@ async function renderCategoryFilter() {
     card.innerHTML = `
       <h4>${menu.name}</h4>
       <p>Rp ${menu.price}</p>
-      <div class="menu-actions">
-        <button onclick="editMenu('${menu.id}')">EDIT</button>
-        <button onclick="deleteMenu('${menu.id}')">DELETE</button>
-      </div>
     `;
 
     grid.appendChild(card);
   });
 }
 
-
-  async function saveMenuItem() {
-  if (!activeCategoryId) {
+ async function saveMenuItem() {
+  if (!activeCategoryName) {
     alert("Select category first");
     return;
   }
@@ -1519,18 +1508,16 @@ async function renderCategoryFilter() {
   if (!name || !price) return alert("Complete form");
 
   const newMenu = {
-    id: crypto.randomUUID(),
     name,
     price,
-    categoryId: activeCategoryId
+    category: activeCategoryName,
+    active: true,
+    createdAt: Date.now()
   };
 
-  await MENUVA_DB.add("menus", newMenu);
+  await MENUVA_DB.add("menuData", newMenu);
 
-  document.getElementById("menuNameInput").value = "";
-  document.getElementById("menuPriceInput").value = "";
-
-  renderMenuPreview(activeCategoryId);
+  renderMenuPreview(activeCategoryName);
 }
 
 
@@ -1605,7 +1592,7 @@ async function saveCategory() {
     name
   };
 
-  await MENUVA_DB.add("categories", newCategory);
+  await MENUVA_DB.add("menuData", newCategory);
 
   // SET ACTIVE CATEGORY
   activeCategoryId = newCategory.id;
@@ -3436,6 +3423,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
