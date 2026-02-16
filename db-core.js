@@ -115,7 +115,7 @@ function openDB() {
     console.error("⏳ IndexedDB open timeout");
     dbOpeningPromise = null;
     reject(new Error("DB open timeout"));
-  }, 5000) // 5 detik
+  }, 12000) // 12 detik
 );
 
 return Promise.race([dbOpeningPromise, timeoutPromise]);
@@ -246,6 +246,7 @@ return Promise.race([dbOpeningPromise, timeoutPromise]);
   });
 
 })();
+
 
 
 
