@@ -1133,11 +1133,50 @@ button {
 </div>
 
 
-<div class="section">
-  <h2>🔥 Menu Promo</h2>
-  <div id="promoContainer"></div>
-  <button class="btn-orange" onclick="tambahPromo()">+ Add Promo Menu</button>
+<div class="terminal-room">
+
+  <h4 class="menu-categories-title">MENU PROMO</h4>
+
+  <div class="terminal-body">
+
+    <!-- LEFT PANEL -->
+    <div class="terminal-left">
+
+      <div class="terminal-card add-category-card" onclick="openAddPromo()">
+        <div class="terminal-card-header">
+          <span class="terminal-dot"></span>
+          <span class="terminal-title">PROMO SYSTEM</span>
+        </div>
+        <div class="terminal-card-body">
+          <h3>+ ADD PROMO</h3>
+          <p>Create new promotional menu</p>
+        </div>
+      </div>
+
+      <div id="promoEditorPanel" class="terminal-editor">
+        <h3>PROMO EDITOR</h3>
+
+        <input type="text" id="promoNameInput" placeholder="Promo Name" />
+        <input type="number" id="promoPriceInput" placeholder="Promo Price" />
+        <input type="file" id="promoImageInput" accept="image/*" />
+        <img id="promoImagePreview"
+             style="width:100%;margin-top:10px;display:none;border:1px solid #00f0ff;" />
+
+        <button onclick="savePromoItem()">SAVE PROMO</button>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="terminal-right">
+      <div id="promoFilterBar" class="terminal-filter-bar"></div>
+      <div id="promoPreviewGrid" class="terminal-grid"></div>
+    </div>
+
+  </div>
+
 </div>
+
 
 <div class="terminal-room">
  <h4 class="menu-categories-title">MENU CATEGORIES</h4>
@@ -3697,6 +3736,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
