@@ -1729,11 +1729,16 @@ function deletePromo(id) {
   
 function updatePromoCountdown() {
   const now = new Date();
+
   window.menuPromo.forEach(promo => {
     if (!promo.tanggalAkhir) return;
+
     const countdownEl = document.getElementById(`countdown-${promo.id}`);
+    if (!countdownEl) return; // 🔥 INI KUNCI
+
     const end = new Date(promo.tanggalAkhir);
     const diff = end - now;
+
     if (diff <= 0) {
       countdownEl.textContent = "EXPIRED";
     } else {
@@ -1741,13 +1746,20 @@ function updatePromoCountdown() {
       const hours = Math.floor((diff / (1000*60*60)) % 24);
       const minutes = Math.floor((diff / (1000*60)) % 60);
       const seconds = Math.floor((diff / 1000) % 60);
-      countdownEl.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+
+      countdownEl.textContent =
+        `${days}d ${hours}h ${minutes}m ${seconds}s`;
     }
   });
 }
 
-// panggil tiap 1 detik
-setInterval(updatePromoCountdown, 1000);
+  function initPromoCountdown() {
+  if (!document.querySelector("[id^='countdown-']")) return;
+  setInterval(updatePromoCountdown, 1000);
+}
+
+initPromoCountdown();
+
 
 // ================== IMAGE UPLOAD =======================
 function uploadPromoImage(event, inputEl) {
@@ -2840,10 +2852,7 @@ async function loadData() {
   try { renderVoucher?.(window.menuVoucher); } 
   catch(e){ console.warn("⚠️ renderVoucher error:", e); }
 
-  try { renderMenu?.(window.menu); } 
-  catch(e){ console.warn("⚠️ renderMenu error:", e); }
-
-
+ 
     // ================= FLIPBOOK =================
     window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages)
       ? resto.flipbookRuanganImages
@@ -3816,56 +3825,3 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
