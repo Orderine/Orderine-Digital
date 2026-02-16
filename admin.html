@@ -1726,14 +1726,24 @@ function renderPromoUI() {
     div.className = "terminal-card promo-item";
     div.dataset.id = promo.id;
 
-    div.innerHTML = `
+   div.innerHTML = `
+  <div class="terminal-card-header">
+    <span class="terminal-dot"></span>
+    <span class="terminal-title">${promo.namaPromo}</span>
+  </div>
+
   <div class="terminal-card-body">
-  <p class="promo-price">Price: ${promo.harga}</p>
-  <img src="${promo.image}" style="width:100%; height:100px; object-fit:cover; display:${promo.image?"block":"none"}" />
-  <p id="countdown-${promo.id}" class="promo-countdown"></p>
-  <button onclick="deletePromo('${promo.id}')">DELETE</button>
-</div>
-    `;
+    <p class="promo-price">Price: ${promo.harga}</p>
+
+    <img src="${promo.image}" 
+         style="width:100%; height:100px; object-fit:cover; display:${promo.image?"block":"none"}" />
+
+    <p id="countdown-${promo.id}" class="promo-countdown"></p>
+
+    <button onclick="deletePromo('${promo.id}')">DELETE</button>
+  </div>
+`;
+
     grid.appendChild(div);
   });
 }
@@ -3844,6 +3854,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
