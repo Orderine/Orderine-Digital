@@ -1692,7 +1692,8 @@ async function savePromoItem() {
   window.menuPromo.push(promo);
   renderPromoUI();
 
-  await MENUVA_DB.put("resto.menuPromo", { ...promo, restoId });
+  await MENUVA_DB.update("promoData", promo);
+
 }
 
 function renderPromoUI() {
@@ -3825,3 +3826,4 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
