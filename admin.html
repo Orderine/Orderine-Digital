@@ -1169,35 +1169,57 @@ button {
   margin: 4px 0;
 }
 
-    /* ================= PROMO TEXT FIX ================= */
-.promo-item,
+    /* ================= PROMO TEXT NUCLEAR FIX ================= */
+.promo-item {
+  color: #eaffff !important;
+}
+
+/* SEMUA TEXT DI DALAM CARD */
 .promo-item * {
-  color: #00f0ff !important; /* neon cyan */
+  color: #eaffff !important;
+  opacity: 1 !important;
 }
 
 /* NAMA PROMO */
 .promo-item .terminal-title {
   color: #00f0ff !important;
-  text-shadow: 0 0 6px #00f0ff;
+  text-shadow: 0 0 8px #00f0ff;
   font-weight: bold;
+  font-size: 16px;
 }
 
 /* HARGA */
-.promo-item .promo-price {
-  color: #00ffa6 !important; /* hijau neon biar beda */
+.promo-price {
+  color: #00ffa6 !important;
   font-weight: bold;
+  font-size: 14px;
 }
 
 /* STATUS */
 .promo-status {
   color: #ffcc00 !important;
   font-weight: bold;
+  font-size: 12px;
+}
+
+/* DATE RANGE */
+.promo-date {
+  color: #ffffff !important;
+  font-size: 11px;
+  opacity: 0.9;
 }
 
 /* COUNTDOWN */
 .promo-countdown {
-  color: #ffffff !important;
-  font-size: 12px;
+  color: #ff4dff !important;
+  font-size: 11px;
+}
+
+/* BACKGROUND TEXT SUPAYA KONTRAS */
+.promo-item .terminal-card-body p {
+  background: rgba(0,0,0,0.35);
+  padding: 2px 4px;
+  border-radius: 3px;
 }
 
   </style>
@@ -1815,16 +1837,21 @@ function renderPromoUI() {
 
       <p class="promo-status">${promo.isActive ? "ACTIVE" : "OFF"}</p>
 
-      <div class="terminal-card-body">
-        <p class="promo-price">Price: ${promo.harga}</p>
+     <div class="terminal-card-body">
+  <p class="promo-price">Price: ${promo.harga}</p>
 
-        <img src="${promo.image}" 
-             style="width:100%; height:100px; object-fit:cover; display:${promo.image?"block":"none"}" />
+  <p class="promo-date">
+    ${promo.startDate || "-"} → ${promo.endDate || "-"}
+  </p>
 
-        <p id="countdown-${promo.id}" class="promo-countdown"></p>
+  <img src="${promo.image}" 
+       style="width:100%; height:100px; object-fit:cover; display:${promo.image?"block":"none"}" />
 
-        <button onclick="deletePromo('${promo.id}')">DELETE</button>
-      </div>
+  <p id="countdown-${promo.id}" class="promo-countdown"></p>
+
+  <button onclick="deletePromo('${promo.id}')">DELETE</button>
+</div>
+
     `;
 
     grid.appendChild(div);
@@ -3936,4 +3963,5 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
