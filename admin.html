@@ -1664,17 +1664,16 @@ function openAddPromo() {
   document.getElementById("promoImageInput").value = "";
   document.getElementById("promoImagePreview").style.display = "none";
   document.getElementById("promoImagePreview").src = "";
-  const tanggalAkhir = document.getElementById("promoEndDateInput")?.value || "";
-  promo.tanggalAkhir = tanggalAkhir ? new Date(tanggalAkhir + "T23:59:59").toISOString() : "";
+
+  // Hapus assignment ke promo object → lakukan di savePromoItem()
 }
 
-function savePromoItem() {
+
+async function savePromoItem() {
   const name = document.getElementById("promoNameInput").value.trim();
   const price = Number(document.getElementById("promoPriceInput").value);
-  const promo.image = document.getElementById("promoImageInput").dataset.image || "";
-
-  await MENUVA_DB.put("menuPromo", { ...promo, restoId });
-
+  const image = document.getElementById("promoImageInput").dataset.image || "";
+  const tanggalAkhir = document.getElementById("promoEndDateInput")?.value || "";
 
   if (!name || price <= 0) {
     alert("⚠️ Please fill in valid promo name and price");
@@ -1685,13 +1684,15 @@ function savePromoItem() {
     id: crypto.randomUUID(),
     namaPromo: name,
     harga: price,
-    deskripsi: "", // optional: add textarea if needed
+    deskripsi: "", // optional
     image,
-    tanggalAkhir: ""
+    tanggalAkhir: tanggalAkhir ? new Date(tanggalAkhir + "T23:59:59").toISOString() : ""
   };
 
   window.menuPromo.push(promo);
   renderPromoUI();
+
+  await MENUVA_DB.put("menuPromo", { ...promo, restoId });
 }
 
 function renderPromoUI() {
@@ -3826,6 +3827,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
