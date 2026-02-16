@@ -1243,7 +1243,19 @@ button {
        accept="image/*"
        onchange="uploadPromoImage(event, this)" />
         <img id="promoImagePreview"
-             style="width:100%;margin-top:10px;display:none;border:1px solid #00f0ff;" />
+        style="width:100%;margin-top:10px;display:none;border:1px solid #00f0ff;" />
+
+        <label>Start Date</label>
+       <input type="date" id="promoStartDate" />
+
+        <label>End Date</label>
+        <input type="date" id="promoEndDate" />
+
+        <label class="promo-toggle">
+        <input type="checkbox" id="promoActiveToggle" checked />
+        Promo Active
+        </label>
+
 
         <button onclick="savePromoItem()">SAVE PROMO</button>
       </div>
@@ -1691,11 +1703,13 @@ function openAddPromo() {
   // Hapus assignment ke promo object → lakukan di savePromoItem()
 }
 
-
 async function savePromoItem() {
   const name = document.getElementById("promoNameInput").value.trim();
   const price = Number(document.getElementById("promoPriceInput").value);
   const image = document.getElementById("promoImageInput").dataset.image || "";
+  const startDate = document.getElementById("promoStartDate").value;
+  const endDate   = document.getElementById("promoEndDate").value;
+  const isActive  = document.getElementById("promoActiveToggle").checked;
 
   if (!name || price <= 0) {
     alert("⚠️ Please fill in valid promo name and price");
@@ -1706,14 +1720,41 @@ async function savePromoItem() {
     id: crypto.randomUUID(),
     namaPromo: name,
     harga: price,
-    image
+    image,
+    startDate,
+    endDate,
+    isActive
   };
 
+  // PUSH DATA
   window.menuPromo.push(promo);
 
+  // RENDER UI
   renderPromoUI();
-}
 
+  // =========================
+  // UX PREMIUM RESET FORM
+  // =========================
+  document.getElementById("promoNameInput").value = "";
+  document.getElementById("promoPriceInput").value = "";
+  document.getElementById("promoImageInput").value = "";
+  document.getElementById("promoStartDate").value = "";
+  document.getElementById("promoEndDate").value = "";
+  document.getElementById("promoActiveToggle").checked = true;
+
+  const preview = document.getElementById("promoImagePreview");
+  preview.src = "";
+  preview.style.display = "none";
+
+  // HAPUS DATASET IMAGE
+  document.getElementById("promoImageInput").dataset.image = "";
+
+  // =========================
+  // AUTO CLOSE EDITOR
+  // =========================
+  const editor = document.getElementById("promoEditorPanel");
+  if (editor) editor.style.display = "none";
+}
 
 function renderPromoUI() {
   const grid = document.getElementById("promoPreviewGrid");
@@ -1721,34 +1762,44 @@ function renderPromoUI() {
 
   grid.innerHTML = "";
 
-  window.menuPromo.forEach(promo => {
+  const today = new Date().toISOString().split("T")[0];
+
+  const activePromos = window.menuPromo.filter(p => {
+    if (!p.isActive) return false;
+    if (p.startDate && today < p.startDate) return false;
+    if (p.endDate && today > p.endDate) return false;
+    return true;
+  });
+
+  activePromos.forEach(promo => {
     const div = document.createElement("div");
     div.className = "terminal-card promo-item";
     div.dataset.id = promo.id;
 
-   div.innerHTML = `
-  <div class="terminal-card-header">
-    <span class="terminal-dot"></span>
-    <span class="terminal-title">${promo.namaPromo}</span>
-  </div>
+    div.innerHTML = `
+      <div class="terminal-card-header">
+        <span class="terminal-dot"></span>
+        <span class="terminal-title">${promo.namaPromo}</span>
+      </div>
 
-  <div class="terminal-card-body">
-    <p class="promo-price">Price: ${promo.harga}</p>
+      <p class="promo-status">${promo.isActive ? "ACTIVE" : "OFF"}</p>
 
-    <img src="${promo.image}" 
-         style="width:100%; height:100px; object-fit:cover; display:${promo.image?"block":"none"}" />
+      <div class="terminal-card-body">
+        <p class="promo-price">Price: ${promo.harga}</p>
 
-    <p id="countdown-${promo.id}" class="promo-countdown"></p>
+        <img src="${promo.image}" 
+             style="width:100%; height:100px; object-fit:cover; display:${promo.image?"block":"none"}" />
 
-    <button onclick="deletePromo('${promo.id}')">DELETE</button>
-  </div>
-`;
+        <p id="countdown-${promo.id}" class="promo-countdown"></p>
+
+        <button onclick="deletePromo('${promo.id}')">DELETE</button>
+      </div>
+    `;
 
     grid.appendChild(div);
   });
 }
 
- 
 async function deletePromo(id) {
   window.menuPromo = window.menuPromo.filter(p => p.id !== id);
   renderPromoUI();
@@ -3854,10 +3905,3 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
