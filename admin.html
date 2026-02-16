@@ -1225,6 +1225,8 @@ button {
 
     </div>
 
+    <div class="promo-countdown" id="countdown-${promo.id}"></div>
+
     <!-- RIGHT PANEL -->
     <div class="terminal-right">
       <div id="promoFilterBar" class="terminal-filter-bar"></div>
@@ -1662,12 +1664,17 @@ function openAddPromo() {
   document.getElementById("promoImageInput").value = "";
   document.getElementById("promoImagePreview").style.display = "none";
   document.getElementById("promoImagePreview").src = "";
+  const tanggalAkhir = document.getElementById("promoEndDateInput")?.value || "";
+  promo.tanggalAkhir = tanggalAkhir ? new Date(tanggalAkhir + "T23:59:59").toISOString() : "";
 }
 
 function savePromoItem() {
   const name = document.getElementById("promoNameInput").value.trim();
   const price = Number(document.getElementById("promoPriceInput").value);
-  const image = document.getElementById("promoImageInput").dataset.image || "";
+  const promo.image = document.getElementById("promoImageInput").dataset.image || "";
+
+  await MENUVA_DB.put("menuPromo", { ...promo, restoId });
+
 
   if (!name || price <= 0) {
     alert("⚠️ Please fill in valid promo name and price");
@@ -1705,7 +1712,7 @@ function renderPromoUI() {
       </div>
       <div class="terminal-card-body">
         <p>Price: ${promo.harga}</p>
-        <img src="${promo.image}" style="max-height:80px; display:${promo.image ? "block":"none"}" />
+        <img src="${promo.image}" style="width:100%; height:100px; object-fit:cover; display:${promo.image?"block":"none"}" />
         <button onclick="deletePromo('${promo.id}')">DELETE</button>
       </div>
     `;
@@ -1713,10 +1720,46 @@ function renderPromoUI() {
   });
 }
 
+  async function loadPromoFromDB(restoId) {
+  try {
+    const promos = await MENUVA_DB.getAll("menuPromo"); // filter restoId kalau perlu
+    window.menuPromo = promos.filter(p => p.restoId === restoId);
+    renderPromoUI();
+  } catch(err) {
+    console.error("Failed to load promo from DB:", err);
+  }
+}
+
+// Panggil pas page ready / loadData()
+loadPromoFromDB(restoId);
+
+
 function deletePromo(id) {
   window.menuPromo = window.menuPromo.filter(p => p.id !== id);
   renderPromoUI();
 }
+  
+function updatePromoCountdown() {
+  const now = new Date();
+  window.menuPromo.forEach(promo => {
+    if (!promo.tanggalAkhir) return;
+    const countdownEl = document.getElementById(`countdown-${promo.id}`);
+    const end = new Date(promo.tanggalAkhir);
+    const diff = end - now;
+    if (diff <= 0) {
+      countdownEl.textContent = "EXPIRED";
+    } else {
+      const days = Math.floor(diff / (1000*60*60*24));
+      const hours = Math.floor((diff / (1000*60*60)) % 24);
+      const minutes = Math.floor((diff / (1000*60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+      countdownEl.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    }
+  });
+}
+
+// panggil tiap 1 detik
+setInterval(updatePromoCountdown, 1000);
 
 // ================== IMAGE UPLOAD =======================
 function uploadPromoImage(event, inputEl) {
@@ -3783,6 +3826,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
