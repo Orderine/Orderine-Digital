@@ -11,6 +11,7 @@
   ====================================================== */
   window.__MENUVA_INTERNAL__ = true;
   window.__MENUVA_DEV__ = false;
+  const DEBUG_DB = false;
 
 
   const DB_NAME = "MenuvaDB";
@@ -110,14 +111,13 @@ function openDB() {
     };
   });
 
-   const timeoutPromise = new Promise((_, reject) =>
+  const timeoutPromise = new Promise((_, reject) =>
   setTimeout(() => {
-    console.error("⏳ IndexedDB open timeout");
+    if (DEBUG_DB) console.warn("⏳ IndexedDB open timeout");
     dbOpeningPromise = null;
     reject(new Error("DB open timeout"));
-  }, 12000) // 12 detik
+  }, 12000)
 );
-
 return Promise.race([dbOpeningPromise, timeoutPromise]);
 }
 
@@ -246,6 +246,7 @@ return Promise.race([dbOpeningPromise, timeoutPromise]);
   });
 
 })();
+
 
 
 
