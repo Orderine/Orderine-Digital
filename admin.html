@@ -1096,10 +1096,11 @@ button {
     /* ================= PROMO GRID ================= */
 #promoPreviewGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* card responsif */
-  gap: 12px; /* jarak antar card */
-  padding: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 12px;
 }
+
 
 /* PROMO CARD */
 .promo-item.terminal-card {
@@ -1112,6 +1113,9 @@ button {
   border-radius: 6px;
   padding: 8px;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+  min-height: 220px;      /* paksa card tidak gepeng */
+  padding: 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 /* IMAGE FIXED SIZE */
@@ -1121,6 +1125,7 @@ button {
   object-fit: cover; /* crop & maintain ratio */
   border-radius: 4px;
   margin-bottom: 6px;
+  height: 130px; 
 }
 
 /* TITLE & PRICE */
@@ -1147,6 +1152,10 @@ button {
   cursor: pointer;
 }
 
+  .promo-item.terminal-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 14px rgba(0,255,255,0.4);
+}
   </style>
 </head>
 <body>
@@ -3826,6 +3835,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
