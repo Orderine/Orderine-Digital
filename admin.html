@@ -1721,20 +1721,7 @@ function renderPromoUI() {
   });
 }
 
-  async function loadPromoFromDB(restoId) {
-  try {
-    const promos = await MENUVA_DB.getAll("menuPromo"); // filter restoId kalau perlu
-    window.menuPromo = promos.filter(p => p.restoId === restoId);
-    renderPromoUI();
-  } catch(err) {
-    console.error("Failed to load promo from DB:", err);
-  }
-}
-
-// Panggil pas page ready / loadData()
-loadPromoFromDB(restoId);
-
-
+ 
 function deletePromo(id) {
   window.menuPromo = window.menuPromo.filter(p => p.id !== id);
   renderPromoUI();
@@ -2841,19 +2828,21 @@ async function loadData() {
     // renderMenuUI?.(resto.menu || []);
 
     // ================= PROMO & VOUCHER =================
-    window.menuPromo = Array.isArray(resto.menuPromo)
-      ? resto.menuPromo
-      : [];
+  window.menuPromo = Array.isArray(resto.menuPromo) ? resto.menuPromo : [];
+  window.menuVoucher = Array.isArray(resto.menuVoucher) ? resto.menuVoucher : [];
+  window.menu = Array.isArray(resto.menu) ? resto.menu : [];
+  window.categories = Array.isArray(resto.categories) ? resto.categories : [];
 
-    window.menuVoucher = Array.isArray(resto.menuVoucher)
-      ? resto.menuVoucher
-      : [];
+  // render semua UI
+  try { renderPromoUI?.(); } 
+  catch(e){ console.warn("⚠️ renderPromoUI error:", e); }
 
-    try { renderPromoUI?.(); }
-    catch(e){ console.warn("⚠️ renderPromoUI error:", e); }
+  try { renderVoucher?.(window.menuVoucher); } 
+  catch(e){ console.warn("⚠️ renderVoucher error:", e); }
 
-    try { renderVoucher?.(window.menuVoucher); }
-    catch(e){ console.warn("⚠️ renderVoucher error:", e); }
+  try { renderMenu?.(window.menu); } 
+  catch(e){ console.warn("⚠️ renderMenu error:", e); }
+}
 
     // ================= FLIPBOOK =================
     window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages)
@@ -3827,6 +3816,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
