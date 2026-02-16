@@ -1138,7 +1138,7 @@ button {
   <h4 class="menu-categories-title">MENU PROMO</h4>
 
   <div class="terminal-header">
-  <span>PROMO MANAGEMENT</span>
+  <span></span>
   </div>
 
   <div class="terminal-body">
@@ -1587,113 +1587,102 @@ if (!window.indexedDB) {
 let flipbookRuanganImages = [];
 let flipbookMenuImages = [];
 
- function renderPromoUI() {
-  const container = document.getElementById("promoContainer");
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  if (!Array.isArray(window.menuPromo)) return;
-
-  window.menuPromo.forEach(promo => {
-    tambahPromo(promo);
-  });
-}
-
-window.renderPromoUI = renderPromoUI;
-
-
-function tambahPromo(promo = {}) {
-  const container = document.getElementById("promoContainer");
-  if (!container) return;
-
-  const {
-    id = "",
-    namaPromo = "",
-    harga = "",
-    deskripsi = "",
-    tanggalAkhir = "",
-    image = ""
-  } = promo;
-
-  const div = document.createElement("div");
-  div.className = "menu-item promo-item";
-
-  // ✅ ID PROMO PERSISTENT (PENTING)
-  div.dataset.id = id || crypto.randomUUID();
-
-  div.innerHTML = `
-    <input type="text" placeholder="Promo Name" value="${namaPromo}">
-    <input type="number" placeholder="Price" value="${harga}">
-    <textarea placeholder="Description">${deskripsi}</textarea>
-    <input type="date" value="${toDateInput(tanggalAkhir)}">
-
-    <input
-      type="file"
-      accept="image/*"
-      onchange="uploadPromoImage(event, this)"
-      data-image="${image}"
-    >
-
-    <img
-      class="promoPreview"
-      src="${image}"
-      style="max-height:80px;margin:5px 0;${image ? "" : "display:none"}"
-    >
-
-    <button class="btn-danger" onclick="this.parentElement.remove()">
-      Delete
-    </button>
-  `;
-
-  container.appendChild(div);
-}
-
   function toDateInput(iso) {
   if (!iso) return "";
   return iso.slice(0, 10); // yyyy-MM-dd
 }
 
+// GLOBAL STORE
+window.menuPromo = [];
 
-  function uploadPromoImage(event, inputEl) {
+// ======================= PROMO UI =========================
+function openAddPromo() {
+  // show editor panel
+  const editor = document.getElementById("promoEditorPanel");
+  if (!editor) return;
+  editor.style.display = "block";
+
+  // reset form
+  document.getElementById("promoNameInput").value = "";
+  document.getElementById("promoPriceInput").value = "";
+  document.getElementById("promoImageInput").value = "";
+  document.getElementById("promoImagePreview").style.display = "none";
+  document.getElementById("promoImagePreview").src = "";
+}
+
+function savePromoItem() {
+  const name = document.getElementById("promoNameInput").value.trim();
+  const price = Number(document.getElementById("promoPriceInput").value);
+  const image = document.getElementById("promoImageInput").dataset.image || "";
+
+  if (!name || price <= 0) {
+    alert("⚠️ Please fill in valid promo name and price");
+    return;
+  }
+
+  const promo = {
+    id: crypto.randomUUID(),
+    namaPromo: name,
+    harga: price,
+    deskripsi: "", // optional: add textarea if needed
+    image,
+    tanggalAkhir: ""
+  };
+
+  window.menuPromo.push(promo);
+  renderPromoUI();
+}
+
+function renderPromoUI() {
+  const grid = document.getElementById("promoPreviewGrid");
+  if (!grid) return;
+
+  grid.innerHTML = "";
+
+  window.menuPromo.forEach(promo => {
+    const div = document.createElement("div");
+    div.className = "terminal-card promo-item";
+    div.dataset.id = promo.id;
+
+    div.innerHTML = `
+      <div class="terminal-card-header">
+        <span class="terminal-dot"></span>
+        <span class="terminal-title">${promo.namaPromo}</span>
+      </div>
+      <div class="terminal-card-body">
+        <p>Price: ${promo.harga}</p>
+        <img src="${promo.image}" style="max-height:80px; display:${promo.image ? "block":"none"}" />
+        <button onclick="deletePromo('${promo.id}')">DELETE</button>
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function deletePromo(id) {
+  window.menuPromo = window.menuPromo.filter(p => p.id !== id);
+  renderPromoUI();
+}
+
+// ================== IMAGE UPLOAD =======================
+function uploadPromoImage(event, inputEl) {
   const file = event.target.files[0];
   if (!file) return;
 
   resizeIfNeeded(file)
     .then(resized => {
-      const preview = inputEl.parentElement.querySelector(".promoPreview");
+      const preview = document.getElementById("promoImagePreview");
       preview.src = resized;
       preview.style.display = "block";
-      inputEl.setAttribute("data-image", resized);
+      inputEl.dataset.image = resized;
     })
     .catch(err => console.error("Upload promo image failed:", err));
 }
 
-function ambilPromo() {
-  const container = document.getElementById("promoContainer");
-  if (!container) return [];
-
-  const promos = [];
-
-  container.querySelectorAll(".promo-item").forEach(item => {
-    const end = item.querySelector("input[type=date]")?.value;
-
-    promos.push({
-      id: item.dataset.id || crypto.randomUUID(),
-      namaPromo: item.querySelector("input[type=text]")?.value || "",
-      harga: Number(item.querySelector("input[type=number]")?.value || 0),
-      deskripsi: item.querySelector("textarea")?.value || "",
-      image: item.querySelector("input[type=file]")?.dataset.image || "",
-      kategori: "PROMO",
-
-      // ⏳ batas akhir 23:59
-      tanggalAkhir: end
-        ? new Date(end + "T23:59:59").toISOString()
-        : ""
-    });
-  });
-
-  return promos;
+// ================== RESTORE / LOAD ====================
+async function loadPromoData(resto) {
+  window.menuPromo = Array.isArray(resto.menuPromo) ? resto.menuPromo : [];
+  renderPromoUI();
 }
 
 let activeCategoryId = null;
@@ -3740,6 +3729,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
