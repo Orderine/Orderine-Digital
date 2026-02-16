@@ -1093,69 +1093,74 @@ button {
   margin-bottom: 15px;
 }
 
-    /* ================= PROMO GRID ================= */
-#promoPreviewGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-  padding: 12px;
+/* =================================================
+   PROMO ZONE – ISOLATED GRID SYSTEM
+================================================= */
+
+.promo-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+  gap: 28px !important;
+  padding: 20px !important;
+  align-items: stretch;
 }
 
-
 /* PROMO CARD */
-.promo-item.terminal-card {
+.promo-grid .promo-item {
+  width: 100%;
+  min-height: 260px;
+  background: #0b0b0b;
+  border: 1px solid #00f0ff;
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 0 12px rgba(0,255,255,0.25);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  align-items: center;
-  background: #0b0b0b; /* dark terminal bg */
-  border: 1px solid #00f0ff;
+  transition: 0.25s ease;
+}
+
+.promo-grid .promo-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 20px rgba(0,255,255,0.5);
+}
+
+/* IMAGE */
+.promo-grid .promo-item img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
   border-radius: 6px;
-  padding: 8px;
-  box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
-  min-height: 220px;      /* paksa card tidak gepeng */
-  padding: 12px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 10px;
 }
 
-/* IMAGE FIXED SIZE */
-.promo-item.terminal-card img {
-  width: 100%;
-  height: 100px; /* semua image sama tinggi */
-  object-fit: cover; /* crop & maintain ratio */
-  border-radius: 4px;
-  margin-bottom: 6px;
-  height: 130px; 
-}
-
-/* TITLE & PRICE */
-.promo-item.terminal-card .terminal-card-header {
-  width: 100%;
+/* TEXT */
+.promo-grid .terminal-card-header,
+.promo-grid .terminal-card-body {
   text-align: center;
-  margin-bottom: 4px;
-}
-
-.promo-item.terminal-card .terminal-card-body {
   width: 100%;
-  text-align: center;
 }
 
 /* DELETE BUTTON */
-.promo-item.terminal-card button {
-  margin-top: 6px;
-  width: 100%;
-  padding: 4px;
-  background: #ff0033;
+.promo-grid .promo-item button {
+  margin-top: auto;
+  padding: 8px;
+  border-radius: 6px;
   border: none;
+  background: #ff0033;
   color: white;
-  border-radius: 4px;
   cursor: pointer;
 }
 
-  .promo-item.terminal-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 0 14px rgba(0,255,255,0.4);
+  #promoEditorPanel h3 {
+  color: #00f0ff;
+  text-shadow:
+    0 0 6px #00f0ff,
+    0 0 12px #00f0ff,
+    0 0 24px rgba(0,240,255,0.7);
+  letter-spacing: 1px;
 }
+
   </style>
 </head>
 <body>
@@ -1240,7 +1245,7 @@ button {
     <!-- RIGHT PANEL -->
     <div class="terminal-right">
       <div id="promoFilterBar" class="terminal-filter-bar"></div>
-      <div id="promoPreviewGrid" class="terminal-grid"></div>
+      <div id="promoPreviewGrid" class="promo-grid"></div>
     </div>
 
   </div>
@@ -3835,6 +3840,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
