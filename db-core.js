@@ -10,6 +10,8 @@
      INTERNAL GUARD FLAG
   ====================================================== */
   window.__MENUVA_INTERNAL__ = true;
+  window.__MENUVA_DEV__ = false;
+
 
   const DB_NAME = "MenuvaDB";
   const DB_VERSION = 18;
@@ -108,7 +110,15 @@ function openDB() {
     };
   });
 
-  return dbOpeningPromise;
+   const timeoutPromise = new Promise((_, reject) =>
+  setTimeout(() => {
+    console.error("⏳ IndexedDB open timeout");
+    dbOpeningPromise = null;
+    reject(new Error("DB open timeout"));
+  }, 5000) // 5 detik
+);
+
+return Promise.race([dbOpeningPromise, timeoutPromise]);
 }
 
   /* ======================================================
@@ -173,6 +183,9 @@ function openDB() {
       return withStore(store, "readwrite", s => s.put(data));
     },
 
+     update(store, data) {return this.add(store, data);
+   },
+
     get(store, key) {
       return withStore(store, "readonly", s => s.get(key));
     },
@@ -210,7 +223,7 @@ function openDB() {
   /* ---- indexedDB ---- */
   const _open = indexedDB.open;
   indexedDB.open = function (...args) {
-    if (window.__MENUVA_INTERNAL__) {
+    if (window.__MENUVA_INTERNAL__ || window.__MENUVA_DEV__) {
       return _open.apply(indexedDB, args);
     }
     throw new Error("🚫 Direct indexedDB access forbidden. Use MENUVA_DB.");
@@ -222,12 +235,18 @@ function openDB() {
 
   /* ---- localStorage ---- */
   ["getItem", "setItem", "removeItem", "clear"].forEach(fn => {
-    localStorage[fn] = function () {
-      throw new Error("🚫 localStorage is forbidden. Use MENUVA_DB.");
-    };
+    const original = localStorage[fn];
+    localStorage[fn] = function (...args) {
+     if (window.__MENUVA_DEV__) {
+    return original.apply(localStorage, args);
+    }
+    throw new Error("🚫 localStorage is forbidden. Use MENUVA_DB.");
+};
+
   });
 
 })();
+
 
 
 
