@@ -1692,7 +1692,7 @@ async function savePromoItem() {
   window.menuPromo.push(promo);
   renderPromoUI();
 
-  await MENUVA_DB.put("menuPromo", { ...promo, restoId });
+  await MENUVA_DB.put("resto.menuPromo", { ...promo, restoId });
 }
 
 function renderPromoUI() {
@@ -2842,7 +2842,7 @@ async function loadData() {
 
   try { renderMenu?.(window.menu); } 
   catch(e){ console.warn("⚠️ renderMenu error:", e); }
-}
+
 
     // ================= FLIPBOOK =================
     window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages)
@@ -3050,7 +3050,7 @@ async function restoreDataFromFile(event) {
 
     // 5️⃣ restore promo
     for (const p of json.data?.menuPromo || []) {
-      await MENUVA_DB.add("menuPromo", { ...p, restoId });
+      await MENUVA_DB.add("resto.menuPromo", { ...p, restoId });
     }
 
     console.log("♻️ Restore SUCCESS for:", loginEmail);
@@ -3816,6 +3816,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
