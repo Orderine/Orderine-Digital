@@ -1098,27 +1098,31 @@ button {
 ================================================= */
 
 .promo-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
-  gap: 28px !important;
-  padding: 20px !important;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
 }
+
 
 /* PROMO CARD */
 .promo-grid .promo-item {
   width: 100%;
-  min-height: 260px;
   background: #0b0b0b;
   border: 1px solid #00f0ff;
   border-radius: 10px;
   padding: 14px;
   box-shadow: 0 0 12px rgba(0,255,255,0.25);
+
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   transition: 0.25s ease;
+
+  aspect-ratio: 3 / 4;   /* INI KUNCI */
+  max-width: 260px;
+  margin: auto;
 }
+
 
 .promo-grid .promo-item:hover {
   transform: translateY(-4px);
@@ -1128,10 +1132,22 @@ button {
 /* IMAGE */
 .promo-grid .promo-item img {
   width: 100%;
-  height: 150px;
+  height: 45%;
+  min-height: 120px;
+  max-height: 180px;
   object-fit: cover;
   border-radius: 6px;
   margin-bottom: 10px;
+}
+    
+.terminal-card-body {
+  flex: 1;
+}
+
+@media (orientation: landscape) {
+  .promo-grid .promo-item {
+    max-width: 220px;
+  }
 }
 
 /* TEXT */
@@ -1246,10 +1262,14 @@ button {
   font-weight: bold;
 }
 
-    .promo-desc {
-  font-family: monospace;
-  letter-spacing: 0.3px;
+.promo-desc {
+  font-size: 12px;
+  color: #aefcff;
+  opacity: 0.85;
+  margin: 4px 0 6px;
+  line-height: 1.3;
 }
+
 
   </style>
 </head>
@@ -4002,6 +4022,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
