@@ -827,14 +827,6 @@ button {
   color: #000;
   box-shadow: 0 0 12px #00ffcc;
 }
-
-  .terminal-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 15px;
-  margin-top: 20px;
-}
-
 .terminal-menu-card {
   background: #0f1720;
   border: 1px solid #00ffcc33;
@@ -1123,6 +1115,20 @@ button {
   height: 100%;
   object-fit: cover;
   object-position: center;
+  display: block;
+}
+.menu-img-wrap {
+  width: 100%;
+  aspect-ratio: 4 / 3;   /* ini kunci biar konsisten */
+  overflow: hidden;
+  border-radius: 8px;
+  background: #111;
+}
+
+.menu-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   display: block;
 }
 
@@ -1892,7 +1898,12 @@ async function renderMenuPreview(categoryName) {
     card.className = "terminal-menu-card";
 
   card.innerHTML = `
-  ${menu.image ? `<img src="${menu.image}" style="width:100%;height:120px;object-fit:cover;">` : ""}
+ ${menu.image ? `
+  <div class="menu-img-wrap">
+    <img src="${menu.image}" class="menu-img">
+  </div>
+` : ""}
+
   <h4>${menu.name}</h4>
   <p>Rp ${menu.price.toLocaleString()}</p>
   <button onclick="deleteMenu(${menu.id})">DELETE</button>
@@ -3879,6 +3890,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
