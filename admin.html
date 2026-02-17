@@ -1809,6 +1809,9 @@ async function savePromoItem() {
   // RENDER UI
   renderPromoUI();
 
+  await simpanData();
+
+
   // =========================
   // UX PREMIUM RESET FORM
   // =========================
@@ -2659,9 +2662,7 @@ async function simpanData() {
       ? ambilSemuaRoom()
       : [];
 
-    const promos = typeof ambilPromo === "function"
-      ? ambilPromo()
-      : [];
+    const promos = window.menuPromo || [];
 
     const vouchers = Array.isArray(window.menuVoucher)
       ? window.menuVoucher
@@ -3219,10 +3220,16 @@ async function restoreDataFromFile(event) {
       await MENUVA_DB.add("flipbookData", { ...f, restoId });
     }
 
-    // 5️⃣ restore promo
-    for (const p of json.data?.menuPromo || []) {
-      await MENUVA_DB.add("resto.menuPromo", { ...p, restoId });
-    }
+   // 5️⃣ restore promo → tempel ke object resto
+if (json.data?.menuPromo) {
+  const resto = await MENUVA_DB.get("restos", restoId);
+
+  if (resto) {
+    resto.menuPromo = json.data.menuPromo;
+    resto.updatedAt = Date.now();
+    await MENUVA_DB.add("restos", resto);
+  }
+}
 
     console.log("♻️ Restore SUCCESS for:", loginEmail);
 
@@ -3987,6 +3994,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
