@@ -1097,17 +1097,23 @@ button {
    PROMO ZONE – ISOLATED GRID SYSTEM
 ================================================= */
 .promo-grid {
+  display: grid;   /* INI WAJIB ADA */
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px 14px; 
+  column-gap: 16px;
+  row-gap: 22px;
+  align-items: start;
 }
+
 
 /* PROMO CARD */
 .promo-grid .promo-item {
   width: 100%;
-  max-width: none;   /* HAPUS BATAS */
-  margin: 0;         /* JANGAN AUTO */
+  margin: 0;
   aspect-ratio: 4 / 5;
+  display: flex;
+  flex-direction: column;
 }
+
 
 .promo-grid .promo-item:hover {
   transform: translateY(-4px);
@@ -1122,18 +1128,13 @@ button {
   max-height: 180px;
   object-fit: cover;
   border-radius: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
 }
     
 .terminal-card-body {
   flex: 1;
 }
 
-@media (orientation: landscape) {
-  .promo-grid .promo-item {
-    max-width: 220px;
-  }
-}
 
 /* TEXT */
 .promo-grid .terminal-card-header,
@@ -4001,6 +4002,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
