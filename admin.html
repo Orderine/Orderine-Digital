@@ -2779,20 +2779,14 @@ async function simpanData() {
 function highlightInvalidPromo() {
   let invalid = false;
 
-  document.querySelectorAll(".promo-item").forEach(item => {
-    const harga = item.querySelector("input[type=number]");
-
-    if (!harga || !harga.value || Number(harga.value) <= 0) {
-      if (harga) harga.style.border = "2px solid red";
+  window.menuPromo.forEach(promo => {
+    if (!promo.namaPromo || !promo.harga || promo.harga <= 0) {
       invalid = true;
-    } else {
-      harga.style.border = "";
     }
   });
 
   return invalid;
 }
-
 
   function highlightInvalidMenu() {
   let invalid = false;
@@ -3994,6 +3988,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
