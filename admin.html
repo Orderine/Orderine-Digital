@@ -1246,6 +1246,11 @@ button {
   font-weight: bold;
 }
 
+    .promo-desc {
+  font-family: monospace;
+  letter-spacing: 0.3px;
+}
+
   </style>
 </head>
 <body>
@@ -1314,6 +1319,10 @@ button {
         <h3>PROMO EDITOR</h3>
 
         <input type="text" id="promoNameInput" placeholder="Promo Name" />
+        <textarea id="promoDescInput"
+          placeholder="Description (Chicken, Mix Vegetable, etc)"
+          rows="2"
+          style="width:100%;resize:vertical;"></textarea>
         <input type="number" id="promoPriceInput" placeholder="Promo Price" />
         <input type="file"
        id="promoImageInput"
@@ -1782,6 +1791,7 @@ function openAddPromo() {
 
 async function savePromoItem() {
   const name = document.getElementById("promoNameInput").value.trim();
+  const desc = document.getElementById("promoDescInput").value.trim();
   const price = Number(document.getElementById("promoPriceInput").value);
   const image = document.getElementById("promoImageInput").dataset.image || "";
   const startDate = document.getElementById("promoStartDate").value;
@@ -1796,6 +1806,7 @@ async function savePromoItem() {
   const promo = {
     id: crypto.randomUUID(),
     namaPromo: name,
+    deskripsi: desc,
     harga: price,
     image,
     startDate,
@@ -1816,6 +1827,7 @@ async function savePromoItem() {
   // UX PREMIUM RESET FORM
   // =========================
   document.getElementById("promoNameInput").value = "";
+  document.getElementById("promoDescInput").value = "";
   document.getElementById("promoPriceInput").value = "";
   document.getElementById("promoImageInput").value = "";
   document.getElementById("promoStartDate").value = "";
@@ -1866,6 +1878,8 @@ function renderPromoUI() {
 
      <div class="terminal-card-body">
   <p class="promo-price">Price: ${promo.harga}</p>
+
+  <p class="promo-desc">${promo.deskripsi || ""}</p>
 
   <p class="promo-date">
     ${promo.startDate || "-"} → ${promo.endDate || "-"}
@@ -3988,6 +4002,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
