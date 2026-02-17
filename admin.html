@@ -1096,25 +1096,17 @@ button {
 /* =================================================
    PROMO ZONE – ISOLATED GRID SYSTEM
 ================================================= */
-
 .promo-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
 }
-
 
 /* PROMO CARD */
 .promo-grid .promo-item {
-  background: #0a0f14;  /* sama seperti terminal-room */
-  border: 1px solid #00ffcc22;
-  box-shadow:
-    0 0 10px #00ffcc22,
-    inset 0 0 20px #001a1a;
-
-  border-radius: 6px;
+  width: 100%;
+  max-width: none;   /* HAPUS BATAS */
+  margin: 0;         /* JANGAN AUTO */
 }
-
 
 .promo-grid .promo-item:hover {
   transform: translateY(-4px);
@@ -1252,6 +1244,10 @@ button {
   opacity: 0.9;
 }
 
+   #promoEditorPanel h3 {
+  color: #22d3ee;
+  text-shadow: 0 0 8px rgba(34,211,238,0.5);
+}
   </style>
 </head>
 <body>
@@ -4003,6 +3999,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
