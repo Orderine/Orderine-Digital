@@ -828,7 +828,7 @@ button {
   box-shadow: 0 0 12px #00ffcc;
 }
 
-    .terminal-grid {
+  .terminal-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 15px;
@@ -1118,12 +1118,7 @@ button {
   display: flex;
   flex-direction: column;
 }
-.promo-grid .terminal-card-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+
 .promo-desc {
   max-height: 36px;
   overflow: hidden;
@@ -1231,7 +1226,7 @@ button {
     <!-- RIGHT PANEL -->
     <div class="terminal-right">
       <div id="promoFilterBar" class="terminal-filter-bar"></div>
-      <div id="promoPreviewGrid" class="promo-grid"></div>
+      <div id="promoPreviewGrid" class="terminal-grid"></div>
     </div>
 
   </div>
@@ -3882,6 +3877,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
