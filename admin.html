@@ -1097,23 +1097,24 @@ button {
    PROMO ZONE – ISOLATED GRID SYSTEM
 ================================================= */
 .promo-grid {
-  display: grid;   /* INI WAJIB ADA */
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  column-gap: 16px;
-  row-gap: 22px;
-  align-items: start;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 240px);
+  justify-content: center;
+  gap: 20px;
 }
-
 
 /* PROMO CARD */
 .promo-grid .promo-item {
-  width: 100%;
-  margin: 0;
-  aspect-ratio: 4 / 5;
+  width: 240px;
+  height: 340px;   /* FIX */
   display: flex;
   flex-direction: column;
+  background: #0a0f14;
+  border: 1px solid #00ffcc22;
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 0 10px #00ffcc22;
 }
-
 
 .promo-grid .promo-item:hover {
   transform: translateY(-4px);
@@ -1123,14 +1124,12 @@ button {
 /* IMAGE */
 .promo-grid .promo-item img {
   width: 100%;
-  height: 45%;
-  min-height: 120px;
-  max-height: 180px;
+  height: 130px;
   object-fit: cover;
   border-radius: 6px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
 }
-    
+
 .terminal-card-body {
   flex: 1;
 }
@@ -1139,21 +1138,22 @@ button {
 /* TEXT */
 .promo-grid .terminal-card-header,
 .promo-grid .terminal-card-body {
-  text-align: center;
-  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 /* DELETE BUTTON */
 .promo-grid .promo-item button {
   margin-top: auto;
   padding: 8px;
-  border-radius: 6px;
+  border-radius: 4px;
   border: none;
   background: #ff0033;
   color: white;
   cursor: pointer;
 }
-
+ 
   #promoEditorPanel h3 {
   color: #00f0ff;
   text-shadow:
@@ -1243,8 +1243,8 @@ button {
 }
 
 .promo-desc {
-  color: #9ca3af;
-  opacity: 0.9;
+  max-height: 38px;
+  overflow: hidden;
 }
 
    #promoEditorPanel h3 {
@@ -4002,14 +4002,3 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
