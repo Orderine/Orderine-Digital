@@ -227,20 +227,78 @@
       background: #cc0000;
       transform: scale(1.05);
     }
-    .section-box {
-      border: none;
-      padding: 16px;
-      margin-bottom: 24px;
-      border-radius: 8px;
-      background: #fff;
-    }
-    .section-box h2,
-    .section-box h3 { margin-top: 0; }
-    .room-section { margin-bottom: 20px; }
-    .room-section button {
-      margin-bottom: 10px;
-      background-color: #17a2b8;
-    }
+   .section-box {
+  background: #0b0f14; /* hitam kebiruan */
+  border: 1px solid #00f0ff33;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 28px;
+
+  box-shadow:
+    0 0 8px #00f0ff22,
+    inset 0 0 12px #000000aa;
+
+  color: #cfefff;
+  position: relative;
+  overflow: hidden;
+}
+
+  .section-box h2,
+  .section-box h3 {
+  color: #00f0ff;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+
+  text-shadow:
+    0 0 6px #00f0ff66,
+    0 0 12px #00f0ff22;
+}
+    .section-box input.nomor-wa {
+  width: 100%;
+  background: #05080c;
+  color: #00f0ff;
+  border: 1px solid #00f0ff44;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+
+  box-shadow: inset 0 0 6px #000;
+}
+
+.section-box input.nomor-wa:focus {
+  outline: none;
+  border-color: #00f0ff;
+  box-shadow: 0 0 8px #00f0ff55;
+}
+.section-box button {
+  background: #07131a;
+  color: #00f0ff;
+  border: 1px solid #00f0ff66;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+
+  text-shadow: 0 0 4px #00f0ff55;
+  transition: all 0.2s ease;
+}
+
+.section-box button:hover {
+  background: #00f0ff;
+  color: #001014;
+  box-shadow: 0 0 10px #00f0ff88;
+}
+.section-box::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, #00f0ff, transparent);
+  opacity: 0.7;
+}
+
     .btn-simpan {
       background-color: #17a2b8;
       color: white;
@@ -4005,3 +4063,4 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
