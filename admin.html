@@ -4099,38 +4099,60 @@ function renderVoucher(vouchers = []) {
     </h3>
 
     ${vouchers.map(v => `
-      <div class="voucher-card">
-        <div>
-          <p>
-            <strong>Kode:</strong> ${v.code}
-            <button type="button"
-              onclick="copyVoucherCode('${v.code}')"
-              style="margin-left:6px;">📋</button>
-          </p>
+     <div class="voucher-item">
+  <p class="voucher-code-row">
+    <strong>Kode:</strong> ${v.code}
+    <button class="voucher-copy-btn" onclick="copyVoucherCode('${v.code}')">📋 Copy Voucher</button>
+  </p>
 
-          <small>Diskon: ${v.discount}%</small><br>
-          <small>Berlaku sampai: ${v.expiry}</small>
-        </div>
+  <p>Diskon: ${v.discount}%</p>
+  <p>Berlaku sampai: ${v.expiry}</p>
 
-       <button 
-  class="voucher-delete-btn" 
-  onclick="deleteVoucher('${v.id}')"
-  title="Delete Voucher">
-  ✖
-</button>
-      </div>
+  <div class="voucher-actions">
+    <button 
+      class="voucher-delete-btn"
+      onclick="deleteVoucher('${v.id}')"
+      title="Delete Voucher">
+      🗑
+    </button>
+  </div>
+</div>
+
     `).join("")}
   `;
 }
 
-  async function deleteVoucher(id) {
-  if (!confirm("Delete voucher ini?")) return;
+ async function deleteVoucher(id) {
+  try {
+    // =========================
+    // INIT STATE SAFETY
+    // =========================
+    window.menuVoucher = Array.isArray(window.menuVoucher)
+      ? window.menuVoucher
+      : [];
 
-  window.vouchers = window.vouchers.filter(v => v.id !== id);
+    // =========================
+    // FILTER DATA
+    // =========================
+    window.menuVoucher = window.menuVoucher.filter(v => v.id !== id);
 
-  renderVoucher(window.vouchers);
-  await simpanData(); // penting biar gak balik pas refresh
+    // =========================
+    // RENDER UI
+    // =========================
+    renderVoucher(window.menuVoucher);
+
+    // =========================
+    // SIMPAN DB
+    // =========================
+    await simpanData();
+
+    console.log("🗑️ Voucher deleted:", id);
+
+  } catch (err) {
+    console.error("❌ deleteVoucher error:", err);
+  }
 }
+
 
 /* ===================== COPY HELPER ===================== */
 function copyVoucherCode(code) {
@@ -4378,6 +4400,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
