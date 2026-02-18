@@ -1152,6 +1152,7 @@ button {
   object-fit: cover;
   object-position: center;
   display: block;
+  border-radius: 8px;
 }
 .menu-img-wrap {
   width: 100%;
@@ -1714,10 +1715,29 @@ function openAddPromo() {
 }
 
 async function savePromoItem() {
-  const name = document.getElementById("promoNameInput").value.trim();
-  const desc = document.getElementById("promoDescInput").value.trim();
+  const name  = document.getElementById("promoNameInput").value.trim();
+  const desc  = document.getElementById("promoDescInput").value.trim();
   const price = Number(document.getElementById("promoPriceInput").value);
-  const image = document.getElementById("promoImageInput").dataset.image || "";
+
+  const inputEl   = document.getElementById("promoImageInput");
+  const previewEl = document.getElementById("promoImagePreview");
+
+  // ================= IMAGE SAFE PICK =================
+  let image = "";
+
+  // 1. Ambil dari dataset dulu
+  if (inputEl.dataset.image && inputEl.dataset.image.startsWith("data:")) {
+    image = inputEl.dataset.image;
+  }
+
+  // 2. Kalau dataset kosong, ambil dari preview
+  if (!image && previewEl.src && previewEl.src.startsWith("data:")) {
+    image = previewEl.src;
+  }
+
+  // 3. Kalau masih kosong biarin "", nanti card tanpa image
+  // ====================================================
+
   const startDate = document.getElementById("promoStartDate").value;
   const endDate   = document.getElementById("promoEndDate").value;
   const isActive  = document.getElementById("promoActiveToggle").checked;
@@ -1732,45 +1752,43 @@ async function savePromoItem() {
     namaPromo: name,
     deskripsi: desc,
     harga: price,
-    image,
+    image: image,   // <- sudah aman HP
     startDate,
     endDate,
     isActive
   };
 
-  // PUSH DATA
+  // ================= PUSH DATA =================
   window.menuPromo.push(promo);
 
-  // RENDER UI
+  // ================= RENDER UI =================
   renderPromoUI();
 
   await simpanData();
 
-
-  // =========================
-  // UX PREMIUM RESET FORM
-  // =========================
-  document.getElementById("promoNameInput").value = "";
-  document.getElementById("promoDescInput").value = "";
+  // ================= RESET FORM =================
+  document.getElementById("promoNameInput").value  = "";
+  document.getElementById("promoDescInput").value  = "";
   document.getElementById("promoPriceInput").value = "";
-  document.getElementById("promoImageInput").value = "";
+  inputEl.value = "";
   document.getElementById("promoStartDate").value = "";
-  document.getElementById("promoEndDate").value = "";
+  document.getElementById("promoEndDate").value   = "";
   document.getElementById("promoActiveToggle").checked = true;
 
-  const preview = document.getElementById("promoImagePreview");
-  preview.src = "";
-  preview.style.display = "none";
+  // ================= RESET PREVIEW =================
+  previewEl.removeAttribute("src"); // lebih aman dari preview.src=""
+  previewEl.style.display = "none";
+  previewEl.style.visibility = "hidden";
+  previewEl.style.opacity = "0";
 
-  // HAPUS DATASET IMAGE
-  document.getElementById("promoImageInput").dataset.image = "";
+  // ================= HAPUS DATASET =================
+  inputEl.dataset.image = "";
 
-  // =========================
-  // AUTO CLOSE EDITOR
-  // =========================
+  // ================= AUTO CLOSE EDITOR =================
   const editor = document.getElementById("promoEditorPanel");
   if (editor) editor.style.display = "none";
 }
+
 
 function renderPromoUI() {
   const grid = document.getElementById("promoPreviewGrid");
@@ -3956,6 +3974,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
