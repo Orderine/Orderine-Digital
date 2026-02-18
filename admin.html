@@ -299,15 +299,7 @@
   opacity: 0.7;
 }
 
-    .btn-simpan {
-      background-color: #17a2b8;
-      color: white;
-      font-weight: bold;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
+   
     .btn-tambah-room {
       background: linear-gradient(135deg, #7f5af0, #2cb5e8);
       color: #fff;
@@ -1544,6 +1536,83 @@ button {
 .voucher-item p{
   margin:2px 0;
 }
+.btn-simpan{
+  background:#002b00;
+  color:#00ff88;
+  border:1px solid #00ff88;
+}
+
+.btn-simpan:hover{
+  background:#00ff88;
+  color:#000;
+  box-shadow:0 0 12px #00ff88;
+}
+.btn-orange{
+  background:#2a1400;
+  color:#ffa500;
+  border:1px solid #ffa500;
+}
+
+.btn-orange:hover{
+  background:#ffa500;
+  color:#000;
+  box-shadow:0 0 12px #ffa500;
+}
+.btn-teal{
+  background:#002a2a;
+  color:#00f0ff;
+  border:1px solid #00f0ff;
+}
+
+.btn-teal:hover{
+  background:#00f0ff;
+  color:#000;
+  box-shadow:0 0 12px #00f0ff;
+}
+.btn-purple{
+  background:#1b0033;
+  color:#bb66ff;
+  border:1px solid #bb66ff;
+}
+
+.btn-purple:hover{
+  background:#bb66ff;
+  color:#000;
+  box-shadow:0 0 12px #bb66ff;
+}
+.btn-red{
+  background:#330000;
+  color:#ff4d4d;
+  border:1px solid #ff4d4d;
+}
+
+.btn-red:hover{
+  background:#ff4d4d;
+  color:#000;
+  box-shadow:0 0 12px #ff4d4d;
+}
+button[onclick="downloadBackupJSON()"]{
+  background:#332900;
+  color:#ffd700;
+  border:1px solid #ffd700;
+}
+
+button[onclick="downloadBackupJSON()"]:hover{
+  background:#ffd700;
+  color:#000;
+  box-shadow:0 0 12px #ffd700;
+}
+#restoreInput{
+  background:#220022;
+  color:#ff66cc;
+  border:1px solid #ff66cc;
+  padding:8px;
+  border-radius:6px;
+}
+
+#restoreInput:hover{
+  box-shadow:0 0 10px #ff66cc;
+}
 
   </style>
 </head>
@@ -1797,7 +1866,7 @@ button {
 <hr>
 
 <div class="section">
-  <button class="btn-simpan" onclick="simpanData()">💾 Save All</button>
+  <button class="btn-simpan" onclick="simpanData()">💾 Save All Data</button>
   <input type="hidden" id="restoId" name="restoId" />
 
   <button id="btnOpenCustomer" class="btn-orange" style="display:none;">👁️ See Customer Page</button>
@@ -4408,6 +4477,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
