@@ -812,7 +812,17 @@ button {
   border: 1px solid #00ffcc55;
   color: #00ffcc;
 }
-
+ .terminal-editor textarea {
+  background: #0a0f14;
+  color: #00f0ff;
+  border: 1px solid #00f0ff44;
+  border-radius: 6px;
+}
+.terminal-editor input:focus {
+  outline: none;
+  border-color: #00f0ff;
+  box-shadow: 0 0 8px #00f0ff55;
+}
 .terminal-editor button {
   padding: 8px 16px;
   background: transparent;
@@ -1174,6 +1184,23 @@ button {
   object-fit: cover;
   border-radius: 8px;
   display: none;
+}
+.terminal-editor h3 {
+  color: #00f0ff;
+  text-shadow: 0 0 6px #00f0ff88, 0 0 12px #00f0ff44;
+  letter-spacing: 1px;
+}
+
+.terminal-editor label {
+  color: #00eaff;
+  font-weight: 600;
+  text-shadow: 0 0 4px #00f0ff55;
+}
+
+/* checkbox text */
+.promo-toggle {
+  color: #00f0ff;
+  text-shadow: 0 0 4px #00f0ff55;
 }
 
   </style>
@@ -1844,12 +1871,16 @@ function renderPromoUI() {
 }
 
 async function deletePromo(id) {
+  // hapus dari memory
   window.menuPromo = window.menuPromo.filter(p => p.id !== id);
+
+  // render ulang UI
   renderPromoUI();
-  await MENUVA_DB.delete("promoData", id);
+
+  // simpan ulang seluruh data promo
+  await simpanData();
 }
 
-  
 function updatePromoCountdown() {
   const now = new Date();
 
@@ -3974,17 +4005,3 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
