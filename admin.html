@@ -112,7 +112,6 @@
     }
     .menu-item button {
       flex: 1 1 auto;
-      white-space: nowrap;
       background: linear-gradient(135deg, #7f5af0, #2cb5e8);
     }
     .btn-danger {
@@ -1123,16 +1122,20 @@ button {
 /* GRID PROMO */
 .terminal-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
   width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
+
 
 /* CARD */
 .terminal-card {
-  height: auto;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
-
 
 .promo-img-wrap {
   width: 100%;
@@ -3953,6 +3956,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
