@@ -1368,6 +1368,75 @@ button {
   gap: 14px;
   margin-top: 10px;
 }
+#roomHotelContainer > div,
+#meetingRoomContainer > div,
+#packageContainer > div {
+  background: #070b10 !important;
+  border: 1px solid #00f0ff22 !important;
+  border-radius: 10px;
+  padding: 12px;
+  color: #cfefff !important;
+
+  box-shadow:
+    inset 0 0 10px #000,
+    0 0 6px #00f0ff11;
+
+  transition: 0.2s ease;
+}
+#roomHotelContainer > div:hover,
+#meetingRoomContainer > div:hover,
+#packageContainer > div:hover {
+  border-color: #00f0ff66 !important;
+  box-shadow:
+    0 0 10px #00f0ff44,
+    inset 0 0 14px #000;
+}
+#roomHotelContainer input,
+#meetingRoomContainer input,
+#packageContainer input,
+#roomHotelContainer textarea,
+#meetingRoomContainer textarea,
+#packageContainer textarea {
+  background: #020406;
+  color: #9fefff;
+  border: 1px solid #00f0ff33;
+}
+#roomHotelContainer label,
+#meetingRoomContainer label,
+#packageContainer label {
+  color: #7fdcff !important;
+}
+.section button {
+  background: linear-gradient(180deg, #031018, #02070c);
+  color: #00f0ff;
+  border: 1px solid #00f0ff55;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+
+  box-shadow:
+    inset 0 0 6px #000,
+    0 0 6px #00f0ff22;
+
+  transition: 0.2s ease;
+}
+.section button:hover {
+  background: #020b12;
+  border-color: #00f0ffaa;
+  color: #7fffff;
+
+  box-shadow:
+    0 0 10px #00f0ff66,
+    inset 0 0 8px #000;
+}
+.section button:active {
+  transform: scale(0.96);
+  box-shadow:
+    inset 0 0 10px #000,
+    0 0 4px #00f0ff44;
+}
 
   </style>
 </head>
@@ -1429,7 +1498,6 @@ button {
         </div>
         <div class="terminal-card-body">
           <h3>+ ADD PROMO</h3>
-          <p>Create new promotional menu</p>
         </div>
       </div>
 
@@ -1495,7 +1563,6 @@ button {
         </div>
         <div class="terminal-card-body">
           <h3>+ ADD CATEGORY</h3>
-          <p>Create new menu category</p>
         </div>
       </div>
 
@@ -4171,6 +4238,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
