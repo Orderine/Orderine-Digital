@@ -902,17 +902,11 @@ button {
   box-shadow: 0 0 12px #ff4d4d;
 }
 
-  .terminal-room {
-  background: #0a0f14;
-  border: 1px solid #00ffcc22;
-  box-shadow:
-    0 0 15px #00ffcc22,
-    inset 0 0 40px #001a1a;
-  margin: 30px;
-  padding: 20px;
-  border-radius: 6px;
+ /* ================= TERMINAL ROOM ================= */
+.terminal-room {
+  width: 100%;
+  margin-bottom: 32px;
 }
-
 .terminal-header {
   border-bottom: 1px solid #00ffcc22;
   padding-bottom: 10px;
@@ -922,20 +916,45 @@ button {
   text align: center;
 }
 
+/* ================= TERMINAL BODY (CORE LAYOUT) ================= */
 .terminal-body {
-  display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 30px;
-  text align: center;
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  align-items: flex-start;
 }
 
-.terminal-left {
-  border-right: 1px solid #00ffcc22;
-  padding-right: 20px;
-}
-
+/* ================= PANEL ================= */
+.terminal-left,
 .terminal-right {
-  padding-left: 10px;
+  flex: 1;
+  min-width: 0; /* penting biar gak overflow */
+}
+
+/* Desktop Height Feel */
+.terminal-left {
+  max-width: 420px;
+}
+
+    /* ================= MOBILE PORTRAIT ================= */
+@media (max-width: 768px) {
+
+  .terminal-body {
+    flex-direction: column;
+  }
+
+  .terminal-left {
+    max-width: 100%;
+  }
+
+  .terminal-right {
+    width: 100%;
+  }
+
+  /* biar ada napas bawah */
+  .terminal-room {
+    padding-bottom: 40px;
+  }
 }
 
     .menu-thumb {
@@ -3890,6 +3909,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
