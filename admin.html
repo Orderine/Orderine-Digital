@@ -1507,17 +1507,34 @@ button {
   color: #7fffff;
 }
 
-.voucher-delete {
-  background: #140000;
-  color: #ff5c5c;
-  border: 1px solid #ff5c5c55;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
+.voucher-delete-btn{
+  width:32px;
+  height:28px;
+  padding:0;
+  font-size:14px;
+  border-radius:4px;
+
+  background:#220000;
+  color:#ff4d4d;
+  border:1px solid #ff4d4d;
+
+  cursor:pointer;
+  transition:0.2s;
 }
 
-.voucher-delete:hover {
-  box-shadow: 0 0 8px #ff5c5c88;
+.voucher-delete-btn:hover{
+  background:#ff1a1a;
+  color:#fff;
+  box-shadow:0 0 8px #ff1a1a;
+}
+.voucher-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+.voucher-item p{
+  margin:2px 0;
 }
 
   </style>
@@ -4095,10 +4112,12 @@ function renderVoucher(vouchers = []) {
           <small>Berlaku sampai: ${v.expiry}</small>
         </div>
 
-        <button class="voucher-delete"
-          onclick="deleteVoucher('${v.id}')">
-          DELETE
-        </button>
+       <button 
+  class="voucher-delete-btn" 
+  onclick="deleteVoucher('${v.id}')"
+  title="Delete Voucher">
+  ✖
+</button>
       </div>
     `).join("")}
   `;
@@ -4359,6 +4378,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
