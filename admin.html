@@ -1437,6 +1437,88 @@ button {
     inset 0 0 10px #000,
     0 0 4px #00f0ff44;
 }
+/* =========================
+   VOUCHER BLOOMBERG TERMINAL
+========================= */
+
+#voucherContainerBox {
+  background: linear-gradient(180deg, #02060a, #010308);
+  border: 1px solid #00f0ff33;
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: inset 0 0 20px #000, 0 0 15px #00f0ff11;
+}
+
+#voucherContainerBox h2 {
+  color: #00f0ff;
+  text-shadow: 0 0 8px #00f0ff55;
+  letter-spacing: 1px;
+}
+
+#voucherForm label {
+  color: #7fffff;
+  font-size: 13px;
+}
+
+#voucherForm input {
+  width: 100%;
+  background: #010409;
+  border: 1px solid #00f0ff33;
+  color: #00f0ff;
+  padding: 8px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  outline: none;
+}
+
+#voucherForm input:focus {
+  border-color: #00f0ff;
+  box-shadow: 0 0 6px #00f0ff66;
+}
+
+#saveVoucherBtn {
+  background: #020b12;
+  color: #00f0ff;
+  border: 1px solid #00f0ff55;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#saveVoucherBtn:hover {
+  box-shadow: 0 0 10px #00f0ff66;
+}
+.voucher-card {
+  background: #010409;
+  border: 1px solid #00f0ff22;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 10px;
+  color: #00f0ff;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  box-shadow: inset 0 0 10px #000;
+}
+
+.voucher-card small {
+  color: #7fffff;
+}
+
+.voucher-delete {
+  background: #140000;
+  color: #ff5c5c;
+  border: 1px solid #ff5c5c55;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.voucher-delete:hover {
+  box-shadow: 0 0 8px #ff5c5c88;
+}
 
   </style>
 </head>
@@ -3901,14 +3983,18 @@ async function loadVouchers() {
   return active;
 }
 
-/* ===================== SAVE VOUCHER (FINAL - SYNC WITH simpanData) ===================== */
+/* ===================== SAVE VOUCHER FINAL ===================== */
 window.saveVoucher = async function () {
   try {
     console.log("💾 saveVoucher triggered");
 
-    const code = document.getElementById("voucherCode")?.value.trim().toUpperCase();
-    const discount = Number(document.getElementById("voucherDiscount")?.value);
-    const expiry = document.getElementById("voucherExpiry")?.value;
+    const codeEl = document.getElementById("voucherCode");
+    const discEl = document.getElementById("voucherDiscount");
+    const expEl  = document.getElementById("voucherExpiry");
+
+    const code = codeEl?.value.trim().toUpperCase();
+    const discount = Number(discEl?.value);
+    const expiry = expEl?.value;
 
     if (!code || isNaN(discount) || !expiry) {
       alert("⚠️ Data voucher tidak valid");
@@ -3929,6 +4015,15 @@ window.saveVoucher = async function () {
       : [];
 
     // =========================
+    // CEK DUPLIKAT KODE
+    // =========================
+    const alreadyExist = window.menuVoucher.some(v => v.code === code);
+    if (alreadyExist) {
+      alert("⚠️ Voucher code sudah ada");
+      return;
+    }
+
+    // =========================
     // BUILD OBJECT
     // =========================
     const voucher = {
@@ -3941,7 +4036,7 @@ window.saveVoucher = async function () {
     };
 
     // =========================
-    // PUSH KE ADMIN STATE
+    // PUSH STATE
     // =========================
     window.menuVoucher.push(voucher);
 
@@ -3951,11 +4046,16 @@ window.saveVoucher = async function () {
     renderVoucher(window.menuVoucher);
 
     // =========================
+    // SIMPAN KE DB
+    // =========================
+    await simpanData(); // <<< INI YANG PENTING
+
+    // =========================
     // RESET FORM
     // =========================
-    voucherCode.value = "";
-    voucherDiscount.value = "";
-    voucherExpiry.value = "";
+    codeEl.value = "";
+    discEl.value = "";
+    expEl.value = "";
 
     alert("✅ Voucher berhasil disimpan");
     console.log("✅ Voucher saved:", voucher);
@@ -3966,30 +4066,51 @@ window.saveVoucher = async function () {
   }
 };
 
-
-  /* ===================== VOUCHER UI ===================== */
+/* ===================== VOUCHER UI ===================== */
 function renderVoucher(vouchers = []) {
   const box = document.getElementById("voucherPreview");
   if (!box) return;
 
   if (!Array.isArray(vouchers) || vouchers.length === 0) {
-    box.innerHTML = "<em>Belum ada voucher aktif</em>";
+    box.innerHTML = "<em style='color:#7fffff'>Belum ada voucher aktif</em>";
     return;
   }
 
   box.innerHTML = `
-    <h3>Voucher Aktif</h3>
+    <h3 style="color:#00f0ff; text-shadow:0 0 6px #00f0ff55;">
+      Voucher Aktif
+    </h3>
+
     ${vouchers.map(v => `
-      <div class="voucher-item">
-        <p>
-          <strong>Kode:</strong> ${v.code}
-          <button type="button" onclick="copyVoucherCode('${v.code}')">📋</button>
-        </p>
-        <p>Diskon: ${v.discount}%</p>
-        <p>Berlaku sampai: ${v.expiry}</p>
+      <div class="voucher-card">
+        <div>
+          <p>
+            <strong>Kode:</strong> ${v.code}
+            <button type="button"
+              onclick="copyVoucherCode('${v.code}')"
+              style="margin-left:6px;">📋</button>
+          </p>
+
+          <small>Diskon: ${v.discount}%</small><br>
+          <small>Berlaku sampai: ${v.expiry}</small>
+        </div>
+
+        <button class="voucher-delete"
+          onclick="deleteVoucher('${v.id}')">
+          DELETE
+        </button>
       </div>
     `).join("")}
   `;
+}
+
+  async function deleteVoucher(id) {
+  if (!confirm("Delete voucher ini?")) return;
+
+  window.vouchers = window.vouchers.filter(v => v.id !== id);
+
+  renderVoucher(window.vouchers);
+  await simpanData(); // penting biar gak balik pas refresh
 }
 
 /* ===================== COPY HELPER ===================== */
@@ -4238,6 +4359,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
