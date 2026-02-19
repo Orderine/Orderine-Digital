@@ -1969,6 +1969,11 @@ button[onclick="downloadBackupJSON()"]:hover{
 👁️ See Customer Page
 </button>
 
+  <div class="qr-section hidden" id="qrSection">
+  <h4>Customer Link</h4>
+
+  <div id="customerLinkDisplay" class="link-display"></div>
+
 <button id="btnSalinLink" class="admin-btn admin-copy hidden">
 📋 Copy Link
 </button>
@@ -1981,11 +1986,7 @@ button[onclick="downloadBackupJSON()"]:hover{
 🖨️ Print QR
 </button>
 
-  <div class="qr-section hidden" id="qrSection">
-  <h4>Customer Link</h4>
-
-  <div id="customerLinkDisplay" class="link-display"></div>
-
+  
   <div id="qrPreview" class="qr-box"></div>
 </div>
 
@@ -4332,8 +4333,8 @@ function renderVoucher(vouchers = []) {
     <button class="voucher-copy-btn" onclick="copyVoucherCode('${v.code}')">📋 Copy Voucher</button>
   </p>
 
-  <p>Diskon: ${v.discount}%</p>
-  <p>Berlaku sampai: ${v.expiry}</p>
+  <p>Off: ${v.discount}%</p>
+  <p>End Date: ${v.expiry}</p>
 
   <div class="voucher-actions">
     <button 
@@ -4634,6 +4635,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
