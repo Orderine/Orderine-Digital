@@ -3757,6 +3757,22 @@ function getCustomerLink() {
   return `${location.origin}${base}/menu.html?resto=${encodeURIComponent(id)}`;
 }
 
+  function generateQRCode(text, elementId) {
+  const container = document.getElementById(elementId);
+  if (!container) {
+    console.warn("QR container tidak ditemukan:", elementId);
+    return;
+  }
+
+  container.innerHTML = ""; // reset dulu
+
+  new QRCode(container, {
+    text: text,
+    width: 128,
+    height: 128,
+  });
+}
+
 // ====================== LOADER HANDLER (Modern, Safe, Single Instance) ======================
 let __loaderInitialized = false;
 
@@ -4568,6 +4584,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
