@@ -1680,6 +1680,9 @@ button[onclick="downloadBackupJSON()"]:hover{
   color:#000 !important;
   box-shadow:0 0 14px #ff4d4d !important;
 }
+.hidden{
+  display:none !important;
+}
 
   </style>
 </head>
@@ -1935,21 +1938,22 @@ button[onclick="downloadBackupJSON()"]:hover{
 <div class="section">
 <button class="admin-btn admin-save" onclick="simpanData()">💾 Save All Data</button>
 
-<button id="btnOpenCustomer" class="admin-btn admin-view" style="display:none;">
+<button id="btnOpenCustomer" class="admin-btn admin-view hidden">
 👁️ See Customer Page
 </button>
 
-<button id="btnSalinLink" class="admin-btn admin-copy" style="display:none;">
+<button id="btnSalinLink" class="admin-btn admin-copy hidden">
 📋 Copy Link
 </button>
 
-<button id="btnDownloadQR" class="admin-btn admin-download" style="display:none;">
+<button id="btnDownloadQR" class="admin-btn admin-download hidden">
 ⬇️ Download QR
 </button>
 
-<button id="btnPrintQR" class="admin-btn admin-print" style="display:none;">
+<button id="btnPrintQR" class="admin-btn admin-print hidden">
 🖨️ Print QR
 </button>
+
 
   <div class="section">
     <h2>🔁 Backup & Restore Data</h2>
@@ -3224,6 +3228,8 @@ async function simpanData() {
     alert("✅ All Data Successfully Saved!");
 
     showCustomerShareUI?.();
+    generateQRCode();
+    showQRButtons();
 
     await MENUVA_DB.add("session", {
   id: "customerShareReady",
@@ -3738,6 +3744,10 @@ if (json.data?.menuPromo) {
   }
 }
 
+function buildCustomerLink(){
+  const restoId = document.getElementById("restoId").value;
+  return `${location.origin}/customer.html?id=${restoId}`;
+}
 
 // ====================== SHARE & QR ======================
 function getCustomerLink() {
@@ -4327,6 +4337,13 @@ function fallbackCopy(text) {
   alert(`✅ Kode "${text}" disalin`);
 }
 
+  function showQRButtons(){
+  document.getElementById("btnOpenCustomer")?.classList.remove("hidden");
+  document.getElementById("btnSalinLink")?.classList.remove("hidden");
+  document.getElementById("btnDownloadQR")?.classList.remove("hidden");
+  document.getElementById("btnPrintQR")?.classList.remove("hidden");
+}
+
 async function getCustomerUrl() {
   const id = document.getElementById("restoId")?.value;
   if (!id) return null;
@@ -4551,6 +4568,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
