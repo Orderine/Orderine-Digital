@@ -570,17 +570,6 @@ button {
     transform: translateY(-2px);
   }
 
-  /* Tombol copy voucher */
-  #voucherPreview button {
-    background: linear-gradient(135deg, #b8860b, #ffd700);
-    color: #1a1a1a;
-    font-size: 14px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  }
-  #voucherPreview button:hover {
-    background: linear-gradient(135deg, #ffd700, #ffcc33);
-    transform: translateY(-2px);
-  }
   .fixed-bar {
   position: fixed;
   bottom: 0;
@@ -1709,6 +1698,34 @@ button[onclick="downloadBackupJSON()"]:hover{
 
 .hidden {
   display: none;
+}
+/* Tombol copy voucher */
+#voucherPreview button {
+  background: linear-gradient(135deg, #b8860b, #ffd700);
+  color: #1a1a1a;
+
+  font-size: 12px;          /* lebih kecil */
+  padding: 6px 10px;        /* lebih pendek */
+  border-radius: 6px;
+
+  line-height: 1.2;
+  display: inline-flex;     /* biar gak full width */
+  align-items: center;
+  gap: 4px;
+
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
+}
+
+#voucherPreview button:hover {
+  background: linear-gradient(135deg, #ffd700, #ffcc33);
+  transform: translateY(-2px);
+}
+@media (max-width: 480px) {
+  #voucherPreview button {
+    font-size: 11px;
+    padding: 5px 8px;
+  }
 }
 
   </style>
@@ -4635,6 +4652,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
