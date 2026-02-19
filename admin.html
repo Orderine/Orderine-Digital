@@ -27,7 +27,7 @@
       font-family: Arial, sans-serif;
       padding: 20px;
       padding-bottom: 80px;
-      background: linear-gradient(135deg, #003366, #003366);
+      background: #003366;
       margin: 0;
       position: relative;
       overflow-x: hidden;
@@ -85,13 +85,7 @@
       text-align: center;
       margin: 10px 0;
     }
-    .section {
-      background: #fff;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-    }
+   
     input, button, textarea {
       padding: 10px;
       margin: 5px 0;
@@ -122,11 +116,7 @@
       background-color: #3498db;
       color: white;
     }
-    .btn-orange {
-      background-color: orange;
-      color: white;
-      border: none;
-    }
+  
     .preview img {
       max-width: 100px;
       margin: 5px;
@@ -395,17 +385,6 @@
   background: linear-gradient(135deg, #1e3a8a, #172554);
   transform: scale(1.05);
 }
-/* Base style tombol */
-button {
-  padding: 10px 16px;
-  font-size: 15px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.25s ease;
-}
-
 /* Orange – utama */
 .btn-orange {
   background: linear-gradient(135deg, #ff914d, #ff6a00);
@@ -413,36 +392,6 @@ button {
 }
 .btn-orange:hover {
   background: linear-gradient(135deg, #ff6a00, #cc5500);
-  transform: scale(1.05);
-}
-
-/* Teal – untuk salin link */
-.btn-teal {
-  background: linear-gradient(135deg, #20c997, #0f766e);
-  color: white;
-}
-.btn-teal:hover {
-  background: linear-gradient(135deg, #0f766e, #0c5f56);
-  transform: scale(1.05);
-}
-
-/* Purple – untuk download */
-.btn-purple {
-  background: linear-gradient(135deg, #a855f7, #6b21a8);
-  color: white;
-}
-.btn-purple:hover {
-  background: linear-gradient(135deg, #6b21a8, #4c1d95);
-  transform: scale(1.05);
-}
-
-/* Red – untuk print */
-.btn-red {
-  background: linear-gradient(135deg, #ef4444, #b91c1c);
-  color: white;
-}
-.btn-red:hover {
-  background: linear-gradient(135deg, #b91c1c, #7f1d1d);
   transform: scale(1.05);
 }
 .section,
@@ -478,6 +427,7 @@ button {
   font-size: 17px;
   letter-spacing: 0.5px;
   margin-bottom: 14px;
+}
 .section button {
   background: #07131a;
   color: #00f0ff;
@@ -717,24 +667,6 @@ button {
 }
 
 /* ===== TERMINAL CARD ===== */
-.terminal-card {
-  background: #0f1720;
-  border: 1px solid #00ffcc33;
-  border-radius: 6px;
-  padding: 18px;
-  width: 280px;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  box-shadow: 0 0 10px #00ffcc22;
-  position: relative;
-  overflow: hidden;
-}
-
-  .terminal-card {
-  backdrop-filter: blur(6px);
-  border-radius: 8px;
-}
-
 
 .terminal-card:hover {
   transform: translateY(-4px);
@@ -873,7 +805,7 @@ button {
   box-shadow: 0 0 15px #00ffcc;
 }
 
-    .terminal-editor {
+  .terminal-editor {
   padding: 20px 0;
 }
 
@@ -920,23 +852,7 @@ button {
 .terminal-menu-card:hover {
   box-shadow: 0 0 15px #00ffcc88;
 }
-
-.menu-actions {
-  margin-top: 10px;
-  display: flex;
-  gap: 5px;
-}
-
-.menu-actions button {
-  flex: 1;
-  background: transparent;
-  border: 1px solid #00ffcc55;
-  color: #00ffcc;
-  cursor: pointer;
-  font-size: 11px;
-}
-
-    .admin-container {
+  .admin-container {
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: 30px;
@@ -951,21 +867,7 @@ button {
 .admin-right {
   padding-left: 10px;
 }
-
-    .terminal-editor {
-  margin-top: 25px;
-}
-
-.terminal-editor input {
-  width: 100%;
-}
-
-.terminal-editor button {
-  width: 100%;
-  margin-top: 5px;
-}
-
-    .menu-actions {
+  .menu-actions {
   margin-top: 10px;
 }
 
@@ -1219,8 +1121,17 @@ button {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  background: #0f1720;
+  border: 1px solid #00ffcc33;
+  border-radius: 6px;
+  padding: 18px;
+  width: 280px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 0 10px #00ffcc22;
+  position: relative;
+  overflow: hidden;
 }
-
 .promo-img-wrap {
   width: 100%;
   aspect-ratio: 4 / 3;   /* rahasia biar cakep */
@@ -1532,11 +1443,6 @@ button {
   color:#000;
   box-shadow:0 0 12px #00ff88;
 }
-.btn-orange{
-  background:#2a1400;
-  color:#ffa500;
-  border:1px solid #ffa500;
-}
 
 .btn-orange:hover{
   background:#ffa500;
@@ -1777,7 +1683,7 @@ button#btnResetData.btn-danger:active {
   animation: dangerPulse 2s infinite;
 }
 
-  </style>
+</style>
 </head>
 <body>
 <div class="menuva-logo">
@@ -4700,6 +4606,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
