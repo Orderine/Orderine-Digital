@@ -1683,6 +1683,33 @@ button[onclick="downloadBackupJSON()"]:hover{
 .hidden{
   display:none !important;
 }
+.qr-section {
+  margin-top: 20px;
+  padding: 15px;
+  background: #111;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.link-display {
+  margin-bottom: 15px;
+  padding: 8px;
+  background: #000;
+  color: #00f5ff;
+  border-radius: 6px;
+  word-break: break-all;
+  font-size: 13px;
+}
+
+.qr-box {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.hidden {
+  display: none;
+}
 
   </style>
 </head>
@@ -1953,6 +1980,14 @@ button[onclick="downloadBackupJSON()"]:hover{
 <button id="btnPrintQR" class="admin-btn admin-print hidden">
 🖨️ Print QR
 </button>
+
+  <div class="qr-section hidden" id="qrSection">
+  <h4>Customer Link</h4>
+
+  <div id="customerLinkDisplay" class="link-display"></div>
+
+  <div id="qrPreview" class="qr-box"></div>
+</div>
 
 
   <div class="section">
@@ -3227,9 +3262,22 @@ async function simpanData() {
     console.log("💾 SIMPAN DATA SUCCESS → RESTO:", restoId);
     alert("✅ All Data Successfully Saved!");
 
-    showCustomerShareUI?.();
-    generateQRCode();
-    showQRButtons();
+   showCustomerShareUI?.();
+
+// ================= GENERATE CUSTOMER LINK =================
+const customerLink = `${location.origin}/customer.html?id=${restoId}`;
+
+// tampilkan link ke UI
+document.getElementById("customerLinkDisplay").textContent = customerLink;
+
+// tampilkan section QR
+document.getElementById("qrSection")?.classList.remove("hidden");
+
+// generate QR
+generateQRCode(customerLink);
+
+showQRButtons();
+
 
     await MENUVA_DB.add("session", {
   id: "customerShareReady",
@@ -3757,21 +3805,23 @@ function getCustomerLink() {
   return `${location.origin}${base}/menu.html?resto=${encodeURIComponent(id)}`;
 }
 
-  function generateQRCode(text, elementId) {
-  const container = document.getElementById(elementId);
+ function generateQRCode(text) {
+  const container = document.getElementById("qrPreview");
+
   if (!container) {
-    console.warn("QR container tidak ditemukan:", elementId);
+    console.warn("QR container tidak ditemukan");
     return;
   }
 
-  container.innerHTML = ""; // reset dulu
+  container.innerHTML = "";
 
   new QRCode(container, {
     text: text,
-    width: 128,
-    height: 128,
+    width: 160,
+    height: 160,
   });
 }
+
 
 // ====================== LOADER HANDLER (Modern, Safe, Single Instance) ======================
 let __loaderInitialized = false;
@@ -4584,6 +4634,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
