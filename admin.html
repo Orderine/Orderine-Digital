@@ -1776,7 +1776,91 @@ button#btnResetData.btn-danger:active {
 #btnResetData {
   animation: dangerPulse 2s infinite;
 }
+.business-wrapper {
+  border: 1px solid #1f1f1f;
+  padding: 25px;
+  background: #0f0f0f;
+}
 
+.terminal-title {
+  color: #00ff9c;
+  letter-spacing: 2px;
+  font-size: 14px;
+  margin-bottom: 25px;
+}
+
+.business-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 25px;
+}
+
+.terminal-card {
+  background: #111;
+  border: 1px solid #1c1c1c;
+  padding: 20px;
+}
+
+.card-header {
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #888;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #1c1c1c;
+  padding-bottom: 10px;
+}
+
+.card-body label {
+  font-size: 12px;
+  color: #aaa;
+  display: block;
+  margin-top: 15px;
+}
+
+.card-body input {
+  width: 100%;
+  background: #000;
+  border: 1px solid #222;
+  color: #00ff9c;
+  padding: 8px;
+  font-size: 13px;
+}
+
+.plan-badge {
+  background: #00c896;
+  color: #000;
+  padding: 6px 12px;
+  font-weight: bold;
+  font-size: 12px;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.subscription-body {
+  font-size: 13px;
+  color: #ccc;
+}
+
+.status-active {
+  color: #00ff9c;
+  font-weight: bold;
+}
+
+.terminal-btn {
+  margin-top: 25px;
+  width: 100%;
+  background: #000;
+  border: 1px solid #00ff9c;
+  color: #00ff9c;
+  padding: 10px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.terminal-btn:hover {
+  background: #00ff9c;
+  color: #000;
+}
 </style>
 </head>
 <body>
@@ -1786,37 +1870,63 @@ button#btnResetData.btn-danger:active {
   <p style="color: white;">Digital Solution For Restaurant, Hotel, & Cafe's</p>
 </div>
 
-<div class="terminal-panel">
-  <h2>BUSINESS IDENTITY</h2>
-  <div class="terminal-header">
-   
-  </div>
+<div class="terminal-panel business-wrapper">
 
-  <div class="terminal-body identity-body">
+  <h2 class="terminal-title">BUSINESS & SUBSCRIPTION</h2>
 
-    <div class="identity-inner">
+  <div class="business-grid">
 
-     <label for="logoInput">Your Business Logo</label>
-      <input type="file" id="logoInput" name="logoInput" accept="image/*" />
+    <!-- LEFT CARD -->
+    <div class="terminal-card identity-card">
 
-      <img id="previewLogo" src="" alt="Logo Restoran" />
+      <div class="card-header">BUSINESS IDENTITY</div>
 
-      <label for="namaRestoran">Your Business Name</label>
-      <input type="text" id="namaRestoran" name="namaRestoran" placeholder="Your Business Name" />
+      <div class="card-body identity-inner">
 
-      <label for="restoAddress">Your Business Address</label>
-      <input id="restoAddress" name="restoAddress" type="text" placeholder="Jl. Sudirman No. 10, Jakarta" />
+        <label for="logoInput">Your Business Logo</label>
+        <input type="file" id="logoInput" name="logoInput" accept="image/*" />
+        <img id="previewLogo" src="" alt="Logo Restoran" />
 
-      <label for="restoPhone">Phone Number</label>
-      <input id="restoPhone" name="restoPhone" type="text" placeholder="08xx-xxxx-xxxx" />
-      
+        <label for="namaRestoran">Your Business Name</label>
+        <input type="text" id="namaRestoran" name="namaRestoran" placeholder="Your Business Name" />
+
+        <label for="restoAddress">Your Business Address</label>
+        <input id="restoAddress" name="restoAddress" type="text" placeholder="Jl. Sudirman No. 10, Jakarta" />
+
+        <label for="restoPhone">Phone Number</label>
+        <input id="restoPhone" name="restoPhone" type="text" placeholder="08xx-xxxx-xxxx" />
+
+      </div>
+
+    </div>
+
+    <!-- RIGHT CARD -->
+    <div class="terminal-card subscription-card">
+
+      <div class="card-header">SUBSCRIPTION STATUS</div>
+
+      <div class="card-body subscription-body">
+
+        <div class="plan-badge">PRO PLAN</div>
+
+        <div class="sub-info">
+          <div>Status: <span class="status-active">ACTIVE</span></div>
+          <div>Expires In: <span id="daysLeft">12 Days</span></div>
+          <div>Expiry Date: <span id="expiryDate">20 Mar 2026</span></div>
+        </div>
+
+        <button class="terminal-btn upgrade-btn">
+          UPGRADE / RENEW
+        </button>
+
+      </div>
+
     </div>
 
   </div>
 
 </div>
-
-
+  
 <div class="terminal-room">
 
   <h4 class="menu-categories-title">MENU PROMO</h4>
@@ -4700,6 +4810,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
