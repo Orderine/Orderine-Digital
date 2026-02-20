@@ -15,7 +15,7 @@
 <link rel="icon" href="data:,">
 
 <!-- CDN BIASA -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   
 <audio id="notifAudio" src="./beep.mp3" preload="auto"></audio>
 <audio id="clickAudio" src="./click.mp3" preload="auto"></audio>
@@ -4096,20 +4096,23 @@ function generateCustomerLink(restoId) {
   return url.trim();
 }
   
-function generateQRCode(text) {
-  const container = document.getElementById("qrPreview");
-  if (!container) return;
+function generateQRCode(url) {
 
+  const container = document.getElementById("qrPreview");
   container.innerHTML = "";
 
-  new QRCode(container, {
-    text: text,
-    width: 260,
-    height: 260,
-    colorDark: "#000000",
-    colorLight: "#ffffff",
-    correctLevel: QRCode.CorrectLevel.H
+  QRCode.toCanvas(container, url, {
+    width: 320,
+    margin: 4,
+    errorCorrectionLevel: "H"
+  }, function (error) {
+    if (error) {
+      console.error("QR Error:", error);
+    } else {
+      console.log("✅ QR Generated!");
+    }
   });
+
 }
   
 // ====================== LOADER HANDLER (Modern, Safe, Single Instance) ======================
@@ -4888,6 +4891,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
