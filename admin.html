@@ -3544,7 +3544,7 @@ async function simpanData() {
     generateQRCode(customerLink);
 
 document.getElementById("btnOpenCustomer").onclick = () => {
-  window.location.href = customerLink;
+  window.open(customerLink, "_blank");
 };
 
     // COPY
@@ -4890,6 +4890,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
