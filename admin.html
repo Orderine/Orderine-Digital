@@ -4091,13 +4091,15 @@ if (json.data?.menuPromo) {
 }
 
 function generateCustomerLink(restoId) {
-  return new URL(
-    `menu.html?resto=${encodeURIComponent(restoId)}`,
-    window.location.href
-  ).href;
+  const base = "https://orderine.github.io/Orderine-Digital/menu.html";
+  const url = `${base}?resto=${encodeURIComponent(restoId)}`;
+  return url.trim();
 }
   
 function generateQRCode(text) {
+  console.log("QR TEXT RAW:", JSON.stringify(text));
+  console.log("QR TEXT LENGTH:", text.length);
+
   const container = document.getElementById("qrPreview");
   if (!container) return;
 
@@ -4108,12 +4110,14 @@ function generateQRCode(text) {
     return;
   }
 
-  new QRCode(container, {
-    text: text,
-    width: 200,
-    height: 200
-  });
+ new QRCode(container, {
+  text: String(text).trim(),
+  width: 200,
+  height: 200,
+  correctLevel: QRCode.CorrectLevel.H
+});
 }
+  
 // ====================== LOADER HANDLER (Modern, Safe, Single Instance) ======================
 let __loaderInitialized = false;
 
@@ -4890,6 +4894,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
