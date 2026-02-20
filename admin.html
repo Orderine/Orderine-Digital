@@ -3542,6 +3542,31 @@ async function simpanData() {
 
     generateQRCode(customerLink);
 
+    // COPY
+document.getElementById("btnSalinLink").onclick = () => {
+  navigator.clipboard.writeText(customerLink);
+  alert("✅ Link copied");
+};
+
+// DOWNLOAD
+document.getElementById("btnDownloadQR").onclick = () => {
+  const img = document.querySelector("#qrPreview img");
+  if (!img) return;
+  const a = document.createElement("a");
+  a.href = img.src;
+  a.download = "orderine-qr.png";
+  a.click();
+};
+
+// PRINT
+document.getElementById("btnPrintQR").onclick = () => {
+  const qrContent = document.getElementById("qrPreview").innerHTML;
+  const win = window.open("", "", "width=400,height=400");
+  win.document.write(`<html><body style="text-align:center">${qrContent}</body></html>`);
+  win.document.close();
+  win.print();
+};
+
     showCustomerShareUI?.();
     showQRButtons?.();
 
@@ -4712,21 +4737,17 @@ function fallbackCopy(text) {
   alert(`✅ Kode "${text}" disalin`);
 }
 
-  function showQRButtons(){
+ function showCustomerShareUI() {
+  document.getElementById("qrSection")?.classList.remove("hidden");
+}
+
+function showQRButtons(){
   document.getElementById("btnOpenCustomer")?.classList.remove("hidden");
   document.getElementById("btnSalinLink")?.classList.remove("hidden");
   document.getElementById("btnDownloadQR")?.classList.remove("hidden");
   document.getElementById("btnPrintQR")?.classList.remove("hidden");
 }
-
-  function showCustomerShareUI() {
-  document.getElementById("btnOpenCustomer")?.style.setProperty("display", "inline-block");
-  document.getElementById("btnSalinLink")?.style.setProperty("display", "inline-block");
-  document.getElementById("qrcodePreview")?.style.setProperty("display", "block");
-  document.getElementById("btnDownloadQR")?.style.setProperty("display", "inline-block");
-  document.getElementById("btnPrintQR")?.style.setProperty("display", "inline-block");
-}
-
+  
  async function markDirty() {
  await MENUVA_DB.delete("session", "customerShareReady");
 }
@@ -4861,5 +4882,6 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
