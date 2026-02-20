@@ -4101,7 +4101,12 @@ function generateQRCode(url) {
   const container = document.getElementById("qrPreview");
   container.innerHTML = "";
 
-  QRCode.toCanvas(container, url, {
+  // BUAT CANVAS BARU
+  const canvas = document.createElement("canvas");
+
+  container.appendChild(canvas);
+
+  QRCode.toCanvas(canvas, url, {
     width: 320,
     margin: 4,
     errorCorrectionLevel: "H"
@@ -4891,6 +4896,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
