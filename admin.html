@@ -3555,16 +3555,6 @@ document.getElementById("btnSalinLink").onclick = () => {
   alert("✅ Link copied");
 };
 
-// DOWNLOAD
-document.getElementById("btnDownloadQR").onclick = () => {
-  const img = document.querySelector("#qrPreview img");
-  if (!img) return;
-  const a = document.createElement("a");
-  a.href = img.src;
-  a.download = "orderine-qr.png";
-  a.click();
-};
-
 // PRINT
 document.getElementById("btnPrintQR").onclick = () => {
   const qrContent = document.getElementById("qrPreview").innerHTML;
@@ -4913,6 +4903,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
