@@ -3577,19 +3577,14 @@ async function simpanData() {
    showCustomerShareUI?.();
 
 // ================= GENERATE CUSTOMER LINK =================
-const customerLink = `${location.origin}/customer.html?id=${restoId}`;
+const customerLink = generateCustomerLink(restoId);
 
-// tampilkan link ke UI
 document.getElementById("customerLinkDisplay").textContent = customerLink;
 
-// tampilkan section QR
-document.getElementById("qrSection")?.classList.remove("hidden");
-
-// generate QR
 generateQRCode(customerLink);
 
+showCustomerShareUI();
 showQRButtons();
-
 
     await MENUVA_DB.add("session", {
   id: "customerShareReady",
@@ -4104,37 +4099,27 @@ if (json.data?.menuPromo) {
   }
 }
 
-function buildCustomerLink(){
-  const restoId = document.getElementById("restoId").value;
-  return `${location.origin}/customer.html?id=${restoId}`;
+ function generateCustomerLink(restoId) {
+  return `${location.origin}/menu.html?resto=${encodeURIComponent(restoId)}`;
 }
-
-// ====================== SHARE & QR ======================
-function getCustomerLink() {
-  const id = document.getElementById("restoId")?.value;
-  if (!id) return null;
-  const base = location.pathname.substring(0, location.pathname.lastIndexOf("/"));
-  return `${location.origin}${base}/menu.html?resto=${encodeURIComponent(id)}`;
-}
-
- function generateQRCode(text) {
+  
+function generateQRCode(text) {
   const container = document.getElementById("qrPreview");
-
-  if (!container) {
-    console.warn("QR container tidak ditemukan");
-    return;
-  }
+  if (!container) return;
 
   container.innerHTML = "";
 
+  if (typeof QRCode !== "function") {
+    console.error("QRCode lib not ready");
+    return;
+  }
+
   new QRCode(container, {
     text: text,
-    width: 160,
-    height: 160,
+    width: 200,
+    height: 200
   });
 }
-
-
 // ====================== LOADER HANDLER (Modern, Safe, Single Instance) ======================
 let __loaderInitialized = false;
 
@@ -4319,17 +4304,6 @@ function bindAdminEvents() {
   renderWaAdmin(window.__WA_ADMIN_CACHE__);
   console.log("🔁 WA rendered after init UI");
 }, 0);
-
-  function bindCustomerButtons() {
-  const btn = document.getElementById("btnOpenCustomer");
-  if (!btn) {
-    console.warn("⚠️ btnOpenCustomer not found");
-    return;
-  }
-
-  btn.onclick = openCustomerPage;
-  console.log("🔗 Customer button bound");
-}
 
 
 async function loadAdminData() {
@@ -4723,88 +4697,6 @@ function fallbackCopy(text) {
   document.getElementById("btnPrintQR")?.classList.remove("hidden");
 }
 
-async function getCustomerUrl() {
-  const id = document.getElementById("restoId")?.value;
-  if (!id) return null;
-
-  return `menu.html?resto=${encodeURIComponent(id)}`;
-}
-
-async function prepareCustomerShare() {
-  const url = await getCustomerUrl();
-  if (!url) return;
-
-  // ===== COPY LINK =====
-  const btnCopy = document.getElementById("btnSalinLink");
-  if (btnCopy) {
-    btnCopy.style.display = "inline-block";
-    btnCopy.onclick = () => {
-      navigator.clipboard.writeText(url);
-      alert("✅ Link customer berhasil disalin");
-    };
-  }
-
-  // ===== QR CODE (ONE LIB ONLY) =====
-  const qrBox = document.getElementById("qrcodePreview");
-  if (!qrBox) return;
-
-  qrBox.innerHTML = "";
-
-  if (typeof QRCode !== "function") {
-    console.error("❌ QRCode constructor not ready:", QRCode);
-    alert("QR Code library belum siap.");
-    return;
-  }
-
-  new QRCode(qrBox, {
-    text: url,
-    width: 200,
-    height: 200
-  });
-
-  // ===== DOWNLOAD =====
-  const btnDownload = document.getElementById("btnDownloadQR");
-  if (btnDownload) {
-    btnDownload.style.display = "inline-block";
-    btnDownload.onclick = () => {
-      const img = qrBox.querySelector("img");
-      if (!img) return alert("QR belum siap");
-      const a = document.createElement("a");
-      a.href = img.src;
-      a.download = "menuva-qr.png";
-      a.click();
-    };
-  }
-
-  // ===== PRINT =====
-  const btnPrint = document.getElementById("btnPrintQR");
-  if (btnPrint) {
-    btnPrint.style.display = "inline-block";
-    btnPrint.onclick = () => {
-      const img = qrBox.querySelector("img");
-      if (!img) return;
-      const w = window.open("");
-      w.document.write(`<img src="${img.src}" style="width:300px"/>`);
-      w.print();
-      w.close();
-    };
-  }
-}
-
-async function openCustomerPage() {
-  try {
-    const url = await getCustomerUrl();
-    if (!url) return alert("Resto ID tidak ditemukan.");
-
-    window.open(url, "_blank");
-
-  } catch (e) {
-    console.error("❌ openCustomerPage error:", e);
-    alert("Gagal membuka customer page.");
-  }
-}
-
-
   function showCustomerShareUI() {
   document.getElementById("btnOpenCustomer")?.style.setProperty("display", "inline-block");
   document.getElementById("btnSalinLink")?.style.setProperty("display", "inline-block");
@@ -4947,33 +4839,3 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
