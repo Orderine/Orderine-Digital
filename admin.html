@@ -1861,6 +1861,38 @@ button#btnResetData.btn-danger:active {
   background: #00ff9c;
   color: #000;
 }
+
+.subscription-body {
+  font-size: 12px;
+  color: #ccc;
+}
+
+.sub-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.sub-label {
+  color: #777;
+  letter-spacing: 1px;
+}
+
+.plan-badge {
+  background: #00ff9c;
+  color: #000;
+  padding: 3px 8px;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.subscription-card.warning {
+  border: 1px solid #ffcc00;
+}
+
+.subscription-card.danger {
+  border: 1px solid #ff3b3b;
+}
 </style>
 </head>
 <body>
@@ -1901,31 +1933,40 @@ button#btnResetData.btn-danger:active {
     </div>
 
     <!-- RIGHT CARD -->
-    <div class="terminal-card subscription-card">
+   <div class="terminal-card subscription-card">
 
-      <div class="card-header">SUBSCRIPTION STATUS</div>
+  <div class="card-header">SUBSCRIPTION STATUS</div>
 
-      <div class="card-body subscription-body">
+  <div class="card-body subscription-body">
 
-        <div class="plan-badge">PRO PLAN</div>
-
-        <div class="sub-info">
-          <div>Status: <span class="status-active">ACTIVE</span></div>
-          <div>Expires In: <span id="daysLeft">12 Days</span></div>
-          <div>Expiry Date: <span id="expiryDate">20 Mar 2026</span></div>
-        </div>
-
-        <button class="terminal-btn upgrade-btn">
-          UPGRADE / RENEW
-        </button>
-
-      </div>
-
+    <div class="sub-row">
+      <span class="sub-label">EMAIL</span>
+      <span id="subEmail"></span>
     </div>
 
-  </div>
+    <div class="sub-row">
+      <span class="sub-label">PLAN</span>
+      <span id="subPlan" class="plan-badge"></span>
+    </div>
+
+    <div class="sub-row">
+      <span class="sub-label">EXPIRES</span>
+      <span id="subExpiry"></span>
+    </div>
+
+    <div class="sub-row">
+      <span class="sub-label">TIME LEFT</span>
+      <span id="subCountdown"></span>
+    </div>
+
+    <button class="terminal-btn upgrade-btn">
+      UPGRADE / RENEW
+    </button>
 
 </div>
+ </div>
+ </div>
+ </div>
   
 <div class="terminal-room">
 
@@ -2354,6 +2395,51 @@ window.ensureRestoId = async function () {
 
   console.log("✅ restoId generated:", restoId);
   return restoId;
+};
+
+  /* ================= RENDER SUBSCRIPTION PANEL ================= */
+
+window.renderSubscriptionPanel = function () {
+  const user = window.activeUser;
+  if (!user || !user.premiumExpire || !user.premiumPlan) return;
+
+  const emailEl = document.getElementById("subEmail");
+  const planEl = document.getElementById("subPlan");
+  const expiryEl = document.getElementById("subExpiry");
+  const countdownEl = document.getElementById("subCountdown");
+  const card = document.querySelector(".subscription-card");
+
+  emailEl.textContent = user.email;
+  planEl.textContent = user.premiumPlan.toUpperCase();
+
+  const expireTime = new Date(user.premiumExpire);
+  expiryEl.textContent = expireTime.toDateString();
+
+  function updateCountdown() {
+    const diff = expireTime - new Date();
+
+    if (diff <= 0) {
+      countdownEl.textContent = "EXPIRED";
+      card.classList.add("danger");
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+
+    countdownEl.textContent = `${days}d ${hours}h`;
+
+    card.classList.remove("warning", "danger");
+
+    if (days <= 3) {
+      card.classList.add("danger");
+    } else if (days <= 7) {
+      card.classList.add("warning");
+    }
+  }
+
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
 };
 
 </script>
@@ -4241,6 +4327,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadAdminData?.();
   startRealtimeOrderChecker();
   await renderCategoryFilter();
+  renderSubscriptionPanel();
 
   try {
     console.log("🚀 Admin Init (CORE)");
@@ -4810,6 +4897,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
