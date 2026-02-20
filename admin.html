@@ -2245,9 +2245,11 @@ button#btnResetData.btn-danger:active {
       📋 Copy Link
     </button>
 
-    <button id="btnDownloadQR" class="admin-btn admin-download hidden">
-      ⬇️ Download QR
-    </button>
+    <button id="btnDownloadQR"
+        class="admin-btn admin-download hidden"
+        onclick="downloadQR()">
+        ⬇️ Download QR
+        </button>
 
     <button id="btnPrintQR" class="admin-btn admin-print hidden">
       🖨️ Print QR
@@ -4095,8 +4097,8 @@ function generateCustomerLink(restoId) {
   const url = `${base}?resto=${encodeURIComponent(restoId)}`;
   return url.trim();
 }
-  
-function generateQRCode(url) {
+
+  function generateQRCode(url) {
 
   const container = document.getElementById("qrPreview");
   container.innerHTML = "";
@@ -4119,7 +4121,22 @@ function generateQRCode(url) {
   });
 
 }
-  
+
+  function downloadQR() {
+
+  const canvas = document.querySelector("#qrPreview canvas");
+
+  if (!canvas) {
+    console.error("❌ Canvas tidak ditemukan");
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.download = "orderine-qr.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+
+}
 // ====================== LOADER HANDLER (Modern, Safe, Single Instance) ======================
 let __loaderInitialized = false;
 
@@ -4896,6 +4913,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
