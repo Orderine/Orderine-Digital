@@ -4085,8 +4085,11 @@ if (json.data?.menuPromo) {
   }
 }
 
- function generateCustomerLink(restoId) {
-  return `${location.origin}/menu.html?resto=${encodeURIComponent(restoId)}`;
+function generateCustomerLink(restoId) {
+  const currentPath = window.location.pathname;
+  const basePath = currentPath.substring(0, currentPath.lastIndexOf("/") + 1);
+  
+  return `${window.location.origin}${basePath}menu.html?resto=${encodeURIComponent(restoId)}`;
 }
   
 function generateQRCode(text) {
@@ -4882,6 +4885,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
