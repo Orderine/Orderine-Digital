@@ -3480,32 +3480,28 @@ window.menuVoucher = window.menuVoucher || [];
 // ====================== SIMPAN (ADMIN → RESTOS ONLY) ======================
 async function simpanData() {
   try {
-    showLoader();
+    showLoader?.();
 
-    /* ==================== AUTH SAFETY ==================== */
-    if (!window.activeUser || !window.activeUser.restoID) {
+    if (!window.activeUser?.restoID) {
       alert("❌ Session tidak valid. Silakan login ulang.");
-      console.error("❌ activeUser missing in simpanData");
       return;
     }
 
     const ownerId = window.activeUser.email.trim().toLowerCase();
     const restoId = window.activeUser.restoID;
 
-    /* ==================== FORM DATA ==================== */
-    const namaRestoran = getVal("namaRestoran");
-    const restoAddress = getVal("restoAddress");
-    const restoPhone   = getVal("restoPhone");
+    const namaRestoran = getVal?.("namaRestoran") || "";
+    const restoAddress = getVal?.("restoAddress") || "";
+    const restoPhone   = getVal?.("restoPhone") || "";
     const logo         = document.getElementById("previewLogo")?.src || "";
-    const nomorWaAdmin = collectWaFromUI();
-    
+    const nomorWaAdmin = collectWaFromUI?.() || [];
+
     if (!restoPhone) {
       alert("❌ Nomor telepon resto wajib diisi!");
       return;
     }
 
-    /* ==================== COLLECT ADMIN DATA ==================== */
-    const menu = Array.isArray(ambilSemuaMenu?.())
+    const menu = typeof ambilSemuaMenu === "function"
       ? ambilSemuaMenu()
       : [];
 
@@ -3513,83 +3509,48 @@ async function simpanData() {
       ? ambilSemuaRoom()
       : [];
 
-    const promos = window.menuPromo || [];
-
-    const vouchers = Array.isArray(window.menuVoucher)
-      ? window.menuVoucher
+    const categories = Array.isArray(window.categories)
+      ? window.categories
       : [];
 
-    const flipbookRuanganImages = Array.isArray(window.flipbookRuanganImages)
-      ? window.flipbookRuanganImages
-      : [];
-
-    const flipbookMenuImages = Array.isArray(window.flipbookMenuImages)
-      ? window.flipbookMenuImages
-      : [];
-
-  
-    /* ==================== VALIDASI ==================== */
-    if (highlightInvalidPromo?.()) {
-      alert("⚠️ Please complete the data promos.");
-      return;
-    }
-
-    if (highlightInvalidMenu?.()) {
-      alert("⚠️ Please complete the data menus.");
-      return;
-    }
-
-    /* ==================== BUILD SINGLE RESTO OBJECT ==================== */
-  
     const restoPayload = {
       id: restoId,
       ownerId,
-
-      // profile
       namaRestoran,
       restoAddress,
       restoPhone,
       logo,
       nomorWaAdmin,
-
-      // 🔥 ALL ADMIN DATA HERE
       categories,
       menu,
       rooms,
-      menuPromo: promos,
-      menuVoucher: vouchers,
-      flipbookRuanganImages,
-      flipbookMenuImages,
-
+      menuPromo: window.menuPromo || [],
+      menuVoucher: window.menuVoucher || [],
+      flipbookRuanganImages: window.flipbookRuanganImages || [],
+      flipbookMenuImages: window.flipbookMenuImages || [],
       updatedAt: Date.now()
     };
 
-    /* ==================== SAVE (UPSERT) ==================== */
     await window.MENUVA_DB.add("restos", restoPayload);
 
-    /* ==================== FINALIZE ==================== */
-    syncRestoIdHidden?.(restoId);
-    prepareCustomerShare?.();
-
     console.log("💾 SIMPAN DATA SUCCESS → RESTO:", restoId);
+
+    // ===== GENERATE CUSTOMER LINK =====
+    const customerLink = generateCustomerLink(restoId);
+
+    document.getElementById("customerLinkDisplay").textContent = customerLink;
+
+    generateQRCode(customerLink);
+
+    showCustomerShareUI?.();
+    showQRButtons?.();
+
+    await window.MENUVA_DB.add("session", {
+      id: "customerShareReady",
+      value: "1"
+    });
+
     alert("✅ All Data Successfully Saved!");
-
-   showCustomerShareUI?.();
-
-// ================= GENERATE CUSTOMER LINK =================
-const customerLink = generateCustomerLink(restoId);
-
-document.getElementById("customerLinkDisplay").textContent = customerLink;
-
-generateQRCode(customerLink);
-
-showCustomerShareUI();
-showQRButtons();
-
-    await MENUVA_DB.add("session", {
-  id: "customerShareReady",
-  value: "1"
-});
 
   } catch (err) {
     console.error("❌ simpanData fatal:", err);
@@ -4900,4 +4861,5 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
