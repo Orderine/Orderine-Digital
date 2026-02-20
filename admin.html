@@ -2230,32 +2230,33 @@ button#btnResetData.btn-danger:active {
 <hr>
 
 <div class="section">
-<button class="admin-btn admin-save" onclick="simpanData()">💾 Save All Data</button>
+  <button class="admin-btn admin-save" onclick="simpanData()">💾 Save All Data</button>
 
-<button id="btnOpenCustomer" class="admin-btn admin-view hidden">
-👁️ See Customer Page
-</button>
+  <button id="btnOpenCustomer" class="admin-btn admin-view hidden">
+    👁️ See Customer Page
+  </button>
 
   <div class="qr-section hidden" id="qrSection">
-  <h4>Customer Link</h4>
+    <h4>Customer Link</h4>
 
-  <div id="customerLinkDisplay" class="link-display"></div>
+    <div id="customerLinkDisplay" class="link-display"></div>
 
-<button id="btnSalinLink" class="admin-btn admin-copy hidden">
-📋 Copy Link
-</button>
+    <button id="btnSalinLink" class="admin-btn admin-copy hidden">
+      📋 Copy Link
+    </button>
 
-<button id="btnDownloadQR" class="admin-btn admin-download hidden">
-⬇️ Download QR
-</button>
+    <button id="btnDownloadQR" class="admin-btn admin-download hidden">
+      ⬇️ Download QR
+    </button>
 
-<button id="btnPrintQR" class="admin-btn admin-print hidden">
-🖨️ Print QR
-</button>
+    <button id="btnPrintQR" class="admin-btn admin-print hidden">
+      🖨️ Print QR
+    </button>
 
-  
-  <div id="qrPreview" class="qr-box"></div>
-</div>
+    <div id="qrPreview" class="qr-box"></div>
+  </div>
+
+</div> <!-- ⬅️ INI YANG KURANG -->
 
 
   <div class="section">
@@ -3542,6 +3543,10 @@ async function simpanData() {
 
     generateQRCode(customerLink);
 
+document.getElementById("btnOpenCustomer").onclick = () => {
+  window.location.href = customerLink;
+};
+
     // COPY
 document.getElementById("btnSalinLink").onclick = () => {
   navigator.clipboard.writeText(customerLink);
@@ -4086,10 +4091,10 @@ if (json.data?.menuPromo) {
 }
 
 function generateCustomerLink(restoId) {
-  const currentPath = window.location.pathname;
-  const basePath = currentPath.substring(0, currentPath.lastIndexOf("/") + 1);
-  
-  return `${window.location.origin}${basePath}menu.html?resto=${encodeURIComponent(restoId)}`;
+  return new URL(
+    `menu.html?resto=${encodeURIComponent(restoId)}`,
+    window.location.href
+  ).href;
 }
   
 function generateQRCode(text) {
@@ -4885,6 +4890,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
