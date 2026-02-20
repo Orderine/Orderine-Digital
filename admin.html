@@ -4345,53 +4345,114 @@ async function loadAdminData() {
 
   
 document.addEventListener("DOMContentLoaded", async () => {
-  initWaAdminUI();
-  initPageToggles(); // 🔥 SEMUA TOGGLE DI SINI
-  bindCustomerButtons();
-  loadAdminData?.();
-  startRealtimeOrderChecker();
-  await renderCategoryFilter();
-  renderSubscriptionPanel();
+  console.group("🚀 ADMIN ENTERPRISE INIT");
 
   try {
-    console.log("🚀 Admin Init (CORE)");
 
-    if (!window.MENUVA_DB) {
-      throw new Error("MENUVA_DB not ready");
-    }
+    /* ================= SAFE CALL HELPER ================= */
+    const safeCall = (fnName, fn, ...args) => {
+      try {
+        if (typeof fn === "function") {
+          return fn(...args);
+        } else {
+          console.warn(`⚠️ ${fnName} not available`);
+        }
+      } catch (err) {
+        console.error(`❌ ${fnName} failed:`, err);
+      }
+    };
 
-    initAdminUI?.();
-    bindAdminEvents?.();
+    const safeAwait = async (fnName, fn, ...args) => {
+      try {
+        if (typeof fn === "function") {
+          return await fn(...args);
+        } else {
+          console.warn(`⚠️ ${fnName} not available`);
+        }
+      } catch (err) {
+        console.error(`❌ ${fnName} failed:`, err);
+      }
+    };
 
-    // ===============================
-    // TUNGGU activeUser SIAP
-    // ===============================
-    const waitForActiveUser = () =>
-      new Promise(resolve => {
+    /* ================= BASIC UI INIT ================= */
+
+    safeCall("initWaAdminUI", window.initWaAdminUI);
+    safeCall("initPageToggles", window.initPageToggles);
+    safeCall("bindCustomerButtons", window.bindCustomerButtons);
+    safeCall("loadAdminData", window.loadAdminData);
+    safeCall("startRealtimeOrderChecker", window.startRealtimeOrderChecker);
+
+    await safeAwait("renderCategoryFilter", window.renderCategoryFilter);
+    safeCall("renderSubscriptionPanel", window.renderSubscriptionPanel);
+
+    console.log("🔎 Checking MENUVA_DB...");
+
+    /* ================= WAIT FOR DB ================= */
+
+    const waitForDB = () =>
+      new Promise((resolve, reject) => {
+        let timeout = 0;
+
         const check = () => {
-          if (window.activeUser?.email && window.activeUser?.restoID) {
-            resolve(window.activeUser);
+          if (window.MENUVA_DB) {
+            resolve(true);
+          } else if (timeout > 5000) {
+            reject(new Error("MENUVA_DB timeout"));
           } else {
+            timeout += 100;
             setTimeout(check, 100);
           }
         };
+
+        check();
+      });
+
+    await waitForDB();
+    console.log("✅ MENUVA_DB ready");
+
+    /* ================= ADMIN UI INIT ================= */
+
+    safeCall("initAdminUI", window.initAdminUI);
+    safeCall("bindAdminEvents", window.bindAdminEvents);
+
+    /* ================= WAIT FOR activeUser ================= */
+
+    const waitForActiveUser = () =>
+      new Promise((resolve, reject) => {
+        let timeout = 0;
+
+        const check = () => {
+          if (window.activeUser?.email && window.activeUser?.restoID) {
+            resolve(window.activeUser);
+          } else if (timeout > 7000) {
+            reject(new Error("activeUser timeout"));
+          } else {
+            timeout += 100;
+            setTimeout(check, 100);
+          }
+        };
+
         check();
       });
 
     const user = await waitForActiveUser();
     console.log("✅ activeUser ready:", user.email);
 
-    await loadData();
+    /* ================= LOAD DATA ================= */
 
-    updateResetButtonState();
+    await safeAwait("loadData", window.loadData);
 
-    console.log("✅ Admin init triggered");
+    safeCall("updateResetButtonState", window.updateResetButtonState);
+
+    console.log("🎉 ADMIN INIT SUCCESS");
+
   } catch (err) {
-    console.error("❌ Error saat init:", err);
+    console.error("💥 ADMIN INIT FATAL:", err);
     alert("Terjadi error saat init. Silakan refresh halaman.");
   }
-});
 
+  console.groupEnd();
+});
  async function updateResetButtonState() {
   const hasBackup = await hasBackupForCurrentUser();
   const btn = document.getElementById("btnReset");
@@ -4839,3 +4900,4 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
