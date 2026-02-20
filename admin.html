@@ -4097,25 +4097,19 @@ function generateCustomerLink(restoId) {
 }
   
 function generateQRCode(text) {
-  console.log("QR TEXT RAW:", JSON.stringify(text));
-  console.log("QR TEXT LENGTH:", text.length);
-
   const container = document.getElementById("qrPreview");
   if (!container) return;
 
   container.innerHTML = "";
 
-  if (typeof QRCode !== "function") {
-    console.error("QRCode lib not ready");
-    return;
-  }
-
- new QRCode(container, {
-  text: String(text).trim(),
-  width: 200,
-  height: 200,
-  correctLevel: QRCode.CorrectLevel.H
-});
+  new QRCode(container, {
+    text: text,
+    width: 260,
+    height: 260,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
 }
   
 // ====================== LOADER HANDLER (Modern, Safe, Single Instance) ======================
@@ -4894,6 +4888,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
