@@ -1893,6 +1893,56 @@ button#btnResetData.btn-danger:active {
 .subscription-card.danger {
   border: 1px solid #ff3b3b;
 }
+.business-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 25px;
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .business-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile Portrait */
+@media (max-width: 600px) {
+  .business-wrapper {
+    padding: 15px;
+  }
+
+  .terminal-card {
+    padding: 15px;
+  }
+
+  .card-header {
+    font-size: 11px;
+  }
+
+  .subscription-body,
+  .identity-inner {
+    font-size: 12px;
+  }
+
+  .sub-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  .plan-badge {
+    margin-top: 4px;
+  }
+}
+@media (max-width: 1024px) {
+  .subscription-card {
+    order: -1;
+  }
+}
+.sub-row span {
+  word-break: break-word;
+}
 </style>
 </head>
 <body>
@@ -4897,6 +4947,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
