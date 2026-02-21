@@ -2564,27 +2564,36 @@ let flipbookMenuImages = [];
   return iso.slice(0, 10); // yyyy-MM-dd
 }
 
-// GLOBAL STORE
+ /* ================= PROMO SYSTEM STATE ================= */
+
+let currentPromoFilter = "active";
+let editingPromoId = null;
+
 window.menuPromo = [];
 
-// ======================= PROMO UI =========================
-function openAddPromo() {
-  // show editor panel
-  const editor = document.getElementById("promoEditorPanel");
-  if (!editor) return;
-  editor.style.display = "block";
+/* ================= GENERATE PROMO CODE ================= */
 
-  // reset form
-  document.getElementById("promoNameInput").value = "";
-  document.getElementById("promoPriceInput").value = "";
-  document.getElementById("promoImageInput").value = "";
-  document.getElementById("promoImagePreview").style.display = "none";
-  document.getElementById("promoImagePreview").src = "";
-
-  // Hapus assignment ke promo object → lakukan di savePromoItem()
+function generatePromoCode() {
+  return "PRM-" + crypto.randomUUID().slice(0,6).toUpperCase();
 }
 
+/* ======================= OPEN EDITOR ========================= */
+
+function openAddPromo() {
+  const editor = document.getElementById("promoEditorPanel");
+  if (!editor) return;
+
+  editor.style.display = "block";
+
+  editingPromoId = null;
+
+  clearPromoEditor();
+}
+
+/* ======================= SAVE PROMO ========================= */
+
 async function savePromoItem() {
+
   const name  = document.getElementById("promoNameInput").value.trim();
   const desc  = document.getElementById("promoDescInput").value.trim();
   const price = Number(document.getElementById("promoPriceInput").value);
@@ -2592,75 +2601,86 @@ async function savePromoItem() {
   const inputEl   = document.getElementById("promoImageInput");
   const previewEl = document.getElementById("promoImagePreview");
 
-  // ================= IMAGE SAFE PICK =================
-  let image = "";
-
-  // 1. Ambil dari dataset dulu
-  if (inputEl.dataset.image && inputEl.dataset.image.startsWith("data:")) {
-    image = inputEl.dataset.image;
-  }
-
-  // 2. Kalau dataset kosong, ambil dari preview
-  if (!image && previewEl.src && previewEl.src.startsWith("data:")) {
-    image = previewEl.src;
-  }
-
-  // 3. Kalau masih kosong biarin "", nanti card tanpa image
-  // ====================================================
+  let image = inputEl.dataset.image || previewEl.src || "";
 
   const startDate = document.getElementById("promoStartDate").value;
   const endDate   = document.getElementById("promoEndDate").value;
   const isActive  = document.getElementById("promoActiveToggle").checked;
 
   if (!name || price <= 0) {
-    alert("⚠️ Please fill in valid promo name and price");
+    alert("⚠️ Please fill valid name and price");
     return;
   }
 
-  const promo = {
-    id: crypto.randomUUID(),
-    namaPromo: name,
-    deskripsi: desc,
-    harga: price,
-    image: image,   // <- sudah aman HP
-    startDate,
-    endDate,
-    isActive
-  };
+  if (editingPromoId) {
+    /* ===== EDIT MODE ===== */
+    const promo = window.menuPromo.find(p => p.id === editingPromoId);
+    if (!promo) return;
 
-  // ================= PUSH DATA =================
-  window.menuPromo.push(promo);
+    promo.namaPromo = name;
+    promo.deskripsi = desc;
+    promo.harga     = price;
+    promo.startDate = startDate;
+    promo.endDate   = endDate;
+    promo.image     = image;
+    promo.isActive  = isActive;
+    promo.updatedAt = Date.now();
 
-  // ================= RENDER UI =================
-  renderPromoUI();
+  } else {
+    /* ===== ADD MODE ===== */
+    const promo = {
+      id: generatePromoCode(),
+      namaPromo: name,
+      deskripsi: desc,
+      harga: price,
+      image: image,
+      startDate,
+      endDate,
+      isActive: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    window.menuPromo.push(promo);
+  }
 
   await simpanData();
 
-  // ================= RESET FORM =================
-  document.getElementById("promoNameInput").value  = "";
-  document.getElementById("promoDescInput").value  = "";
-  document.getElementById("promoPriceInput").value = "";
-  inputEl.value = "";
-  document.getElementById("promoStartDate").value = "";
-  document.getElementById("promoEndDate").value   = "";
-  document.getElementById("promoActiveToggle").checked = true;
+  editingPromoId = null;
+  clearPromoEditor();
+  renderPromoFilterBar();
+  renderPromoUI();
 
-  // ================= RESET PREVIEW =================
-  previewEl.removeAttribute("src"); // lebih aman dari preview.src=""
-  previewEl.style.display = "none";
-  previewEl.style.visibility = "hidden";
-  previewEl.style.opacity = "0";
-
-  // ================= HAPUS DATASET =================
-  inputEl.dataset.image = "";
-
-  // ================= AUTO CLOSE EDITOR =================
   const editor = document.getElementById("promoEditorPanel");
   if (editor) editor.style.display = "none";
 }
 
+/* ======================= FILTER BAR ========================= */
+
+function renderPromoFilterBar() {
+
+  const bar = document.getElementById("promoFilterBar");
+  if (!bar) return;
+
+  bar.innerHTML = `
+    <div class="filter-toggle">
+      <button onclick="setPromoFilter('all')" class="${currentPromoFilter==='all'?'active':''}">Semua</button>
+      <button onclick="setPromoFilter('active')" class="${currentPromoFilter==='active'?'active':''}">Aktif</button>
+      <button onclick="setPromoFilter('inactive')" class="${currentPromoFilter==='inactive'?'active':''}">Nonaktif</button>
+    </div>
+  `;
+}
+
+function setPromoFilter(filter){
+  currentPromoFilter = filter;
+  renderPromoFilterBar();
+  renderPromoUI();
+}
+
+/* ======================= RENDER UI ========================= */
 
 function renderPromoUI() {
+
   const grid = document.getElementById("promoPreviewGrid");
   if (!grid) return;
 
@@ -2668,17 +2688,29 @@ function renderPromoUI() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  const activePromos = window.menuPromo.filter(p => {
-    if (!p.isActive) return false;
+  let promos = [...window.menuPromo];
+
+  /* FILTER ACTIVE STATUS */
+  if (currentPromoFilter === "active") {
+    promos = promos.filter(p => p.isActive);
+  }
+  if (currentPromoFilter === "inactive") {
+    promos = promos.filter(p => !p.isActive);
+  }
+
+  /* FILTER DATE RANGE */
+  promos = promos.filter(p => {
+    if (!p.isActive) return currentPromoFilter !== "active";
     if (p.startDate && today < p.startDate) return false;
     if (p.endDate && today > p.endDate) return false;
     return true;
   });
 
-  activePromos.forEach(promo => {
+  promos.forEach(promo => {
+
     const div = document.createElement("div");
     div.className = "terminal-card promo-item";
-    div.dataset.id = promo.id;
+    if (!promo.isActive) div.style.opacity = "0.5";
 
     div.innerHTML = `
       <div class="terminal-card-header">
@@ -2686,159 +2718,133 @@ function renderPromoUI() {
         <span class="terminal-title">${promo.namaPromo}</span>
       </div>
 
-      <p class="promo-status">${promo.isActive ? "ACTIVE" : "OFF"}</p>
+      <p class="promo-status">
+        ${promo.isActive ? "ACTIVE" : "NONAKTIF"}
+      </p>
 
-     <div class="terminal-card-body">
-  <p class="promo-price">Price: ${promo.harga}</p>
+      <div class="terminal-card-body">
 
-  <p class="promo-desc">${promo.deskripsi || ""}</p>
+        <p>Kode: ${promo.id}</p>
 
-  <p class="promo-date">
-    ${promo.startDate || "-"} → ${promo.endDate || "-"}
-  </p>
+        <p class="promo-price">Price: ${promo.harga}</p>
 
- <div class="promo-img-wrap" style="display:${promo.image?"block":"none"}">
-  <img src="${promo.image}" class="promo-img">
-</div>
+        <p class="promo-desc">${promo.deskripsi || ""}</p>
 
+        <p class="promo-date">
+          ${promo.startDate || "-"} → ${promo.endDate || "-"}
+        </p>
 
-  <p id="countdown-${promo.id}" class="promo-countdown"></p>
+        <div class="promo-img-wrap" style="display:${promo.image?"block":"none"}">
+          <img src="${promo.image}" class="promo-img">
+        </div>
 
-  <button onclick="deletePromo('${promo.id}')">DELETE</button>
-</div>
+        <p id="countdown-${promo.id}" class="promo-countdown"></p>
 
+        <button onclick="editPromo('${promo.id}')">Edit</button>
+        <button onclick="togglePromoStatus('${promo.id}')">
+          ${promo.isActive ? "Nonaktifkan" : "Aktifkan"}
+        </button>
+
+      </div>
     `;
 
     grid.appendChild(div);
   });
 }
 
-async function deletePromo(id) {
-  // hapus dari memory
-  window.menuPromo = window.menuPromo.filter(p => p.id !== id);
+/* ======================= TOGGLE ACTIVE ========================= */
 
-  // render ulang UI
-  renderPromoUI();
+async function togglePromoStatus(id) {
 
-  // simpan ulang seluruh data promo
+  const promo = window.menuPromo.find(p => p.id === id);
+  if (!promo) return;
+
+  promo.isActive = !promo.isActive;
+  promo.updatedAt = Date.now();
+
   await simpanData();
+
+  renderPromoUI();
 }
 
+/* ======================= EDIT ========================= */
+
+function editPromo(id) {
+
+  const promo = window.menuPromo.find(p => p.id === id);
+  if (!promo) return;
+
+  editingPromoId = id;
+
+  document.getElementById("promoNameInput").value  = promo.namaPromo;
+  document.getElementById("promoDescInput").value  = promo.deskripsi;
+  document.getElementById("promoPriceInput").value = promo.harga;
+  document.getElementById("promoStartDate").value  = promo.startDate || "";
+  document.getElementById("promoEndDate").value    = promo.endDate || "";
+  document.getElementById("promoActiveToggle").checked = promo.isActive;
+
+  const preview = document.getElementById("promoImagePreview");
+  if (promo.image) {
+    preview.src = promo.image;
+    preview.style.display = "block";
+  }
+
+  openAddPromo();
+}
+
+/* ======================= CLEAR EDITOR ========================= */
+
+function clearPromoEditor(){
+
+  document.getElementById("promoNameInput").value  = "";
+  document.getElementById("promoDescInput").value  = "";
+  document.getElementById("promoPriceInput").value = "";
+  document.getElementById("promoStartDate").value  = "";
+  document.getElementById("promoEndDate").value    = "";
+  document.getElementById("promoActiveToggle").checked = true;
+
+  const preview = document.getElementById("promoImagePreview");
+  preview.src = "";
+  preview.style.display = "none";
+
+  document.getElementById("promoImageInput").dataset.image = "";
+}
+
+/* ================= COUNTDOWN ================= */
+
 function updatePromoCountdown() {
+
   const now = new Date();
 
   window.menuPromo.forEach(promo => {
-    if (!promo.tanggalAkhir) return;
 
-    const countdownEl = document.getElementById(`countdown-${promo.id}`);
-    if (!countdownEl) return; // 🔥 INI KUNCI
+    const el = document.getElementById(`countdown-${promo.id}`);
+    if (!el || !promo.endDate) return;
 
-    const end = new Date(promo.tanggalAkhir);
+    const end = new Date(promo.endDate);
     const diff = end - now;
 
     if (diff <= 0) {
-      countdownEl.textContent = "EXPIRED";
+      el.textContent = "EXPIRED";
     } else {
-      const days = Math.floor(diff / (1000*60*60*24));
-      const hours = Math.floor((diff / (1000*60*60)) % 24);
-      const minutes = Math.floor((diff / (1000*60)) % 60);
-      const seconds = Math.floor((diff / 1000) % 60);
-
-      countdownEl.textContent =
-        `${days}d ${hours}h ${minutes}m ${seconds}s`;
+      const d = Math.floor(diff/(1000*60*60*24));
+      const h = Math.floor((diff/(1000*60*60))%24);
+      const m = Math.floor((diff/(1000*60))%60);
+      const s = Math.floor((diff/1000)%60);
+      el.textContent = `${d}d ${h}h ${m}m ${s}s`;
     }
   });
 }
 
-  function initPromoCountdown() {
-  if (!document.querySelector("[id^='countdown-']")) return;
-  setInterval(updatePromoCountdown, 1000);
-}
+setInterval(updatePromoCountdown,1000);
 
-initPromoCountdown();
+/* ================= INIT ================= */
 
-
-// ================== IMAGE UPLOAD =======================
-function uploadPromoImage(event, inputEl) {
-  const file = (event.target && event.target.files[0]) || 
-               (inputEl && inputEl.files[0]);
-
-  if (!file) return;
-
-  const preview = document.getElementById("promoImagePreview");
-
-  // tampilkan loading kecil dulu biar user tau jalan
-  preview.style.display = "block";
-  preview.src = "";
-
-  resizeIfNeeded(file)
-    .then(resized => {
-      preview.src = resized;
-
-      // penting buat mobile kadang height collapse
-      preview.style.visibility = "visible";
-      preview.style.opacity = "1";
-
-      // simpan data image
-      inputEl.dataset.image = resized;
-    })
-    .catch(err => {
-      console.error("Upload promo image failed:", err);
-
-      // fallback tanpa resize
-      const reader = new FileReader();
-      reader.onload = e => {
-        preview.src = e.target.result;
-        preview.style.display = "block";
-        inputEl.dataset.image = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-}
-
-// ================== RESTORE / LOAD ====================
-async function loadPromoData(resto) {
-  window.menuPromo = Array.isArray(resto.menuPromo) ? resto.menuPromo : [];
+function initPromoSystem(){
+  renderPromoFilterBar();
   renderPromoUI();
 }
-
-let activeCategoryId = null;
-let activeCategoryName = null;
-
-
-async function renderCategoryFilter() {
-  const menus = await MENUVA_DB.getAll("menuData");
-
-  const uniqueCategories = [
-    ...new Set(
-      menus
-        .map(m => m.category)
-        .filter(c => c && c !== "undefined")
-    )
-  ];
-
-  const bar = document.getElementById("categoryFilterBar");
-  bar.innerHTML = "";
-
-  uniqueCategories.forEach(cat => {
-    const btn = document.createElement("div");
-    btn.className = "terminal-filter-btn";
-    btn.innerText = cat;
-
-    if (cat === activeCategoryName) {
-      btn.classList.add("active");
-    }
-
-    btn.onclick = () => {
-      activeCategoryName = cat;
-      renderCategoryFilter();
-      renderMenuPreview(cat);
-    };
-
-    bar.appendChild(btn);
-  });
-}
-
+  
 async function renderMenuPreview(categoryName) {
   const menus = await MENUVA_DB.getAll("menuData");
 
@@ -4451,14 +4457,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const user = await waitForActiveUser();
     console.log("✅ activeUser ready:", user.email);
 
-    /* ================= LOAD DATA ================= */
+   /* ================= LOAD DATA ================= */
 
-    await safeAwait("loadData", window.loadData);
+await safeAwait("loadData", window.loadData);
 
-    safeCall("updateResetButtonState", window.updateResetButtonState);
+safeCall("initPromoSystem", window.initPromoSystem);
 
-    console.log("🎉 ADMIN INIT SUCCESS");
+safeCall("updateResetButtonState", window.updateResetButtonState);
 
+console.log("🎉 ADMIN INIT SUCCESS");
+    
   } catch (err) {
     console.error("💥 ADMIN INIT FATAL:", err);
     alert("Terjadi error saat init. Silakan refresh halaman.");
@@ -4466,6 +4474,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   console.groupEnd();
 });
+  
  async function updateResetButtonState() {
   const hasBackup = await hasBackupForCurrentUser();
   const btn = document.getElementById("btnReset");
@@ -4909,6 +4918,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
