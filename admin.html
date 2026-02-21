@@ -2663,18 +2663,18 @@ function generatePromoCode() {
 }
 
 /* ======================= OPEN EDITOR ========================= */
+function openAddPromo(isEdit = false) {
 
-function openAddPromo() {
   const editor = document.getElementById("promoEditorPanel");
   if (!editor) return;
 
   editor.style.display = "block";
 
-  editingPromoId = null;
-
-  clearPromoEditor();
+  if (!isEdit) {
+    editingPromoId = null;
+    clearPromoEditor();
+  }
 }
-
 /* ======================= SAVE PROMO ========================= */
 
 async function savePromoItem() {
@@ -2876,18 +2876,15 @@ async function togglePromoStatus(id) {
   renderPromoUI();
 }
 
-/* ======================= EDIT ========================= */
+/* ======================= EDIT PROMO========================= */
 window.editPromo = function(id) {
 
-  if (!window.menuPromo) return;
-
   const promo = window.menuPromo.find(p => String(p.id) === String(id));
-  if (!promo) {
-    console.warn("Promo not found:", id);
-    return;
-  }
+  if (!promo) return;
 
   editingPromoId = id;
+
+  openAddPromo(true); // 🔥 kasih flag edit
 
   const map = {
     promoNameInput: promo.namaPromo,
@@ -2910,8 +2907,6 @@ window.editPromo = function(id) {
     preview.src = promo.image;
     preview.style.display = "block";
   }
-
-  openAddPromo();
 };
 
 /* ======================= CLEAR EDITOR ========================= */
@@ -5040,6 +5035,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
