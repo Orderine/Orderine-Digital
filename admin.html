@@ -1950,29 +1950,56 @@ button#btnResetData.btn-danger:active {
   word-break: break-word;
 }
 /* ================= BLOOMBERG FILTER WRAPPER ================= */
+/* ================= WRAPPER ================= */
 
 .terminal-filter-wrapper {
   display: flex;
+  flex-wrap: wrap; /* 🔥 penting */
   align-items: center;
   justify-content: space-between;
+
   padding: 14px 18px;
   margin-bottom: 18px;
 
   background: linear-gradient(145deg, #0a0f1a, #111827);
   border: 1px solid #00f0ff33;
   box-shadow: 0 0 12px #00f0ff22;
+
+  gap: 12px; /* 🔥 biar ada jarak saat wrap */
 }
 
+/* ================= TOGGLE ================= */
+
+.terminal-filter-toggle {
+  display: flex;
+  flex-wrap: wrap; /* 🔥 ini kunci */
+  gap: 8px;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 768px) {
+
+  .terminal-filter-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .terminal-filter-toggle {
+    width: 100%;
+  }
+
+  .terminal-filter-btn {
+    flex: 1; /* 🔥 tombol isi lebar */
+    text-align: center;
+  }
+}
+    
 .terminal-filter-label {
   font-size: 11px;
   letter-spacing: 2px;
   color: #00f0ff;
   font-weight: 600;
-}
-
-.terminal-filter-toggle {
-  display: flex;
-  gap: 8px;
 }
 
 /* ================= BUTTON ================= */
@@ -2744,7 +2771,7 @@ function renderPromoFilterBar() {
         <button 
           onclick="setPromoFilter('inactive')" 
           class="terminal-filter-btn ${currentPromoFilter==='inactive'?'active':''}">
-          PROMO NONACTIVE
+          INACTIVE PROMO
         </button>
 
       </div>
@@ -2824,7 +2851,7 @@ function renderPromoUI() {
 
         <button onclick="editPromo('${promo.id}')">Edit</button>
         <button onclick="togglePromoStatus('${promo.id}')">
-          ${promo.isActive ? "Nonaktifkan" : "Aktifkan"}
+          ${promo.isActive ? "Deactivate" : "Activate"}
         </button>
 
       </div>
@@ -2850,29 +2877,42 @@ async function togglePromoStatus(id) {
 }
 
 /* ======================= EDIT ========================= */
+window.editPromo = function(id) {
 
-function editPromo(id) {
+  if (!window.menuPromo) return;
 
-  const promo = window.menuPromo.find(p => p.id === id);
-  if (!promo) return;
+  const promo = window.menuPromo.find(p => String(p.id) === String(id));
+  if (!promo) {
+    console.warn("Promo not found:", id);
+    return;
+  }
 
   editingPromoId = id;
 
-  document.getElementById("promoNameInput").value  = promo.namaPromo;
-  document.getElementById("promoDescInput").value  = promo.deskripsi;
-  document.getElementById("promoPriceInput").value = promo.harga;
-  document.getElementById("promoStartDate").value  = promo.startDate || "";
-  document.getElementById("promoEndDate").value    = promo.endDate || "";
-  document.getElementById("promoActiveToggle").checked = promo.isActive;
+  const map = {
+    promoNameInput: promo.namaPromo,
+    promoDescInput: promo.deskripsi,
+    promoPriceInput: promo.harga,
+    promoStartDate: promo.startDate || "",
+    promoEndDate: promo.endDate || ""
+  };
+
+  Object.keys(map).forEach(key => {
+    const el = document.getElementById(key);
+    if (el) el.value = map[key];
+  });
+
+  const toggle = document.getElementById("promoActiveToggle");
+  if (toggle) toggle.checked = promo.isActive;
 
   const preview = document.getElementById("promoImagePreview");
-  if (promo.image) {
+  if (preview && promo.image) {
     preview.src = promo.image;
     preview.style.display = "block";
   }
 
   openAddPromo();
-}
+};
 
 /* ======================= CLEAR EDITOR ========================= */
 
@@ -5000,6 +5040,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
