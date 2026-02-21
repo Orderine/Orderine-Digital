@@ -1949,6 +1949,64 @@ button#btnResetData.btn-danger:active {
 .sub-row span {
   word-break: break-word;
 }
+/* ================= BLOOMBERG FILTER WRAPPER ================= */
+
+.terminal-filter-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+
+  background: linear-gradient(145deg, #0a0f1a, #111827);
+  border: 1px solid #00f0ff33;
+  box-shadow: 0 0 12px #00f0ff22;
+}
+
+.terminal-filter-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #00f0ff;
+  font-weight: 600;
+}
+
+.terminal-filter-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+/* ================= BUTTON ================= */
+
+.terminal-filter-btn {
+  padding: 6px 16px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  background: #0f172a;
+  color: #9ca3af;
+
+  border: 1px solid #1f2937;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  text-transform: uppercase;
+}
+
+/* Hover */
+
+.terminal-filter-btn:hover {
+  border-color: #00f0ff;
+  color: #00f0ff;
+  box-shadow: 0 0 6px #00f0ff55;
+}
+
+/* Active */
+
+.terminal-filter-btn.active {
+  background: #00f0ff;
+  color: #000;
+  border-color: #00f0ff;
+  box-shadow: 0 0 12px #00f0ff88;
+}
 </style>
 </head>
 <body>
@@ -2663,10 +2721,34 @@ function renderPromoFilterBar() {
   if (!bar) return;
 
   bar.innerHTML = `
-    <div class="filter-toggle">
-      <button onclick="setPromoFilter('all')" class="${currentPromoFilter==='all'?'active':''}">Semua</button>
-      <button onclick="setPromoFilter('active')" class="${currentPromoFilter==='active'?'active':''}">Aktif</button>
-      <button onclick="setPromoFilter('inactive')" class="${currentPromoFilter==='inactive'?'active':''}">Nonaktif</button>
+    <div class="terminal-filter-wrapper">
+
+      <div class="terminal-filter-label">
+        PRODUCT STATUS
+      </div>
+
+      <div class="terminal-filter-toggle">
+
+        <button 
+          onclick="setPromoFilter('all')" 
+          class="terminal-filter-btn ${currentPromoFilter==='all'?'active':''}">
+          ALL
+        </button>
+
+        <button 
+          onclick="setPromoFilter('active')" 
+          class="terminal-filter-btn ${currentPromoFilter==='active'?'active':''}">
+          PROMO ACTIVE
+        </button>
+
+        <button 
+          onclick="setPromoFilter('inactive')" 
+          class="terminal-filter-btn ${currentPromoFilter==='inactive'?'active':''}">
+          PROMO NONACTIVE
+        </button>
+
+      </div>
+
     </div>
   `;
 }
@@ -4918,6 +5000,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
