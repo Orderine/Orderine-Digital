@@ -2978,6 +2978,33 @@ function initPromoSystem(){
   renderPromoFilterBar();
   renderPromoUI();
 }
+
+function uploadPromoImage(event) {
+
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+
+    const base64 = e.target.result;
+
+    const preview = document.getElementById("promoImagePreview");
+    const inputEl = document.getElementById("promoImageInput");
+
+    if (preview) {
+      preview.src = base64;
+      preview.style.display = "block";
+    }
+
+    if (inputEl) {
+      inputEl.dataset.image = base64;
+    }
+  };
+
+  reader.readAsDataURL(file);
+}
   
 async function renderMenuPreview(categoryName) {
   const menus = await MENUVA_DB.getAll("menuData");
@@ -5052,6 +5079,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
