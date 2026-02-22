@@ -2079,6 +2079,23 @@ button#btnResetData.btn-danger:active {
   padding: 3px 6px;
   border-left: 2px solid #ff9900;
 }
+.terminal-hint {
+  font-size: 11px;
+  margin-bottom: 10px;
+  line-height: 1.4;
+
+  color: #ff9900;
+  opacity: 0.85;
+
+  font-family: "Courier New", monospace;
+  letter-spacing: 0.5px;
+
+  text-shadow: 0 0 4px rgba(255,153,0,0.4);
+}
+.terminal-hint {
+  border-left: 2px solid #ff9900;
+  padding-left: 8px;
+}
 </style>
 </head>
 <body>
@@ -2169,7 +2186,6 @@ button#btnResetData.btn-danger:active {
 
       <div class="terminal-card add-category-card" onclick="openAddPromo()">
         <div class="terminal-card-header">
-          <span class="terminal-dot"></span>
           <span class="terminal-title">PROMO SYSTEM</span>
         </div>
         <div class="terminal-card-body">
@@ -2220,13 +2236,26 @@ button#btnResetData.btn-danger:active {
 
 </div>
 
-  <div class="terminal-card">
+ <div class="terminal-card">
   <div class="terminal-card-header">
     <span class="terminal-title">SYSTEM SETTINGS</span>
   </div>
+
   <div class="terminal-card-body">
-    <input type="text" id="locationCodeInput" placeholder="Location Code (HT1, RST1...)" />
+
+    <div class="terminal-hint">
+      Enter three letters from your business name, then click Save.
+      Example: Orderine Resto Jawa → ORJ
+    </div>
+
+    <input 
+      type="text" 
+      id="locationCodeInput" 
+      placeholder="Location Code (HT1, RST1...)" 
+    />
+
     <button onclick="saveSystemSettings()">SAVE SETTINGS</button>
+
   </div>
 </div>
 
@@ -2243,7 +2272,6 @@ button#btnResetData.btn-danger:active {
 
       <div class="terminal-card add-category-card" onclick="openAddCategory()">
         <div class="terminal-card-header">
-          <span class="terminal-dot"></span>
           <span class="terminal-title">CATEGORY SYSTEM</span>
         </div>
         <div class="terminal-card-body">
@@ -5184,6 +5212,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
