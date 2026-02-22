@@ -2659,7 +2659,23 @@ window.menuPromo = [];
 /* ================= GENERATE PROMO CODE ================= */
 
 function generatePromoCode() {
-  return "PRM-" + crypto.randomUUID().slice(0,6).toUpperCase();
+  const promos = window.menuPromo || [];
+
+  // Ambil nomor terakhir
+  let maxNumber = 0;
+
+  promos.forEach(p => {
+    if (p.kodePromo) {
+      const number = parseInt(p.kodePromo.replace("PR-", ""));
+      if (!isNaN(number) && number > maxNumber) {
+        maxNumber = number;
+      }
+    }
+  });
+
+  const newNumber = maxNumber + 1;
+
+  return "PR-" + String(newNumber).padStart(3, "0");
 }
 
 /* ======================= OPEN EDITOR ========================= */
@@ -2713,18 +2729,19 @@ async function savePromoItem() {
 
   } else {
     /* ===== ADD MODE ===== */
-    const promo = {
-      id: generatePromoCode(),
-      namaPromo: name,
-      deskripsi: desc,
-      harga: price,
-      image: image,
-      startDate,
-      endDate,
-      isActive: true,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
+   const promo = {
+  id: crypto.randomUUID(),        // ID internal (aman)
+  kodePromo: generatePromoCode(), // kode pendek untuk tampil
+  namaPromo: name,
+  deskripsi: desc,
+  harga: price,
+  image: image,
+  startDate,
+  endDate,
+  isActive: true,
+  createdAt: Date.now(),
+  updatedAt: Date.now()
+};
 
     window.menuPromo.push(promo);
   }
@@ -2833,7 +2850,7 @@ function renderPromoUI() {
 
       <div class="terminal-card-body">
 
-        <p>Kode: ${promo.id}</p>
+        <p>Code : ${promo.kodePromo}</p>
 
         <p class="promo-price">Price: ${promo.harga}</p>
 
@@ -5035,6 +5052,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
