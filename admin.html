@@ -3032,19 +3032,24 @@ window.renderCategoryFilter = function () {
 
 };
 
- async function loadCategories() {
+async function loadCategories() {
 
-  const restoId = window.activeUser?.restoID;
-  if (!restoId) return;
+  const menus = await MENUVA_DB.getAll("menuData");
 
-  const resto = await MENUVA_DB.get("restos", restoId);
-  if (!resto) return;
+  const map = new Map();
 
-  const categories = Array.isArray(resto.categories)
-    ? resto.categories
-    : [];
+  menus.forEach(m => {
+    if (m.category && m.active !== false) {
+      map.set(m.category, {
+        name: m.category,
+        icon: "📁"
+      });
+    }
+  });
 
-  window.menuCategories = categories;
+  window.menuCategories = Array.from(map.values());
+
+  console.log("📂 Derived categories:", window.menuCategories);
 
   renderCategoryFilter();
 }
@@ -4636,6 +4641,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     await waitForDB();
     console.log("✅ MENUVA_DB ready");
+    await loadCategories();
 
     /* ================= ADMIN UI INIT ================= */
 
@@ -5127,6 +5133,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
