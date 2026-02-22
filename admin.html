@@ -3051,10 +3051,7 @@ function uploadPromoImage(event) {
 }
 
     /* =================PREFIX CODE MENU CATEGORIES ================= */
-  localStorage.setItem("systemSettings", JSON.stringify({
-  locationCode: "HT1"
- }));
-
+  
   let systemSettings = JSON.parse(localStorage.getItem("systemSettings")) || {
   locationCode: ""
 };
@@ -3073,29 +3070,30 @@ function saveSystemSettings() {
   alert("Location code saved");
 }
 
-  async function generateMenuCode(categoryName) {
+ async function generateMenuCode(categoryName) {
 
   const settings = JSON.parse(localStorage.getItem("systemSettings")) || {};
 
   if (!settings.locationCode) {
-    alert("Set location code first in system settings");
+    alert("Set location code first");
     return null;
   }
+
+  const categories = await MENUVA_DB.getAll("categories");
+  const category = categories.find(c => c.name === categoryName);
+
+  if (!category) {
+    alert("Category not found");
+    return null;
+  }
+
+  const prefix = category.prefix;
 
   const menus = await MENUVA_DB.getAll("menuData");
 
   const sameCategoryMenus = menus.filter(m =>
     m.category === categoryName
   );
-
-  let prefix;
-
-  if (sameCategoryMenus.length > 0) {
-    prefix = sameCategoryMenus[0].menuCode.split("-")[1];
-  } else {
-    alert("Category has no prefix yet. Create category with prefix first.");
-    return null;
-  }
 
   const numbers = sameCategoryMenus.map(m => {
     const parts = m.menuCode.split("-");
@@ -3107,7 +3105,6 @@ function saveSystemSettings() {
 
   return `${settings.locationCode}-${prefix}-${String(nextNumber).padStart(3, "0")}`;
 }
-
   /* ================= MENU CATEGORIES ================= */
 window.renderCategoryFilter = function () {
 
@@ -3145,19 +3142,16 @@ window.renderCategoryFilter = function () {
 
 async function loadCategories() {
 
-  const menus = await MENUVA_DB.getAll("menuData");
+  const categories = await MENUVA_DB.getAll("categories");
 
-  const map = new Map();
+  window.menuCategories = categories;
 
-  menus.forEach(m => {
-    if (m.category && m.active !== false) {
-      map.set(m.category, {
-        name: m.category,
-        icon: "📁",
-        prefix: m.menuCode?.split("-")[1] || null
-      });
-    }
-  });
+  if (!activeCategoryName && categories.length > 0) {
+    activeCategoryName = categories[0].name;
+  }
+
+  renderCategoryFilter();
+}
 
   window.menuCategories = Array.from(map.values());
 
@@ -3245,38 +3239,35 @@ document.getElementById("menuImageInput").addEventListener("change", function (e
 });
 
 async function saveMenuItem() {
+
   if (!activeCategoryName) {
     alert("Select category first");
     return;
   }
 
-  const menuCode = await generateMenuCode(activeCategoryName);
-  if (!menuCode) return;
+  const name = document.getElementById("menuNameInput").value.trim();
+  const price = parseFloat(document.getElementById("menuPriceInput").value);
 
   if (!name || isNaN(price)) {
     alert("Complete form");
     return;
   }
 
- // ambil semua menu dulu
-const existingMenus = await MENUVA_DB.getAll("menuData");
+  const menuCode = await generateMenuCode(activeCategoryName);
+  if (!menuCode) return;
 
-// generate code
-const menuCode = generateMenuCode(activeCategoryName, existingMenus);
-
-const newMenu = {
-  name,
-  price,
-  image: uploadedImageBase64 || null,
-  category: activeCategoryName,
-  menuCode, // 🔥 TAMBAH INI
-  active: true,
-  createdAt: Date.now()
-};
+  const newMenu = {
+    name,
+    price,
+    image: uploadedImageBase64 || null,
+    category: activeCategoryName,
+    menuCode,
+    active: true,
+    createdAt: Date.now()
+  };
 
   await MENUVA_DB.add("menuData", newMenu);
 
-  // Reset form
   document.getElementById("menuNameInput").value = "";
   document.getElementById("menuPriceInput").value = "";
   document.getElementById("menuImageInput").value = "";
@@ -3288,7 +3279,6 @@ const newMenu = {
   await renderCategoryFilter();
   await renderMenuPreview(activeCategoryName);
 }
-
 
 let CATEGORY_CACHE = [];
 window.menuCategories = [];
@@ -3359,17 +3349,28 @@ function closeAddCategory() {
 
 
 async function saveCategory() {
-  const name = document.getElementById("categoryNameInput").value.trim();
-  if (!name) return alert("Category name required");
 
-  activeCategoryName = name;
+  const name = document.getElementById("categoryNameInput").value.trim();
+  const prefix = document.getElementById("categoryPrefixInput").value.trim().toUpperCase();
+
+  if (!name || !prefix) {
+    alert("Category name & prefix required");
+    return;
+  }
+
+  const newCategory = {
+    name,
+    prefix,
+    icon: "📁",
+    createdAt: Date.now()
+  };
+
+  await MENUVA_DB.add("categories", newCategory);
 
   closeAddCategory();
-
-  renderCategoryFilter();
-  renderMenuPreview(name);
+  await loadCategories();
 }
-
+  
 function uploadMenuImage(event, inputEl) {
   const file = event.target.files[0];
   if (!file) return;
@@ -5254,6 +5255,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
