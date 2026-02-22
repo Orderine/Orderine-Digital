@@ -3252,29 +3252,30 @@ async function renderMenuPreview(categoryName) {
 
 /* ================= MENU CODE GENERATOR ================= */
 
-function generateMenuCode(category) {
-
-  if (!category || typeof category !== "object") {
-    console.error("Invalid category object:", category);
-    return "ERR-XX-0000";
-  }
+function generateMenuCode(categoryName) {
 
   const location =
     window.systemSettings?.locationCode || "LOC";
 
-  const name = category.name || category.nama || "";
-
-  const clean = name.replace(/[^A-Za-z]/g, "").toUpperCase();
+  const clean = (categoryName || "XX")
+    .replace(/[^A-Za-z]/g, "")
+    .toUpperCase();
 
   const prefix = clean.slice(0, 2).padEnd(2, "X");
 
-  if (typeof category.lastCodeNumber !== "number") {
-    category.lastCodeNumber = 0;
+  // 🔥 Ambil counter dari memory global
+  window.__CATEGORY_COUNTER__ =
+    window.__CATEGORY_COUNTER__ || {};
+
+  if (!window.__CATEGORY_COUNTER__[prefix]) {
+    window.__CATEGORY_COUNTER__[prefix] = 0;
   }
 
-  category.lastCodeNumber++;
+  window.__CATEGORY_COUNTER__[prefix]++;
 
-  const running = String(category.lastCodeNumber).padStart(4, "0");
+  const running = String(
+    window.__CATEGORY_COUNTER__[prefix]
+  ).padStart(4, "0");
 
   return `${location}-${prefix}-${running}`;
 }
@@ -3324,7 +3325,7 @@ async function saveMenuItem() {
   if (!categoryObj)
     return alert("Category not found");
 
-  const menuCode = generateMenuCode(categoryObj);
+  const menuCode = generateMenuCode(activeCategoryName);
 
   await MENUVA_DB.add("menuData", {
     id: Date.now(),
@@ -5182,3 +5183,4 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
