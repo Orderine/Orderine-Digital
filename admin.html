@@ -2463,7 +2463,7 @@ button#btnResetData.btn-danger:active {
 /* ================= SUBSCRIPTION COUNTDOWN ================= */
 
 let subscriptionCountdownTimer = null;
-let activeCategoryName = null;
+
 
 window.initSubscriptionCountdown = function () {
   const user = window.activeUser;
@@ -3052,62 +3052,33 @@ function uploadPromoImage(event) {
 
     /* =================PREFIX CODE MENU CATEGORIES ================= */
   
- async function getSystemSettings() {
-  const data = await MENUVA_DB.get("systemSettings", "main");
-  return data || { locationCode: "" };
-}
-
-function saveSystemSettings() {
-  const code = document.getElementById("locationCodeInput").value.trim().toUpperCase();
-
-  if (!code) {
-    alert("Location code required");
-    return;
-  }
-
- await MENUVA_DB.put("systemSettings", {
-  id: "main",
-  locationCode: code
-});
-
-  alert("Location code saved");
-}
-
- async function generateMenuCode(categoryName) {
-
-  const settings = JSON.parse(localStorage.getItem("systemSettings")) || {};
-
-  if (!settings.locationCode) {
-    alert("Set location code first");
-    return null;
-  }
-
-  const categories = await MENUVA_DB.getAll("categories");
-  const category = categories.find(c => c.name === categoryName);
-
-  if (!category) {
-    alert("Category not found");
-    return null;
-  }
-
-  const prefix = category.prefix;
+let activeCategoryName = null;
+  
+async function generateMenuCode(categoryName) {
 
   const menus = await MENUVA_DB.getAll("menuData");
+
+  const prefix = categoryName
+    .replace(/\s+/g, "")
+    .substring(0, 2)
+    .toUpperCase();
 
   const sameCategoryMenus = menus.filter(m =>
     m.category === categoryName
   );
 
   const numbers = sameCategoryMenus.map(m => {
+    if (!m.menuCode) return 0;
     const parts = m.menuCode.split("-");
-    return parseInt(parts[2], 10);
+    return parseInt(parts[1], 10) || 0;
   });
 
   const nextNumber =
     numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
 
-  return `${settings.locationCode}-${prefix}-${String(nextNumber).padStart(3, "0")}`;
+  return `${prefix}-${String(nextNumber).padStart(3, "0")}`;
 }
+  
   /* ================= MENU CATEGORIES ================= */
 window.renderCategoryFilter = function () {
 
@@ -3145,12 +3116,25 @@ window.renderCategoryFilter = function () {
 
 async function loadCategories() {
 
-  const categories = await MENUVA_DB.getAll("categories");
+  const menus = await MENUVA_DB.getAll("menuData");
 
-  window.menuCategories = categories;
+  const map = new Map();
 
-  if (!activeCategoryName && categories.length > 0) {
-    activeCategoryName = categories[0].name;
+  menus.forEach(menu => {
+    if (!menu.category) return;
+
+    if (!map.has(menu.category)) {
+      map.set(menu.category, {
+        name: menu.category,
+        icon: "📁"
+      });
+    }
+  });
+
+  window.menuCategories = Array.from(map.values());
+
+  if (!activeCategoryName && window.menuCategories.length > 0) {
+    activeCategoryName = window.menuCategories[0].name;
   }
 
   renderCategoryFilter();
@@ -3204,7 +3188,7 @@ async function renderMenuPreview(categoryName) {
     activeCategoryName = null;
   }
 
-  await renderCategoryFilter();
+  await loadCategories();
 
   if (activeCategoryName) {
     await renderMenuPreview(activeCategoryName);
@@ -3341,28 +3325,18 @@ function closeAddCategory() {
   modal.style.display = "none";
 }
 
-
 async function saveCategory() {
 
   const name = document.getElementById("categoryNameInput").value.trim();
-  const prefix = document.getElementById("categoryPrefixInput").value.trim().toUpperCase();
 
-  if (!name || !prefix) {
-    alert("Category name & prefix required");
+  if (!name) {
+    alert("Category name required");
     return;
   }
 
-  const newCategory = {
-    name,
-    prefix,
-    icon: "📁",
-    createdAt: Date.now()
-  };
-
-  await MENUVA_DB.add("categories", newCategory);
+  alert("Category will appear automatically after you add first menu item.");
 
   closeAddCategory();
-  await loadCategories();
 }
   
 function uploadMenuImage(event, inputEl) {
@@ -5249,6 +5223,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
