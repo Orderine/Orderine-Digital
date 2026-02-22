@@ -2063,6 +2063,11 @@ button#btnResetData.btn-danger:active {
   border-color: #00f0ff;
   box-shadow: 0 0 12px #00f0ff88;
 }
+.menu-code {
+  font-size: 11px;
+  color: #00f0ff;
+  letter-spacing: 1px;
+}
 </style>
 </head>
 <body>
@@ -3121,6 +3126,7 @@ async function renderMenuPreview(categoryName) {
 ` : ""}
 
   <h4>${menu.name}</h4>
+  <small class="menu-code">${menu.menuCode || ""}</small>
   <p>Rp ${menu.price.toLocaleString()}</p>
   <button onclick="deleteMenu(${menu.id})">DELETE</button>
 `;
@@ -3172,6 +3178,32 @@ document.getElementById("menuImageInput").addEventListener("change", function (e
   reader.readAsDataURL(file);
 });
 
+   /* ================= MENU CATEGORIES CODE ================= */
+  const CATEGORY_PREFIX_MAP = {
+  "Food": "FD",
+  "Drink": "DR",
+  "Dessert": "DS",
+  "Light Bites": "LB",
+  "Special Menu": "SP"
+};
+
+  function generateMenuCode(category, existingMenus = []) {
+  const prefix = CATEGORY_PREFIX_MAP[category] || "MN";
+
+  const sameCategoryMenus = existingMenus.filter(m =>
+    m.menuCode?.startsWith(prefix)
+  );
+
+  const numbers = sameCategoryMenus.map(m => {
+    const parts = m.menuCode.split("-");
+    return parseInt(parts[1], 10);
+  });
+
+  const nextNumber =
+    numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+
+  return `${prefix}-${String(nextNumber).padStart(3, "0")}`;
+}
 
 async function saveMenuItem() {
   if (!activeCategoryName) {
@@ -3187,14 +3219,21 @@ async function saveMenuItem() {
     return;
   }
 
-  const newMenu = {
-    name,
-    price,
-    image: uploadedImageBase64 || null,
-    category: activeCategoryName,
-    active: true,
-    createdAt: Date.now()
-  };
+ // ambil semua menu dulu
+const existingMenus = await MENUVA_DB.getAll("menuData");
+
+// generate code
+const menuCode = generateMenuCode(activeCategoryName, existingMenus);
+
+const newMenu = {
+  name,
+  price,
+  image: uploadedImageBase64 || null,
+  category: activeCategoryName,
+  menuCode, // 🔥 TAMBAH INI
+  active: true,
+  createdAt: Date.now()
+};
 
   await MENUVA_DB.add("menuData", newMenu);
 
@@ -5176,6 +5215,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
