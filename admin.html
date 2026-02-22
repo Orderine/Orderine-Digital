@@ -3032,9 +3032,20 @@ window.renderCategoryFilter = function () {
 
 };
 
-  async function loadCategories() {
-  const categories = await MENUVA_DB.getAll("categoryData");
-  window.menuCategories = categories || [];
+ async function loadCategories() {
+
+  const restoId = window.activeUser?.restoID;
+  if (!restoId) return;
+
+  const resto = await MENUVA_DB.get("restos", restoId);
+  if (!resto) return;
+
+  const categories = Array.isArray(resto.categories)
+    ? resto.categories
+    : [];
+
+  window.menuCategories = categories;
+
   renderCategoryFilter();
 }
   
@@ -4656,6 +4667,7 @@ document.addEventListener("DOMContentLoaded", async () => {
    /* ================= LOAD DATA ================= */
 
 await safeAwait("loadData", window.loadData);
+await loadCategories();
 
 safeCall("initPromoSystem", window.initPromoSystem);
 
@@ -5114,6 +5126,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
