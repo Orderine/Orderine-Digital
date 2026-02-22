@@ -3251,27 +3251,37 @@ async function renderMenuPreview(categoryName) {
 
 function generateMenuCode(category) {
 
-  if (!category) return null;
+  if (!category) return "ERR-XX-0000";
 
-  // pastikan prefix ada
-  if (!category.codePrefix) {
-    category.codePrefix = generateCategoryPrefix(category.name);
+  // ===== LOCATION =====
+  const location =
+    window.systemSettings?.locationCode ||
+    "LOC";
+
+  // ===== PREFIX =====
+  let prefix = category.codePrefix;
+
+  if (!prefix) {
+    const clean = (category.name || "XX")
+      .replace(/[^A-Za-z]/g, "")
+      .toUpperCase();
+
+    prefix = clean.slice(0, 2).padEnd(2, "X");
+
+    category.codePrefix = prefix; // simpan balik ke category
   }
 
-  // pastikan counter ada
-  if (!category.lastCodeNumber) {
+  // ===== COUNTER =====
+  if (typeof category.lastCodeNumber !== "number") {
     category.lastCodeNumber = 0;
   }
 
   category.lastCodeNumber += 1;
 
-  const running = String(category.lastCodeNumber).padStart(4, "0");
+  const running = String(category.lastCodeNumber)
+    .padStart(4, "0");
 
-  const location =
-    window.systemSettings?.locationCode ||
-    "LOC";
-
-  return `${location}-${category.codePrefix}-${running}`;
+  return `${location}-${prefix}-${running}`;
 }
   
 /* ================= SAVE MENU ================= */
@@ -5167,6 +5177,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
