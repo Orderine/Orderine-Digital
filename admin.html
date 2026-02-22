@@ -3092,25 +3092,28 @@ function generateCategoryPrefix(categoryName) {
 
 function tambahMenuBaru(categoryId, nama, harga, image) {
 
+  // 🔥 Ambil object category yang asli
   const category = window.categories.find(c => c.id === categoryId);
-  if (!category) return;
+
+  if (!category) {
+    console.error("Category tidak ditemukan:", categoryId);
+    return;
+  }
 
   const code = generateMenuCode(category);
 
   const newMenu = {
-    id: crypto.randomUUID(), // internal ID tetap pakai UUID
-    code: code,
-    nama: nama,
-    harga: harga,
-    image: image,
-    categoryId: categoryId
+    id: crypto.randomUUID(),
+    code,
+    nama,
+    harga,
+    image,
+    categoryId
   };
 
   window.menuList.push(newMenu);
 
-  console.log("🔥 Menu created:", newMenu);
-
-  saveRestoData();
+  simpanData();
 }
 
 function flashTerminalMessage(text) {
@@ -3251,35 +3254,27 @@ async function renderMenuPreview(categoryName) {
 
 function generateMenuCode(category) {
 
-  if (!category) return "ERR-XX-0000";
-
-  // ===== LOCATION =====
-  const location =
-    window.systemSettings?.locationCode ||
-    "LOC";
-
-  // ===== PREFIX =====
-  let prefix = category.codePrefix;
-
-  if (!prefix) {
-    const clean = (category.name || "XX")
-      .replace(/[^A-Za-z]/g, "")
-      .toUpperCase();
-
-    prefix = clean.slice(0, 2).padEnd(2, "X");
-
-    category.codePrefix = prefix; // simpan balik ke category
+  if (!category || typeof category !== "object") {
+    console.error("Invalid category object:", category);
+    return "ERR-XX-0000";
   }
 
-  // ===== COUNTER =====
+  const location =
+    window.systemSettings?.locationCode || "LOC";
+
+  const name = category.name || category.nama || "";
+
+  const clean = name.replace(/[^A-Za-z]/g, "").toUpperCase();
+
+  const prefix = clean.slice(0, 2).padEnd(2, "X");
+
   if (typeof category.lastCodeNumber !== "number") {
     category.lastCodeNumber = 0;
   }
 
-  category.lastCodeNumber += 1;
+  category.lastCodeNumber++;
 
-  const running = String(category.lastCodeNumber)
-    .padStart(4, "0");
+  const running = String(category.lastCodeNumber).padStart(4, "0");
 
   return `${location}-${prefix}-${running}`;
 }
@@ -3321,8 +3316,15 @@ async function saveMenuItem() {
   if (!name || isNaN(price))
     return alert("Complete form");
 
-  const menuCode =
-    await generateMenuCode(activeCategoryName);
+  // 🔥 FIX DI SINI
+  const categoryObj = window.categories.find(
+    c => c.name === activeCategoryName
+  );
+
+  if (!categoryObj)
+    return alert("Category not found");
+
+  const menuCode = generateMenuCode(categoryObj);
 
   await MENUVA_DB.add("menuData", {
     id: Date.now(),
@@ -3334,6 +3336,9 @@ async function saveMenuItem() {
     createdAt: Date.now()
   });
 
+  // 🔥 Simpan supaya counter tidak reset
+  await simpanData();
+
   document.getElementById("menuNameInput").value = "";
   document.getElementById("menuPriceInput").value = "";
   document.getElementById("menuImageInput").value = "";
@@ -3343,7 +3348,7 @@ async function saveMenuItem() {
   await loadCategories();
   await renderMenuPreview(activeCategoryName);
 }
-
+  
 /* ================= DELETE MENU ================= */
 
 async function deleteMenu(id) {
@@ -5177,50 +5182,3 @@ function openInviteAdmin() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
