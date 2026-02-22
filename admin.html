@@ -2068,6 +2068,17 @@ button#btnResetData.btn-danger:active {
   color: #00f0ff;
   letter-spacing: 1px;
 }
+.menu-code {
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1.2px;
+
+  color: #ff9900;
+  text-shadow: 0 0 6px rgba(255,153,0,0.7);
+
+  padding: 3px 6px;
+  border-left: 2px solid #ff9900;
+}
 </style>
 </head>
 <body>
@@ -2884,7 +2895,6 @@ function renderPromoUI() {
 
     div.innerHTML = `
       <div class="terminal-card-header">
-        <span class="terminal-dot"></span>
         <span class="terminal-title">${promo.namaPromo}</span>
       </div>
 
@@ -3241,7 +3251,7 @@ async function renderMenuPreview(categoryName) {
       </div>` : ""}
 
       <h4>${menu.name}</h4>
-      <small>${menu.menuCode || ""}</small>
+      <div class="menu-code">${menu.menuCode}</div>
       <p>Rp ${menu.price.toLocaleString()}</p>
       <button onclick="deleteMenu(${menu.id})">DELETE</button>
     `;
@@ -5174,5 +5184,6 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
