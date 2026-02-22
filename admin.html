@@ -3061,15 +3061,56 @@ let uploadedImageBase64 = null;
 window.APP_CONFIG = { locationCode: "" };
 
 function saveSystemSettings() {
-  const input = document
-    .getElementById("locationCodeInput")
-    .value.trim()
-    .toUpperCase();
+  const input = document.getElementById("locationCodeInput");
+  if (!input) return;
 
-  if (!input) return alert("Location code required");
+  const raw = input.value.trim().toUpperCase();
 
-  window.APP_CONFIG.locationCode = input;
-  flashTerminalMessage("SYSTEM SETTINGS SAVED");
+  if (!raw) {
+    alert("Location code wajib diisi");
+    return;
+  }
+
+  // ambil 3 huruf saja
+  const clean = raw.replace(/[^A-Z0-9]/g, "").slice(0, 3);
+
+  window.systemSettings = window.systemSettings || {};
+  window.systemSettings.locationCode = clean;
+
+  console.log("✅ Location Code saved:", clean);
+
+  saveRestoData(); // pastikan ikut ke DB
+}
+
+function generateCategoryPrefix(categoryName) {
+  if (!categoryName) return "XX";
+
+  const clean = categoryName.replace(/[^A-Za-z]/g, "").toUpperCase();
+
+  return clean.slice(0, 2).padEnd(2, "X");
+}
+
+function tambahMenuBaru(categoryId, nama, harga, image) {
+
+  const category = window.categories.find(c => c.id === categoryId);
+  if (!category) return;
+
+  const code = generateMenuCode(category);
+
+  const newMenu = {
+    id: crypto.randomUUID(), // internal ID tetap pakai UUID
+    code: code,
+    nama: nama,
+    harga: harga,
+    image: image,
+    categoryId: categoryId
+  };
+
+  window.menuList.push(newMenu);
+
+  console.log("🔥 Menu created:", newMenu);
+
+  saveRestoData();
 }
 
 function flashTerminalMessage(text) {
@@ -3208,23 +3249,31 @@ async function renderMenuPreview(categoryName) {
 
 /* ================= MENU CODE GENERATOR ================= */
 
-async function generateMenuCode(categoryName) {
-  const menus = await MENUVA_DB.getAll("menuData");
+function generateMenuCode(category) {
 
-  const prefix = categoryName
-    .replace(/\s+/g, "")
-    .substring(0, 2)
-    .toUpperCase();
+  if (!category) return null;
 
-  const numbers = menus
-    .filter(m => m.category === categoryName && m.menuCode)
-    .map(m => parseInt(m.menuCode.split("-")[1]) || 0);
+  // pastikan prefix ada
+  if (!category.codePrefix) {
+    category.codePrefix = generateCategoryPrefix(category.name);
+  }
 
-  const next = numbers.length ? Math.max(...numbers) + 1 : 1;
+  // pastikan counter ada
+  if (!category.lastCodeNumber) {
+    category.lastCodeNumber = 0;
+  }
 
-  return `${prefix}-${String(next).padStart(3, "0")}`;
+  category.lastCodeNumber += 1;
+
+  const running = String(category.lastCodeNumber).padStart(4, "0");
+
+  const location =
+    window.systemSettings?.locationCode ||
+    "LOC";
+
+  return `${location}-${category.codePrefix}-${running}`;
 }
-
+  
 /* ================= SAVE MENU ================= */
 
 document
@@ -3765,6 +3814,11 @@ async function simpanData() {
       ? window.categories
       : [];
 
+    // ================= SAVE SYSTEM SETTINGS =================
+    const locationCode =
+     window.systemSettings?.locationCode ||
+     "LOC";
+
     const restoPayload = {
       id: restoId,
       ownerId,
@@ -3773,6 +3827,7 @@ async function simpanData() {
       restoPhone,
       logo,
       nomorWaAdmin,
+      locationCode,
       categories,
       menu,
       rooms,
@@ -4011,6 +4066,18 @@ async function loadData() {
     safeSetVal("namaRestoran", resto.namaRestoran);
     safeSetVal("restoAddress", resto.restoAddress);
     safeSetVal("restoPhone", resto.restoPhone);
+
+    // ================= SYSTEM SETTINGS =================
+    window.systemSettings = {
+    locationCode: resto.locationCode || "LOC"
+    };
+
+    const locationInput = document.getElementById("locationCodeInput");
+    if (locationInput) {
+     locationInput.value = window.systemSettings.locationCode;
+     }
+
+     console.log("🏷️ Location Code loaded:", window.systemSettings.locationCode);
 
     // ================= WA ADMIN =================
     try {
@@ -5100,6 +5167,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
