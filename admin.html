@@ -3052,9 +3052,10 @@ function uploadPromoImage(event) {
 
     /* =================PREFIX CODE MENU CATEGORIES ================= */
   
-  let systemSettings = JSON.parse(localStorage.getItem("systemSettings")) || {
-  locationCode: ""
-};
+ async function getSystemSettings() {
+  const data = await MENUVA_DB.get("systemSettings", "main");
+  return data || { locationCode: "" };
+}
 
 function saveSystemSettings() {
   const code = document.getElementById("locationCodeInput").value.trim().toUpperCase();
@@ -3064,8 +3065,10 @@ function saveSystemSettings() {
     return;
   }
 
-  systemSettings.locationCode = code;
-  localStorage.setItem("systemSettings", JSON.stringify(systemSettings));
+ await MENUVA_DB.put("systemSettings", {
+  id: "main",
+  locationCode: code
+});
 
   alert("Location code saved");
 }
@@ -5246,6 +5249,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
