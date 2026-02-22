@@ -847,23 +847,24 @@ button {
 
 /* ================= BLOOMBERG TERMINAL CATEGORY BAR ================= */
 
-/* ================= FIX RESPONSIVE TERMINAL FILTER ================= */
+/* FIX FLEX CONTAINER BUG */
+#categoryFilterBar {
+  min-width: 0;
+}
 
 .terminal-filter-bar {
   display: flex;
-  flex-wrap: nowrap; /* WAJIB */
+  flex-wrap: nowrap;
   gap: 8px;
   padding: 12px;
-  background: #0a0f14;
-  border-bottom: 1px solid #1e2a36;
 
   overflow-x: auto;
   overflow-y: hidden;
 
-  -webkit-overflow-scrolling: touch; /* smooth scroll mobile */
-  scrollbar-width: none;
+  white-space: nowrap;
 
-  white-space: nowrap; /* penting */
+  min-width: 0;
+  width: 100%;
 }
 
 .terminal-filter-bar::after {
@@ -5184,6 +5185,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
