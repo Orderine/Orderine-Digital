@@ -3521,7 +3521,6 @@ window.menuPromo = window.menuPromo || [];
 window.promoList = window.menuPromo;
 
 window.uploadMenuImage = uploadMenuImage;
-window.ambilMenu = ambilMenu;
 
 window.tambahRoom = tambahRoom;
 window.ambilSemuaRoom = ambilSemuaRoom;
@@ -3842,22 +3841,6 @@ document.getElementById("btnPrintQR").onclick = () => {
     .filter(Boolean);
 }
 
- function ambilSemuaMenu() {
-
-  const result = [];
-
-  CATEGORY_CACHE.forEach(cat => {
-
-    const containerId = "menuContainer_" + cat.id;
-
-    result.push(...ambilMenu(containerId));
-
-  });
-
-  return result;
-}
-
-
   function syncRestoIdHidden(restoId) {
   let el = document.getElementById("restoId");
   if (!el) {
@@ -3994,8 +3977,7 @@ function loadWaAdminFromData(list) {
   });
 }
 
-
-window.__LOAD_DATA_RUNNING__ = false;
+  window.__LOAD_DATA_RUNNING__ = false;
 
 async function loadData() {
   if (window.__LOAD_DATA_RUNNING__) return;
@@ -4019,17 +4001,6 @@ async function loadData() {
       console.warn("⚠️ Resto not found in DB");
       return;
     }
-
-    // ================= CATEGORY SETUP (WAJIB DULU) =================
-    const categories = Array.isArray(resto.categories)
-      ? resto.categories
-      : [];
-
-    // isi cache dulu
-    setCategoryCache(categories);
-    renderCategoryContainers(categories);
-
-    console.log("📂 Categories loaded:", categories.length);
 
     // ================= RESTO PROFILE =================
     const safeSetVal = (id, val) => {
@@ -4055,62 +4026,26 @@ async function loadData() {
       if (img) img.src = resto.logo;
     }
 
-    // ================= MENU =================
-    window.menuList = Array.isArray(resto.menu)
-      ? resto.menu
-      : [];
+    // ================= MENU SYSTEM BARU =================
+    // Ambil kategori dari menuData store
+    await loadCategories();
 
-    console.log("🍽️ Menu loaded:", window.menuList.length);
-
-    // clear UI kalau ada
-    if (typeof clearMenuUI === "function") {
-      clearMenuUI();
+    if (activeCategoryName) {
+      await renderMenuPreview(activeCategoryName);
     }
 
-    // masukkan menu ke kategori yang benar
-   window.menuList.forEach(m => {
-  try {
-    if (typeof window.tambahMenu === "function") {
-
-      const categoryId =
-        m.categoryId ||
-        m.kategori ||
-        categories[0]?.id ||
-        "";
-
-      window.tambahMenu(
-        categoryId,
-        m.nama || "",
-        m.harga || "",
-        m.image || ""
-      );
-
-    } else {
-      console.warn("⚠️ tambahMenu tidak tersedia (legacy system off)");
-    }
-
-  } catch (e) {
-    console.warn("⚠️ tambahMenu error", m, e);
-  }
-});
+    console.log("🍽️ Menu system loaded (menuData store)");
 
     // ================= PROMO & VOUCHER =================
-  window.menuPromo = Array.isArray(resto.menuPromo) ? resto.menuPromo : [];
-  window.menuVoucher = Array.isArray(resto.menuVoucher) ? resto.menuVoucher : [];
-  window.menu = Array.isArray(resto.menu) ? resto.menu : [];
-  window.categories = Array.isArray(resto.categories) ? resto.categories : [];
-  window.menuCategories = window.categories;
-  console.log("✅ menuCategories di-set:", window.menuCategories);
-  renderCategoryFilter();
+    window.menuPromo = Array.isArray(resto.menuPromo) ? resto.menuPromo : [];
+    window.menuVoucher = Array.isArray(resto.menuVoucher) ? resto.menuVoucher : [];
 
-  // render semua UI
-  try { renderPromoUI?.(); } 
-  catch(e){ console.warn("⚠️ renderPromoUI error:", e); }
+    try { renderPromoUI?.(); }
+    catch (e) { console.warn("⚠️ renderPromoUI error:", e); }
 
-  try { renderVoucher?.(window.menuVoucher); } 
-  catch(e){ console.warn("⚠️ renderVoucher error:", e); }
+    try { renderVoucher?.(window.menuVoucher); }
+    catch (e) { console.warn("⚠️ renderVoucher error:", e); }
 
- 
     // ================= FLIPBOOK =================
     window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages)
       ? resto.flipbookRuanganImages
@@ -4127,16 +4062,16 @@ async function loadData() {
 
     window.flipbookRuanganImages.forEach(src => {
       try { renderImagePreview?.("ruangan", src); }
-      catch(e){ console.warn(e); }
+      catch (e) { console.warn(e); }
     });
 
     window.flipbookMenuImages.forEach(src => {
       try { renderImagePreview?.("menu", src); }
-      catch(e){ console.warn(e); }
+      catch (e) { console.warn(e); }
     });
 
     try { renderFlipbookUI?.(); }
-    catch(e){ console.warn("⚠️ renderFlipbookUI error:", e); }
+    catch (e) { console.warn("⚠️ renderFlipbookUI error:", e); }
 
     // ================= ROOMS =================
     window.rooms = Array.isArray(resto.rooms)
@@ -4149,7 +4084,7 @@ async function loadData() {
       console.warn("⚠️ renderRoomsFromDB error:", e);
     }
 
-    console.log("✅ loadData FINISHED");
+    console.log("✅ loadData FINISHED (CLEAN MODE)");
 
   } catch (err) {
     console.error("❌ loadData fatal:", err);
@@ -4158,7 +4093,7 @@ async function loadData() {
     window.__LOAD_DATA_RUNNING__ = false;
   }
 }
-
+  
 // ====================== RESET / BACKUP / RESTORE ======================
 async function resetData() {
   if (!hasBackupForCurrentUser()) {
@@ -5165,6 +5100,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
