@@ -3502,7 +3502,6 @@ function renderRoomsFromDB(rooms = []) {
 window.menuPromo = window.menuPromo || [];
 window.promoList = window.menuPromo;
 
-window.tambahMenu = tambahMenu;
 window.uploadMenuImage = uploadMenuImage;
 window.ambilMenu = ambilMenu;
 
@@ -3978,11 +3977,11 @@ function loadWaAdminFromData(list) {
 }
 
 
-let __LOAD_DATA_RUNNING__ = false;
+window.__LOAD_DATA_RUNNING__ = false;
 
 async function loadData() {
-  if (__LOAD_DATA_RUNNING__) return;
-  __LOAD_DATA_RUNNING__ = true;
+  if (window.__LOAD_DATA_RUNNING__) return;
+  window.__LOAD_DATA_RUNNING__ = true;
 
   try {
     showLoader?.("Loading data...");
@@ -4051,27 +4050,31 @@ async function loadData() {
     }
 
     // masukkan menu ke kategori yang benar
-    window.menuList.forEach(m => {
-      try {
-        const categoryId =
-          m.categoryId ||
-          m.kategori ||
-          categories[0]?.id ||
-          "";
+   window.menuList.forEach(m => {
+  try {
+    if (typeof window.tambahMenu === "function") {
 
-        tambahMenu?.(
-          categoryId,
-          m.nama || "",
-          m.harga || "",
-          m.image || ""
-        );
-      } catch (e) {
-        console.warn("⚠️ tambahMenu error", m, e);
-      }
-    });
+      const categoryId =
+        m.categoryId ||
+        m.kategori ||
+        categories[0]?.id ||
+        "";
 
-    // ❌ renderMenuUI dihapus karena bikin error
-    // renderMenuUI?.(resto.menu || []);
+      window.tambahMenu(
+        categoryId,
+        m.nama || "",
+        m.harga || "",
+        m.image || ""
+      );
+
+    } else {
+      console.warn("⚠️ tambahMenu tidak tersedia (legacy system off)");
+    }
+
+  } catch (e) {
+    console.warn("⚠️ tambahMenu error", m, e);
+  }
+});
 
     // ================= PROMO & VOUCHER =================
   window.menuPromo = Array.isArray(resto.menuPromo) ? resto.menuPromo : [];
@@ -4134,7 +4137,7 @@ async function loadData() {
     console.error("❌ loadData fatal:", err);
   } finally {
     hideLoader?.();
-    __LOAD_DATA_RUNNING__ = false;
+    window.__LOAD_DATA_RUNNING__ = false;
   }
 }
 
@@ -5144,6 +5147,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
