@@ -3300,6 +3300,24 @@ async function deleteMenu(id) {
     document.getElementById("menuPreviewGrid").innerHTML = "";
   }
 }
+
+  function uploadMenuImage(event) {
+  console.log("📷 Upload image triggered");
+
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    const imagePreview = document.getElementById("menuImagePreview");
+    if (imagePreview) {
+      imagePreview.src = e.target.result;
+    }
+  };
+
+  reader.readAsDataURL(file);
+}
   
 /* ============================================================
    ROOM
@@ -4367,7 +4385,7 @@ function generateCustomerLink(restoId) {
 
 }
 // ====================== LOADER HANDLER (Modern, Safe, Single Instance) ======================
-let __loaderInitialized = false;
+var __loaderInitialized = false;
 
 function showLoader(text = "Loading data...") {
   let loader = document.getElementById("loader");
@@ -5147,6 +5165,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
