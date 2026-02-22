@@ -3154,6 +3154,7 @@ async function saveMenuItem() {
 
 
 let CATEGORY_CACHE = [];
+window.menuCategories = [];
   
 function setCategoryCache(categories = []) {
   CATEGORY_CACHE = Array.isArray(categories) ? categories : [];
@@ -4521,6 +4522,8 @@ function bindAdminEvents() {
 async function loadAdminData() {
   console.log("📦 loadAdminData");
 
+ await loadCategories();
+
   const inviteBtn = document.getElementById("inviteAdminBtn");
   if (!inviteBtn) {
     console.warn("⚠️ inviteAdminBtn not found");
@@ -5111,6 +5114,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
