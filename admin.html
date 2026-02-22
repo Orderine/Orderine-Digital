@@ -3152,15 +3152,6 @@ async function loadCategories() {
 
   renderCategoryFilter();
 }
-
-  window.menuCategories = Array.from(map.values());
-
-  if (!activeCategoryName && window.menuCategories.length > 0) {
-    activeCategoryName = window.menuCategories[0].name;
-  }
-
-  renderCategoryFilter();
-}
   
 async function renderMenuPreview(categoryName) {
   const menus = await MENUVA_DB.getAll("menuData");
@@ -5255,6 +5246,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
