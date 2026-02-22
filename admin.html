@@ -3053,6 +3053,49 @@ function uploadPromoImage(event) {
     /* =================PREFIX CODE MENU CATEGORIES ================= */
   
 let activeCategoryName = null;
+
+  // ===== GLOBAL CONFIG MEMORY =====
+window.APP_CONFIG = {
+  locationCode: ""
+};
+
+// ===== SAVE SETTINGS =====
+function saveSystemSettings() {
+
+  const input = document
+    .getElementById("locationCodeInput")
+    .value
+    .trim()
+    .toUpperCase();
+
+  if (!input) {
+    alert("Location code required");
+    return;
+  }
+
+  window.APP_CONFIG.locationCode = input;
+
+  console.log("SYSTEM CONFIG UPDATED:", window.APP_CONFIG);
+
+  flashTerminalMessage("SYSTEM SETTINGS SAVED");
+}
+
+  function flashTerminalMessage(text) {
+
+  const header = document.querySelector(".terminal-title");
+
+  if (!header) return;
+
+  const original = header.textContent;
+
+  header.textContent = text;
+  header.style.color = "#00ffcc";
+
+  setTimeout(() => {
+    header.textContent = original;
+    header.style.color = "#ff9900";
+  }, 1500);
+}
   
 async function generateMenuCode(categoryName) {
 
@@ -5223,6 +5266,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
