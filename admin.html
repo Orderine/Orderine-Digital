@@ -2436,6 +2436,7 @@ button#btnResetData.btn-danger:active {
 /* ================= SUBSCRIPTION COUNTDOWN ================= */
 
 let subscriptionCountdownTimer = null;
+let activeCategoryName = null;
 
 window.initSubscriptionCountdown = function () {
   const user = window.activeUser;
@@ -3036,7 +3037,7 @@ window.renderCategoryFilter = function () {
     btn.className = "terminal-filter-btn";
     btn.textContent = cat.icon ? `${cat.icon} ${cat.name}` : cat.name;
 
-    if (cat.name === activeCategoryName) {
+    if (activeCategoryName && cat.name === activeCategoryName) {
       btn.classList.add("active");
     }
 
@@ -3071,6 +3072,10 @@ async function loadCategories() {
       });
     }
   });
+
+  if (!activeCategoryName && window.menuCategories.length > 0) {
+  activeCategoryName = window.menuCategories[0].name;
+}
 
   window.menuCategories = Array.from(map.values());
 
@@ -5158,6 +5163,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
