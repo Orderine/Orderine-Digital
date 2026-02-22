@@ -3317,14 +3317,6 @@ async function saveMenuItem() {
   if (!name || isNaN(price))
     return alert("Complete form");
 
-  // 🔥 FIX DI SINI
-  const categoryObj = window.categories.find(
-    c => c.name === activeCategoryName
-  );
-
-  if (!categoryObj)
-    return alert("Category not found");
-
   const menuCode = generateMenuCode(activeCategoryName);
 
   await MENUVA_DB.add("menuData", {
@@ -3337,8 +3329,7 @@ async function saveMenuItem() {
     createdAt: Date.now()
   });
 
-  // 🔥 Simpan supaya counter tidak reset
-  await simpanData();
+  await simpanData(); // kalau masih lo butuhin
 
   document.getElementById("menuNameInput").value = "";
   document.getElementById("menuPriceInput").value = "";
@@ -5183,4 +5174,5 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
