@@ -3005,6 +3005,38 @@ function uploadPromoImage(event) {
 
   reader.readAsDataURL(file);
 }
+
+  /* ================= MENU CATEGORIES ================= */
+window.renderCategoryFilter = function () {
+
+  const container = document.getElementById("categoryFilterBar");
+  if (!container) return;
+
+  const categories = window.menuCategories || [];
+
+  container.innerHTML = "";
+
+  categories.forEach(cat => {
+
+    const btn = document.createElement("button");
+    btn.className = "terminal-filter-btn";
+    btn.textContent = cat.icon ? `${cat.icon} ${cat.name}` : cat.name;
+
+    btn.onclick = function () {
+      activeCategoryName = cat.name;
+      renderMenuPreview(cat.name);
+    };
+
+    container.appendChild(btn);
+  });
+
+};
+
+  async function loadCategories() {
+  const categories = await MENUVA_DB.getAll("categoryData");
+  window.menuCategories = categories || [];
+  renderCategoryFilter();
+}
   
 async function renderMenuPreview(categoryName) {
   const menus = await MENUVA_DB.getAll("menuData");
@@ -5079,6 +5111,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
