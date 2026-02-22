@@ -4063,7 +4063,7 @@ async function loadData() {
   window.menu = Array.isArray(resto.menu) ? resto.menu : [];
   window.categories = Array.isArray(resto.categories) ? resto.categories : [];
   window.menuCategories = window.categories;
-    
+  console.log("✅ menuCategories di-set:", window.menuCategories);
   renderCategoryFilter();
 
   // render semua UI
@@ -5127,6 +5127,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
