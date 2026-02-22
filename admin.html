@@ -4062,6 +4062,9 @@ async function loadData() {
   window.menuVoucher = Array.isArray(resto.menuVoucher) ? resto.menuVoucher : [];
   window.menu = Array.isArray(resto.menu) ? resto.menu : [];
   window.categories = Array.isArray(resto.categories) ? resto.categories : [];
+  window.menuCategories = window.categories;
+    
+  renderCategoryFilter();
 
   // render semua UI
   try { renderPromoUI?.(); } 
@@ -4607,8 +4610,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeCall("bindCustomerButtons", window.bindCustomerButtons);
     safeCall("loadAdminData", window.loadAdminData);
     safeCall("startRealtimeOrderChecker", window.startRealtimeOrderChecker);
-
-    await safeAwait("renderCategoryFilter", window.renderCategoryFilter);
     safeCall("renderSubscriptionPanel", window.renderSubscriptionPanel);
 
     console.log("🔎 Checking MENUVA_DB...");
@@ -5126,6 +5127,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
