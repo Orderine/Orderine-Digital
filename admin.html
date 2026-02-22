@@ -845,38 +845,54 @@ button {
   box-shadow: 0 0 12px #00ffcc;
 }
 
-  .terminal-filter-bar {
+/* ================= BLOOMBERG TERMINAL CATEGORY BAR ================= */
+
+.terminal-filter-bar {
   display: flex;
-  flex-wrap: wrap;  
-  gap: 10px;
-  padding: 15px 0;
-  border-bottom: 1px solid #00ffcc33;
-  max-width: 100%;
+  gap: 8px;
+  padding: 12px;
+  background: #0a0f14;
+  border-bottom: 1px solid #1e2a36;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.terminal-filter-bar::-webkit-scrollbar {
+  display: none;
 }
     
 .terminal-right {
   overflow-x: hidden;
 }
 
+/* ================= BUTTON ================= */
+
 .terminal-filter-btn {
+  background: transparent;
+  color: #7f8c9a;
+  border: 1px solid #1f2b37;
   padding: 6px 14px;
-  border: 1px solid #00ffcc55;
-  cursor: pointer;
   font-size: 12px;
+  font-weight: 600;
   letter-spacing: 1px;
-  transition: 0.2s;
-  background: #0f1720;
-  color: #00ffcc;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
 }
 
+/* Hover Effect */
 .terminal-filter-btn:hover {
-  box-shadow: 0 0 10px #00ffcc;
+  color: #00f0ff;
+  border-color: #00f0ff;
+  box-shadow: 0 0 6px #00f0ff33;
 }
 
+/* Active State */
 .terminal-filter-btn.active {
-  background: #00ffcc;
+  background: #00f0ff;
   color: #000;
-  box-shadow: 0 0 15px #00ffcc;
+  border-color: #00f0ff;
+  box-shadow: 0 0 10px #00f0ff88;
 }
 
     .terminal-editor {
@@ -3012,24 +3028,33 @@ window.renderCategoryFilter = function () {
   const container = document.getElementById("categoryFilterBar");
   if (!container) return;
 
-  const categories = window.menuCategories || [];
-
   container.innerHTML = "";
 
-  categories.forEach(cat => {
+  (window.menuCategories || []).forEach(cat => {
 
     const btn = document.createElement("button");
     btn.className = "terminal-filter-btn";
     btn.textContent = cat.icon ? `${cat.icon} ${cat.name}` : cat.name;
 
+    if (cat.name === activeCategoryName) {
+      btn.classList.add("active");
+    }
+
     btn.onclick = function () {
+
       activeCategoryName = cat.name;
+
+      document
+        .querySelectorAll(".terminal-filter-btn")
+        .forEach(b => b.classList.remove("active"));
+
+      btn.classList.add("active");
+
       renderMenuPreview(cat.name);
     };
 
     container.appendChild(btn);
   });
-
 };
 
 async function loadCategories() {
@@ -5133,6 +5158,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
