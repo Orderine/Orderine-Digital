@@ -3050,44 +3050,33 @@ function uploadPromoImage(event) {
   reader.readAsDataURL(file);
 }
 
-    /* =================PREFIX CODE MENU CATEGORIES ================= */
-  
+/* ================= MENU CATEGORY SYSTEM CLEAN ================= */
+
 let activeCategoryName = null;
+window.menuCategories = [];
+let uploadedImageBase64 = null;
 
-  // ===== GLOBAL CONFIG MEMORY =====
-window.APP_CONFIG = {
-  locationCode: ""
-};
+/* ================= SETTINGS ================= */
 
-// ===== SAVE SETTINGS =====
+window.APP_CONFIG = { locationCode: "" };
+
 function saveSystemSettings() {
-
   const input = document
     .getElementById("locationCodeInput")
-    .value
-    .trim()
+    .value.trim()
     .toUpperCase();
 
-  if (!input) {
-    alert("Location code required");
-    return;
-  }
+  if (!input) return alert("Location code required");
 
   window.APP_CONFIG.locationCode = input;
-
-  console.log("SYSTEM CONFIG UPDATED:", window.APP_CONFIG);
-
   flashTerminalMessage("SYSTEM SETTINGS SAVED");
 }
 
-  function flashTerminalMessage(text) {
-
+function flashTerminalMessage(text) {
   const header = document.querySelector(".terminal-title");
-
   if (!header) return;
 
   const original = header.textContent;
-
   header.textContent = text;
   header.style.color = "#00ffcc";
 
@@ -3096,9 +3085,130 @@ function saveSystemSettings() {
     header.style.color = "#ff9900";
   }, 1500);
 }
-  
-async function generateMenuCode(categoryName) {
 
+/* ================= CATEGORY LOAD ================= */
+
+async function loadCategories() {
+  const menus = await MENUVA_DB.getAll("menuData");
+
+  const uniqueNames = [...new Set(
+    menus
+      .filter(m => m.category)
+      .map(m => m.category)
+  )];
+
+  window.menuCategories = uniqueNames.map(name => ({
+    name,
+    icon: "📁"
+  }));
+
+  if (!activeCategoryName && window.menuCategories.length) {
+    activeCategoryName = window.menuCategories[0].name;
+  }
+
+  renderCategoryFilter();
+}
+
+/* ================= CATEGORY FILTER RENDER ================= */
+
+function renderCategoryFilter() {
+  const container = document.getElementById("categoryFilterBar");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  window.menuCategories.forEach(cat => {
+
+    const btn = document.createElement("button");
+    btn.className = "terminal-filter-btn";
+    btn.textContent = `${cat.icon} ${cat.name}`;
+
+    if (cat.name === activeCategoryName) {
+      btn.classList.add("active");
+    }
+
+    btn.onclick = async () => {
+      activeCategoryName = cat.name;
+      renderCategoryFilter();
+      await renderMenuPreview(cat.name);
+    };
+
+    container.appendChild(btn);
+  });
+}
+
+/* ================= ADD CATEGORY ================= */
+
+function openAddCategory() {
+  document.getElementById("addCategoryModal").style.display = "flex";
+}
+
+function closeAddCategory() {
+  document.getElementById("addCategoryModal").style.display = "none";
+}
+
+function saveCategory() {
+  const name = document
+    .getElementById("categoryNameInput")
+    .value.trim();
+
+  if (!name) return alert("Category name required");
+
+  const exists = window.menuCategories
+    .some(c => c.name.toLowerCase() === name.toLowerCase());
+
+  if (exists) return alert("Category already exists");
+
+  window.menuCategories.push({
+    name,
+    icon: "📁"
+  });
+
+  activeCategoryName = name;
+
+  renderCategoryFilter();
+  renderMenuPreview(name);
+
+  document.getElementById("categoryNameInput").value = "";
+  closeAddCategory();
+}
+
+/* ================= MENU PREVIEW ================= */
+
+async function renderMenuPreview(categoryName) {
+  const menus = await MENUVA_DB.getAll("menuData");
+
+  const filtered = menus.filter(m =>
+    m.category === categoryName
+  );
+
+  const grid = document.getElementById("menuPreviewGrid");
+  grid.innerHTML = "";
+
+  filtered.forEach(menu => {
+
+    const card = document.createElement("div");
+    card.className = "terminal-menu-card";
+
+    card.innerHTML = `
+      ${menu.image ? `
+      <div class="menu-img-wrap">
+        <img src="${menu.image}" class="menu-img">
+      </div>` : ""}
+
+      <h4>${menu.name}</h4>
+      <small>${menu.menuCode || ""}</small>
+      <p>Rp ${menu.price.toLocaleString()}</p>
+      <button onclick="deleteMenu(${menu.id})">DELETE</button>
+    `;
+
+    grid.appendChild(card);
+  });
+}
+
+/* ================= MENU CODE GENERATOR ================= */
+
+async function generateMenuCode(categoryName) {
   const menus = await MENUVA_DB.getAll("menuData");
 
   const prefix = categoryName
@@ -3106,130 +3216,81 @@ async function generateMenuCode(categoryName) {
     .substring(0, 2)
     .toUpperCase();
 
-  const sameCategoryMenus = menus.filter(m =>
-    m.category === categoryName
-  );
+  const numbers = menus
+    .filter(m => m.category === categoryName && m.menuCode)
+    .map(m => parseInt(m.menuCode.split("-")[1]) || 0);
 
-  const numbers = sameCategoryMenus.map(m => {
-    if (!m.menuCode) return 0;
-    const parts = m.menuCode.split("-");
-    return parseInt(parts[1], 10) || 0;
-  });
+  const next = numbers.length ? Math.max(...numbers) + 1 : 1;
 
-  const nextNumber =
-    numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
-
-  return `${prefix}-${String(nextNumber).padStart(3, "0")}`;
+  return `${prefix}-${String(next).padStart(3, "0")}`;
 }
-  
-  /* ================= MENU CATEGORIES ================= */
-window.renderCategoryFilter = function () {
 
-  const container = document.getElementById("categoryFilterBar");
-  if (!container) return;
+/* ================= SAVE MENU ================= */
 
-  container.innerHTML = "";
+document
+  .getElementById("menuImageInput")
+  .addEventListener("change", function (e) {
 
-  (window.menuCategories || []).forEach(cat => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-    const btn = document.createElement("button");
-    btn.className = "terminal-filter-btn";
-    btn.textContent = cat.icon ? `${cat.icon} ${cat.name}` : cat.name;
+    const reader = new FileReader();
 
-    if (activeCategoryName && cat.name === activeCategoryName) {
-      btn.classList.add("active");
-    }
-
-    btn.onclick = function () {
-
-      activeCategoryName = cat.name;
-
-      document
-        .querySelectorAll(".terminal-filter-btn")
-        .forEach(b => b.classList.remove("active"));
-
-      btn.classList.add("active");
-
-      renderMenuPreview(cat.name);
+    reader.onload = function (event) {
+      uploadedImageBase64 = event.target.result;
+      const preview = document.getElementById("imagePreview");
+      preview.src = uploadedImageBase64;
+      preview.style.display = "block";
     };
 
-    container.appendChild(btn);
-  });
-};
-
-async function loadCategories() {
-
-  const menus = await MENUVA_DB.getAll("menuData");
-
-  const map = new Map();
-
-  menus.forEach(menu => {
-    if (!menu.category) return;
-
-    if (!map.has(menu.category)) {
-      map.set(menu.category, {
-        name: menu.category,
-        icon: "📁"
-      });
-    }
+    reader.readAsDataURL(file);
   });
 
-  window.menuCategories = Array.from(map.values());
+async function saveMenuItem() {
 
-  if (!activeCategoryName && window.menuCategories.length > 0) {
-    activeCategoryName = window.menuCategories[0].name;
-  }
+  if (!activeCategoryName)
+    return alert("Select category first");
 
-  renderCategoryFilter();
-}
-  
-async function renderMenuPreview(categoryName) {
-  const menus = await MENUVA_DB.getAll("menuData");
+  const name = document
+    .getElementById("menuNameInput")
+    .value.trim();
 
-  const filtered = menus.filter(m =>
-    m.category === categoryName &&
-    m.name &&
-    typeof m.price !== "undefined"
+  const price = parseFloat(
+    document.getElementById("menuPriceInput").value
   );
 
-  const grid = document.getElementById("menuPreviewGrid");
-  grid.innerHTML = "";
+  if (!name || isNaN(price))
+    return alert("Complete form");
 
-  filtered.forEach(menu => {
-    const card = document.createElement("div");
-    card.className = "terminal-menu-card";
+  const menuCode =
+    await generateMenuCode(activeCategoryName);
 
-  card.innerHTML = `
- ${menu.image ? `
-  <div class="menu-img-wrap">
-    <img src="${menu.image}" class="menu-img">
-  </div>
-` : ""}
-
-  <h4>${menu.name}</h4>
-  <small class="menu-code">${menu.menuCode || ""}</small>
-  <p>Rp ${menu.price.toLocaleString()}</p>
-  <button onclick="deleteMenu(${menu.id})">DELETE</button>
-`;
-    grid.appendChild(card);
+  await MENUVA_DB.add("menuData", {
+    id: Date.now(),
+    name,
+    price,
+    image: uploadedImageBase64,
+    category: activeCategoryName,
+    menuCode,
+    createdAt: Date.now()
   });
+
+  document.getElementById("menuNameInput").value = "";
+  document.getElementById("menuPriceInput").value = "";
+  document.getElementById("menuImageInput").value = "";
+  uploadedImageBase64 = null;
+  document.getElementById("imagePreview").style.display = "none";
+
+  await loadCategories();
+  await renderMenuPreview(activeCategoryName);
 }
 
- async function deleteMenu(id) {
-  const confirmDelete = confirm("Delete this menu?");
-  if (!confirmDelete) return;
+/* ================= DELETE MENU ================= */
+
+async function deleteMenu(id) {
+  if (!confirm("Delete this menu?")) return;
 
   await MENUVA_DB.delete("menuData", id);
-
-  const menus = await MENUVA_DB.getAll("menuData");
-
-  const stillExists = menus.some(
-    m => m.category === activeCategoryName
-  );
-
-  if (!stillExists) {
-    activeCategoryName = null;
-  }
 
   await loadCategories();
 
@@ -3239,190 +3300,7 @@ async function renderMenuPreview(categoryName) {
     document.getElementById("menuPreviewGrid").innerHTML = "";
   }
 }
-
-  let uploadedImageBase64 = null;
-
-document.getElementById("menuImageInput").addEventListener("change", function (e) {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-
-  reader.onload = function (event) {
-    uploadedImageBase64 = event.target.result;
-
-    const preview = document.getElementById("imagePreview");
-    preview.src = uploadedImageBase64;
-    preview.style.display = "block";
-  };
-
-  reader.readAsDataURL(file);
-});
-
-async function saveMenuItem() {
-
-  if (!activeCategoryName) {
-    alert("Select category first");
-    return;
-  }
-
-  const name = document.getElementById("menuNameInput").value.trim();
-  const price = parseFloat(document.getElementById("menuPriceInput").value);
-
-  if (!name || isNaN(price)) {
-    alert("Complete form");
-    return;
-  }
-
-  const menuCode = await generateMenuCode(activeCategoryName);
-  if (!menuCode) return;
-
-  const newMenu = {
-    name,
-    price,
-    image: uploadedImageBase64 || null,
-    category: activeCategoryName,
-    menuCode,
-    active: true,
-    createdAt: Date.now()
-  };
-
-  await MENUVA_DB.add("menuData", newMenu);
-
-  document.getElementById("menuNameInput").value = "";
-  document.getElementById("menuPriceInput").value = "";
-  document.getElementById("menuImageInput").value = "";
-  uploadedImageBase64 = null;
-
-  const preview = document.getElementById("imagePreview");
-  if (preview) preview.style.display = "none";
-
-  await renderCategoryFilter();
-  await renderMenuPreview(activeCategoryName);
-}
-
-let CATEGORY_CACHE = [];
-window.menuCategories = [];
   
-function setCategoryCache(categories = []) {
-  CATEGORY_CACHE = Array.isArray(categories) ? categories : [];
-}
-
-function tambahMenu(categoryId = "", nama = "", harga = "", image = "") {
-
-  if (!CATEGORY_CACHE.length) return;
-
-  if (!categoryId) categoryId = CATEGORY_CACHE[0].id;
-
-  const container = document.getElementById("menuContainer_" + categoryId);
-
-  if (!container) {
-    console.warn("Container not found:", categoryId);
-    return;
-  }
-
-  console.log("Tambah menu dipanggil:", categoryId, nama, harga);
-}
-
-  function renderCategoryContainers(categories = []) {
-
-  const root = document.getElementById("menuRoot");
-
-  if (!root) return;
-
-  root.innerHTML = "";
-
-  categories.forEach(cat => {
-
-    const section = document.createElement("div");
-
-    section.innerHTML = `
-      <h3>${cat.icon || "📁"} ${cat.name}</h3>
-
-      <div id="menuContainer_${cat.id}" class="menu-container"></div>
-
-      <button onclick="tambahMenu('${cat.id}')">
-        + Add ${cat.name}
-      </button>
-
-      <hr>
-    `;
-
-    root.appendChild(section);
-
-  });
-
-}
-function openAddCategory() {
-  const modal = document.getElementById("addCategoryModal");
-  if (!modal) {
-    console.error("❌ addCategoryModal not found");
-    return;
-  }
-  modal.style.display = "flex";
-}
-
-function closeAddCategory() {
-  const modal = document.getElementById("addCategoryModal");
-  if (!modal) return;
-  modal.style.display = "none";
-}
-
-async function saveCategory() {
-
-  const name = document.getElementById("categoryNameInput").value.trim();
-
-  if (!name) {
-    alert("Category name required");
-    return;
-  }
-
-  alert("Category will appear automatically after you add first menu item.");
-
-  closeAddCategory();
-}
-  
-function uploadMenuImage(event, inputEl) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  resizeIfNeeded(file)
-    .then(resized => {
-      const preview = inputEl.parentElement.querySelector(".menuPreview");
-      preview.src = resized;
-      preview.style.display = "block";
-      inputEl.setAttribute("data-image", resized);
-    })
-    .catch(err => console.error("Upload menu image failed:", err));
-}
-
-function ambilMenu(containerId) {
-  const container = document.getElementById(containerId);
-  if (!container) return [];
-
-  const result = [];
-
-  container.querySelectorAll(".menu-item").forEach(item => {
-    const nama = item.querySelector("input[type=text]")?.value || "";
-    const harga = parseInt(item.querySelector("input[type=number]")?.value || "0");
-    const categoryId = item.querySelector("select")?.value || "";
-    const image = item.querySelector("input[type=file]")?.getAttribute("data-image") || "";
-
-    if (nama && harga > 0) {
-      result.push({
-        id: "menu_" + Date.now() + Math.floor(Math.random() * 1000),
-        nama,
-        harga,
-        categoryId,
-        image
-      });
-    }
-  });
-
-  return result;
-}
-
-
 /* ============================================================
    ROOM
 ============================================================ */
@@ -5266,6 +5144,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
