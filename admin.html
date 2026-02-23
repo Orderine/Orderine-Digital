@@ -4661,7 +4661,7 @@ async function loadAdminData() {
   
 document.addEventListener("DOMContentLoaded", async () => {
   console.group("🚀 ADMIN ENTERPRISE INIT");
-  renderSubscriptionPanel();
+
 
   try {
 
@@ -4697,7 +4697,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeCall("bindCustomerButtons", window.bindCustomerButtons);
     safeCall("loadAdminData", window.loadAdminData);
     safeCall("startRealtimeOrderChecker", window.startRealtimeOrderChecker);
-    safeCall("renderSubscriptionPanel", window.renderSubscriptionPanel);
+    
 
     console.log("🔎 Checking MENUVA_DB...");
 
@@ -4752,6 +4752,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const user = await waitForActiveUser();
     console.log("✅ activeUser ready:", user.email);
+
+    safeCall("renderSubscriptionPanel", window.renderSubscriptionPanel);
 
    /* ================= LOAD DATA ================= */
 
@@ -5215,6 +5217,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
