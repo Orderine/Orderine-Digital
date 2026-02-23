@@ -401,38 +401,26 @@ function renderHeader(data) {
   return {
     id: raw.id || crypto.randomUUID(),
 
-    namaPromo:
-      raw.namaPromo ||
-      raw.name ||
-      "Untitled Promo",
+    namaPromo: raw.namaPromo || raw.name || "Untitled",
 
-    deskripsi:
-      raw.deskripsi ||
-      raw.description ||
-      "",
+    deskripsi: raw.deskripsi || raw.description || "",
 
-    harga:
-      raw.harga ??
-      raw.price ??
-      0,
+    harga: raw.harga ?? raw.price ?? 0,
 
-    kategori:
-      raw.kategori ||
-      raw.type ||
-      "PROMO",
+    kategori: raw.kategori || raw.type || "PROMO",
 
-    tanggalAkhir:
-      raw.tanggalAkhir ||
-      raw.endDate ||
-      null,
+    tanggalAkhir: raw.tanggalAkhir || raw.endDate || null,
 
-    image:
-      raw.image ||
-      raw.imageUrl ||
-      null
+    image: raw.image || raw.imageUrl || null,
+
+    isActive:
+      raw.isActive ??
+      raw.aktif ??
+      raw.enabled ??
+      (raw.status === "active")
   };
 }
-
+  
 function renderPromo(list = []) {
   const box = document.getElementById("promoContainer");
   const warn = document.getElementById("promoWarning");
@@ -445,8 +433,20 @@ function renderPromo(list = []) {
     return;
   }
 
+  let visibleCount = 0; // 🔥 counter promo yang benar-benar tampil
+
   list.forEach(raw => {
-    const p = normalizePromo(raw); // 🔥 normalize dulu
+    const p = normalizePromo(raw);
+
+    if (!p.isActive) return;
+
+    if (p.tanggalAkhir) {
+      const end = new Date(p.tanggalAkhir);
+      end.setHours(23,59,59,999);
+      if (end < new Date()) return;
+    }
+
+    visibleCount++;
 
     const card = document.createElement("div");
     card.className = "promo-item";
@@ -479,6 +479,10 @@ function renderPromo(list = []) {
 
     startPromoCountdown(p);
   });
+
+  if (visibleCount === 0) {
+    warn.textContent = "❌ No active promo available";
+  }
 }
 
   function renderMenuPromoUI(promos = []) {
@@ -504,10 +508,17 @@ function renderPromo(list = []) {
     const diff = end - now;
 
     if (diff <= 0) {
-      el.textContent = "❌ PROMO EXPIRED";
-      el.classList.remove("pulse");
-      return;
-    }
+  el.textContent = "❌ PROMO EXPIRED";
+
+  const card = el.closest(".promo-item");
+  if (card) {
+    setTimeout(() => {
+      card.remove();
+    }, 2000);
+  }
+
+  return;
+}
 
     const totalSeconds = Math.floor(diff / 1000);
     const days = Math.floor(totalSeconds / (3600 * 24));
@@ -627,6 +638,7 @@ async function goToPage(page) {
 
 </body>
 </html>
+
 
 
 
