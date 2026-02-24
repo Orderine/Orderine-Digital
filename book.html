@@ -1328,73 +1328,91 @@ function playSound(type) {
 }
 
   
- document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   console.log("▶️ book.html init start");
 
   try {
-    // ===== OPEN DB FIRST =====
+    // ==============================
+    // 1️⃣ OPEN DB
+    // ==============================
     await window.MENUVA_DB.openDB();
 
-    // ===== INIT UI =====
+    // ==============================
+    // 2️⃣ INIT UI
+    // ==============================
     await initDarkMode();
     await initLocaleSelect();
     initVoucherInput();
 
-    // ===== INIT DB & LOAD DATA =====
+    // ==============================
+    // 3️⃣ AMBIL RESTO ID
+    // ==============================
     const restoId = getQueryRestoId();
     if (!restoId) {
       console.error("❌ restoId missing in URL");
       return;
     }
 
+    // ==============================
+    // 4️⃣ LOAD RESTO DATA
+    // ==============================
     const data = await loadDataFromDB(restoId);
     if (!data) {
       console.warn("⚠️ Data resto belum tersedia");
       return;
     }
 
-    // ⬇️ TAMBAHKAN INI
-    renderBookHeader(data);
     restoData = data;
-    const normalized = normalizeAdminData(data);
-if (!normalized) {
-  console.error("❌ Format data admin tidak dikenali", data);
-  return;
-}
+    renderBookHeader(restoData);
 
-restoData = normalized;
-// ===============================
-// 🔥 LOAD MENU DARI STORE BARU
-// ===============================
-menuData = (await MENUVA_DB.getAll("menuData") || [])
-  .filter(m => m.restoId === restoId);
-menuPromo = await MENUVA_DB.getAll("menuPromo") || [];
-const voucherRaw = await MENUVA_DB.getAll("menuVoucher") || [];
+    // ==============================
+    // 5️⃣ LOAD STORE TERPISAH (v19)
+    // ==============================
+    menuData = (await MENUVA_DB.getAll("menuData") || [])
+      .filter(m => m.restoId === restoId);
 
-cachedVoucherList = voucherRaw.map(normalizeVoucher);
+    menuPromo = (await MENUVA_DB.getAll("menuPromo") || [])
+      .filter(p => p.restoId === restoId);
 
-console.log("🔥 menuData loaded:", menuData.length);
-console.log("🔥 menuPromo loaded:", menuPromo.length);
+    const voucherRaw = (await MENUVA_DB.getAll("menuVoucher") || [])
+      .filter(v => v.restoId === restoId);
 
-    // ===== DEFAULT DATE / TIME =====
+    cachedVoucherList = voucherRaw.map(normalizeVoucher);
+
+    console.log("🔥 menuData loaded:", menuData.length);
+    console.log("🔥 menuPromo loaded:", menuPromo.length);
+    console.log("🔥 voucher loaded:", cachedVoucherList.length);
+
+    // ==============================
+    // 6️⃣ DEFAULT DATE & TIME
+    // ==============================
     const now = new Date();
     const pad = n => String(n).padStart(2, "0");
 
-    document.getElementById("custDate").value =
-      `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+    const dateEl = document.getElementById("custDate");
+    const timeEl = document.getElementById("custTime");
 
-    document.getElementById("custTime").value =
-      `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    if (dateEl)
+      dateEl.value =
+        `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
 
-    // ===== RENDER SETELAH DATA SIAP =====
+    if (timeEl)
+      timeEl.value =
+        `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    // ==============================
+    // 7️⃣ RENDER UI
+    // ==============================
     renderDynamicCategories();
     renderPromo(menuPromo);
 
-    // ===== RESTORE STATE =====
-    loadCartFromStorage();
-    loadCustomerForm();
+    // ==============================
+    // 8️⃣ RESTORE SESSION
+    // ==============================
+    await loadCartFromStorage();
+    await loadCustomerForm();
     renderCart();
-    restoreVoucherFromStorage();
+    await restoreVoucherFromStorage();
     applyVoucherAndUpdateSummary();
 
     console.log("✅ book.html init DONE");
@@ -1403,7 +1421,7 @@ console.log("🔥 menuPromo loaded:", menuPromo.length);
     console.error("❌ book.html init error:", err);
   }
 });
-
+  
  function renderBookHeader(data) {
   // LOGO
   const logo = document.getElementById("restoLogo");
@@ -1589,6 +1607,7 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
 
