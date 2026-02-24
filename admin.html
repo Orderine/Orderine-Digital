@@ -3356,29 +3356,57 @@ document
     reader.readAsDataURL(file);
   });
 
+window.tempMenu = window.tempMenu || [];
+
 function saveMenuItem() {
 
-  const name = ...
-  const price = ...
-  const restoId = window.activeUser?.restoID;
+  if (!window.activeUser?.restoID) {
+    alert("❌ Session tidak valid");
+    return;
+  }
+
+  const nameInput = document.getElementById("menuName");
+  const priceInput = document.getElementById("menuPrice");
+
+  const name = nameInput?.value?.trim();
+  const price = parseInt(priceInput?.value || "0");
+
+  if (!name) {
+    alert("❌ Nama menu wajib diisi");
+    return;
+  }
+
+  if (!price || price <= 0) {
+    alert("❌ Harga tidak valid");
+    return;
+  }
+
+  const restoId = window.activeUser.restoID;
 
   const newMenu = {
     id: crypto.randomUUID(),
     restoId,
     name,
     price,
-    image: uploadedImageBase64,
+    image: window.uploadedImageBase64 || "",
     category: {
-      name: activeCategoryName,
-      prefix: generateCategoryPrefix(activeCategoryName)
+      name: window.activeCategoryName || "Uncategorized",
+      prefix: generateCategoryPrefix(window.activeCategoryName || "UNC")
     },
-    menuCode,
+    menuCode: generateMenuCode?.() || "AUTO",
     createdAt: Date.now()
   };
 
-  tempMenu.push(newMenu);
+  // pastikan tempMenu ada
+  if (!Array.isArray(window.tempMenu)) {
+    window.tempMenu = [];
+  }
 
-  renderMenuFromMemory();
+  window.tempMenu.push(newMenu);
+
+  renderMenuFromMemory?.();
+
+  alert("✅ Menu ditambahkan ke draft (klik SAVE untuk commit)");
 }
   
 /* ================= DELETE MENU ================= */
@@ -5216,6 +5244,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
