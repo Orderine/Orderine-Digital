@@ -15,7 +15,7 @@
 
 
   const DB_NAME = "MenuvaDB";
-  const DB_VERSION = 18;
+  const DB_VERSION = 19;
 
   let dbOpeningPromise = null;
   let dbInstance = null;
@@ -60,14 +60,36 @@ function openDB() {
         v.createIndex("createdAt", "createdAt", { unique: false });
       }
 
-      if (!db.objectStoreNames.contains("menuData")) {
-        const menu = db.createObjectStore("menuData", {
-          keyPath: "id",
-          autoIncrement: true
-        });
-        menu.createIndex("category", "category", { unique: false });
-        menu.createIndex("active", "active", { unique: false });
-      }
+     if (!db.objectStoreNames.contains("menuData")) {
+  const menu = db.createObjectStore("menuData", {
+    keyPath: "id"
+  });
+  menu.createIndex("restoId", "restoId", { unique: false });
+  menu.createIndex("category", "category", { unique: false });
+  menu.createIndex("active", "active", { unique: false });
+}
+
+       /* =========================
+   MENU PROMO (NEW CLEAN)
+========================= */
+if (!db.objectStoreNames.contains("menuPromo")) {
+  const promo = db.createObjectStore("menuPromo", {
+    keyPath: "id"
+  });
+  promo.createIndex("restoId", "restoId", { unique: false });
+  promo.createIndex("isActive", "isActive", { unique: false });
+}
+
+/* =========================
+   MENU VOUCHER (NEW CLEAN)
+========================= */
+if (!db.objectStoreNames.contains("menuVoucher")) {
+  const voucher = db.createObjectStore("menuVoucher", {
+    keyPath: "id"
+  });
+  voucher.createIndex("restoId", "restoId", { unique: false });
+  voucher.createIndex("isActive", "isActive", { unique: false });
+}
 
       if (!db.objectStoreNames.contains("ordersData")) {
         const orders = db.createObjectStore("ordersData", {
@@ -171,6 +193,8 @@ return Promise.race([dbOpeningPromise, timeoutPromise]);
       "admin_invites",
       "admins",
       "void_logs",
+      "menuPromo",      
+      "menuVoucher",  
       "menuData",
       "ordersData",
       "promoData",
@@ -246,9 +270,3 @@ return Promise.race([dbOpeningPromise, timeoutPromise]);
   });
 
 })();
-
-
-
-
-
-
