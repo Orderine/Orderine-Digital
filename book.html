@@ -713,18 +713,25 @@ async function removeFromCart(index) {
   tabsContainer.innerHTML = "";
   contentContainer.innerHTML = "";
 
-  // 🔥 Ambil category unik dari menuData
+  // 🔥 Ambil category unik (support string & object)
   const categoryMap = {};
 
   menuData.forEach(menu => {
-    if (!menu.category?.name) return;
-    categoryMap[menu.category.name] = true;
+    const catName =
+      typeof menu.category === "string"
+        ? menu.category
+        : menu.category?.name;
+
+    if (!catName) return;
+
+    categoryMap[catName] = true;
   });
 
   const categories = Object.keys(categoryMap);
 
   if (!categories.length) {
-    contentContainer.innerHTML = '<div class="cart-empty">No menu available</div>';
+    contentContainer.innerHTML =
+      '<div class="cart-empty">No menu available</div>';
     return;
   }
 
@@ -737,7 +744,6 @@ async function removeFromCart(index) {
     tabBtn.className = "tab";
     if (index === 0) tabBtn.classList.add("active");
     tabBtn.textContent = catName;
-
     tabBtn.onclick = () => switchTab(safeId);
 
     tabsContainer.appendChild(tabBtn);
@@ -750,29 +756,38 @@ async function removeFromCart(index) {
 
     const grid = document.createElement("div");
     grid.className = "grid";
-    grid.id = safeId + "Grid";
 
-    // 🔥 Filter menu sesuai category
-    const items = menuData.filter(
-      m => m.category?.name === catName
-    );
+    // 🔥 FILTER MENU (support string & object)
+    const items = menuData.filter(m => {
+      const c =
+        typeof m.category === "string"
+          ? m.category
+          : m.category?.name;
+
+      return c === catName;
+    });
 
     if (!items.length) {
-      grid.innerHTML = '<div class="cart-empty">No item yet</div>';
+      grid.innerHTML =
+        '<div class="cart-empty">No item yet</div>';
     } else {
+
       items.forEach(m => {
 
         const card = document.createElement("div");
         card.className = "menu-card";
-        card.onclick = () => {
-          addToCartObj(m.name, Number(m.price) || 0);
-          updateBadge(card, m.name);
-        };
 
         const hargaNum = Number(m.price) || 0;
 
+        card.onclick = () => {
+          addToCartObj(m.name, hargaNum);
+          updateBadge(card, m.name);
+        };
+
         card.innerHTML = `
-          ${m.image ? `<img class="menu-thumb" src="${m.image}" alt="${escapeHtml(m.name)}">` : `<div class="menu-thumb"></div>`}
+          ${m.image
+            ? `<img class="menu-thumb" src="${m.image}" alt="${escapeHtml(m.name)}">`
+            : `<div class="menu-thumb"></div>`}
           <div class="menu-title">${escapeHtml(m.name)}</div>
           <div class="menu-price" data-price="${hargaNum}">
             ${formatWithActive(hargaNum)}
@@ -788,14 +803,14 @@ async function removeFromCart(index) {
     contentContainer.appendChild(section);
   });
 
-  // 🔥 Tambahkan TAB PROMO di akhir
+  // === TAB PROMO ===
   const promoTab = document.createElement("div");
   promoTab.className = "tab";
   promoTab.textContent = "Promo";
   promoTab.onclick = () => switchTab("promo");
   tabsContainer.appendChild(promoTab);
 }
-
+  
   function renderPromo(list) {
   const grid = document.getElementById('promoGrid');
   if (!grid) return;
@@ -1574,6 +1589,7 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
 
