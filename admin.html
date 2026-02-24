@@ -2688,6 +2688,11 @@ const DB_NAME = window.MENUVA_DB.NAME;
 const STORE_NAME = window.MENUVA_DB.STORE;
 const DB_VERSION = window.MENUVA_DB.VERSION;
 
+  // ====================== MEMORY STATE ======================
+let tempMenu = [];
+let tempPromo = [];
+let tempVoucher = [];
+
   /* ====================== MENUVA DATA DB HELPERS ====================== */
 
 // 🔐 Ambil ID aktif (AMAN)
@@ -3351,47 +3356,29 @@ document
     reader.readAsDataURL(file);
   });
 
-async function saveMenuItem() {
+function saveMenuItem() {
 
-  if (!activeCategoryName)
-    return alert("Select category first");
+  const name = ...
+  const price = ...
+  const restoId = window.activeUser?.restoID;
 
-  const name = document
-    .getElementById("menuNameInput")
-    .value.trim();
+  const newMenu = {
+    id: crypto.randomUUID(),
+    restoId,
+    name,
+    price,
+    image: uploadedImageBase64,
+    category: {
+      name: activeCategoryName,
+      prefix: generateCategoryPrefix(activeCategoryName)
+    },
+    menuCode,
+    createdAt: Date.now()
+  };
 
-  const price = parseFloat(
-    document.getElementById("menuPriceInput").value
-  );
+  tempMenu.push(newMenu);
 
-  if (!name || isNaN(price))
-    return alert("Complete form");
-
-  const menuCode = await generateMenuCode(activeCategoryName);
-
-await MENUVA_DB.add("menuData", {
-  id: Date.now(),
-  name,
-  price,
-  image: uploadedImageBase64,
-  category: {
-    name: activeCategoryName,
-    prefix: generateCategoryPrefix(activeCategoryName)
-  },
-  menuCode,
-  createdAt: Date.now()
-});
-
-  await simpanData(); // kalau masih lo butuhin
-
-  document.getElementById("menuNameInput").value = "";
-  document.getElementById("menuPriceInput").value = "";
-  document.getElementById("menuImageInput").value = "";
-  uploadedImageBase64 = null;
-  document.getElementById("imagePreview").style.display = "none";
-
-  await loadCategories();
-  await renderMenuPreview(activeCategoryName);
+  renderMenuFromMemory();
 }
   
 /* ================= DELETE MENU ================= */
@@ -3862,9 +3849,7 @@ async function simpanData() {
       return;
     }
 
-    const menu = typeof ambilSemuaMenu === "function"
-      ? ambilSemuaMenu()
-      : [];
+    const menu = tempMenu;
 
     const categories = Array.isArray(window.categories)
       ? window.categories
@@ -3920,7 +3905,7 @@ async function simpanData() {
       }
     }
 
-    for (const promo of (window.menuPromo || [])) {
+    for (const promo of tempPromo) {
       await MENUVA_DB.add("menuPromo", {
         ...promo,
         restoId
@@ -3939,7 +3924,7 @@ async function simpanData() {
       }
     }
 
-    for (const voucher of (window.menuVoucher || [])) {
+    for (const voucher of tempVoucher) {
       await MENUVA_DB.add("menuVoucher", {
         ...voucher,
         restoId
@@ -4384,73 +4369,48 @@ async function restoreDataFromFile(event) {
       return;
     }
 
-    if (!json.owner?.email) {
-      alert("❌ Backup tidak memiliki email owner");
-      return;
-    }
+    const loginEmail = window.activeUser?.email?.trim().toLowerCase();
+    const backupEmail = json.owner?.email?.trim().toLowerCase();
 
-    if (!window.activeUser?.email || !window.activeUser?.restoID) {
+    if (!loginEmail || !window.activeUser?.restoID) {
       alert("❌ User belum login dengan benar");
       return;
     }
-
-    const loginEmail = window.activeUser.email.trim().toLowerCase();
-    const backupEmail = json.owner.email.trim().toLowerCase();
 
     if (loginEmail !== backupEmail) {
       alert("❌ Backup ini bukan milik akun ini");
       return;
     }
 
-    const restoId = window.activeUser.restoID;
+    showLoader("♻️ Restoring to memory...");
 
-    showLoader("♻️ Restoring data...");
+    /* =========================================
+       1️⃣ RESTORE TO MEMORY (NOT DB)
+    ========================================= */
 
-    // 1️⃣ bersihkan data lama (context resto sekarang)
-    await clearRestoDataOnly();
+    tempMenu = json.data?.menuData || [];
+    tempPromo = json.data?.menuPromo || [];
+    tempVoucher = json.data?.menuVoucher || [];
 
-    // 2️⃣ restore resto profile
-    if (json.data?.restos) {
-  await MENUVA_DB.add("restos", {
-    ...json.data.restos,
-    id: restoId
-  });
-}
+    /* =========================================
+       2️⃣ RENDER UI DARI MEMORY
+    ========================================= */
 
-    // 3️⃣ restore menu
-    for (const m of json.data?.menuData || []) {
-      await MENUVA_DB.add("menuData", { ...m, restoId });
-    }
+    renderMenuFromMemory?.();
+    renderPromoFromMemory?.();
+    renderVoucherFromMemory?.();
 
-    // 4️⃣ restore flipbook
-    for (const f of json.data?.flipbookData || []) {
-      await MENUVA_DB.add("flipbookData", { ...f, restoId });
-    }
-
-   // 5️⃣ restore promo → tempel ke object resto
-if (json.data?.menuPromo) {
-  const resto = await MENUVA_DB.get("restos", restoId);
-
-  if (resto) {
-    resto.menuPromo = json.data.menuPromo;
-    resto.updatedAt = Date.now();
-    await MENUVA_DB.add("restos", resto);
-  }
-}
-
-    console.log("♻️ Restore SUCCESS for:", loginEmail);
-
-    alert("✅ Data berhasil direstore");
-    location.reload(); // biar loadData() + render jalan normal
+    alert("✅ Data berhasil dimuat ke memory.\nKlik SAVE untuk commit ke database.");
 
   } catch (err) {
     console.error("❌ Restore failed:", err);
     alert("❌ File backup rusak / tidak valid");
   } finally {
-    hideLoader();
+    hideLoader?.();
   }
 }
 
+  
 function generateCustomerLink(restoId) {
   const base = "https://orderine.github.io/Orderine-Digital/menu.html";
   const url = `${base}?resto=${encodeURIComponent(restoId)}`;
@@ -4683,48 +4643,24 @@ function bindAdminEvents() {
 
 
 async function loadAdminData() {
-  console.log("📦 loadAdminData");
+  const restoId = window.activeUser?.restoID;
+  if (!restoId) return;
 
- await loadCategories();
+  const allMenu = await MENUVA_DB.getAll("menuData");
+  const allPromo = await MENUVA_DB.getAll("menuPromo");
+  const allVoucher = await MENUVA_DB.getAll("menuVoucher");
 
-  const inviteBtn = document.getElementById("inviteAdminBtn");
-  if (!inviteBtn) {
-    console.warn("⚠️ inviteAdminBtn not found");
-    return;
-  }
+  tempMenu = allMenu.filter(m => m.restoId === restoId);
+  tempPromo = allPromo.filter(p => p.restoId === restoId);
+  tempVoucher = allVoucher.filter(v => v.restoId === restoId);
 
-  try {
-    // Ambil session dari MENUVA_DB (single source of truth)
-    const session = await MENUVA_DB.getSession();
-
-    if (!session) {
-      console.warn("⚠️ No active session");
-      inviteBtn.style.display = "none";
-      return;
-    }
-
-    const role = session.role;
-    console.log("👤 Admin role:", role);
-
-    // 🔐 ROLE GUARD
-    if (role === "owner") {
-      inviteBtn.style.display = "flex"; // FIX UTAMA
-      console.log("✅ Invite Admin button enabled");
-    } else {
-      inviteBtn.remove(); // lebih bersih
-      console.log("🚫 Invite Admin hidden for role:", role);
-    }
-
-  } catch (err) {
-    console.error("❌ loadAdminData error:", err);
-    inviteBtn.style.display = "none";
-  }
+  renderMenuFromMemory();
+  renderPromoFromMemory();
+  renderVoucherFromMemory();
 }
-
   
 document.addEventListener("DOMContentLoaded", async () => {
   console.group("🚀 ADMIN ENTERPRISE INIT");
-
 
   try {
 
@@ -5280,6 +5216,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
