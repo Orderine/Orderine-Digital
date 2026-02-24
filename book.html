@@ -312,22 +312,17 @@ footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);paddin
 
 <div class="tabs-wrap">
   <div class="container">
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab('food')">Food</div>
-      <div class="tab" onclick="switchTab('snack')">Snack & Dessert</div>
-      <div class="tab" onclick="switchTab('drink')">Drink</div>
-      <div class="tab" onclick="switchTab('special')">Special</div>
-      <div class="tab" onclick="switchTab('promo')">Promo</div>
-    </div>
+    <div class="tabs" id="dynamicTabs"></div>
   </div>
 </div>
 
 <main class="container" style="padding-top:12px">
-  <section id="food" class="tab-content active"><div class="grid" id="foodGrid"></div></section>
-  <section id="snack" class="tab-content"><div class="grid" id="snackGrid"></div></section>
-  <section id="drink" class="tab-content"><div class="grid" id="drinkGrid"></div></section>
-  <section id="special" class="tab-content"><div class="grid" id="specialGrid"></div></section>
-  <section id="promo" class="tab-content"><div class="grid" id="promoGrid"></div></section>
+  <div id="dynamicTabContent"></div>
+
+  <!-- PROMO tetap static -->
+  <section id="promo" class="tab-content">
+    <div class="grid" id="promoGrid"></div>
+  </section>
 </main>
 
 <footer>
@@ -708,33 +703,98 @@ async function removeFromCart(index) {
   window._menuva.refreshAllPriceDisplays = () => refreshAllPriceDisplays();
 
   /* ------------------ RENDER MENU & PROMO ---------------------- */
-  function renderMenu() {
-    const map = { food:'foodGrid', snack:'snackGrid', drink:'drinkGrid', special:'specialGrid' };
-    Object.keys(map).forEach(k=>{
-      const grid = document.getElementById(map[k]);
-      if (!grid) return;
-      grid.innerHTML = '';
-      const items = (menuData || []).filter(m => m.kategori === k);
-      if (!items || items.length ===0) {
-        grid.innerHTML = '<div class="cart-empty">No item yet</div>';
-        return;
-      }
-      items.forEach(m=>{
-        const card = document.createElement('div');
-        card.className = 'menu-card';
-        card.onclick = () => { addToCartObj(m.nama, Number(m.harga)||0); updateBadge(card, m.nama); };
-        const hargaNum = Number(m.harga) || 0;
+ function renderDynamicCategories() {
+
+  const tabsContainer = document.getElementById("dynamicTabs");
+  const contentContainer = document.getElementById("dynamicTabContent");
+
+  if (!tabsContainer || !contentContainer) return;
+
+  tabsContainer.innerHTML = "";
+  contentContainer.innerHTML = "";
+
+  // 🔥 Ambil category unik dari menuData
+  const categoryMap = {};
+
+  menuData.forEach(menu => {
+    if (!menu.category?.name) return;
+    categoryMap[menu.category.name] = true;
+  });
+
+  const categories = Object.keys(categoryMap);
+
+  if (!categories.length) {
+    contentContainer.innerHTML = '<div class="cart-empty">No menu available</div>';
+    return;
+  }
+
+  categories.forEach((catName, index) => {
+
+    const safeId = catName.replace(/\s+/g, "_").toLowerCase();
+
+    // ==== TAB BUTTON ====
+    const tabBtn = document.createElement("div");
+    tabBtn.className = "tab";
+    if (index === 0) tabBtn.classList.add("active");
+    tabBtn.textContent = catName;
+
+    tabBtn.onclick = () => switchTab(safeId);
+
+    tabsContainer.appendChild(tabBtn);
+
+    // ==== TAB CONTENT ====
+    const section = document.createElement("section");
+    section.id = safeId;
+    section.className = "tab-content";
+    if (index === 0) section.classList.add("active");
+
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    grid.id = safeId + "Grid";
+
+    // 🔥 Filter menu sesuai category
+    const items = menuData.filter(
+      m => m.category?.name === catName
+    );
+
+    if (!items.length) {
+      grid.innerHTML = '<div class="cart-empty">No item yet</div>';
+    } else {
+      items.forEach(m => {
+
+        const card = document.createElement("div");
+        card.className = "menu-card";
+        card.onclick = () => {
+          addToCartObj(m.name, Number(m.price) || 0);
+          updateBadge(card, m.name);
+        };
+
+        const hargaNum = Number(m.price) || 0;
+
         card.innerHTML = `
-          ${m.image ? `<img class="menu-thumb" src="${m.image}" alt="${escapeHtml(m.nama)}">` : `<div class="menu-thumb"></div>`}
-          <div class="menu-title">${escapeHtml(m.nama)}</div>
-          <div class="menu-desc">${escapeHtml(m.deskripsi || '')}</div>
-          <div class="menu-price" data-price="${hargaNum}">${formatWithActive(hargaNum)}</div>
+          ${m.image ? `<img class="menu-thumb" src="${m.image}" alt="${escapeHtml(m.name)}">` : `<div class="menu-thumb"></div>`}
+          <div class="menu-title">${escapeHtml(m.name)}</div>
+          <div class="menu-price" data-price="${hargaNum}">
+            ${formatWithActive(hargaNum)}
+          </div>
           <span class="badge" style="display:none">0</span>
         `;
+
         grid.appendChild(card);
       });
-    });
-  }
+    }
+
+    section.appendChild(grid);
+    contentContainer.appendChild(section);
+  });
+
+  // 🔥 Tambahkan TAB PROMO di akhir
+  const promoTab = document.createElement("div");
+  promoTab.className = "tab";
+  promoTab.textContent = "Promo";
+  promoTab.onclick = () => switchTab("promo");
+  tabsContainer.appendChild(promoTab);
+}
 
   function renderPromo(list) {
   const grid = document.getElementById('promoGrid');
@@ -1235,15 +1295,24 @@ function playSound(type) {
   }
 
   /* ------------------ TABS ------------------ */
-  function switchTab(tabName){
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    const target = document.getElementById(tabName);
-    if (target) target.classList.add('active');
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    const activeTab = Array.from(document.querySelectorAll('.tab')).find(x => x.getAttribute('onclick')?.includes(tabName));
-    if (activeTab) activeTab.classList.add('active');
-  }
+ function switchTab(tabName) {
 
+  document.querySelectorAll('.tab-content')
+    .forEach(c => c.classList.remove('active'));
+
+  document.querySelectorAll('.tab')
+    .forEach(t => t.classList.remove('active'));
+
+  const target = document.getElementById(tabName);
+  if (target) target.classList.add('active');
+
+  const activeTab = Array.from(document.querySelectorAll('.tab'))
+    .find(x => x.textContent.toLowerCase().replace(/\s+/g,'_') === tabName);
+
+  if (activeTab) activeTab.classList.add('active');
+}
+
+  
  document.addEventListener("DOMContentLoaded", async () => {
   console.log("▶️ book.html init start");
 
@@ -1296,7 +1365,7 @@ cachedVoucherList = Array.isArray(normalized.menuVoucher)
       `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
     // ===== RENDER SETELAH DATA SIAP =====
-    renderMenu();
+    renderDynamicCategories();
     renderPromo(menuPromo);
 
     // ===== RESTORE STATE =====
@@ -1416,14 +1485,14 @@ async function clearCustomerData(confirmRequired = true) {
 
     await MENUVA_DB.delete("session", "menuva_voucher");
 
-    // =============================
-    // 5️⃣ Update UI instantly
-    // =============================
-    renderCart();
-    applyVoucherAndUpdateSummary?.();
-    renderMenu?.();
-    renderPromo?.(menuPromo);
-    updateCartCount?.();
+   // =============================
+// 5️⃣ Update UI instantly
+// =============================
+renderCart();
+applyVoucherAndUpdateSummary?.();
+renderDynamicCategories?.();   // 🔥 GANTI INI
+renderPromo?.(menuPromo);
+updateCartCount?.();
 
     // =============================
     // 6️⃣ Notify other tabs
@@ -1498,4 +1567,5 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
 
