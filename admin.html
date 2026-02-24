@@ -2782,13 +2782,15 @@ function openAddPromo(isEdit = false) {
 
 async function savePromoItem() {
 
+  const restoId = window.activeUser?.restoID;
+  if (!restoId) return;
+
   const name  = document.getElementById("promoNameInput").value.trim();
   const desc  = document.getElementById("promoDescInput").value.trim();
   const price = Number(document.getElementById("promoPriceInput").value);
 
   const inputEl   = document.getElementById("promoImageInput");
   const previewEl = document.getElementById("promoImagePreview");
-
   let image = inputEl.dataset.image || previewEl.src || "";
 
   const startDate = document.getElementById("promoStartDate").value;
@@ -2801,49 +2803,59 @@ async function savePromoItem() {
   }
 
   if (editingPromoId) {
-    /* ===== EDIT MODE ===== */
-    const promo = window.menuPromo.find(p => p.id === editingPromoId);
-    if (!promo) return;
 
-    promo.namaPromo = name;
-    promo.deskripsi = desc;
-    promo.harga     = price;
-    promo.startDate = startDate;
-    promo.endDate   = endDate;
-    promo.image     = image;
-    promo.isActive  = isActive;
-    promo.updatedAt = Date.now();
+    /* ===== UPDATE DIRECT KE STORE ===== */
+
+    const updatedPromo = {
+      id: editingPromoId,
+      restoId,
+      kodePromo: window.menuPromo.find(p => p.id === editingPromoId)?.kodePromo,
+      namaPromo: name,
+      deskripsi: desc,
+      harga: price,
+      image,
+      startDate,
+      endDate,
+      isActive,
+      updatedAt: Date.now()
+    };
+
+    await MENUVA_DB.update("menuPromo", updatedPromo);
 
   } else {
-    /* ===== ADD MODE ===== */
-   const promo = {
-  id: crypto.randomUUID(),        // ID internal (aman)
-  kodePromo: generatePromoCode(), // kode pendek untuk tampil
-  namaPromo: name,
-  deskripsi: desc,
-  harga: price,
-  image: image,
-  startDate,
-  endDate,
-  isActive: true,
-  createdAt: Date.now(),
-  updatedAt: Date.now()
-};
 
-    window.menuPromo.push(promo);
+    /* ===== ADD DIRECT KE STORE ===== */
+
+    const newPromo = {
+      id: crypto.randomUUID(),
+      restoId,
+      kodePromo: generatePromoCode(),
+      namaPromo: name,
+      deskripsi: desc,
+      harga: price,
+      image,
+      startDate,
+      endDate,
+      isActive: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    await MENUVA_DB.add("menuPromo", newPromo);
   }
 
-  await simpanData();
+  /* 🔥 Reload dari DB supaya clean */
+  window.menuPromo = await MENUVA_DB.getAll("menuPromo");
+  window.menuPromo = window.menuPromo.filter(p => p.restoId === restoId);
 
   editingPromoId = null;
   clearPromoEditor();
   renderPromoFilterBar();
   renderPromoUI();
 
-  const editor = document.getElementById("promoEditorPanel");
-  if (editor) editor.style.display = "none";
+  document.getElementById("promoEditorPanel").style.display = "none";
 }
-
+  
 /* ======================= FILTER BAR ========================= */
 
 function renderPromoFilterBar() {
@@ -2965,20 +2977,22 @@ function renderPromoUI() {
 }
 
 /* ======================= TOGGLE ACTIVE ========================= */
-
 async function togglePromoStatus(id) {
 
+  const restoId = window.activeUser?.restoID;
   const promo = window.menuPromo.find(p => p.id === id);
   if (!promo) return;
 
   promo.isActive = !promo.isActive;
   promo.updatedAt = Date.now();
 
-  await simpanData();
+  await MENUVA_DB.update("menuPromo", promo);
+
+  window.menuPromo = await MENUVA_DB.getAll("menuPromo");
+  window.menuPromo = window.menuPromo.filter(p => p.restoId === restoId);
 
   renderPromoUI();
 }
-
 /* ======================= EDIT PROMO========================= */
 window.editPromo = function(id) {
 
@@ -3824,7 +3838,7 @@ window.flipbookRuanganImages = window.flipbookRuanganImages || [];
 window.flipbookMenuImages = window.flipbookMenuImages || [];
 window.menuVoucher = window.menuVoucher || [];
 
-// ====================== SIMPAN (ADMIN → RESTOS ONLY) ======================
+// ====================== SIMPAN (ADMIN → CLEAN STORE MODE) ======================
 async function simpanData() {
   try {
     showLoader?.();
@@ -3852,20 +3866,17 @@ async function simpanData() {
       ? ambilSemuaMenu()
       : [];
 
-    const rooms = typeof ambilSemuaRoom === "function"
-      ? ambilSemuaRoom()
-      : [];
-
     const categories = Array.isArray(window.categories)
       ? window.categories
       : [];
 
-    // ================= SAVE SYSTEM SETTINGS =================
     const locationCode =
-     window.systemSettings?.locationCode ||
-     "LOC";
+      window.systemSettings?.locationCode || "LOC";
 
-    const restoPayload = {
+    /* ==========================================================
+       1️⃣ SAVE RESTO IDENTITY ONLY (NO NESTED DATA)
+    ========================================================== */
+    await window.MENUVA_DB.add("restos", {
       id: restoId,
       ownerId,
       namaRestoran,
@@ -3875,44 +3886,93 @@ async function simpanData() {
       nomorWaAdmin,
       locationCode,
       categories,
-      menu,
-      rooms,
-      menuPromo: window.menuPromo || [],
-      menuVoucher: window.menuVoucher || [],
-      flipbookRuanganImages: window.flipbookRuanganImages || [],
-      flipbookMenuImages: window.flipbookMenuImages || [],
       updatedAt: Date.now()
-    };
+    });
 
-    await window.MENUVA_DB.add("restos", restoPayload);
+    /* ==========================================================
+       2️⃣ REPLACE MENU DATA (DELETE OLD → INSERT NEW)
+    ========================================================== */
 
-    console.log("💾 SIMPAN DATA SUCCESS → RESTO:", restoId);
+    const allMenu = await MENUVA_DB.getAll("menuData");
 
-    // ===== GENERATE CUSTOMER LINK =====
+    for (const item of allMenu) {
+      if (item.restoId === restoId) {
+        await MENUVA_DB.delete("menuData", item.id);
+      }
+    }
+
+    for (const item of menu) {
+      await MENUVA_DB.add("menuData", {
+        ...item,
+        restoId
+      });
+    }
+
+    /* ==========================================================
+       3️⃣ REPLACE PROMO
+    ========================================================== */
+
+    const allPromo = await MENUVA_DB.getAll("menuPromo");
+
+    for (const p of allPromo) {
+      if (p.restoId === restoId) {
+        await MENUVA_DB.delete("menuPromo", p.id);
+      }
+    }
+
+    for (const promo of (window.menuPromo || [])) {
+      await MENUVA_DB.add("menuPromo", {
+        ...promo,
+        restoId
+      });
+    }
+
+    /* ==========================================================
+       4️⃣ REPLACE VOUCHER
+    ========================================================== */
+
+    const allVoucher = await MENUVA_DB.getAll("menuVoucher");
+
+    for (const v of allVoucher) {
+      if (v.restoId === restoId) {
+        await MENUVA_DB.delete("menuVoucher", v.id);
+      }
+    }
+
+    for (const voucher of (window.menuVoucher || [])) {
+      await MENUVA_DB.add("menuVoucher", {
+        ...voucher,
+        restoId
+      });
+    }
+
+    console.log("💾 SIMPAN DATA SUCCESS (CLEAN MODE) →", restoId);
+
+    /* ==========================================================
+       CUSTOMER LINK & QR (TIDAK DIUBAH)
+    ========================================================== */
+
     const customerLink = generateCustomerLink(restoId);
 
     document.getElementById("customerLinkDisplay").textContent = customerLink;
-
     generateQRCode(customerLink);
 
-document.getElementById("btnOpenCustomer").onclick = () => {
-  window.open(customerLink, "_blank");
-};
+    document.getElementById("btnOpenCustomer").onclick = () => {
+      window.open(customerLink, "_blank");
+    };
 
-    // COPY
-document.getElementById("btnSalinLink").onclick = () => {
-  navigator.clipboard.writeText(customerLink);
-  alert("✅ Link copied");
-};
+    document.getElementById("btnSalinLink").onclick = () => {
+      navigator.clipboard.writeText(customerLink);
+      alert("✅ Link copied");
+    };
 
-// PRINT
-document.getElementById("btnPrintQR").onclick = () => {
-  const qrContent = document.getElementById("qrPreview").innerHTML;
-  const win = window.open("", "", "width=400,height=400");
-  win.document.write(`<html><body style="text-align:center">${qrContent}</body></html>`);
-  win.document.close();
-  win.print();
-};
+    document.getElementById("btnPrintQR").onclick = () => {
+      const qrContent = document.getElementById("qrPreview").innerHTML;
+      const win = window.open("", "", "width=400,height=400");
+      win.document.write(`<html><body style="text-align:center">${qrContent}</body></html>`);
+      win.document.close();
+      win.print();
+    };
 
     showCustomerShareUI?.();
     showQRButtons?.();
@@ -4149,10 +4209,14 @@ async function loadData() {
 
     console.log("🍽️ Menu system loaded (menuData store)");
 
-    // ================= PROMO & VOUCHER =================
-    window.menuPromo = Array.isArray(resto.menuPromo) ? resto.menuPromo : [];
-    window.menuVoucher = Array.isArray(resto.menuVoucher) ? resto.menuVoucher : [];
+    // ================= PROMO (STORE BARU) =================
+window.menuPromo = await MENUVA_DB.getAll("menuPromo");
+window.menuPromo = window.menuPromo.filter(p => p.restoId === restoId);
 
+// ================= VOUCHER (STORE BARU) =================
+window.menuVoucher = await MENUVA_DB.getAll("menuVoucher");
+window.menuVoucher = window.menuVoucher.filter(v => v.restoId === restoId);
+    
     try { renderPromoUI?.(); }
     catch (e) { console.warn("⚠️ renderPromoUI error:", e); }
 
@@ -5216,6 +5280,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
