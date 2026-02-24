@@ -1348,11 +1348,18 @@ if (!normalized) {
 }
 
 restoData = normalized;
-menuData  = Array.isArray(normalized.menu) ? normalized.menu : [];
-menuPromo = Array.isArray(normalized.menuPromo) ? normalized.menuPromo : [];
-cachedVoucherList = Array.isArray(normalized.menuVoucher)
-  ? normalized.menuVoucher.map(normalizeVoucher)
-  : [];
+// ===============================
+// 🔥 LOAD MENU DARI STORE BARU
+// ===============================
+menuData = (await MENUVA_DB.getAll("menuData") || [])
+  .filter(m => m.restoId === restoId);
+menuPromo = await MENUVA_DB.getAll("menuPromo") || [];
+const voucherRaw = await MENUVA_DB.getAll("menuVoucher") || [];
+
+cachedVoucherList = voucherRaw.map(normalizeVoucher);
+
+console.log("🔥 menuData loaded:", menuData.length);
+console.log("🔥 menuPromo loaded:", menuPromo.length);
 
     // ===== DEFAULT DATE / TIME =====
     const now = new Date();
@@ -1567,5 +1574,6 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
