@@ -3365,8 +3365,9 @@ function saveMenuItem() {
     return;
   }
 
-  const nameInput = document.getElementById("menuName");
-  const priceInput = document.getElementById("menuPrice");
+  const nameInput = document.getElementById("menuNameInput");
+  const priceInput = document.getElementById("menuPriceInput");
+  const imageInput = document.getElementById("menuImageInput");
 
   const name = nameInput?.value?.trim();
   const price = parseInt(priceInput?.value || "0");
@@ -3397,17 +3398,35 @@ function saveMenuItem() {
     createdAt: Date.now()
   };
 
-  // pastikan tempMenu ada
-  if (!Array.isArray(window.tempMenu)) {
-    window.tempMenu = [];
-  }
-
+  window.tempMenu = window.tempMenu || [];
   window.tempMenu.push(newMenu);
 
   renderMenuFromMemory?.();
 
-  alert("✅ Menu ditambahkan ke draft (klik SAVE untuk commit)");
+  // reset form
+  nameInput.value = "";
+  priceInput.value = "";
+  imageInput.value = "";
+  document.getElementById("imagePreview").style.display = "none";
+
+  alert("✅ Menu masuk draft. Klik SAVE DATA untuk commit.");
 }
+
+  /* ================= IMAGE TO MEMORY ================= */
+
+  document.getElementById("menuImageInput").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    window.uploadedImageBase64 = evt.target.result;
+    const preview = document.getElementById("imagePreview");
+    preview.src = window.uploadedImageBase64;
+    preview.style.display = "block";
+  };
+  reader.readAsDataURL(file);
+});
   
 /* ================= DELETE MENU ================= */
 
@@ -5244,6 +5263,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
