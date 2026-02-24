@@ -3356,6 +3356,40 @@ document
     reader.readAsDataURL(file);
   });
 
+  function renderMenuFromMemory() {
+
+  const grid = document.getElementById("menuPreviewGrid");
+  if (!grid) return;
+
+  grid.innerHTML = "";
+
+  if (!Array.isArray(window.tempMenu) || window.tempMenu.length === 0) {
+    grid.innerHTML = "<p style='opacity:0.6'>No menu in draft</p>";
+    return;
+  }
+
+  window.tempMenu.forEach(menu => {
+
+    const card = document.createElement("div");
+    card.className = "terminal-card";
+
+    card.innerHTML = `
+      <div class="terminal-card-header">
+        <span class="terminal-title">${menu.category?.name || "MENU"}</span>
+      </div>
+      <div class="terminal-card-body">
+        ${menu.image ? `<img src="${menu.image}" style="width:100%;height:120px;object-fit:cover;margin-bottom:10px;">` : ""}
+        <h3>${menu.name}</h3>
+        <p>Rp ${Number(menu.price).toLocaleString("id-ID")}</p>
+      </div>
+    `;
+
+    grid.appendChild(card);
+
+  });
+
+}
+
 window.tempMenu = window.tempMenu || [];
 
 function saveMenuItem() {
@@ -5263,6 +5297,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
