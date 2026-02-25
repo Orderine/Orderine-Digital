@@ -3111,7 +3111,7 @@ function uploadPromoImage(event) {
 
 let activeCategoryName = null;
 window.menuCategories = [];
-let uploadedImageBase64 = null;
+window.uploadedImageBase64 = null;
 
 /* ================= SETTINGS ================= */
 
@@ -3411,7 +3411,7 @@ async function saveMenuItem() {
 
   alert("✅ Menu saved successfully!");
 }
-  
+
 /* ================= DELETE MENU ================= */
 
 async function deleteMenu(id) {
@@ -3435,24 +3435,6 @@ async function deleteMenu(id) {
   console.log("🗑️ Menu deleted:", id);
 }
 
-  function uploadMenuImage(event) {
-  console.log("📷 Upload image triggered");
-
-  const file = event?.target?.files?.[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-
-  reader.onload = function(e) {
-    const imagePreview = document.getElementById("menuImagePreview");
-    if (imagePreview) {
-      imagePreview.src = e.target.result;
-    }
-  };
-
-  reader.readAsDataURL(file);
-}
-  
 /* ============================================================
    ROOM
 ============================================================ */
@@ -5192,6 +5174,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
