@@ -2688,10 +2688,6 @@ const DB_NAME = window.MENUVA_DB.NAME;
 const STORE_NAME = window.MENUVA_DB.STORE;
 const DB_VERSION = window.MENUVA_DB.VERSION;
 
-  // ====================== MEMORY STATE ======================
-let tempMenu = [];
-let tempPromo = [];
-let tempVoucher = [];
 
   /* ====================== MENUVA DATA DB HELPERS ====================== */
 
@@ -3194,11 +3190,17 @@ function flashTerminalMessage(text) {
 /* ================= CATEGORY LOAD ================= */
 
 async function loadCategories() {
+
+  const restoId = window.activeUser?.restoID;
+  if (!restoId) return;
+
   const menus = await MENUVA_DB.getAll("menuData");
+
+  const filteredMenus = menus.filter(m => m.restoId === restoId);
 
   const unique = {};
 
-  menus.forEach(m => {
+  filteredMenus.forEach(m => {
     if (m.category?.name) {
       unique[m.category.name] = m.category;
     }
@@ -3212,7 +3214,6 @@ async function loadCategories() {
 
   renderCategoryFilter();
 }
-
 /* ================= CATEGORY FILTER RENDER ================= */
 
 function renderCategoryFilter() {
@@ -3283,9 +3284,14 @@ function saveCategory() {
 /* ================= MENU PREVIEW ================= */
 
 async function renderMenuPreview(categoryName) {
+
+  const restoId = window.activeUser?.restoID;
+  if (!restoId) return;
+
   const menus = await MENUVA_DB.getAll("menuData");
 
   const filtered = menus.filter(m =>
+    m.restoId === restoId &&
     m.category?.name === categoryName
   );
 
@@ -3293,7 +3299,6 @@ async function renderMenuPreview(categoryName) {
   grid.innerHTML = "";
 
   filtered.forEach(menu => {
-
     const card = document.createElement("div");
     card.className = "terminal-menu-card";
 
@@ -3306,7 +3311,7 @@ async function renderMenuPreview(categoryName) {
       <h4>${menu.name}</h4>
       <div class="menu-code">${menu.menuCode}</div>
       <p>Rp ${menu.price.toLocaleString()}</p>
-      <button onclick="deleteMenu(${menu.id})">DELETE</button>
+      <button onclick="deleteMenu('${menu.id}')">DELETE</button>
     `;
 
     grid.appendChild(card);
@@ -3356,67 +3361,24 @@ document
     reader.readAsDataURL(file);
   });
 
-  function renderMenuFromMemory() {
-
-  const grid = document.getElementById("menuPreviewGrid");
-  if (!grid) return;
-
-  grid.innerHTML = "";
-
-  if (!Array.isArray(window.tempMenu) || window.tempMenu.length === 0) {
-    grid.innerHTML = "<p style='opacity:0.6'>No menu in draft</p>";
-    return;
-  }
-
-  window.tempMenu.forEach(menu => {
-
-    const card = document.createElement("div");
-    card.className = "terminal-card";
-
-    card.innerHTML = `
-      <div class="terminal-card-header">
-        <span class="terminal-title">${menu.category?.name || "MENU"}</span>
-      </div>
-      <div class="terminal-card-body">
-        ${menu.image ? `<img src="${menu.image}" style="width:100%;height:120px;object-fit:cover;margin-bottom:10px;">` : ""}
-        <h3>${menu.name}</h3>
-        <p>Rp ${Number(menu.price).toLocaleString("id-ID")}</p>
-      </div>
-    `;
-
-    grid.appendChild(card);
-
-  });
-
-}
-
-window.tempMenu = window.tempMenu || [];
-
-function saveMenuItem() {
+ 
+async function saveMenuItem() {
 
   if (!window.activeUser?.restoID) {
     alert("❌ Session tidak valid");
     return;
   }
 
-  const nameInput = document.getElementById("menuNameInput");
-  const priceInput = document.getElementById("menuPriceInput");
-  const imageInput = document.getElementById("menuImageInput");
+  const name = document.getElementById("menuNameInput")?.value.trim();
+  const price = parseInt(document.getElementById("menuPriceInput")?.value || "0");
 
-  const name = nameInput?.value?.trim();
-  const price = parseInt(priceInput?.value || "0");
-
-  if (!name) {
-    alert("❌ Nama menu wajib diisi");
-    return;
-  }
-
-  if (!price || price <= 0) {
-    alert("❌ Harga tidak valid");
-    return;
-  }
+  if (!name) return alert("❌ Nama menu wajib diisi");
+  if (!price || price <= 0) return alert("❌ Harga tidak valid");
 
   const restoId = window.activeUser.restoID;
+  const categoryName = window.activeCategoryName || "Uncategorized";
+
+  const menuCode = await generateMenuCode(categoryName);
 
   const newMenu = {
     id: crypto.randomUUID(),
@@ -3425,57 +3387,50 @@ function saveMenuItem() {
     price,
     image: window.uploadedImageBase64 || "",
     category: {
-      name: window.activeCategoryName || "Uncategorized",
-      prefix: generateCategoryPrefix(window.activeCategoryName || "UNC")
+      name: categoryName,
+      prefix: generateCategoryPrefix(categoryName)
     },
-    menuCode: generateMenuCode?.() || "AUTO",
+    menuCode,
     createdAt: Date.now()
   };
 
-  window.tempMenu = window.tempMenu || [];
-  window.tempMenu.push(newMenu);
+  await MENUVA_DB.add("menuData", newMenu);
 
-  renderMenuFromMemory?.();
+  // reload UI
+  await loadCategories();
+  await renderMenuPreview(categoryName);
 
   // reset form
-  nameInput.value = "";
-  priceInput.value = "";
-  imageInput.value = "";
+  document.getElementById("menuNameInput").value = "";
+  document.getElementById("menuPriceInput").value = "";
+  document.getElementById("menuImageInput").value = "";
   document.getElementById("imagePreview").style.display = "none";
+  window.uploadedImageBase64 = null;
 
-  alert("✅ Menu masuk draft. Klik SAVE DATA untuk commit.");
+  alert("✅ Menu saved successfully!");
 }
-
-  /* ================= IMAGE TO MEMORY ================= */
-
-  document.getElementById("menuImageInput").addEventListener("change", function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    window.uploadedImageBase64 = evt.target.result;
-    const preview = document.getElementById("imagePreview");
-    preview.src = window.uploadedImageBase64;
-    preview.style.display = "block";
-  };
-  reader.readAsDataURL(file);
-});
   
 /* ================= DELETE MENU ================= */
 
 async function deleteMenu(id) {
   if (!confirm("Delete this menu?")) return;
 
+  const restoId = window.activeUser?.restoID;
+  if (!restoId) return;
+
   await MENUVA_DB.delete("menuData", id);
 
+  // Reload kategori (sudah auto filter by resto)
   await loadCategories();
 
-  if (activeCategoryName) {
-    await renderMenuPreview(activeCategoryName);
+  if (window.activeCategoryName) {
+    await renderMenuPreview(window.activeCategoryName);
   } else {
-    document.getElementById("menuPreviewGrid").innerHTML = "";
+    const grid = document.getElementById("menuPreviewGrid");
+    if (grid) grid.innerHTML = "";
   }
+
+  console.log("🗑️ Menu deleted:", id);
 }
 
   function uploadMenuImage(event) {
@@ -3974,44 +3929,6 @@ async function simpanData() {
       });
     }
 
-    /* ==========================================================
-       3️⃣ REPLACE PROMO
-    ========================================================== */
-
-    const allPromo = await MENUVA_DB.getAll("menuPromo");
-
-    for (const p of allPromo) {
-      if (p.restoId === restoId) {
-        await MENUVA_DB.delete("menuPromo", p.id);
-      }
-    }
-
-    for (const promo of tempPromo) {
-      await MENUVA_DB.add("menuPromo", {
-        ...promo,
-        restoId
-      });
-    }
-
-    /* ==========================================================
-       4️⃣ REPLACE VOUCHER
-    ========================================================== */
-
-    const allVoucher = await MENUVA_DB.getAll("menuVoucher");
-
-    for (const v of allVoucher) {
-      if (v.restoId === restoId) {
-        await MENUVA_DB.delete("menuVoucher", v.id);
-      }
-    }
-
-    for (const voucher of tempVoucher) {
-      await MENUVA_DB.add("menuVoucher", {
-        ...voucher,
-        restoId
-      });
-    }
-
     console.log("💾 SIMPAN DATA SUCCESS (CLEAN MODE) →", restoId);
 
     /* ==========================================================
@@ -4265,29 +4182,31 @@ async function loadData() {
       if (img) img.src = resto.logo;
     }
 
-    // ================= MENU SYSTEM BARU =================
-    // Ambil kategori dari menuData store
-    await loadCategories();
+   // ================= MENU SYSTEM =================
+await loadCategories();
 
-    if (activeCategoryName) {
-      await renderMenuPreview(activeCategoryName);
-    }
+if (window.activeCategoryName) {
+  await renderMenuPreview(window.activeCategoryName);
+}
 
-    console.log("🍽️ Menu system loaded (menuData store)");
+console.log("🍽️ Menu system loaded");
 
-    // ================= PROMO (STORE BARU) =================
-window.menuPromo = await MENUVA_DB.getAll("menuPromo");
-window.menuPromo = window.menuPromo.filter(p => p.restoId === restoId);
+// ================= PROMO =================
+const allPromo = await MENUVA_DB.getAll("menuPromo");
+window.menuPromo = allPromo.filter(p => p.restoId === restoId);
 
-// ================= VOUCHER (STORE BARU) =================
-window.menuVoucher = await MENUVA_DB.getAll("menuVoucher");
-window.menuVoucher = window.menuVoucher.filter(v => v.restoId === restoId);
-    
-    try { renderPromoUI?.(); }
-    catch (e) { console.warn("⚠️ renderPromoUI error:", e); }
+renderPromoFilterBar();
+renderPromoUI();
 
-    try { renderVoucher?.(window.menuVoucher); }
-    catch (e) { console.warn("⚠️ renderVoucher error:", e); }
+console.log("🎯 Promo system loaded");
+
+// ================= VOUCHER =================
+const allVoucher = await MENUVA_DB.getAll("menuVoucher");
+window.menuVoucher = allVoucher.filter(v => v.restoId === restoId);
+
+renderVoucher(window.menuVoucher);
+
+console.log("🎟️ Voucher system loaded");
 
     // ================= FLIPBOOK =================
     window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages)
@@ -4723,23 +4642,7 @@ function bindAdminEvents() {
 }, 0);
 
 
-async function loadAdminData() {
-  const restoId = window.activeUser?.restoID;
-  if (!restoId) return;
-
-  const allMenu = await MENUVA_DB.getAll("menuData");
-  const allPromo = await MENUVA_DB.getAll("menuPromo");
-  const allVoucher = await MENUVA_DB.getAll("menuVoucher");
-
-  tempMenu = allMenu.filter(m => m.restoId === restoId);
-  tempPromo = allPromo.filter(p => p.restoId === restoId);
-  tempVoucher = allVoucher.filter(v => v.restoId === restoId);
-
-  renderMenuFromMemory();
-  renderPromoFromMemory();
-  renderVoucherFromMemory();
-}
-  
+   // ==================== DOM ====================
 document.addEventListener("DOMContentLoaded", async () => {
   console.group("🚀 ADMIN ENTERPRISE INIT");
 
@@ -4775,7 +4678,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeCall("initWaAdminUI", window.initWaAdminUI);
     safeCall("initPageToggles", window.initPageToggles);
     safeCall("bindCustomerButtons", window.bindCustomerButtons);
-    safeCall("loadAdminData", window.loadAdminData);
     safeCall("startRealtimeOrderChecker", window.startRealtimeOrderChecker);
     
 
@@ -5297,6 +5199,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
