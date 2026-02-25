@@ -3867,6 +3867,7 @@ async function simpanData() {
     const restoPhone   = getVal?.("restoPhone") || "";
     const logo         = document.getElementById("previewLogo")?.src || "";
     const nomorWaAdmin = collectWaFromUI?.() || [];
+    const rooms = ambilSemuaRoom();
 
     if (!restoPhone) {
       alert("❌ Nomor telepon resto wajib diisi!");
@@ -3902,6 +3903,10 @@ await window.MENUVA_DB.add("restos", {
   nomorWaAdmin,
   locationCode,
   categories,
+  rooms,
+
+  flipbookRuanganImages: window.flipbookRuanganImages || [],
+  flipbookMenuImages: window.flipbookMenuImages || [],
   updatedAt: Date.now()
 });
 
@@ -4845,7 +4850,7 @@ async function loadVouchers() {
   const restoId = window.activeUser?.restoID;
   if (!restoId) return [];
 
-  const list = (await MENUVA_DB.getAll("voucherData"))
+  const list = (await MENUVA_DB.getAll("menuVoucher"))
     .filter(v => v.restoId === restoId);
 
   const today = new Date();
@@ -4857,7 +4862,7 @@ async function loadVouchers() {
   return active;
 }
 
-/* ===================== SAVE VOUCHER FINAL ===================== */
+/* ===================== SAVE VOUCHER FINAL (FIXED) ===================== */
 window.saveVoucher = async function () {
   try {
     console.log("💾 saveVoucher triggered");
@@ -4889,9 +4894,13 @@ window.saveVoucher = async function () {
       : [];
 
     // =========================
-    // CEK DUPLIKAT KODE
+    // CEK DUPLIKAT (CEK DB JUGA)
     // =========================
-    const alreadyExist = window.menuVoucher.some(v => v.code === code);
+    const allVoucher = await MENUVA_DB.getAll("menuVoucher");
+    const alreadyExist = allVoucher.some(
+      v => v.restoId === restoId && v.code === code
+    );
+
     if (alreadyExist) {
       alert("⚠️ Voucher code sudah ada");
       return;
@@ -4910,7 +4919,12 @@ window.saveVoucher = async function () {
     };
 
     // =========================
-    // PUSH STATE
+    // SAVE KE STORE BARU
+    // =========================
+    await MENUVA_DB.add("menuVoucher", voucher);
+
+    // =========================
+    // UPDATE STATE
     // =========================
     window.menuVoucher.push(voucher);
 
@@ -4918,11 +4932,6 @@ window.saveVoucher = async function () {
     // RENDER UI
     // =========================
     renderVoucher(window.menuVoucher);
-
-    // =========================
-    // SIMPAN KE DB
-    // =========================
-    await simpanData(); // <<< INI YANG PENTING
 
     // =========================
     // RESET FORM
@@ -4979,17 +4988,21 @@ function renderVoucher(vouchers = []) {
   `;
 }
 
- async function deleteVoucher(id) {
+/* ===================== DELETE VOUCHER FINAL ===================== */
+async function deleteVoucher(id) {
   try {
-    // =========================
-    // INIT STATE SAFETY
-    // =========================
+
     window.menuVoucher = Array.isArray(window.menuVoucher)
       ? window.menuVoucher
       : [];
 
     // =========================
-    // FILTER DATA
+    // DELETE DARI DB
+    // =========================
+    await MENUVA_DB.delete("menuVoucher", id);
+
+    // =========================
+    // UPDATE STATE
     // =========================
     window.menuVoucher = window.menuVoucher.filter(v => v.id !== id);
 
@@ -4998,18 +5011,12 @@ function renderVoucher(vouchers = []) {
     // =========================
     renderVoucher(window.menuVoucher);
 
-    // =========================
-    // SIMPAN DB
-    // =========================
-    await simpanData();
-
     console.log("🗑️ Voucher deleted:", id);
 
   } catch (err) {
     console.error("❌ deleteVoucher error:", err);
   }
 }
-
 
 /* ===================== COPY HELPER ===================== */
 function copyVoucherCode(code) {
@@ -5178,6 +5185,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
