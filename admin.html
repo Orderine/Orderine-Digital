@@ -3109,7 +3109,7 @@ function uploadPromoImage(event) {
 
 /* ================= MENU CATEGORY SYSTEM CLEAN ================= */
 
-let activeCategoryName = null;
+window.activeCategoryName = null;
 window.menuCategories = [];
 window.uploadedImageBase64 = null;
 
@@ -3208,9 +3208,9 @@ async function loadCategories() {
 
   window.menuCategories = Object.values(unique);
 
-  if (!activeCategoryName && window.menuCategories.length) {
-    activeCategoryName = window.menuCategories[0].name;
-  }
+ if (!window.activeCategoryName && window.menuCategories.length) {
+  window.activeCategoryName = window.menuCategories[0].name;
+}
 
   renderCategoryFilter();
 }
@@ -3231,15 +3231,15 @@ function renderCategoryFilter() {
     // 🔥 Jangan pakai icon kalau tidak ada
     btn.textContent = cat.name;
 
-    if (cat.name === activeCategoryName) {
-      btn.classList.add("active");
-    }
+    if (cat.name === window.activeCategoryName) {
+     btn.classList.add("active");
+      }
 
-    btn.onclick = async () => {
-      activeCategoryName = cat.name;
-      renderCategoryFilter();
-      await renderMenuPreview(cat.name);
-    };
+   btn.onclick = async () => {
+  window.activeCategoryName = cat.name;
+  renderCategoryFilter();
+  await renderMenuPreview(cat.name);
+};
 
     container.appendChild(btn);
   });
@@ -3381,8 +3381,14 @@ async function saveMenuItem() {
   if (!name) return alert("❌ Nama menu wajib diisi");
   if (!price || price <= 0) return alert("❌ Harga tidak valid");
 
+  // 🔥 GUARD CATEGORY
+  if (!window.activeCategoryName) {
+    alert("Pilih category dulu sebelum save menu");
+    return;
+  }
+
   const restoId = window.activeUser.restoID;
-  const categoryName = window.activeCategoryName || "Uncategorized";
+  const categoryName = window.activeCategoryName; // ❌ TANPA fallback
 
   const menuCode = await generateMenuCode(categoryName);
 
@@ -3402,7 +3408,6 @@ async function saveMenuItem() {
 
   await MENUVA_DB.add("menuData", newMenu);
 
-  // reload UI
   await loadCategories();
   await renderMenuPreview(categoryName);
 
@@ -5185,6 +5190,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
