@@ -370,18 +370,19 @@ async function getRestoId() {
 ======================= */
 async function loadMenuPageData(restoId) {
   const resto = await MENUVA_DB.get("restos", restoId);
-
   if (!resto) return null;
+
+  // 🔥 Ambil promo dari store menuPromo
+  const allPromos = await MENUVA_DB.getAll("menuPromo");
+
+  const filteredPromos = allPromos.filter(
+    p => p.restoId === restoId
+  );
 
   return {
     resto,
+    promo: filteredPromos,
 
-    // promo disimpan menyatu di resto
-    promo: Array.isArray(resto.menuPromo)
-      ? resto.menuPromo
-      : [],
-
-    // flipbook juga MENYATU di resto
     flipbookRuangan: Array.isArray(resto.flipbookRuanganImages)
       ? resto.flipbookRuanganImages
       : [],
@@ -391,7 +392,6 @@ async function loadMenuPageData(restoId) {
       : []
   };
 }
-
 /* =======================
    RENDER
 ======================= */
@@ -653,6 +653,7 @@ async function goToPage(page) {
 
 </body>
 </html>
+
 
 
 
