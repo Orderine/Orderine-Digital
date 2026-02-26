@@ -590,42 +590,38 @@ function renderFlipbookGallery(id, images = [], warnId) {
 async function initMenuPage() {
   console.log("▶️ initMenuPage");
 
-  const restoId = await getRestoId();   // ✅ FIX
+  const restoId = await getRestoId();
   if (!restoId) {
     console.warn("❌ Resto ID tidak ditemukan");
     return;
   }
 
-  const resto = await MENUVA_DB.get("restos", restoId);
-  if (!resto) {
+  const data = await loadMenuPageData(restoId);
+  if (!data) {
     showFallbackUI("Menu belum tersedia");
     return;
   }
 
-  renderHeader(resto);
+  renderHeader(data.resto);
 
-  renderPromo(Array.isArray(resto.menuPromo) ? resto.menuPromo : []);
+  // 🔥 INI YANG BENAR
+  renderPromo(data.promo);
 
   renderFlipbookGallery(
     "flipbookRuanganGallery",
-    Array.isArray(resto.flipbookRuanganImages)
-      ? resto.flipbookRuanganImages
-      : [],
+    data.flipbookRuangan,
     "ruanganWarning"
   );
 
   renderFlipbookGallery(
     "flipbookMenuGallery",
-    Array.isArray(resto.flipbookMenuImages)
-      ? resto.flipbookMenuImages
-      : [],
+    data.flipbookMenu,
     "menuWarning"
   );
 
   console.log("✅ Menu ready");
 }
-
-
+  
 /* =======================
    START
 ======================= */
@@ -653,15 +649,3 @@ async function goToPage(page) {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
