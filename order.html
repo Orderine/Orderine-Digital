@@ -613,15 +613,33 @@ body.dark .qty-controls span {
 </div>
   
 <script>
-  const enabled = localStorage.getItem("page_order");
-  if (enabled === "false" || enabled === null) {
-    window.location.href = "menu.html"; 
-    // atau tampilkan pesan kalau mau:
-    // document.body.innerHTML = "<h2>⚠️ Reservation & Delivery tidak aktif</h2>";
-  }
-</script>
 
-<script>
+  (async () => {
+
+  await new Promise(resolve => {
+    const check = () => {
+      if (window.MENUVA_DB) resolve();
+      else setTimeout(check, 50);
+    };
+    check();
+  });
+
+  const session = await MENUVA_DB.getSession();
+  if (!session?.restoID) {
+    window.location.href = "menu.html";
+    return;
+  }
+
+  const resto = await MENUVA_DB.get("restos", session.restoID);
+  const enabled = resto?.settings?.orderPageEnabled ?? true;
+
+  if (!enabled) {
+    window.location.href = "menu.html";
+    return;
+  }
+
+})();
+  
 /* ================= THEME (restore + toggle) ================= */
 const THEME_KEY = 'menuva_theme';
 function applyTheme() {
@@ -708,117 +726,6 @@ function updateSemuaHarga() {
   updateRingkasan();
 }
 
-/* ================== IndexedDB & data load ================== */
-let db;
-const DB_NAME = "MenuvaDB";
-const STORE_NAME = "menuvaData";
-const DB_VERSION = 14; // harus sama persis dengan admin.html
-let data = {};
-const pesanan = {};
-
-// Helper: read ?resto= param
-function getRestoParam() {
-  try {
-    const p = new URLSearchParams(window.location.search);
-    return p.get('resto') || null;
-  } catch (e) { return null; }
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-  applyTheme();
-  initLocaleSelect();
-  try {
-    await initDB();
-    await loadDataFromDB();
-  } catch (err) {
-    console.warn("DB init/load warning:", err);
-  }
-  // Render (safe: functions will guard DOM)
-  tampilkanHeader();
-  tampilkanFilterKategori();
-  tampilkanPromo();
-  tampilkanMenu();
-  updateRingkasan();
-});
-
-function initDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onerror = () => reject(req.error);
-    req.onsuccess = (e) => {
-      db = e.target.result;
-      resolve(db);
-    };
-    // important: do NOT create objectStore here — admin.html should manage schema
-    req.onupgradeneeded = (e) => {
-      // If DB doesn't exist, create a store so getAll won't throw in older browsers.
-      // BUT keep minimal: create only if absent to avoid overriding admin logic.
-      db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "restoId" });
-        console.log("initDB: created object store (order page fallback)");
-      }
-    };
-  });
-}
-
-function loadDataFromDB() {
-  return new Promise((resolve, reject) => {
-    if (!db) return resolve({});
-    // if store doesn't exist, return empty
-    if (!db.objectStoreNames.contains(STORE_NAME)) {
-      console.warn("store not found:", STORE_NAME);
-      return resolve({});
-    }
-
-    const restoParam = getRestoParam();
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORE_NAME);
-
-    if (restoParam) {
-      try {
-        const req = store.get(restoParam);
-        req.onsuccess = () => {
-          data = req.result || {};
-          console.log("Loaded data by resto param:", restoParam, data);
-          resolve(data);
-        };
-        req.onerror = () => {
-          console.warn("get by key error:", req.error);
-          resolve({});
-        };
-      } catch (err) {
-        console.warn("get by key exception:", err);
-        resolve({});
-      }
-      return;
-    }
-
-    // fallback: getAll and pick first record with restoId
-    try {
-      const allReq = store.getAll();
-      allReq.onsuccess = () => {
-        const all = allReq.result || [];
-        if (all.length === 0) {
-          data = {};
-          return resolve({});
-        }
-        const firstWithKey = all.find(r => r && (r.restoId || r.restoPhone));
-        data = firstWithKey || all[0];
-        console.log("Loaded first available data:", data);
-        resolve(data);
-      };
-      allReq.onerror = () => {
-        console.warn("getAll error:", allReq.error);
-        resolve({});
-      };
-    } catch (err) {
-      console.error("loadDataFromDB exception:", err);
-      resolve({});
-    }
-  });
-}
-
 /* =================== SAFETY: escape HTML =================== */
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -879,6 +786,26 @@ function tampilkanFilterKategori() {
     btn.onclick = () => tampilkanMenu(k, btn);
     tabContainer.appendChild(btn);
   });
+}
+
+  async function loadOrderData() {
+
+  const session = await MENUVA_DB.getSession();
+  if (!session?.restoID) return {};
+
+  const restoID = session.restoID;
+
+  const resto = await MENUVA_DB.get("restos", restoID);
+  const menu = await MENUVA_DB.getAll("menuData");
+  const promo = await MENUVA_DB.getAll("menuPromo");
+  const voucher = await MENUVA_DB.getAll("menuVoucher");
+
+  return {
+    ...resto,
+    menu: menu.filter(m => m.restoID === restoID),
+    menuPromo: promo.filter(p => p.restoID === restoID),
+    menuVoucher: voucher.filter(v => v.restoID === restoID)
+  };
 }
 
 function tampilkanMenu(kategori = null, btn = null) {
@@ -1217,7 +1144,7 @@ async function autoApplyVoucher() {
 
   // === LOAD VOUCHER DARI DATABASE ===
 async function loadVoucherList() {
-  const data = await loadDataFromDB(1);
+  const data = await loadOrderData(1);
 
   if (!Array.isArray(data.menuVoucher)) return [];
 
@@ -1228,29 +1155,23 @@ async function loadVoucherList() {
 }
 
 
-// Event attach
-document.addEventListener("DOMContentLoaded", () => {
-  const voucherInput = document.getElementById("voucherInput");
-  if (voucherInput) {
-    ["input", "keyup", "change", "blur"].forEach(evt => {
-      voucherInput.addEventListener(evt, autoApplyVoucher);
-    });
-  }
-});
+document.addEventListener("DOMContentLoaded", async () => {
+  applyTheme();
+  initLocaleSelect();
 
+  try {
+    data = await loadOrderData();
+  } catch (err) {
+    console.warn("DB init/load warning:", err);
+    data = {};
+  }
+
+  tampilkanHeader();
+  tampilkanFilterKategori();
+  tampilkanPromo();
+  tampilkanMenu();
+  updateRingkasan();
+});
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
