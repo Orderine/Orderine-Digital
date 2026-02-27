@@ -510,7 +510,71 @@ body.dark .qty-controls span {
   background: #ffecec !important;
   transition: 0.25s;
 }
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 18px;
+}
 
+.menu-grid .order-menu-card {
+  padding: 15px;
+  border-radius: 14px;
+  box-sizing: border-box;
+}
+
+.order-menu-card img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+:root {
+  --neon-green: #00ff9f;
+  --neon-blue: #00d4ff;
+  --neon-pink: #ff2bd6;
+  --cyber-bg: #0b0f14;
+  --cyber-panel: #11161d;
+}
+
+body.dark-mode {
+  background: var(--cyber-bg);
+}
+
+.section-title {
+  color: var(--neon-green);
+  letter-spacing: 1px;
+  text-shadow: 0 0 6px var(--neon-green);
+}
+
+.promo-card,
+.order-menu-card {
+  background: var(--cyber-panel);
+  border: 1px solid rgba(0,255,159,0.2);
+  box-shadow: 0 0 15px rgba(0,255,159,0.1);
+  transition: 0.3s;
+}
+
+.promo-card:hover,
+.order-menu-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 20px var(--neon-blue);
+}
+
+button {
+  background: linear-gradient(45deg, var(--neon-green), var(--neon-blue));
+  border: none;
+  color: black;
+  font-weight: bold;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  box-shadow: 0 0 15px var(--neon-pink);
+}
 </style>
 </head>
 <body>
@@ -736,6 +800,49 @@ function tampilkanHeader() {
   if (telpEl) telpEl.textContent = telp;
 }
 
+  function renderPromoList(promoList) {
+
+  const container = document.getElementById("promoContainer");
+  container.innerHTML = "";
+
+  promoList.forEach(promo => {
+
+    const card = document.createElement("div");
+    card.className = "promo-card";
+
+    card.innerHTML = `
+      <h3 class="promo-title">
+        ${escapeHtml(promo.namaPromo)}
+      </h3>
+
+      <p class="promo-desc">
+        ${escapeHtml(promo.deskripsi)}
+      </p>
+
+      <div class="promo-price">
+        ${promo.harga ? formatHarga(promo.harga) : ""}
+      </div>
+
+      <div class="promo-code">
+        ${promo.kodePromo}
+      </div>
+
+      <div class="promo-countdown" id="countdown-${promo.id}"></div>
+
+      <button onclick="addPromoToCart('${promo.id}')">
+        Order Now
+      </button>
+    `;
+
+    container.appendChild(card);
+
+    if (promo.expiredAt) {
+      startCountdown(promo.id, promo.expiredAt);
+    }
+
+  });
+}
+
 async function loadPromoMenus() {
 
   const session = await MENUVA_DB.getSession();
@@ -780,6 +887,33 @@ async function loadPromoMenus() {
 
     container.appendChild(card);
   });
+}
+
+  function startCountdown(id, endTime) {
+
+  const el = document.getElementById(`countdown-${id}`);
+  if (!el) return;
+
+  function update() {
+
+    const now = new Date().getTime();
+    const target = new Date(endTime).getTime();
+    const diff = target - now;
+
+    if (diff <= 0) {
+      el.innerText = "EXPIRED";
+      return;
+    }
+
+    const h = Math.floor(diff / (1000 * 60 * 60));
+    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+    el.innerText = `Ends in ${h}h ${m}m ${s}s`;
+  }
+
+  update();
+  setInterval(update, 1000);
 }
 
   function addPromoToCart(promoId) {
@@ -910,6 +1044,7 @@ async function loadOrderMenus() {
 }
   
 /* =================== PROMO =================== */
+
 function ubahJumlahPromo(index, delta) {
   pesanan[index] = Math.max(0, (pesanan[index] || 0) + delta);
   const el = document.getElementById(`qty-${index}`);
@@ -1266,5 +1401,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 </script>
 </body>
 </html>
+
 
 
