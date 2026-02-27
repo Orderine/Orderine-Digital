@@ -606,6 +606,8 @@ body.dark .qty-controls span {
 <script>
 
   let pesanan = [];
+  window.orderCategories = [];
+  window.activeOrderCategory = null;
 
   (async () => {
 
@@ -733,138 +735,106 @@ function tampilkanHeader() {
   if (telpEl) telpEl.textContent = telp;
 }
 
-function tampilkanFilterKategori() {
-  const tabContainer = document.getElementById('kategoriTabs');
-  if (!tabContainer) return;
-  tabContainer.innerHTML = '';
-  if (!Array.isArray(data.menu) || data.menu.length === 0) return;
-
-  const allBtn = document.createElement('button');
-  allBtn.textContent = 'All';
-  allBtn.classList.add('active');
-  allBtn.onclick = () => tampilkanMenu('Semua', allBtn);
-  tabContainer.appendChild(allBtn);
-
-  const kategoriUnik = [...new Set(data.menu.map(m => m.kategori).filter(Boolean))];
-  kategoriUnik.forEach(k => {
-    const btn = document.createElement('button');
-    btn.textContent = k.charAt(0).toUpperCase() + k.slice(1);
-    btn.onclick = () => tampilkanMenu(k, btn);
-    tabContainer.appendChild(btn);
-  });
-}
-
-  async function loadOrderData() {
+async function loadOrderMenus() {
 
   const session = await MENUVA_DB.getSession();
-  if (!session?.restoID) return {};
+  const restoId = session?.restoID;
 
-  const restoID = session.restoID;
+  if (!restoId) return;
 
-  const resto = await MENUVA_DB.get("restos", restoID);
-  const menu = await MENUVA_DB.getAll("menuData");
-  const promo = await MENUVA_DB.getAll("menuPromo");
-  const voucher = await MENUVA_DB.getAll("menuVoucher");
+  const allMenus = await MENUVA_DB.getAll("menuData");
 
-  return {
-    ...resto,
-    menu: menu.filter(m => m.restoID === restoID),
-    menuPromo: promo.filter(p => p.restoID === restoID),
-    menuVoucher: voucher.filter(v => v.restoID === restoID)
-  };
+  const filtered = allMenus.filter(m => m.restoId === restoId);
+
+  const unique = {};
+
+  filtered.forEach(m => {
+    if (m.category?.name) {
+      unique[m.category.name] = m.category;
+    }
+  });
+
+  window.orderCategories = Object.values(unique);
+
+  if (!window.activeOrderCategory && window.orderCategories.length) {
+    window.activeOrderCategory = window.orderCategories[0].name;
+  }
+
+  renderOrderCategoryFilter();
 }
 
-function tampilkanMenu(kategori = null, btn = null) {
-  const kategoriDipilih = kategori || 'Semua';
-  if (btn) {
-    document.querySelectorAll('#kategoriTabs button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+  function renderOrderCategoryFilter() {
+
+  const container = document.getElementById("orderCategoryBar");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  window.orderCategories.forEach(cat => {
+
+    const btn = document.createElement("button");
+    btn.className = "order-filter-btn";
+    btn.textContent = cat.name;
+
+    if (cat.name === window.activeOrderCategory) {
+      btn.classList.add("active");
+    }
+
+    btn.onclick = async () => {
+      window.activeOrderCategory = cat.name;
+      renderOrderCategoryFilter();
+      await renderOrderMenuGrid(cat.name);
+    };
+
+    container.appendChild(btn);
+  });
+
+  if (window.activeOrderCategory) {
+    renderOrderMenuGrid(window.activeOrderCategory);
   }
+}
 
-  const menuList = document.getElementById('menu-list');
-  if (!menuList) return;
-  menuList.innerHTML = '';
+  async function renderOrderMenuGrid(categoryName) {
 
-  if (!Array.isArray(data.menu) || data.menu.length === 0) {
-    menuList.innerHTML = `<div class="fallback">No menu available</div>`;
-    return;
-  }
+  const restoId = window.activeUser?.restoID;
+  if (!restoId) return;
 
-  data.menu.forEach((item, index) => {
-    if (kategoriDipilih !== 'Semua' && item.kategori !== kategoriDipilih) return;
-    if (pesanan[index] === undefined) pesanan[index] = 0;
-    const hargaNum = Number(item.harga) || 0;
-    const hargaFormatted = formatHarga(hargaNum);
+  const allMenus = await MENUVA_DB.getAll("menuData");
 
-    const itemEl = document.createElement('div');
-    itemEl.className = 'menu-item';
-    itemEl.innerHTML = `
-      <div class="menu-name">${escapeHtml(item.nama || '')}</div>
-      <div class="menu-price" data-price="${hargaNum}" id="price-${index}">${hargaFormatted}</div>
-      <div class="qty-controls">
-        <button data-idx="${index}" data-delta="-1">-</button>
-        <span id="qty-${index}">${pesanan[index]}</span>
-        <button data-idx="${index}" data-delta="1">+</button>
-      </div>
+  const filtered = allMenus.filter(m =>
+    m.restoId === restoId &&
+    m.category?.name === categoryName
+  );
+
+  const grid = document.getElementById("orderMenuGrid");
+  if (!grid) return;
+
+  grid.innerHTML = "";
+
+  filtered.forEach(menu => {
+
+    const card = document.createElement("div");
+    card.className = "order-menu-card";
+
+    card.innerHTML = `
+      ${menu.image ? `
+      <div class="order-img-wrap">
+        <img src="${menu.image}" class="order-img">
+      </div>` : ""}
+
+      <h4>${menu.name}</h4>
+      <div class="order-code">${menu.menuCode}</div>
+      <p>Rp ${menu.price.toLocaleString()}</p>
+      <button onclick="addToCart('${menu.id}')">
+        ADD
+      </button>
     `;
-    menuList.appendChild(itemEl);
-  });
 
-  menuList.querySelectorAll('button[data-idx]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = btn.dataset.idx;
-      const delta = Number(btn.dataset.delta || 0);
-      ubahJumlah(idx, delta);
-    });
+    grid.appendChild(card);
   });
-
-  updateRingkasan();
 }
-
+  
 /* =================== PROMO =================== */
-function tampilkanPromo() {
-  const promoContainer = document.getElementById('promoContainer');
-  if (!promoContainer) return;
-
-  if (!Array.isArray(data.menuPromo) || data.menuPromo.length === 0) {
-    promoContainer.innerHTML = '';
-    return;
-  }
-  promoContainer.innerHTML = '';
-
-  data.menuPromo.forEach((promo, index) => {
-    const promoKey = `promo-${index}`;
-    if (pesanan[promoKey] === undefined) pesanan[promoKey] = 0;
-    const hargaNum = Number(promo.harga) || 0;
-    const hargaFormatted = formatHarga(hargaNum);
-
-    const div = document.createElement('div');
-    div.className = 'promo-card';
-    div.innerHTML = `
-      <div class="promo-badge">Promo</div>
-      ${promo.image ? `<img src="${escapeHtml(promo.image)}" alt="Promo image">` : ''}
-      <div class="promo-name">${escapeHtml(promo.namaPromo || '')}</div>
-      <div class="promo-menu-title">${escapeHtml(promo.namaMenu || '')}</div>
-      <div class="promo-menu-desc">${escapeHtml(promo.deskripsi || '')}</div>
-      <div class="promo-price">${hargaFormatted} ${promo.tanggalAkhir ? `| Until ${escapeHtml(promo.tanggalAkhir)}` : ''}</div>
-      <div class="qty-controls">
-        <button data-key="${promoKey}" data-delta="-1">-</button>
-        <span id="qty-${promoKey}">${pesanan[promoKey]}</span>
-        <button data-key="${promoKey}" data-delta="1">+</button>
-      </div>
-    `;
-    promoContainer.appendChild(div);
-  });
-
-  promoContainer.querySelectorAll('button[data-key]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const key = btn.dataset.key;
-      const delta = Number(btn.dataset.delta || 0);
-      ubahJumlahPromo(key, delta);
-    });
-  });
-}
-
 function ubahJumlahPromo(index, delta) {
   pesanan[index] = Math.max(0, (pesanan[index] || 0) + delta);
   const el = document.getElementById(`qty-${index}`);
@@ -881,32 +851,31 @@ function ubahJumlah(index, delta) {
 }
 
 /* =================== RINGKASAN =================== */
-function updateRingkasan() {
-  let totalQty = 0;
+async function updateRingkasan() {
+
+  const session = await MENUVA_DB.getSession();
+  const restoId = session?.restoID;
+  if (!restoId) return;
+
+  const allMenus = await MENUVA_DB.getAll("menuData");
+  const restoMenus = allMenus.filter(m => m.restoId === restoId);
+
   let totalHargaValue = 0;
   const cartEl = document.getElementById("cartItems");
-  if (cartEl) cartEl.innerHTML = ""; // reset isi cart
+  if (cartEl) cartEl.innerHTML = "";
 
-  Object.entries(pesanan).forEach(([key, jumlah]) => {
+  Object.entries(pesanan).forEach(([menuId, jumlah]) => {
+
     if (!jumlah || jumlah <= 0) return;
 
-    let item, harga, nama;
-    if (String(key).startsWith("promo-")) {
-      const idx = parseInt(String(key).split("-")[1], 10);
-      item = (data.menuPromo || [])[idx];
-      harga = Number(item && item.harga) || 0;
-      nama = item?.namaPromo || item?.namaMenu || "Promo";
-    } else {
-      const idx = Number(key);
-      item = (data.menu || [])[idx];
-      harga = Number(item && item.harga) || 0;
-      nama = item?.nama || "Item";
-    }
+    const item = restoMenus.find(m => m.id === menuId);
+    if (!item) return;
 
-    totalQty += jumlah;
+    const harga = Number(item.price) || 0;
+    const nama = item.name;
+
     totalHargaValue += jumlah * harga;
 
-    // bikin row cart
     if (cartEl) {
       const row = document.createElement("div");
       row.className = "cart-row";
@@ -917,22 +886,34 @@ function updateRingkasan() {
       `;
       cartEl.appendChild(row);
     }
+
   });
 
-  // update summary total
   const totalEl = document.getElementById("totalPrice");
   const grandEl = document.getElementById("grandTotal");
+
   if (totalEl) {
     totalEl.innerText = `Total Price = ${formatHarga(totalHargaValue)}`;
     totalEl.dataset.raw = String(totalHargaValue);
     totalEl.dataset.rawOriginal = String(totalHargaValue);
   }
+
   if (grandEl) {
     grandEl.innerText = `Grand Total = ${formatHarga(totalHargaValue)}`;
   }
 
-  // re-apply voucher otomatis
   autoApplyVoucher();
+}
+
+  function addToCart(menuId) {
+
+  if (!pesanan[menuId]) {
+    pesanan[menuId] = 1;
+  } else {
+    pesanan[menuId]++;
+  }
+
+  updateRingkasan();
 }
 
   function formatHarga(amount) {
@@ -946,11 +927,12 @@ function updateRingkasan() {
 
 /* =================== KIRIM PESAN (WhatsApp) =================== */
 function kirimPesanan() {
-  const namaCust = document.getElementById('nama')?.value.trim() || '';
+
+  const namaCust   = document.getElementById('nama')?.value.trim() || '';
   const alamatCust = document.getElementById('alamat')?.value.trim() || '';
   const waktuAntar = document.getElementById('waktuAntar')?.value;
-  const catatan = document.getElementById('catatan')?.value.trim() || '';
-  const ruangan = document.getElementById('ruangan')?.value.trim() || '';
+  const catatan    = document.getElementById('catatan')?.value.trim() || '';
+  const ruangan    = document.getElementById('ruangan')?.value.trim() || '';
 
   if (!data || (!Array.isArray(data.menu) && !Array.isArray(data.menuPromo))) {
     alert('❌ Restaurant data not found.');
@@ -958,61 +940,115 @@ function kirimPesanan() {
   }
 
   const lines = [];
-  let totalHargaAll = 0;
+
   Object.entries(pesanan).forEach(([key, jumlah]) => {
     if (!jumlah || jumlah <= 0) return;
-    if (String(key).startsWith('promo-')) {
-      const idx = parseInt(String(key).split('-')[1], 10);
-      const item = (data.menuPromo || [])[idx];
-      const harga = Number(item && item.harga) || 0;
-      totalHargaAll += harga * jumlah;
-      lines.push(`${item.namaPromo || item.namaMenu || 'Promo'} x${jumlah} (${formatHarga(harga * jumlah)})`);
+
+    let item, harga, nama, kode = "";
+
+    if (String(key).startsWith("promo-")) {
+      const idx = parseInt(String(key).split("-")[1], 10);
+      item = (data.menuPromo || [])[idx];
+      if (!item) return;
+
+      harga = Number(item.harga) || 0;
+      nama  = item.namaPromo || item.namaMenu || "Promo";
+      kode  = item.productCode ? `[${item.productCode}] ` : "";
+
     } else {
       const idx = Number(key);
-      const item = (data.menu || [])[idx];
-      const harga = Number(item && item.harga) || 0;
-      totalHargaAll += harga * jumlah;
-      lines.push(`${item.nama || ''} x${jumlah} (${formatHarga(harga * jumlah)})`);
+      item = (data.menu || [])[idx];
+      if (!item) return;
+
+      harga = Number(item.harga) || 0;
+      nama  = item.nama || "Item";
+      kode  = item.productCode ? `[${item.productCode}] ` : "";
     }
+
+    lines.push(
+      `${kode}${nama} x${jumlah} = ${formatHarga(harga * jumlah)}`
+    );
   });
 
-  if (lines.length === 0) { alert('No items selected.'); return; }
+  if (lines.length === 0) {
+    alert('⚠️ No items selected.');
+    return;
+  }
+
+  /* =================== AMBIL TOTAL DARI SUMMARY =================== */
+
+  const totalEl  = document.getElementById("totalPrice");
+  const grandEl  = document.getElementById("grandTotal");
+  const diskonEl = document.getElementById("voucherDiscount");
+
+  const subtotalRaw = Number(totalEl?.dataset.raw || 0);
+  const subtotalText = formatHarga(subtotalRaw);
+
+  const diskonText = diskonEl?.innerText || "";
+  const grandText  = grandEl?.innerText || "";
+
+  /* =================== FORMAT PESAN =================== */
 
   const now = new Date();
   const waktuOrder = now.toLocaleString("id-ID");
 
-  let pesan = `🧾 New Order from ${namaCust || 'Customer'}\n\n`;
-  pesan += `📅 Order Date: ${waktuOrder}\n`;
-  if (waktuAntar) pesan += `🕒 Delivery Time: ${new Date(waktuAntar).toLocaleString("id-ID")}\n`;
-  if (ruangan) pesan += `🏨 Room: ${ruangan}\n`;
-  pesan += `\n📍 Address:\n${alamatCust}\n\n`;
-  pesan += `🛒 List order:\n${lines.join('\n')}\n\n`;
+  let pesan = `🧾 *NEW ORDER*\n`;
+  pesan += `━━━━━━━━━━━━━━━━━━\n\n`;
 
-  // subtotal (sebelum diskon)
-  pesan += `💰 Total: ${formatHarga(totalHargaAll)}\n`;
+  pesan += `👤 Customer : ${namaCust || 'Customer'}\n`;
+  pesan += `📅 Order Date : ${waktuOrder}\n`;
 
-  // ambil diskon & grand total dari DOM
-  const discountText = document.getElementById("voucherDiscount")?.innerText || "";
-  const grandText = document.getElementById("grandTotal")?.innerText || "";
+  if (waktuAntar) {
+    pesan += `🕒 Delivery Time : ${new Date(waktuAntar).toLocaleString("id-ID")}\n`;
+  }
 
-  if (discountText) pesan += `${discountText}\n`;
-  if (grandText) pesan += `${grandText}\n`;
+  if (ruangan) {
+    pesan += `🏨 Room : ${ruangan}\n`;
+  }
 
-  if (catatan) pesan += `\n📌 Notes:\n${catatan}`;
+  if (alamatCust) {
+    pesan += `\n📍 Address:\n${alamatCust}\n`;
+  }
+
+  pesan += `\n🛒 *ORDER LIST*\n`;
+  pesan += `━━━━━━━━━━━━━━━━━━\n`;
+  pesan += `${lines.join('\n')}\n`;
+  pesan += `━━━━━━━━━━━━━━━━━━\n\n`;
+
+  pesan += `💰 Subtotal : ${subtotalText}\n`;
+
+  if (diskonText) {
+    pesan += `${diskonText}\n`;
+  }
+
+  if (grandText) {
+    pesan += `${grandText}\n`;
+  }
+
+  if (catatan) {
+    pesan += `\n📌 Notes:\n${catatan}\n`;
+  }
+
+  pesan += `\n━━━━━━━━━━━━━━━━━━`;
+
+  /* =================== KIRIM KE ADMIN =================== */
 
   const nomorAdminList = data.nomorWaAdmin || [];
+
   if (!Array.isArray(nomorAdminList) || nomorAdminList.length === 0) {
     alert('⚠️ Tidak ada nomor admin yang tersedia.');
     return;
   }
 
   nomorAdminList.forEach(nomor => {
-    const cleaned = String(nomor).replace(/[^0-9]/g,'');
+    const cleaned = String(nomor).replace(/[^0-9]/g, '');
+    if (!cleaned) return;
+
     const waLink = `https://wa.me/${cleaned}?text=${encodeURIComponent(pesan)}`;
     window.open(waLink, '_blank');
   });
 }
-
+  
 /* ============== Helper ============== */
 function refreshAllPriceDisplays() {
   document.querySelectorAll('.menu-price').forEach(el => {
@@ -1126,45 +1162,23 @@ async function autoApplyVoucher() {
   grandEl.innerText = `Grand Total = ${formatHarga(discounted)}`;
 }
 
-  // === LOAD VOUCHER DARI DATABASE ===
-async function loadVoucherList() {
-  const data = await loadOrderData(1);
-
-  if (!Array.isArray(data.menuVoucher)) return [];
-
-  const today = new Date();
-
-  // filter voucher aktif
-  return data.menuVoucher.filter(v => new Date(v.expiry) >= today);
-}
-
+  // === DOM ===
 
 document.addEventListener("DOMContentLoaded", async () => {
 
-  await applyTheme(); // tambahin await biar konsisten
+  await applyTheme();
 
   const btn = document.getElementById("darkToggle");
-  if (btn) {
-    btn.addEventListener("click", toggleDark);
-  }
+  if (btn) btn.addEventListener("click", toggleDark);
 
-  try {
-    data = await loadOrderData();
-  } catch (err) {
-    console.warn("DB init/load warning:", err);
-    data = {};
-  }
-
-  tampilkanHeader();
-  tampilkanFilterKategori();
-  tampilkanPromo();
-  tampilkanMenu();
-  updateRingkasan();
+  await loadOrderMenus();
+  await updateRingkasan();
 });
   
 </script>
 </body>
 </html>
+
 
 
 
