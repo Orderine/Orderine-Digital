@@ -759,6 +759,13 @@ function formatHarga(amount) {
   }
 }
 
+  function getActiveLocaleCurrency() {
+  return {
+    locale: "id-ID",
+    currency: "IDR"
+  };
+}
+  
 /* =================== SAFETY: escape HTML =================== */
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -800,49 +807,6 @@ function tampilkanHeader() {
   if (telpEl) telpEl.textContent = telp;
 }
 
-  function renderPromoList(promoList) {
-
-  const container = document.getElementById("promoContainer");
-  container.innerHTML = "";
-
-  promoList.forEach(promo => {
-
-    const card = document.createElement("div");
-    card.className = "promo-card";
-
-    card.innerHTML = `
-      <h3 class="promo-title">
-        ${escapeHtml(promo.namaPromo)}
-      </h3>
-
-      <p class="promo-desc">
-        ${escapeHtml(promo.deskripsi)}
-      </p>
-
-      <div class="promo-price">
-        ${promo.harga ? formatHarga(promo.harga) : ""}
-      </div>
-
-      <div class="promo-code">
-        ${promo.kodePromo}
-      </div>
-
-      <div class="promo-countdown" id="countdown-${promo.id}"></div>
-
-      <button onclick="addPromoToCart('${promo.id}')">
-        Order Now
-      </button>
-    `;
-
-    container.appendChild(card);
-
-    if (promo.expiredAt) {
-      startCountdown(promo.id, promo.expiredAt);
-    }
-
-  });
-}
-
 async function loadPromoMenus() {
 
   const session = await MENUVA_DB.getSession();
@@ -867,26 +831,44 @@ async function loadPromoMenus() {
 
   filtered.forEach(promo => {
 
-    const card = document.createElement("div");
-    card.className = "promo-card";
+  const card = document.createElement("div");
+  card.className = "promo-card";
 
-    card.innerHTML = `
-      ${promo.image ? `
-        <div class="promo-img-wrap">
-          <img src="${promo.image}">
-        </div>
-      ` : ""}
+  card.innerHTML = `
+    ${promo.image ? `
+      <div class="promo-img-wrap">
+        <img src="${promo.image}">
+      </div>
+    ` : ""}
 
-      <h3>${escapeHtml(promo.name)}</h3>
-      <p class="promo-price">${formatHarga(promo.price)}</p>
+    <h3>${escapeHtml(promo.namaPromo)}</h3>
 
-      <button onclick="addPromoToCart('${promo.id}')">
-        Order Now
-      </button>
-    `;
+    <p class="promo-desc">
+      ${escapeHtml(promo.deskripsi || "")}
+    </p>
 
-    container.appendChild(card);
-  });
+    <div class="promo-code">
+      ${escapeHtml(promo.kodePromo || "")}
+    </div>
+
+    <p class="promo-price">
+      ${formatHarga(promo.harga || 0)}
+    </p>
+
+    <div class="promo-countdown" id="countdown-${promo.id}"></div>
+
+    <button onclick="addPromoToCart('${promo.id}')">
+      Order Now
+    </button>
+  `;
+
+  container.appendChild(card);
+
+  if (promo.expiredAt) {
+    startCountdown(promo.id, promo.expiredAt);
+  }
+
+});
 }
 
   function startCountdown(id, endTime) {
@@ -1086,8 +1068,8 @@ const combinedItems = [...restoMenus, ...restoPromos];
     const item = combinedItems.find(m => m.id === menuId);
     if (!item) return;
 
-    const harga = Number(item.price) || 0;
-    const nama = item.name;
+   const harga = Number(item.price ?? item.harga) || 0;
+   const nama = item.name ?? item.namaPromo ?? "";
 
     totalHargaValue += jumlah * harga;
 
@@ -1129,15 +1111,6 @@ const combinedItems = [...restoMenus, ...restoPromos];
   }
 
   updateRingkasan();
-}
-
-  function formatHarga(amount) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(Number(amount || 0));
 }
 
 /* =================== KIRIM PESAN (WhatsApp) =================== */
@@ -1401,6 +1374,3 @@ document.addEventListener("DOMContentLoaded", async () => {
 </script>
 </body>
 </html>
-
-
-
