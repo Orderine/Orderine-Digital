@@ -1078,15 +1078,25 @@ function refreshAllPriceDisplays() {
 </script>
 
 <script>
-  window.addEventListener("load", () => {
-    const plan = localStorage.getItem("user_plan"); 
-    const voucherEnabled = localStorage.getItem("page_voucher") === "true";
-    
-    if (plan !== "monthly" && voucherEnabled) {
-      document.getElementById("voucherSection").style.display = "block";
-    }
-  });
+window.addEventListener("load", async () => {
 
+  const session = await MENUVA_DB.getSession();
+  if (!session?.restoID) return;
+
+  const resto = await MENUVA_DB.get("restos", session.restoID);
+  if (!resto) return;
+
+  const plan = resto?.subscription?.plan || "free";
+  const voucherEnabled = resto?.settings?.voucherPageEnabled ?? false;
+
+  if (plan !== "monthly" && voucherEnabled) {
+    const el = document.getElementById("voucherSection");
+    if (el) el.style.display = "block";
+  }
+
+});
+
+  
   // Helper parse angka
 function cleanNumber(val) {
   if (val == null) return 0;
@@ -1203,5 +1213,3 @@ document.addEventListener("DOMContentLoaded", async () => {
 </script>
 </body>
 </html>
-
-
