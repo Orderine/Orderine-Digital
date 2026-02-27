@@ -537,27 +537,20 @@ body.dark .qty-controls span {
   --cyber-panel: #11161d;
 }
 
-body.dark-mode {
-  background: var(--cyber-bg);
-}
-
 .section-title {
   color: var(--neon-green);
   letter-spacing: 1px;
   text-shadow: 0 0 6px var(--neon-green);
 }
 
-.promo-card,
-.order-menu-card {
+body.dark .promo-card,
+body.dark .order-menu-card {
   background: var(--cyber-panel);
   border: 1px solid rgba(0,255,159,0.2);
   box-shadow: 0 0 15px rgba(0,255,159,0.1);
-  transition: 0.3s;
 }
-
-.promo-card:hover,
-.order-menu-card:hover {
-  transform: translateY(-4px);
+body.dark .promo-card:hover,
+body.dark .order-menu-card:hover {
   box-shadow: 0 0 20px var(--neon-blue);
 }
 
@@ -1374,3 +1367,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 </script>
 </body>
 </html>
+
