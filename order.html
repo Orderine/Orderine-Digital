@@ -750,10 +750,16 @@ async function loadOrderMenus() {
   const unique = {};
 
   filtered.forEach(m => {
-    if (m.category?.name) {
-      unique[m.category.name] = m.category;
-    }
-  });
+
+  if (typeof m.category === "string") {
+    unique[m.category] = { name: m.category };
+  }
+
+  if (typeof m.category === "object" && m.category?.name) {
+    unique[m.category.name] = m.category;
+  }
+
+});
 
   window.orderCategories = Object.values(unique);
 
@@ -766,7 +772,7 @@ async function loadOrderMenus() {
 
   function renderOrderCategoryFilter() {
 
-  const container = document.getElementById("orderCategoryBar");
+  const container = document.getElementById("kategoriTabs");
   if (!container) return;
 
   container.innerHTML = "";
@@ -795,19 +801,30 @@ async function loadOrderMenus() {
   }
 }
 
-  async function renderOrderMenuGrid(categoryName) {
+ async function renderOrderMenuGrid(categoryName) {
 
-  const restoId = window.activeUser?.restoID;
+  const session = await MENUVA_DB.getSession();
+  const restoId = session?.restoID;
   if (!restoId) return;
 
   const allMenus = await MENUVA_DB.getAll("menuData");
 
-  const filtered = allMenus.filter(m =>
-    m.restoId === restoId &&
-    m.category?.name === categoryName
-  );
+  const filtered = allMenus.filter(m => {
 
-  const grid = document.getElementById("orderMenuGrid");
+  if (m.restoId !== restoId) return false;
+
+  if (typeof m.category === "string") {
+    return m.category === categoryName;
+  }
+
+  if (typeof m.category === "object") {
+    return m.category?.name === categoryName;
+  }
+
+  return false;
+});
+
+  const grid = document.getElementById("menu-list");
   if (!grid) return;
 
   grid.innerHTML = "";
@@ -825,7 +842,7 @@ async function loadOrderMenus() {
 
       <h4>${menu.name}</h4>
       <div class="order-code">${menu.menuCode}</div>
-      <p>Rp ${menu.price.toLocaleString()}</p>
+      <p>${formatHarga(menu.price)}</p>
       <button onclick="addToCart('${menu.id}')">
         ADD
       </button>
@@ -1186,3 +1203,4 @@ document.addEventListener("DOMContentLoaded", async () => {
 </script>
 </body>
 </html>
+
