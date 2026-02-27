@@ -606,7 +606,7 @@ body.dark .qty-controls span {
 <script>
 
   let data = {};
-  let pesanan = [];
+  let pesanan = {};
   window.orderCategories = [];
   window.activeOrderCategory = null;
 
@@ -1169,25 +1169,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await applyTheme();
 
-  try {
-    data = await loadOrderData(); // JANGAN pakai let / const lagi
-  } catch (err) {
-    console.warn("DB init/load warning:", err);
-    data = {};
-  }
+  const session = await MENUVA_DB.getSession();
+  if (!session?.restoID) return;
+
+  const resto = await MENUVA_DB.get("restos", session.restoID);
+  if (!resto) return;
+
+  // Kalau masih mau pakai variabel global:
+  data = resto;
 
   tampilkanHeader();
-  tampilkanFilterKategori();
-  tampilkanPromo();
+
+  await loadOrderMenus();   // INI pengganti tampilkanFilterKategori
   updateRingkasan();
 });
-  
 </script>
 </body>
 </html>
-
-
-
-
-
-
