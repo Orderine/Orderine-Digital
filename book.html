@@ -827,6 +827,7 @@ async function removeFromCart(index) {
 
         const card = document.createElement("div");
         card.className = "menu-card";
+        catCard.className = 'category-card bb-text';
 
         const hargaNum = Number(m.price) || 0;
 
@@ -835,8 +836,7 @@ async function removeFromCart(index) {
           updateBadge(card, m.name);
         };
 
-        catCard.className = 'category-card bb-text';
-
+  
         card.innerHTML = `
           ${m.image
             ? `<img class="menu-thumb" src="${m.image}" alt="${escapeHtml(m.name)}">`
@@ -883,8 +883,9 @@ async function removeFromCart(index) {
   }
 
   promos.forEach(p => {
-    const card = document.createElement('div');
-    card.className = 'promo-card';
+   const card = document.createElement('div');
+   card.className = 'promo-card';
+   card.classList.add('bb-text');
     card.style.position = 'relative'; // biar badge nempel ke pojok kanan atas
 
     const endAttr = p.endDate ? `data-end="${p.endDate}"` : '';
@@ -897,8 +898,6 @@ async function removeFromCart(index) {
       <div class="promo-price">${formatWithActive(p.harga || 0)}</div>
       <div class="promo-count" ${endAttr}></div>
     `;
-
-    card.className = 'promo-card bb-text';
 
     // 🔹 badge kategori (misal tulisan "PROMO" di pojok kiri)
     const badgeLabel = document.createElement('div');
@@ -1663,4 +1662,5 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
 
