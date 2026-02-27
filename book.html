@@ -818,8 +818,8 @@ async function removeFromCart(index) {
 
   const promos = (list && list.length ? list : menuPromo || []).filter(p => {
     const now = Date.now();
-    if (!p.tanggalAkhir) return true;
-    const end = new Date(p.tanggalAkhir).getTime();
+   if (!p.endDate) return true;
+    const end = new Date(p.endDate).getTime();
     return isFinite(end) ? end > now : true;
   });
 
@@ -834,7 +834,7 @@ async function removeFromCart(index) {
     card.className = 'promo-card';
     card.style.position = 'relative'; // biar badge nempel ke pojok kanan atas
 
-    const endAttr = p.tanggalAkhir ? `data-end="${p.tanggalAkhir}"` : '';
+    const endAttr = p.endDate ? `data-end="${p.endDate}"` : '';
 
     // isi konten utama promo
     card.innerHTML = `
@@ -1607,9 +1607,3 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
-
-
-
-
-
-
