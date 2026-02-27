@@ -4672,7 +4672,7 @@ function bindAdminEvents() {
   toggleOrder.addEventListener("change", async function () {
 
     resto.settings.orderPageEnabled = this.checked;
-    await MENUVA_DB.put("restos", resto);
+    await MENUVA_DB.update("restos", resto);
 
     console.log("🛒 Order Page:", this.checked ? "ENABLED" : "DISABLED");
   });
@@ -4680,7 +4680,7 @@ function bindAdminEvents() {
   toggleRoom.addEventListener("change", async function () {
 
     resto.settings.roomPageEnabled = this.checked;
-    await MENUVA_DB.put("restos", resto);
+    await MENUVA_DB.update("restos", resto);
 
     console.log("🏨 Room Page:", this.checked ? "ENABLED" : "DISABLED");
   });
@@ -5248,6 +5248,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
