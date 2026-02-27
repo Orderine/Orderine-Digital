@@ -643,57 +643,76 @@ body.dark .qty-controls span {
   
 /* ================= THEME (restore + toggle) ================= */
 const THEME_KEY = 'menuva_theme';
-function applyTheme() {
-  const saved = localStorage.getItem(THEME_KEY);
-  const btn = document.getElementById('darkToggle');
-  if (saved === 'dark') {
-    document.body.classList.add('dark');
-    if (btn) btn.textContent = '☀️';
-  } else {
-    document.body.classList.remove('dark');
-    if (btn) btn.textContent = '🌙';
-  }
-}
-function toggleDark() {
-  document.body.classList.toggle('dark');
-  const isDark = document.body.classList.contains('dark');
-  localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
-  const btn = document.getElementById('darkToggle');
-  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
-}
-document.getElementById('darkToggle')?.addEventListener('click', toggleDark);
+async function applyTheme() {
 
-/* ================ LOCALE / CURRENCY LOGIC ================ */
-const LOCALE_KEY = 'menuva_localeChoice';
-function parseLocaleCurrency(value) {
-  if (!value || value === 'auto') return { mode: 'auto' };
-  const parts = String(value).split('|');
-  return { mode: 'manual', locale: parts[0] || '', currency: parts[1] || '' };
+  const session = await MENUVA_DB.getSession();
+  if (!session?.restoID) return;
+
+  const resto = await MENUVA_DB.get("restos", session.restoID);
+  const theme = resto?.settings?.theme || "light";
+
+  document.documentElement.setAttribute("data-theme", theme);
 }
-function detectBrowserLocaleCurrency() {
-  const locale = navigator.language || 'en-US';
-  const fallback = {
-    'id': 'IDR', 'en': 'USD', 'en-GB': 'GBP', 'de': 'EUR',
-    'fr': 'EUR', 'ja': 'JPY', 'zh': 'CNY'
-  };
-  let currency = fallback[locale.split('-')[0]] || 'USD';
-  if (fallback[locale]) currency = fallback[locale];
-  return { locale, currency };
+  
+async function toggleDark() {
+
+  const session = await MENUVA_DB.getSession();
+  if (!session?.restoID) return;
+
+  const resto = await MENUVA_DB.get("restos", session.restoID);
+  if (!resto) return;
+
+  const current = resto.settings?.theme === "dark";
+  const newTheme = current ? "light" : "dark";
+
+  // apply to DOM
+  document.documentElement.setAttribute("data-theme", newTheme);
+
+  // ensure settings object
+  resto.settings = resto.settings || {};
+  resto.settings.theme = newTheme;
+
+  await MENUVA_DB.update("restos", resto);
+
+  const btn = document.getElementById("darkToggle");
+  if (btn) btn.textContent = newTheme === "dark" ? "☀️" : "🌙";
 }
-function getActiveLocaleCurrency() {
-  const sel = document.getElementById('localeSelect');
-  const saved = localStorage.getItem(LOCALE_KEY) || (sel ? sel.value : 'auto');
+  
+async function getActiveLocaleCurrency() {
+
+  const session = await MENUVA_DB.getSession();
+  if (!session?.restoID) return detectBrowserLocaleCurrency();
+
+  const resto = await MENUVA_DB.get("restos", session.restoID);
+
+  const saved = resto?.settings?.localeChoice || "auto";
   const parsed = parseLocaleCurrency(saved);
-  if (parsed.mode === 'auto') {
+
+  if (parsed.mode === "auto") {
     return detectBrowserLocaleCurrency();
-  } else {
-    const browser = detectBrowserLocaleCurrency();
-    return { locale: parsed.locale || browser.locale, currency: parsed.currency || browser.currency };
   }
+
+  const browser = detectBrowserLocaleCurrency();
+  return {
+    locale: parsed.locale || browser.locale,
+    currency: parsed.currency || browser.currency
+  };
 }
-function saveLocaleChoice(value) {
-  localStorage.setItem(LOCALE_KEY, value);
+  
+async function saveLocaleChoice(value) {
+
+  const session = await MENUVA_DB.getSession();
+  if (!session?.restoID) return;
+
+  const resto = await MENUVA_DB.get("restos", session.restoID);
+  if (!resto) return;
+
+  resto.settings = resto.settings || {};
+  resto.settings.localeChoice = value;
+
+  await MENUVA_DB.update("restos", resto);
 }
+  
 function formatHarga(amount) {
   const ac = getActiveLocaleCurrency();
   const locale = ac.locale || undefined;
@@ -711,16 +730,24 @@ function formatHarga(amount) {
   }
 }
 
-function initLocaleSelect() {
-  const sel = document.getElementById('localeSelect');
+async function initLocaleSelect() {
+
+  const sel = document.getElementById("localeSelect");
   if (!sel) return;
-  const saved = localStorage.getItem(LOCALE_KEY) || 'auto';
-  sel.value = saved;
-  sel.addEventListener('change', () => {
-    saveLocaleChoice(sel.value);
+
+  const session = await MENUVA_DB.getSession();
+  if (!session?.restoID) return;
+
+  const resto = await MENUVA_DB.get("restos", session.restoID);
+
+  sel.value = resto?.settings?.localeChoice || "auto";
+
+  sel.addEventListener("change", async () => {
+    await saveLocaleChoice(sel.value);
     updateSemuaHarga();
   });
 }
+  
 function updateSemuaHarga() {
   tampilkanPromo();
   tampilkanMenu();
@@ -1176,4 +1203,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 </script>
 </body>
 </html>
+
 
