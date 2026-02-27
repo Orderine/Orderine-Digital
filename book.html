@@ -269,6 +269,57 @@ footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);paddin
   .fixed-bar{padding:8px}
 }
 
+   /* ===============================
+   BLOOMBERG TERMINAL TEXT STYLE
+   (NO BACKGROUND CHANGE)
+================================= */
+
+:root {
+  --bb-orange: #ff7a00;
+  --bb-green: #00c853;
+  --bb-yellow: #ffcc00;
+  --bb-cyan: #00bcd4;
+}
+
+/* TITLE */
+.bb-text .promo-title,
+.bb-text .menu-title,
+.bb-text .category-title {
+  color: var(--bb-orange);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-shadow: 0 0 4px rgba(255, 122, 0, 0.4);
+}
+
+/* DESKRIPSI */
+.bb-text .promo-desc,
+.bb-text .menu-desc {
+  color: var(--bb-green);
+  font-size: 13px;
+  opacity: 0.95;
+}
+
+/* PRICE */
+.bb-text .promo-price,
+.bb-text .menu-price {
+  color: var(--bb-yellow);
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(255, 204, 0, 0.6);
+}
+
+/* BADGE */
+.bb-text .promo-badge {
+  color: var(--bb-cyan);
+  font-weight: bold;
+}
+
+/* COUNTDOWN */
+.bb-text .promo-count {
+  color: var(--bb-green);
+  font-size: 12px;
+  margin-top: 6px;
+}
 /* End of CSS */
 </style>
 
@@ -784,6 +835,8 @@ async function removeFromCart(index) {
           updateBadge(card, m.name);
         };
 
+        catCard.className = 'category-card bb-text';
+
         card.innerHTML = `
           ${m.image
             ? `<img class="menu-thumb" src="${m.image}" alt="${escapeHtml(m.name)}">`
@@ -845,6 +898,8 @@ async function removeFromCart(index) {
       <div class="promo-count" ${endAttr}></div>
     `;
 
+    card.className = 'promo-card bb-text';
+
     // 🔹 badge kategori (misal tulisan "PROMO" di pojok kiri)
     const badgeLabel = document.createElement('div');
     badgeLabel.className = 'promo-badge';
@@ -885,6 +940,7 @@ async function removeFromCart(index) {
 
     grid.appendChild(card);
   });
+
 
   startPromoCountdown?.();
 }
@@ -1607,3 +1663,4 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
