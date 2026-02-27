@@ -4630,6 +4630,63 @@ function bindAdminEvents() {
   console.log("🔁 WA rendered after init UI");
 }, 0);
 
+    // ==================== DOM TOGGLE PAGE ====================
+
+  window.initPageToggles = async function () {
+
+  console.log("⚙️ Initializing Page Toggles...");
+
+  const toggleOrder = document.getElementById("toggleOrderPage");
+  const toggleRoom  = document.getElementById("toggleRoomPage");
+
+  if (!toggleOrder || !toggleRoom) {
+    console.warn("⚠️ Toggle elements not found");
+    return;
+  }
+
+  // Pastikan activeUser sudah ada
+  if (!window.activeUser?.restoID) {
+    console.warn("⚠️ activeUser not ready for toggle");
+    return;
+  }
+
+  // Ambil data resto
+  const resto = await MENUVA_DB.get("restos", window.activeUser.restoID);
+  if (!resto) {
+    console.warn("⚠️ Resto not found");
+    return;
+  }
+
+  // Pastikan settings object ada
+  resto.settings = resto.settings || {};
+
+  // Default TRUE kalau belum pernah diset
+  const orderEnabled = resto.settings.orderPageEnabled ?? true;
+  const roomEnabled  = resto.settings.roomPageEnabled ?? true;
+
+  toggleOrder.checked = orderEnabled;
+  toggleRoom.checked  = roomEnabled;
+
+  // ================= SAVE EVENT =================
+
+  toggleOrder.addEventListener("change", async function () {
+
+    resto.settings.orderPageEnabled = this.checked;
+    await MENUVA_DB.put("restos", resto);
+
+    console.log("🛒 Order Page:", this.checked ? "ENABLED" : "DISABLED");
+  });
+
+  toggleRoom.addEventListener("change", async function () {
+
+    resto.settings.roomPageEnabled = this.checked;
+    await MENUVA_DB.put("restos", resto);
+
+    console.log("🏨 Room Page:", this.checked ? "ENABLED" : "DISABLED");
+  });
+
+  console.log("✅ Page Toggles Ready");
+};
 
    // ==================== DOM ====================
 document.addEventListener("DOMContentLoaded", async () => {
@@ -4665,7 +4722,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     /* ================= BASIC UI INIT ================= */
 
     safeCall("initWaAdminUI", window.initWaAdminUI);
-    safeCall("initPageToggles", window.initPageToggles);
     safeCall("bindCustomerButtons", window.bindCustomerButtons);
     safeCall("startRealtimeOrderChecker", window.startRealtimeOrderChecker);
     
@@ -4724,8 +4780,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const user = await waitForActiveUser();
     console.log("✅ activeUser ready:", user.email);
 
-    safeCall("renderSubscriptionPanel", window.renderSubscriptionPanel);
+    await safeAwait("initPageToggles", window.initPageToggles);
 
+    safeCall("renderSubscriptionPanel", window.renderSubscriptionPanel);
+    
    /* ================= LOAD DATA ================= */
 
 await safeAwait("loadData", window.loadData);
@@ -5190,6 +5248,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
