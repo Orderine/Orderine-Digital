@@ -643,7 +643,7 @@ async function applyTheme() {
   const resto = await MENUVA_DB.get("restos", session.restoID);
   const theme = resto?.settings?.theme || "light";
 
-  document.documentElement.setAttribute("data-theme", theme);
+  document.body.classList.toggle("dark", theme === "dark");
 
   const btn = document.getElementById("darkToggle");
   if (btn) {
@@ -663,8 +663,8 @@ async function toggleDark() {
   const newTheme = current ? "light" : "dark";
 
   // apply to DOM
-  document.documentElement.setAttribute("data-theme", newTheme);
-
+document.body.classList.toggle("dark", newTheme === "dark");
+  
   // ensure settings object
   resto.settings = resto.settings || {};
   resto.settings.theme = newTheme;
@@ -1165,6 +1165,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 </script>
 </body>
 </html>
+
 
 
 
