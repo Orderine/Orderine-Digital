@@ -825,11 +825,11 @@ async function removeFromCart(index) {
 
       items.forEach(m => {
 
-        const card = document.createElement("div");
-        card.className = "menu-card";
-        catCard.className = 'category-card bb-text';
-
-        const hargaNum = Number(m.price) || 0;
+     const card = document.createElement("div");
+     card.className = "menu-card";
+     card.classList.add("bb-text");
+        
+      const hargaNum = Number(m.price) || 0;
 
         card.onclick = () => {
           addToCartObj(m.name, hargaNum);
@@ -1662,5 +1662,6 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
