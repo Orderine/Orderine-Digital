@@ -736,6 +736,63 @@ function tampilkanHeader() {
   if (telpEl) telpEl.textContent = telp;
 }
 
+async function loadPromoMenus() {
+
+  const session = await MENUVA_DB.getSession();
+  const restoId = session?.restoID;
+  if (!restoId) return;
+
+  const allPromo = await MENUVA_DB.getAll("menuPromo");
+
+  const filtered = allPromo.filter(p => 
+    p.restoId === restoId && p.active !== false
+  );
+
+  const container = document.getElementById("promoContainer");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (!filtered.length) {
+    container.innerHTML = "<p style='opacity:0.6'>No promo available</p>";
+    return;
+  }
+
+  filtered.forEach(promo => {
+
+    const card = document.createElement("div");
+    card.className = "promo-card";
+
+    card.innerHTML = `
+      ${promo.image ? `
+        <div class="promo-img-wrap">
+          <img src="${promo.image}">
+        </div>
+      ` : ""}
+
+      <h3>${escapeHtml(promo.name)}</h3>
+      <p class="promo-price">${formatHarga(promo.price)}</p>
+
+      <button onclick="addPromoToCart('${promo.id}')">
+        Order Now
+      </button>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+  function addPromoToCart(promoId) {
+
+  if (!pesanan[promoId]) {
+    pesanan[promoId] = 1;
+  } else {
+    pesanan[promoId]++;
+  }
+
+  updateRingkasan();
+}
+
 async function loadOrderMenus() {
 
   const session = await MENUVA_DB.getSession();
@@ -876,7 +933,12 @@ async function updateRingkasan() {
   if (!restoId) return;
 
   const allMenus = await MENUVA_DB.getAll("menuData");
-  const restoMenus = allMenus.filter(m => m.restoId === restoId);
+const allPromo = await MENUVA_DB.getAll("menuPromo");
+
+const restoMenus = allMenus.filter(m => m.restoId === restoId);
+const restoPromos = allPromo.filter(p => p.restoId === restoId);
+
+const combinedItems = [...restoMenus, ...restoPromos];
 
   let totalHargaValue = 0;
   const cartEl = document.getElementById("cartItems");
@@ -886,7 +948,7 @@ async function updateRingkasan() {
 
     if (!jumlah || jumlah <= 0) return;
 
-    const item = restoMenus.find(m => m.id === menuId);
+    const item = combinedItems.find(m => m.id === menuId);
     if (!item) return;
 
     const harga = Number(item.price) || 0;
@@ -1197,10 +1259,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   tampilkanHeader();
 
+  await loadPromoMenus();
   await loadOrderMenus();   // INI pengganti tampilkanFilterKategori
   updateRingkasan();
 });
 </script>
 </body>
 </html>
+
 
