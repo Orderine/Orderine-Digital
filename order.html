@@ -605,6 +605,7 @@ body.dark .qty-controls span {
 <script src="db-core.js"></script>
 <script>
 
+  let data = {};
   let pesanan = [];
   window.orderCategories = [];
   window.activeOrderCategory = null;
@@ -1168,16 +1169,23 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await applyTheme();
 
-  const btn = document.getElementById("darkToggle");
-  if (btn) btn.addEventListener("click", toggleDark);
+  try {
+    data = await loadOrderData(); // JANGAN pakai let / const lagi
+  } catch (err) {
+    console.warn("DB init/load warning:", err);
+    data = {};
+  }
 
-  await loadOrderMenus();
-  await updateRingkasan();
+  tampilkanHeader();
+  tampilkanFilterKategori();
+  tampilkanPromo();
+  updateRingkasan();
 });
   
 </script>
 </body>
 </html>
+
 
 
 
