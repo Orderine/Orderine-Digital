@@ -526,16 +526,6 @@ body.dark .qty-controls span {
 
   <div class="header-right">
     <button class="dark-toggle" id="darkToggle" title="Toggle theme">🌙</button>
-    <select id="localeSelect" class="locale-select" title="Change locale / currency">
-      <option value="auto">Auto (browser)</option>
-      <option value="en-US|USD">US — USD</option>
-      <option value="id-ID|IDR">INA — IDR</option>
-      <option value="en-GB|GBP">UK — GBP</option>
-      <option value="de-DE|EUR">Germany — EUR</option>
-      <option value="ja-JP|JPY">Japan — JPY</option>
-      <option value="zh-CN|CNY">China — CNY</option>
-      <option value="fr-FR|EUR">France — EUR</option>
-    </select>
   </div>
 </header>
 
@@ -680,41 +670,6 @@ async function toggleDark() {
   if (btn) btn.textContent = newTheme === "dark" ? "☀️" : "🌙";
 }
   
-async function getActiveLocaleCurrency() {
-
-  const session = await MENUVA_DB.getSession();
-  if (!session?.restoID) return detectBrowserLocaleCurrency();
-
-  const resto = await MENUVA_DB.get("restos", session.restoID);
-
-  const saved = resto?.settings?.localeChoice || "auto";
-  const parsed = parseLocaleCurrency(saved);
-
-  if (parsed.mode === "auto") {
-    return detectBrowserLocaleCurrency();
-  }
-
-  const browser = detectBrowserLocaleCurrency();
-  return {
-    locale: parsed.locale || browser.locale,
-    currency: parsed.currency || browser.currency
-  };
-}
-  
-async function saveLocaleChoice(value) {
-
-  const session = await MENUVA_DB.getSession();
-  if (!session?.restoID) return;
-
-  const resto = await MENUVA_DB.get("restos", session.restoID);
-  if (!resto) return;
-
-  resto.settings = resto.settings || {};
-  resto.settings.localeChoice = value;
-
-  await MENUVA_DB.update("restos", resto);
-}
-  
 function formatHarga(amount) {
   const ac = getActiveLocaleCurrency();
   const locale = ac.locale || undefined;
@@ -730,30 +685,6 @@ function formatHarga(amount) {
   } catch (e) {
     return (currency ? currency + ' ' : '') + (Number(amount) || 0).toLocaleString();
   }
-}
-
-async function initLocaleSelect() {
-
-  const sel = document.getElementById("localeSelect");
-  if (!sel) return;
-
-  const session = await MENUVA_DB.getSession();
-  if (!session?.restoID) return;
-
-  const resto = await MENUVA_DB.get("restos", session.restoID);
-
-  sel.value = resto?.settings?.localeChoice || "auto";
-
-  sel.addEventListener("change", async () => {
-    await saveLocaleChoice(sel.value);
-    updateSemuaHarga();
-  });
-}
-  
-function updateSemuaHarga() {
-  tampilkanPromo();
-  tampilkanMenu();
-  updateRingkasan();
 }
 
 /* =================== SAFETY: escape HTML =================== */
@@ -999,6 +930,14 @@ function updateRingkasan() {
   autoApplyVoucher();
 }
 
+  function formatHarga(amount) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(Number(amount || 0));
+}
 
 /* =================== KIRIM PESAN (WhatsApp) =================== */
 function kirimPesanan() {
@@ -1035,11 +974,11 @@ function kirimPesanan() {
   if (lines.length === 0) { alert('No items selected.'); return; }
 
   const now = new Date();
-  const waktuOrder = now.toLocaleString(getActiveLocaleCurrency().locale);
+  const waktuOrder = now.toLocaleString("id-ID");
 
   let pesan = `🧾 New Order from ${namaCust || 'Customer'}\n\n`;
   pesan += `📅 Order Date: ${waktuOrder}\n`;
-  if (waktuAntar) pesan += `🕒 Delivery Time: ${new Date(waktuAntar).toLocaleString(getActiveLocaleCurrency().locale)}\n`;
+  if (waktuAntar) pesan += `🕒 Delivery Time: ${new Date(waktuAntar).toLocaleString("id-ID")}\n`;
   if (ruangan) pesan += `🏨 Room: ${ruangan}\n`;
   pesan += `\n📍 Address:\n${alamatCust}\n\n`;
   pesan += `🛒 List order:\n${lines.join('\n')}\n\n`;
@@ -1197,7 +1136,6 @@ async function loadVoucherList() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   applyTheme();
-  initLocaleSelect();
 
   try {
     data = await loadOrderData();
@@ -1215,4 +1153,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 </script>
 </body>
 </html>
+
 
