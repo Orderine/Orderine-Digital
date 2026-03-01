@@ -693,25 +693,25 @@ button:hover {
 })();
   
 /* ================= THEME (restore + toggle) ================= */
-const THEME_KEY = 'menuva_theme';
-async function applyTheme() {
 
+async function applyTheme() {
   const session = await MENUVA_DB.getSession();
   if (!session?.restoID) return;
 
   const resto = await MENUVA_DB.get("restos", session.restoID);
   const theme = resto?.settings?.theme || "light";
 
+  // Apply ke body
   document.body.classList.toggle("dark", theme === "dark");
 
+  // Update icon
   const btn = document.getElementById("darkToggle");
   if (btn) {
     btn.textContent = theme === "dark" ? "☀️" : "🌙";
   }
 }
-  
-async function toggleDark() {
 
+async function toggleDark() {
   const session = await MENUVA_DB.getSession();
   if (!session?.restoID) return;
 
@@ -721,17 +721,23 @@ async function toggleDark() {
   const current = resto.settings?.theme === "dark";
   const newTheme = current ? "light" : "dark";
 
-  // apply to DOM
-document.body.classList.toggle("dark", newTheme === "dark");
-  
-  // ensure settings object
+  // Update DOM dulu (biar responsif)
+  document.body.classList.toggle("dark", newTheme === "dark");
+
+  // Ensure settings object
   resto.settings = resto.settings || {};
   resto.settings.theme = newTheme;
 
+  // Save ke DB
   await MENUVA_DB.update("restos", resto);
 
+  // Update icon
   const btn = document.getElementById("darkToggle");
-  if (btn) btn.textContent = newTheme === "dark" ? "☀️" : "🌙";
+  if (btn) {
+    btn.textContent = newTheme === "dark" ? "☀️" : "🌙";
+  }
+
+  console.log("🔥 THEME UPDATED TO:", newTheme);
 }
   
 function formatHarga(amount) {
@@ -1342,11 +1348,16 @@ async function autoApplyVoucher() {
   grandEl.innerText = `Grand Total = ${formatHarga(discounted)}`;
 }
 
-  // === DOM ===
-
+  /* ================= DOM ================= */
 document.addEventListener("DOMContentLoaded", async () => {
 
   await applyTheme();
+
+  // 🔥 CONNECT BUTTON HERE
+  const darkBtn = document.getElementById("darkToggle");
+  if (darkBtn) {
+    darkBtn.addEventListener("click", toggleDark);
+  }
 
   const session = await MENUVA_DB.getSession();
   if (!session?.restoID) return;
@@ -1354,17 +1365,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const resto = await MENUVA_DB.get("restos", session.restoID);
   if (!resto) return;
 
-  // Kalau masih mau pakai variabel global:
   data = resto;
 
   tampilkanHeader();
 
   await loadPromoMenus();
-  await loadOrderMenus();   // INI pengganti tampilkanFilterKategori
+  await loadOrderMenus();
   updateRingkasan();
 });
 </script>
 </body>
 </html>
+
 
 
