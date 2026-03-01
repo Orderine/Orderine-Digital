@@ -37,29 +37,35 @@
     color:var(--text);
     margin:0;padding:0;padding-bottom:60px;
   }
+
+
 .header {
-  width: 100%;
-  background: linear-gradient(90deg, var(--brand-2), var(--brand-3));
-  color: #fff;
-  padding: 16px;
-  position: relative; /* ikut scroll, bukan sticky */
-  box-shadow: var(--shadow);
-
+  position: relative;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start; /* kiri & kanan sejajar atas */
+  align-items: center;
+  justify-content: flex-end; /* tombol tetap kanan */
+  padding: 12px 20px;
 }
 
-/* Kiri: Logo di atas, Info di bawah */
+/* LEFT container tidak perlu flex lagi */
 .header-left {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  flex-direction: column; /* logo atas, info bawah */
-  align-items: flex-start; /* rata kiri */
-  gap: 6px;
-  flex: 1;
-  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
 }
 
+/* Supaya info benar-benar center */
+.resto-info {
+  text-align: center;
+}
+
+.header-right {
+  z-index: 2; /* biar tidak ketiban */
+}
 /* Logo */
 .header-left img {
   width: 70px;
@@ -1376,6 +1382,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 </script>
 </body>
 </html>
+
 
 
 
