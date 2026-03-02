@@ -584,6 +584,20 @@ function tampilkanData() {
   document.getElementById("teleponRestoranDisplay").innerText =
     restoData.restoPhone || "";
 
+  // ===============================
+  // 🔥 TAMBAHKAN BAGIAN INI (LOGO)
+  // ===============================
+  const logoEl = document.getElementById("restoLogo");
+  if (logoEl) {
+    if (restoData.logo) {
+      logoEl.src = restoData.logo;
+      logoEl.style.display = "block";
+    } else {
+      logoEl.style.display = "none"; // biar gak ada broken image
+    }
+  }
+  // ===============================
+
   const gridRooms = document.getElementById("rooms");
   const gridMeet = document.getElementById("meetings");
   const gridPack = document.getElementById("packages");
@@ -983,6 +997,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 </body>
 </html>
+
 
 
 
