@@ -422,37 +422,48 @@ let menuRooms = [];
 let vouchers = [];
 let cart = [];
 
+const getEl = id => document.getElementById(id);
+
 async function initRoomPage() {
-  try {
-    const session = await MENUVA_DB.getSession();
-    if (!session || !session.restoId) {
-      console.warn("No active session");
+
+  let session = await MENUVA_DB.getSession();
+
+  if (!session) {
+    console.warn("⚠️ No active session, rebuilding from resto param...");
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const restoID = urlParams.get("resto");
+
+    if (!restoID) {
+      console.error("❌ No resto ID in URL");
+      window.location.href = "menu.html";
       return;
     }
 
-    const restoId = session.restoId;
+    const resto = await MENUVA_DB.get("restos", restoID);
+    if (!resto) {
+      console.error("❌ Resto not found");
+      window.location.href = "menu.html";
+      return;
+    }
 
-    // 1️⃣ Load resto profile
-    restoData = await MENUVA_DB.get("restos", restoId);
+    session = {
+      restoID: restoID,
+      roomPageEnabled: resto.settings?.roomPageEnabled ?? true,
+      orderPageEnabled: resto.settings?.orderPageEnabled ?? true
+    };
 
-    // 2️⃣ Load rooms from menuData
-    const allMenu = await MENUVA_DB.getAll("menuData");
-    menuRooms = allMenu.filter(m =>
-      m.restoId === restoId &&
-      m.active !== false &&
-      (m.category === "room" || m.category === "meeting" || m.category === "package")
-    );
-
-    // 3️⃣ Load voucher
-    const allVoucher = await MENUVA_DB.getAll("menuVoucher");
-    vouchers = allVoucher.filter(v =>
-      v.restoId === restoId &&
-      v.isActive === true
-    );
-
-  } catch (err) {
-    console.error("Room init error:", err);
+    await MENUVA_DB.setSession(session);
   }
+
+  // 🚪 Guard Room Access
+  if (!session.roomPageEnabled) {
+    console.warn("🚫 Room page disabled");
+    window.location.href = "menu.html";
+    return;
+  }
+
+  console.log("🏨 Room Page Access Granted");
 }
   
 /* ========= THEME ========= */
@@ -925,4 +936,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 </body>
 </html>
+
 
