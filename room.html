@@ -428,98 +428,69 @@ body.dark .room-card {
 </div>
 
 <script>
-/* ========= CONFIG ========= */
-const DB_NAME = "MenuvaDB";        // match admin.html
-const STORE_NAME = "menuvaData";
-const DB_VERSION = 14;
-
-/* ========= STATE ========= */
-let db = null;
-let restoData = {}; // object loaded from DB
+let restoData = null;
+let menuRooms = [];
+let vouchers = [];
 let cart = [];
-let currentLocale = navigator.language || "id-ID";
-let currentCurrency = "IDR";
 
-/* ========= HELPERS ========= */
-function getEl(id){ return document.getElementById(id); }
-function escapeHtml(str){
-  if (str === null || str === undefined) return "";
-  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,"&#39;").replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-function formatCurrency(num){
-  const n = Number(num) || 0;
+async function initRoomPage() {
   try {
-    return new Intl.NumberFormat(currentLocale, { style: "currency", currency: currentCurrency, maximumFractionDigits: 0 }).format(n);
-  } catch (e) {
-    return n.toLocaleString();
+    const session = await MENUVA_DB.getSession();
+    if (!session || !session.restoId) {
+      console.warn("No active session");
+      return;
+    }
+
+    const restoId = session.restoId;
+
+    // 1️⃣ Load resto profile
+    restoData = await MENUVA_DB.get("restos", restoId);
+
+    // 2️⃣ Load rooms from menuData
+    const allMenu = await MENUVA_DB.getAll("menuData");
+    menuRooms = allMenu.filter(m =>
+      m.restoId === restoId &&
+      m.active !== false &&
+      (m.category === "room" || m.category === "meeting" || m.category === "package")
+    );
+
+    // 3️⃣ Load voucher
+    const allVoucher = await MENUVA_DB.getAll("menuVoucher");
+    vouchers = allVoucher.filter(v =>
+      v.restoId === restoId &&
+      v.isActive === true
+    );
+
+  } catch (err) {
+    console.error("Room init error:", err);
   }
 }
-
-/* ========= INDEXEDDB ========= */
-function initDB(){
-  return new Promise((resolve,reject)=>{
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onerror = () => reject(req.error);
-    req.onsuccess = e => { db = e.target.result; resolve(db); };
-    req.onupgradeneeded = e => {
-      db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "restoId" });
-      }
-    };
-  });
-}
-
-/**
- * Load data from store:
- * - if URL has ?resto=ID -> try store.get(ID)
- * - else -> getAll() and return first record (admin saved single record)
- */
-function loadDataFromDB(){
-  return new Promise((resolve)=>{
-    if(!db){ return resolve({}); }
-    try {
-      const urlParams = new URLSearchParams(location.search);
-      const wanted = urlParams.get('resto') || null;
-      const tx = db.transaction(STORE_NAME, "readonly");
-      const store = tx.objectStore(STORE_NAME);
-
-      if (wanted) {
-        const r = store.get(wanted);
-        r.onsuccess = () => resolve(r.result || {});
-        r.onerror = () => resolve({});
-        return;
-      }
-
-      const allReq = store.getAll();
-      allReq.onsuccess = () => {
-        const all = allReq.result || [];
-        if (all.length === 0) return resolve({});
-        // prefer record with restoId, else first
-        const found = all.find(x => x && (x.restoId || x.restoPhone)) || all[0];
-        resolve(found || {});
-      };
-      allReq.onerror = () => resolve({});
-    } catch (err) {
-      console.error("loadDataFromDB error", err);
-      resolve({});
-    }
-  });
-}
-
+  
 /* ========= THEME ========= */
-function applyTheme(){
-  const saved = localStorage.getItem('menuva_theme');
+async function applyTheme(){
+  const session = await MENUVA_DB.getSession();
+  const saved = session?.theme;
+
   if (saved === 'dark') document.body.classList.add('dark');
   else document.body.classList.remove('dark');
+
   const btn = getEl('darkToggle');
-  if (btn) btn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+  if (btn) btn.textContent =
+    document.body.classList.contains('dark') ? '☀️' : '🌙';
 }
-function toggleDark(){
+
+async function toggleDark(){
   document.body.classList.toggle('dark');
-  localStorage.setItem('menuva_theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+
+  const session = await MENUVA_DB.getSession() || {};
+  await MENUVA_DB.setSession({
+    ...session,
+    theme: document.body.classList.contains('dark') ? 'dark' : 'light'
+  });
+
   const btn = getEl('darkToggle');
-  if (btn) btn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+  if (btn) btn.textContent =
+    document.body.classList.contains('dark') ? '☀️' : '🌙';
 }
 
 /* ========= UI: ROOM CARD CREATION (safer) ========= */
@@ -572,49 +543,31 @@ function createRoomCard(room){
 }
 
 /* ========= DISPLAY ========= */
-function tampilkanData(){
-  const emptyEl = getEl('empty');
-  if(!restoData || !restoData.namaRestoran){
-    if (emptyEl) emptyEl.classList.remove('hidden');
-    // still fill header with defaults
-    getEl('restoLogo').style.display = 'none';
-    getEl('restoName').innerText = 'Resto Name';
-    getEl('alamatRestoranDisplay').innerText = '';
-    getEl('teleponRestoranDisplay').innerText = '';
-    return;
-  }
+function tampilkanData() {
+  if (!restoData) return;
 
-  if (emptyEl) emptyEl.classList.add('hidden');
+  document.getElementById("restoName").innerText =
+    restoData.name || restoData.namaRestoran || "";
 
-  // header
-  const logoEl = getEl('restoLogo');
-  if (restoData.logo) { logoEl.src = restoData.logo; logoEl.style.display = ''; logoEl.onerror = () => { logoEl.style.display = 'none'; }; }
-  else logoEl.style.display = 'none';
-  getEl('restoName').innerText = restoData.namaRestoran || '';
-  getEl('alamatRestoranDisplay').innerText = restoData.restoAddress || '';
-  getEl('teleponRestoranDisplay').innerText = restoData.restoPhone || '';
+  document.getElementById("alamatRestoranDisplay").innerText =
+    restoData.address || "";
 
-  // set default currency if admin provided something (optional)
-  if (restoData.currency) {
-    currentCurrency = restoData.currency;
-  }
+  document.getElementById("teleponRestoranDisplay").innerText =
+    restoData.phone || "";
 
-  // grids
-  const gridRooms = getEl('rooms');
-  const gridMeet = getEl('meetings');
-  const gridPack = getEl('packages');
-  [gridRooms, gridMeet, gridPack].forEach(g => { if (g) g.innerHTML = ''; });
+  const gridRooms = document.getElementById("rooms");
+  const gridMeet = document.getElementById("meetings");
+  const gridPack = document.getElementById("packages");
 
-  let total = 0;
-  const rooms = Array.isArray(restoData.rooms) ? restoData.rooms : (restoData.menu || []);
-  rooms.forEach(r => {
-    total++;
-    const card = createRoomCard(r);
-    if ((r.kategori || r.category) === 'meeting') gridMeet.appendChild(card);
-    else if ((r.kategori || r.category) === 'package') gridPack.appendChild(card);
+  [gridRooms, gridMeet, gridPack].forEach(g => g.innerHTML = "");
+
+  menuRooms.forEach(room => {
+    const card = createRoomCard(room);
+
+    if (room.category === "meeting") gridMeet.appendChild(card);
+    else if (room.category === "package") gridPack.appendChild(card);
     else gridRooms.appendChild(card);
   });
-  if (getEl('empty')) getEl('empty').classList.toggle('hidden', total > 0);
 }
   
 function updateCartUI() {
@@ -706,30 +659,13 @@ let VOUCHER_RAF = null;      // untuk requestAnimationFrame throttle
 let VOUCHER_LAST_VALUE = ""; // untuk cegah perhitungan ulang yg tidak perlu
 
 // === Load voucher list hanya 1x ===
-async function loadVoucherList() {
-  try {
-    // Kalau sudah ada di cache → langsung return
-    if (CACHE_VOUCHERS !== null) return CACHE_VOUCHERS;
+function findVoucher(code) {
+  const today = new Date().toISOString().split("T")[0];
 
-    // FIX: gunakan restoData yang sudah dimuat, JANGAN load ulang DB!
-    const data = restoData;
-
-    if (!data || !Array.isArray(data.menuVoucher)) {
-      CACHE_VOUCHERS = [];
-      return CACHE_VOUCHERS;
-    }
-
-    const today = new Date().toISOString().split("T")[0];
-
-    // Cache voucher aktif
-    CACHE_VOUCHERS = data.menuVoucher.filter(v => v.expiry >= today);
-    return CACHE_VOUCHERS;
-
-  } catch (err) {
-    console.error("Voucher load error:", err);
-    CACHE_VOUCHERS = [];
-    return CACHE_VOUCHERS;
-  }
+  return vouchers.find(v =>
+    v.code === code &&
+    (!v.expiry || v.expiry >= today)
+  );
 }
 
 // === Apply voucher dengan throttle & DOM optimized ===
@@ -774,9 +710,8 @@ async function autoApplyVoucher() {
     }
 
     // ==== Ambil voucher 1x ====
-    const vouchers = await loadVoucherList();
-    const found = vouchers.find(v => v.code === code);
-
+    const found = findVoucher(code);
+    
     // ==== Voucher INVALID ====
     if (!found) {
       inputEl.classList.remove("voucher-ok");
@@ -817,14 +752,6 @@ async function autoApplyVoucher() {
   });
 }
 
-// === Event Listener optimized (tanpa keyup) ===
-document.addEventListener("DOMContentLoaded", () => {
-  const voucherInput = document.getElementById("voucherInput");
-  if (voucherInput) {
-    voucherInput.addEventListener("input", autoApplyVoucher); // PATCH
-  }
-});
-
 // === Ketika nambah room ke cart, voucher tetap diterapkan ===
 function tambahKeCart(room) {
   if (!room || !room.nama) return;
@@ -838,8 +765,6 @@ function tambahKeCart(room) {
 
   updateCartUI();
 
-  // re-apply voucher jika ada
-  const voucher = JSON.parse(localStorage.getItem("voucher") || "null");
   if (voucher) {
     requestAnimationFrame(autoApplyVoucher);
   }
@@ -884,106 +809,71 @@ function setupTabs(){
   });
 }
 
-
-/* ========= WA & Buttons ========= */
 function setupWA(){
   const sendBtn = getEl('btnSend');
   if(!sendBtn) return;
-  sendBtn.addEventListener('click', ()=>{
+
+  sendBtn.addEventListener('click', async ()=>{  // 🔥 jadi async
+
     const adminNos = restoData.nomorWaAdmin || restoData.nomor_admin || restoData.nomor || [];
     if (!adminNos || (Array.isArray(adminNos) && adminNos.length === 0)) {
       alert("Admin's WhatsApp number has not been set.");
       return;
     }
-    if (cart.length === 0) { alert("Cart is still empty."); return; }
+
+    if (cart.length === 0) {
+      alert("Cart is still empty.");
+      return;
+    }
+
     const adminNoRaw = Array.isArray(adminNos) ? adminNos[0] : adminNos;
     const adminNo = String(adminNoRaw).replace(/[^0-9]/g,'');
 
-    // === Buat pesan WA ===
-    let pesan = `Hello ${restoData.namaRestoran || 'Admin'}, I want a reservation:\n\n`;
-    cart.forEach((it,i) => {
-      pesan += `${i+1}. ${it.nama} - ${formatCurrency(it.harga)} x ${it.qty} = ${formatCurrency((it.harga||0)*it.qty)}\n`;
-    });
-
-    // ambil total asli & diskon
+    // === HITUNG TOTAL DULU ===
     const totalEl = getEl("totalPrice");
     const discountEl = getEl("voucherDiscount");
-    const grandEl = getEl("grandTotal");
 
     const originalTotal = cleanNumber(totalEl?.dataset.rawOriginal || 0);
     const grandTotal = cleanNumber(totalEl?.dataset.raw || originalTotal);
     const discountText = discountEl?.innerText || "";
 
+    // ==============================
+    // 🔥 PATCH SAVE ORDER TARUH DI SINI
+    // ==============================
+    await MENUVA_DB.add("ordersData", {
+      restoId: restoData.id,
+      items: cart,
+      total: grandTotal,
+      status: "pending",
+      orderTime: Date.now()
+    });
+    // ==============================
+
+
+    // === Buat pesan WA ===
+    let pesan = `Hello ${restoData.namaRestoran || 'Admin'}, I want a reservation:\n\n`;
+
+    cart.forEach((it,i) => {
+      pesan += `${i+1}. ${it.nama} - ${formatCurrency(it.harga)} x ${it.qty} = ${formatCurrency((it.harga||0)*it.qty)}\n`;
+    });
+
     pesan += `\nTotal Price = ${formatCurrency(originalTotal)}\n`;
     if (discountText) pesan += discountText + "\n";
     pesan += `Grand Total = ${formatCurrency(grandTotal)}\n\n`;
 
-    // Tambahan data customer
     pesan += `Name: ${getEl('custName')?.value || ''}\n`;
     pesan += `Address: ${getEl('custAddress')?.value || ''}\n`;
     pesan += `Phone: ${getEl('custPhone')?.value || ''}\n`;
     pesan += `Date: ${getEl('custDate')?.value || ''}\n`;
     pesan += `Notes: ${getEl('custNote')?.value || ''}\n`;
 
-    // buka WhatsApp
+    // === BUKA WHATSAPP SETELAH SAVE ===
     window.open(`https://wa.me/${adminNo}?text=${encodeURIComponent(pesan)}`, '_blank');
   });
 
   const back = getEl('btnBack');
   if (back) back.addEventListener('click', () => history.back());
 }
-
-/* ========= INIT ========= */
-document.addEventListener('DOMContentLoaded', async ()=>{
-  // === tampilkan spinner pusaran air ===
-  showLoading(); // 🔧 ditambahkan
-
-  // === PATCH: Lazy Loading untuk semua IMG ===
-  document.querySelectorAll("img").forEach(img => {
-    img.loading = "lazy";
-  });
-  
-  // apply theme button wiring
-  applyTheme();
-  const darkBtn = getEl('darkToggle');
-  if (darkBtn) darkBtn.addEventListener('click', toggleDark);
-
-  // locale select wiring
-  setupLocaleSelect();
-
-  // tabs
-  setupTabs();
-
-  // (hapus sistem loader lama, karena kita pakai overlay baru)
-  // const ld = getEl('loadingIndicator');
-  // if (ld) ld.classList.add('active');
-
-  try {
-    await initDB();
-    restoData = await loadDataFromDB();
-  } catch (err) {
-    console.error('DB init/load error', err);
-    restoData = {};
-  }
-
-  tampilkanData();
-  updateCartUI();
-  setupWA();
-
-  // === Tambahan logika voucher ===
-  const plan = localStorage.getItem("user_plan"); 
-  const voucherEnabled = localStorage.getItem("page_voucher") === "true";
-
-  if (plan !== "monthly" && voucherEnabled) {
-    document.getElementById("voucherSection").style.display = "block";
-  }
-
-  // === sembunyikan spinner pusaran air ===
-  hideLoading(); // 🔧 ditambahkan
-
-  // (hapus sistem loader lama, karena kita pakai overlay baru)
-  // if (ld) ld.classList.remove('active');
-});
 
 function showLoading() {
   const overlay = document.getElementById('loadingOverlay');
@@ -995,16 +885,54 @@ function hideLoading() {
   if (overlay) overlay.classList.remove('show');
 }
 
+
+document.addEventListener('DOMContentLoaded', async () => {
+
+  // 🔐 PAGE LOCK DULU (paling atas)
+  const session = await MENUVA_DB.getSession();
+  if (!session?.roomPageEnabled) {
+    window.location.href = "menu.html";
+    return;
+  }
+
+  showLoading();
+
+  // 🔥 INIT CORE
+  await initRoomPage();
+  await applyTheme();
+
+  // === Lazy load images
+  document.querySelectorAll("img").forEach(img => {
+    img.loading = "lazy";
+  });
+
+  // === Dark toggle wiring
+  const darkBtn = getEl('darkToggle');
+  if (darkBtn) darkBtn.addEventListener('click', toggleDark);
+
+  // === Voucher input wiring
+  const voucherInput = document.getElementById("voucherInput");
+  if (voucherInput) {
+    voucherInput.addEventListener("input", autoApplyVoucher);
+  }
+
+  // === UI setup
+  setupLocaleSelect();
+  setupTabs();
+  setupWA();
+
+  tampilkanData();
+  updateCartUI();
+
+  // === Voucher visibility FIXED
+  if (restoData?.voucherEnabled === true) {
+    document.getElementById("voucherSection").style.display = "block";
+  }
+
+  hideLoading();
+});
+  
 </script>
 
-<script>
-  const enabled = localStorage.getItem("page_room");
-  if (enabled === "false" || enabled === null) {
-    // redirect kalau halaman dimatikan
-    window.location.href = "menu.html";
-  }
-</script>
 </body>
 </html>
-
-
