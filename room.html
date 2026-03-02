@@ -352,18 +352,6 @@ body.dark .room-card {
   <div class="header-right">
     <button id="darkToggle" class="dark-toggle" title="Toggle theme">🌙</button>
   </div>
-
-  <!-- kanan bawah -->
-  <div class="header-bottom-right">
-    <select id="localeSelect" class="locale-select" title="Change locale / currency">
-      <option value="auto">Auto (browser)</option>
-      <option value="id-ID|IDR">INA — IDR</option>
-      <option value="en-US|USD">US — USD</option>
-      <option value="en-GB|GBP">UK — GBP</option>
-      <option value="ja-JP|JPY">JP — JPY</option>
-      <option value="fr-FR|EUR">FR — EUR</option>
-    </select>
-  </div>
 </header>
   
 <!-- 🔹 Loading Overlay -->
@@ -427,6 +415,7 @@ body.dark .room-card {
   <button class="btn-back" id="btnBack">🔙 Back To Menu</button>
 </div>
 
+<script src="db-core.js"></script>
 <script>
 let restoData = null;
 let menuRooms = [];
@@ -936,3 +925,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 </body>
 </html>
+
