@@ -4630,9 +4630,8 @@ function bindAdminEvents() {
   console.log("🔁 WA rendered after init UI");
 }, 0);
 
-    // ==================== DOM TOGGLE PAGE ====================
-
-  window.initPageToggles = async function () {
+   // ==================== DOM TOGGLE PAGE ====================
+window.initPageToggles = async function () {
 
   console.log("⚙️ Initializing Page Toggles...");
 
@@ -4644,45 +4643,61 @@ function bindAdminEvents() {
     return;
   }
 
-  // Pastikan activeUser sudah ada
   if (!window.activeUser?.restoID) {
     console.warn("⚠️ activeUser not ready for toggle");
     return;
   }
 
-  // Ambil data resto
   const resto = await MENUVA_DB.get("restos", window.activeUser.restoID);
   if (!resto) {
     console.warn("⚠️ Resto not found");
     return;
   }
 
-  // Pastikan settings object ada
   resto.settings = resto.settings || {};
 
-  // Default TRUE kalau belum pernah diset
   const orderEnabled = resto.settings.orderPageEnabled ?? true;
   const roomEnabled  = resto.settings.roomPageEnabled ?? true;
 
   toggleOrder.checked = orderEnabled;
   toggleRoom.checked  = roomEnabled;
 
-  // ================= SAVE EVENT =================
-
+  // ================= ORDER TOGGLE =================
   toggleOrder.addEventListener("change", async function () {
 
-    resto.settings.orderPageEnabled = this.checked;
+    const enabled = this.checked;
+
+    // 1️⃣ Simpan permanen ke restos
+    resto.settings.orderPageEnabled = enabled;
     await MENUVA_DB.update("restos", resto);
 
-    console.log("🛒 Order Page:", this.checked ? "ENABLED" : "DISABLED");
+    // 2️⃣ Sync ke session
+    const session = await MENUVA_DB.getSession() || {};
+    await MENUVA_DB.setSession({
+      ...session,
+      orderPageEnabled: enabled
+    });
+
+    console.log("🛒 Order Page:", enabled ? "ENABLED" : "DISABLED");
   });
 
+  // ================= ROOM TOGGLE =================
   toggleRoom.addEventListener("change", async function () {
 
-    resto.settings.roomPageEnabled = this.checked;
+    const enabled = this.checked;
+
+    // 1️⃣ Simpan permanen ke restos
+    resto.settings.roomPageEnabled = enabled;
     await MENUVA_DB.update("restos", resto);
 
-    console.log("🏨 Room Page:", this.checked ? "ENABLED" : "DISABLED");
+    // 2️⃣ Sync ke session (INI YANG PENTING)
+    const session = await MENUVA_DB.getSession() || {};
+    await MENUVA_DB.setSession({
+      ...session,
+      roomPageEnabled: enabled
+    });
+
+    console.log("🏨 Room Page:", enabled ? "ENABLED" : "DISABLED");
   });
 
   console.log("✅ Page Toggles Ready");
@@ -4841,49 +4856,6 @@ async function setBool(key, val) {
   });
 }
 
-async function initPageToggles() {
-  const dom = {
-    order: document.getElementById("toggleOrderPage"),
-    room: document.getElementById("toggleRoomPage"),
-    voucher: document.getElementById("toggleVoucherPage"),
-    voucherForm: document.getElementById("voucherForm")
-  };
-
-  const cfg = await getAdminConfig();
-
-  // ORDER PAGE
-  if (dom.order) {
-    dom.order.checked = cfg.public_order_enabled;
-    dom.order.onchange = async e => {
-      await setAdminConfig({ public_order_enabled: e.target.checked });
-      console.log("🌍 order.html =", e.target.checked);
-    };
-  }
-
-  // ROOM PAGE
-  if (dom.room) {
-    dom.room.checked = cfg.public_room_enabled;
-    dom.room.onchange = async e => {
-      await setAdminConfig({ public_room_enabled: e.target.checked });
-      console.log("🌍 room.html =", e.target.checked);
-    };
-  }
-
-  // VOUCHER FORM
-  if (dom.voucher && dom.voucherForm) {
-    dom.voucher.checked = cfg.voucher_form_enabled;
-    dom.voucherForm.style.display =
-      cfg.voucher_form_enabled ? "block" : "none";
-
-    dom.voucher.onchange = async e => {
-      const on = e.target.checked;
-      await setAdminConfig({ voucher_form_enabled: on });
-      dom.voucherForm.style.display = on ? "block" : "none";
-      console.log("🧾 voucher form =", on);
-    };
-  }
-}
-  
 async function getAdminConfig() {
   let cfg = await MENUVA_DB.get("restos", "config");
 
@@ -5248,6 +5220,7 @@ function openInviteAdmin() {
 
 </body>
 </html>
+
 
 
 
