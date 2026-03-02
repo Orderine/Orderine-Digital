@@ -576,13 +576,13 @@ function tampilkanData() {
   if (!restoData) return;
 
   document.getElementById("restoName").innerText =
-    restoData.name || restoData.namaRestoran || "";
+    restoData.namaRestoran || "";
 
   document.getElementById("alamatRestoranDisplay").innerText =
-    restoData.address || "";
+    restoData.restoAddress || "";
 
   document.getElementById("teleponRestoranDisplay").innerText =
-    restoData.phone || "";
+    restoData.restoPhone || "";
 
   const gridRooms = document.getElementById("rooms");
   const gridMeet = document.getElementById("meetings");
@@ -593,10 +593,28 @@ function tampilkanData() {
   menuRooms.forEach(room => {
     const card = createRoomCard(room);
 
-    if (room.category === "meeting") gridMeet.appendChild(card);
-    else if (room.category === "package") gridPack.appendChild(card);
-    else gridRooms.appendChild(card);
+    if (room.type === "meeting") {
+      gridMeet.appendChild(card);
+    } 
+    else if (room.type === "package") {
+      gridPack.appendChild(card);
+    } 
+    else {
+      gridRooms.appendChild(card);
+    }
   });
+
+  checkEmptyState();
+}
+
+  function checkEmptyState(){
+  const empty = document.getElementById("empty");
+  const grids = document.querySelectorAll(".grid");
+
+  const hasData = Array.from(grids).some(g => g.children.length > 0);
+
+  if (!hasData) empty.classList.remove("hidden");
+  else empty.classList.add("hidden");
 }
   
 function updateCartUI() {
@@ -965,6 +983,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 </body>
 </html>
+
 
 
 
