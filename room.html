@@ -435,14 +435,12 @@ async function initRoomPage() {
     const restoID = urlParams.get("resto");
 
     if (!restoID) {
-      console.error("❌ No resto ID in URL");
       window.location.href = "menu.html";
       return;
     }
 
     const resto = await MENUVA_DB.get("restos", restoID);
     if (!resto) {
-      console.error("❌ Resto not found");
       window.location.href = "menu.html";
       return;
     }
@@ -456,12 +454,26 @@ async function initRoomPage() {
     await MENUVA_DB.setSession(session);
   }
 
-  // 🚪 Guard Room Access
   if (!session.roomPageEnabled) {
-    console.warn("🚫 Room page disabled");
     window.location.href = "menu.html";
     return;
   }
+
+  // ===============================
+  // 🔥 INI YANG KURANG
+  // ===============================
+
+  restoData = await MENUVA_DB.get("restos", session.restoID);
+
+  if (!restoData) {
+    console.error("❌ Resto not found");
+    return;
+  }
+
+  // rooms sekarang nested di resto
+  menuRooms = restoData.rooms || [];
+
+  console.log("✅ Loaded Rooms:", menuRooms);
 
   console.log("🏨 Room Page Access Granted");
 }
@@ -936,5 +948,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 </body>
 </html>
+
 
 
