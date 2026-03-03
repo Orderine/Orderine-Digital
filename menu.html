@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>All Menu</title>
 <style>
+  * {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden; /* 🔥 matikan geser kanan kiri */
+}
+  
   body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -127,11 +137,12 @@
     scroll-snap-type: x mandatory;
     gap: 10px;
     padding: 10px 0;
+    max-width: 100%;
   }
   .flipbook-gallery img {
     flex-shrink: 0;
-    width: 100%;  /* 1 gambar full container */
-    max-width: 600px;
+    width: 90%;  /* 1 gambar full container */
+    max-width: 100%;
     height: auto;
     scroll-snap-align: center;
     border-radius: 10px;
@@ -649,3 +660,4 @@ async function goToPage(page) {
 
 </body>
 </html>
+
