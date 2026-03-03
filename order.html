@@ -62,14 +62,6 @@
   justify-content: center;
   text-align: center;
 }
-
-/* Tombol tetap kanan */
-.header-right {
-  grid-column: 3;
-  display: flex;
-  justify-content: flex-end;
-}
-
 /* Supaya info benar-benar center */
 .resto-info {
   text-align: center;
@@ -126,15 +118,30 @@
 }
 
 .dark-toggle {
-  background: rgba(255,255,255,0.2);
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  color: #fff;
-  padding: 4px 6px;
-  border-radius: 6px;
-}
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
 
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+
+  border: none;
+  cursor: pointer;
+
+  font-size: 20px;
+
+  background: linear-gradient(135deg, #0b1120, #1e40af);
+  color: white;
+
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+
+  z-index: 9999;
+}
+.dark-toggle:hover {
+  transform: scale(1.08);
+  transition: 0.2s ease;
+}
 .locale-select {
   padding: 4px 6px;
   border-radius: 6px;
@@ -1394,6 +1401,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 </script>
 </body>
 </html>
+
 
 
 
