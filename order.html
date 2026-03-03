@@ -119,24 +119,28 @@
 
 .dark-toggle {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 24px;
+  right: 24px;
 
-  width: 50px;
-  height: 50px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
 
   border: none;
   cursor: pointer;
 
-  font-size: 20px;
+  font-size: 22px;
 
-  background: linear-gradient(135deg, #0b1120, #1e40af);
-  color: white;
+  background: #1e40af; /* biru solid supaya pasti kelihatan */
+  color: #ffffff;
 
-  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.35);
 
-  z-index: 9999;
+  z-index: 99999; /* pastikan paling atas */
+}
+   body.dark .dark-toggle {
+  background: #facc15; /* kuning terang saat dark */
+  color: #000;
 }
 .dark-toggle:hover {
   transform: scale(1.08);
@@ -1401,6 +1405,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 </script>
 </body>
 </html>
+
 
 
 
