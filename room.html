@@ -73,11 +73,15 @@ header {
   left: 0;
   width: 100%;
   height: var(--header-height);
-  background: linear-gradient(135deg, var(--brand), var(--brand-2));
-  color: white;
   z-index: 9999;
-}
 
+  /* Pakai warna fix dulu supaya pasti tidak transparan */
+  background: linear-gradient(135deg, #1f70ff, #2a5298);
+  color: white;
+
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+  
 .header-right {
   position: relative;
   z-index: 10000;
@@ -1028,6 +1032,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 </body>
 </html>
+
 
 
 
