@@ -6,7 +6,10 @@
 <title>Receives - Admin</title>
 
 <style>
-
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
 /* ================= ROOT ================= */
 :root{
   --bg:#f4f8ff;
@@ -940,38 +943,18 @@ header{
 }
 
 .report-overlay {
-
   position: fixed;
   inset: 0;
-
-  background: rgba(5,10,25,.85);
-  backdrop-filter: blur(6px);
-
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
-
-  /* 🔥 INI FIX UTAMA */
-  align-items: flex-start;
-
   justify-content: center;
-
-  overflow-y: auto; /* 🔥 AKTIFKAN SCROLL */
-
-  padding: 40px 20px; /* biar ada ruang atas bawah */
-
-  z-index: 9999;
+  align-items: flex-start;
+  padding: 20px;
+  box-sizing: border-box;
 }
-
-  .report-terminal {
-
-  width: 95%;
-  max-width: 1200px;
-
-  margin: auto; /* bantu center horizontal */
-
-  margin-bottom: 40px; /* ruang bawah */
-
-}
-
   .report-overlay::-webkit-scrollbar {
   width: 8px;
 }
@@ -1036,8 +1019,8 @@ header{
 /* ===== STATS GRID ===== */
 .terminal-stats {
   display: grid;
-  grid-template-columns: repeat(3,1fr);
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
 }
 
 .terminal-card {
@@ -1217,14 +1200,11 @@ display: none !important;
 }
 
 .distribution-grid {
-
   display: grid;
-
-  grid-template-columns: 1fr 1fr;
-
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
-
 }
+  
 
 .distribution-box {
 
@@ -1261,12 +1241,31 @@ display: none !important;
   width: 100% !important;
   height: 220px !important;
 }
+canvas {
+  max-width: 100%;
+}
 
 .distribution-card {
   width: 100%;
   overflow: hidden; /* 🔥 cegah keluar container */
 }
+@media (max-width: 768px) {
 
+  .report-overlay {
+    padding: 10px;
+  }
+
+  .terminal-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .terminal-footer {
+    text-align: center;
+  }
+
+}
 </style>
 
 </head>
@@ -4165,6 +4164,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
