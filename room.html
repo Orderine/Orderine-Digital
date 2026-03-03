@@ -73,9 +73,14 @@ header {
   left: 0;
   width: 100%;
   height: var(--header-height);
-  background: var(--surface);
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: white;
   z-index: 9999;
-  border-bottom: 1px solid var(--border);
+}
+
+.header-right {
+  position: relative;
+  z-index: 10000;
 }
 
 /* GRID LAYOUT */
@@ -1023,6 +1028,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 </body>
 </html>
+
 
 
 
