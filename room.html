@@ -19,6 +19,7 @@
   --card-dark:#1c2333;
   --chip:#dce7ff;
   --shadow:0 6px 24px rgba(0,0,0,.08);
+  --header-height: 100px;
 }
 body.dark{
   --bg:#0e1116;
@@ -65,57 +66,74 @@ body.dark .locale-select {
   border-color: #444;
 }
 
+/* HEADER FIXED */
 header {
-  position: relative;
-  background: #003366; /* biru elegan paten */
-  padding: 16px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  color: #fff; /* teks di header selalu putih */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--header-height);
+  background: var(--surface);
+  z-index: 9999;
+  border-bottom: 1px solid var(--border);
 }
 
+/* GRID LAYOUT */
 .header-inner {
-  display: flex;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 12px;
-  position: relative;
+  padding: 0 20px;
 }
 
-.header-left {
+/* CENTER CONTENT */
+.center-info {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  text-align: center;
+  gap: 4px;
 }
 
-header img#restoLogo {
-  width: 70px;
-  height: 70px;
+/* LOGO */
+#restoLogo {
+  height: 40px;
   object-fit: contain;
-  border-radius: 8px;
-  background: #fff; /* biar logo keliatan jelas */
 }
 
-header h1 {
-  font-size: 1.2rem;
+/* NAMA RESTO */
+#restoName {
+  font-size: 18px;
+  font-weight: 600;
   margin: 0;
-  color: #fff;
+  line-height: 1.2;
 }
 
-header .contact-info {
-  font-size: 0.8rem;
-  color: #e0e0e0;
+/* CONTACT */
+.contact-info {
+  font-size: 12px;
+  color: var(--muted);
   line-height: 1.3;
 }
 
-/* --- Header Right (button + dropdown) --- */
+/* RIGHT SIDE */
 .header-right {
-  position: absolute;
-  right: 16px;
-  top: 8px;
   display: flex;
-  flex-direction: column; /* biar toggle di atas, dropdown di bawah */
-  align-items: flex-end;
-  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* DARK BUTTON */
+.dark-toggle {
+  font-size: 18px;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+/* Supaya konten tidak ketiban */
+body {
+  padding-top: var(--header-height);
 }
 
 .dark-toggle {
@@ -338,6 +356,11 @@ body.dark .room-card {
 <body>
 <header>
   <div class="header-inner">
+
+    <!-- Spacer kiri -->
+    <div></div>
+
+    <!-- CENTER -->
     <div class="center-info">
       <img id="restoLogo" alt="Logo" />
       <h1 id="restoName">Resto Name</h1>
@@ -346,11 +369,14 @@ body.dark .room-card {
         <div id="teleponRestoranDisplay"></div>
       </div>
     </div>
-  </div>
 
-  <!-- kanan atas -->
-  <div class="header-right">
-    <button id="darkToggle" class="dark-toggle" title="Toggle theme">🌙</button>
+    <!-- RIGHT -->
+    <div class="header-right">
+      <button id="darkToggle" class="dark-toggle" title="Toggle theme">
+        🌙
+      </button>
+    </div>
+
   </div>
 </header>
   
@@ -997,6 +1023,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 </body>
 </html>
+
 
 
 
