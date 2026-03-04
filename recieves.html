@@ -1321,6 +1321,26 @@ canvas {
 .terminal-chart-card {
   padding: 20px;
 }
+
+.dashboard-toggle {
+  background: #111827;
+  color: #00ff9c;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+}
+
+.dashboard-content {
+  transition: all 0.4s ease;
+  overflow: hidden;
+}
+
+.dashboard-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
 </style>
 
 </head>
@@ -1345,158 +1365,174 @@ canvas {
 
 <div id="orderPage">
 
-  <div class="page-container">
+<!-- ================= DASHBOARD WRAPPER ================= -->
+<div class="dashboard-wrapper">
 
-    <!-- ================= TOP REVENUE ================= -->
-    <section class="revenue-dashboard">
-      <div class="rev-card">
-        <div class="rev-title">Revenue</div>
-        <div class="rev-value" id="revTotal">Rp 0</div>
-      </div>
+  <!-- TOGGLE BUTTON -->
+  <div class="dashboard-toggle" onclick="toggleDashboard()">
+    📊 Dashboard Panel
+    <span id="dashboardArrow">▼</span>
+  </div>
 
-      <div class="rev-card">
-        <div class="rev-title">Orders</div>
-        <div class="rev-value" id="revOrders">0</div>
-      </div>
+  <!-- COLLAPSIBLE CONTENT -->
+  <div id="dashboardContent" class="dashboard-content">
 
-      <div class="rev-card">
-        <div class="rev-title">OPEN</div>
-        <div class="rev-value" id="revOpen">0</div>
-      </div>
+    <div class="page-container">
 
-      <div class="rev-card">
-        <div class="rev-title">PAID</div>
-        <div class="rev-value" id="revPaid">0</div>
-      </div>
-    </section>
-
-
-    <!-- ================= ROW 2 ================= -->
-    <section class="dashboard-row">
-
-      <!-- Summary (KOTAK) -->
-      <div class="card-square summary-card" onclick="renderSummaryPage()">
-        <div class="card-icon">📊</div>
-        <div class="card-title">Summary</div>
-        <div class="card-desc">Lihat laporan lengkap</div>
-      </div>
-
-      <!-- Insight (PANJANG) -->
-      <div class="card-rectangle insight-card">
-
-        <h3>📈 Today Insight</h3>
-
-        <div class="stat-item">
-          <span>🧾 Today Orders</span>
-          <strong id="todayOrdersStat">0</strong>
+      <!-- ================= TOP REVENUE ================= -->
+      <section class="revenue-dashboard">
+        <div class="rev-card">
+          <div class="rev-title">Revenue</div>
+          <div class="rev-value" id="revTotal">Rp 0</div>
         </div>
 
-        <div class="stat-item">
-          <span>💰 Avg Order</span>
-          <strong id="avgOrderStat">Rp 0</strong>
+        <div class="rev-card">
+          <div class="rev-title">Orders</div>
+          <div class="rev-value" id="revOrders">0</div>
         </div>
 
-        <div class="stat-item">
-          <span>⏳ Avg Prep</span>
-          <strong id="avgPrepStat">0 min</strong>
+        <div class="rev-card">
+          <div class="rev-title">OPEN</div>
+          <div class="rev-value" id="revOpen">0</div>
         </div>
 
-        <div class="stat-item">
-          <span>🔥 Top Item</span>
-          <strong id="topItemStat">-</strong>
+        <div class="rev-card">
+          <div class="rev-title">PAID</div>
+          <div class="rev-value" id="revPaid">0</div>
+        </div>
+      </section>
+
+
+      <!-- ================= ROW 2 ================= -->
+      <section class="dashboard-row">
+
+        <!-- Summary -->
+        <div class="card-square summary-card" onclick="renderSummaryPage()">
+          <div class="card-icon">📊</div>
+          <div class="card-title">Summary</div>
+          <div class="card-desc">Lihat laporan lengkap</div>
         </div>
 
-      </div>
+        <!-- Insight -->
+        <div class="card-rectangle insight-card">
 
-    </section>
+          <h3>📈 Today Insight</h3>
 
+          <div class="stat-item">
+            <span>🧾 Today Orders</span>
+            <strong id="todayOrdersStat">0</strong>
+          </div>
 
-    <!-- ================= ROW 3 ================= -->
-    <section class="dashboard-row">
+          <div class="stat-item">
+            <span>💰 Avg Order</span>
+            <strong id="avgOrderStat">Rp 0</strong>
+          </div>
 
-      <!-- Live Info (KOTAK) -->
-      <div class="card-square live-card">
-        <div class="clock-line">
-          🕒 <span id="liveClock">00:00:00</span>
+          <div class="stat-item">
+            <span>⏳ Avg Prep</span>
+            <strong id="avgPrepStat">0 min</strong>
+          </div>
+
+          <div class="stat-item">
+            <span>🔥 Top Item</span>
+            <strong id="topItemStat">-</strong>
+          </div>
+
         </div>
-        <div id="shiftInfo">Shift: -</div>
-        <div id="userInfo">User: -</div>
-      </div>
 
-     
-    <!-- Revenue Trend Chart -->
-<div class="card-rectangle revenue-chart-card">
-  <h3>📊 Revenue Trend (7 Days)</h3>
-  <canvas id="revenueTrendChart" height="120"></canvas>
+      </section>
+
+
+      <!-- ================= ROW 3 ================= -->
+      <section class="dashboard-row">
+
+        <!-- Live Info -->
+        <div class="card-square live-card">
+          <div class="clock-line">
+            🕒 <span id="liveClock">00:00:00</span>
+          </div>
+          <div id="shiftInfo">Shift: -</div>
+          <div id="userInfo">User: -</div>
+        </div>
+
+        <!-- Revenue Trend -->
+        <div class="card-rectangle revenue-chart-card">
+          <h3>📊 Revenue Trend (7 Days)</h3>
+          <canvas id="revenueTrendChart" height="120"></canvas>
+        </div>
+
+      </section>
+
+
+      <!-- ================= EXTRA CHART SECTION ================= -->
+      <section class="dashboard-row">
+
+        <div class="terminal-chart-card">
+          <div class="chart-card-header">
+            <div class="chart-card-title">ORDERS BY HOUR</div>
+            <div class="chart-card-sub">Peak Activity Analysis</div>
+          </div>
+          <div class="chart-card-body">
+            <canvas id="ordersByHourChart"></canvas>
+          </div>
+        </div>
+
+        <div class="terminal-chart-card">
+          <div class="chart-card-header">
+            <div class="chart-card-title">ORDER STATUS BREAKDOWN</div>
+            <div class="chart-card-sub">Operational Monitoring</div>
+          </div>
+          <div class="chart-card-body">
+            <canvas id="orderStatusChart"></canvas>
+          </div>
+        </div>
+
+      </section>
+
+
+      <section class="dashboard-row">
+
+        <div class="terminal-chart-card">
+          <div class="chart-card-header">
+            <div class="chart-card-title">PAYMENT METHOD DISTRIBUTION</div>
+            <div class="chart-card-sub">Cashflow Snapshot</div>
+          </div>
+          <div class="chart-card-body">
+            <canvas id="paymentMethodChart"></canvas>
+          </div>
+        </div>
+
+        <div class="terminal-chart-card">
+          <div class="chart-card-header">
+            <div class="chart-card-title">FAST MOVING ITEMS</div>
+            <div class="chart-card-sub">Quantity Sold Ranking</div>
+          </div>
+          <div class="chart-card-body">
+            <canvas id="fastMovingChart"></canvas>
+          </div>
+        </div>
+
+      </section>
+
+
+      <!-- ================= ALERT SECTION ================= -->
+      <section>
+        <div class="terminal-card alert-card">
+          <div class="distribution-header">
+            OPERATIONAL ALERT
+          </div>
+          <div id="operationalAlertBox">
+            No alerts detected.
+          </div>
+        </div>
+      </section>
+
+    </div> <!-- END page-container -->
+
+  </div> <!-- END dashboardContent -->
+
 </div>
-
-<div class="terminal-chart-card">
-  <div class="chart-card-header">
-    <div class="chart-card-title">
-      ORDERS BY HOUR
-    </div>
-    <div class="chart-card-sub">
-      Peak Activity Analysis
-    </div>
-  </div>
-  <div class="chart-card-body">
-    <canvas id="ordersByHourChart"></canvas>
-  </div>
-</div>
-
-      <div class="terminal-chart-card">
-  <div class="chart-card-header">
-    <div class="chart-card-title">
-      ORDER STATUS BREAKDOWN
-    </div>
-    <div class="chart-card-sub">
-      Operational Monitoring
-    </div>
-  </div>
-  <div class="chart-card-body">
-    <canvas id="orderStatusChart"></canvas>
-  </div>
-</div>
-
-      <div class="terminal-chart-card">
-  <div class="chart-card-header">
-    <div class="chart-card-title">
-      PAYMENT METHOD DISTRIBUTION
-    </div>
-    <div class="chart-card-sub">
-      Cashflow Snapshot
-    </div>
-  </div>
-  <div class="chart-card-body">
-    <canvas id="paymentMethodChart"></canvas>
-  </div>
-</div>
-
-      <div class="terminal-chart-card">
-  <div class="chart-card-header">
-    <div class="chart-card-title">
-      FAST MOVING ITEMS
-    </div>
-    <div class="chart-card-sub">
-      Quantity Sold Ranking
-    </div>
-  </div>
-  <div class="chart-card-body">
-    <canvas id="fastMovingChart"></canvas>
-  </div>
-</div>
-</section>
-
-    <div class="terminal-card alert-card">
-  <div class="distribution-header">
-    OPERATIONAL ALERT
-  </div>
-  <div id="operationalAlertBox">
-    No alerts detected.
-  </div>
-</div>
-
-  </div>
+<!-- ================= END DASHBOARD WRAPPER ================= -->
 
   <!-- ================= ORDERS ================= -->
   <main class="orders-section">
@@ -1706,6 +1742,19 @@ async function hashPIN(pin) {
   return Array.from(new Uint8Array(buf))
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+  function toggleDashboard() {
+  const content = document.getElementById("dashboardContent");
+  const arrow = document.getElementById("dashboardArrow");
+
+  content.classList.toggle("collapsed");
+
+  if (content.classList.contains("collapsed")) {
+    arrow.textContent = "▲";
+  } else {
+    arrow.textContent = "▼";
+  }
 }
 
  function updateRevenueDashboard(orders, date) {
@@ -4323,25 +4372,3 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
