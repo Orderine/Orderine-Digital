@@ -3338,7 +3338,9 @@ async function renderCategoryChart(startDate, endDate) {
       const revenue = item.harga * item.qty;
 
       const kategori =
-        String(categoryMap[item.nama] || "uncategorized").toLowerCase();
+  categoryMap[
+    item.nama?.trim().toLowerCase()
+  ] || "uncategorized";
 
       categoryRevenue[kategori] =
         (categoryRevenue[kategori] || 0) + revenue;
@@ -3447,12 +3449,17 @@ async function buildMenuCategoryMap() {
   });
 
   // 🔹 PROMO STORE
-  promo.forEach(item => {
+ promo.forEach(item => {
 
-    if (!item || !item.name) return;
+  if (!item || !item.namaPromo) return;
 
-    menuCategoryMap[item.name] = "promo";
-  });
+  const key =
+    item.namaPromo
+      .trim()
+      .toLowerCase();
+
+  menuCategoryMap[key] = "promo";
+});
 
   console.log("CategoryMap:", menuCategoryMap);
 
@@ -4185,6 +4192,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
