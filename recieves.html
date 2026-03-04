@@ -897,14 +897,30 @@ header{
 }
 
   /* OVERLAY */
-.modal-overlay{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.7);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:9999;
+/* OVERLAY tetap full screen */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(6px);
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: stretch; /* penting */
+  z-index: 9999;
+}
+
+/* REPORT MODAL FULL BODY */
+.report-modal {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0;
+  border-radius: 0;
+  overflow-y: auto;
+  background: var(--surface);
+  box-sizing: border-box;
+  padding: 16px;
 }
 
 /* MODAL BOX */
@@ -4213,6 +4229,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
