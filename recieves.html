@@ -3427,18 +3427,18 @@ async function buildMenuCategoryMap() {
 
   menu.forEach(item => {
 
-    if (!item || !item.nama) return;
+    if (!item || !item.name) return;
 
-    const kategori = String(item.kategori || "uncategorized").toLowerCase();
+    const kategori =
+      String(item.category || "uncategorized").toLowerCase();
 
-    menuCategoryMap[item.nama] = kategori;
+    menuCategoryMap[item.name] = kategori;
 
   });
 
   console.log("CategoryMap:", menuCategoryMap);
 
   return menuCategoryMap;
-
 }
 
 async function getAllMenu() {
@@ -4157,6 +4157,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
