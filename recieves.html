@@ -1222,8 +1222,8 @@ display: none !important;
 /* Grid layout */
 .distribution-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
   width: 100%;
 }
 
@@ -1302,7 +1302,14 @@ canvas {
   .terminal-footer {
     text-align: center;
   }
-
+}
+.report-terminal > *:not(:last-child) {
+  margin-bottom: 28px;
+}
+.terminal-card,
+.terminal-chart,
+.terminal-chart-card {
+  padding: 20px;
 }
 </style>
 
@@ -4243,6 +4250,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
