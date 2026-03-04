@@ -970,7 +970,7 @@ header{
 /* ===== TERMINAL BOX ===== */
 .report-terminal {
   width: 100vw;
-  height: 100vh;
+  min-height: 100vh;
   max-width: 100%;
   margin: 0;
   border-radius: 0;
@@ -1105,10 +1105,26 @@ header{
 
 /* ===== FOOTER ===== */
 .terminal-footer {
+  margin-top: 32px;
+  padding: 20px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
+  align-items: center;
 }
-
+  .terminal-footer {
+  overflow: visible;
+}
+  @media (max-width: 768px) {
+  .terminal-export:hover {
+    transform: none;
+  }
+}
+.terminal-export {
+  display: inline-block; /* penting */
+  width: 100%;
+  max-width: 260px;
+  text-align: center;
+}
 .terminal-export {
   background: linear-gradient(145deg,#059669,#047857);
   border: none;
@@ -1164,25 +1180,19 @@ display: none !important;
 }
 
 .chart-card-title {
-
   font-size: 13px;
-
   font-weight: 600;
-
   letter-spacing: 1px;
-
-  color: #e2e8f0;
-
+  color: #00ff9c;
+  text-align: center;
 }
 
 .chart-card-sub {
-
   font-size: 11px;
-
   color: rgba(148,163,184,.6);
-
   margin-top: 4px;
-
+  color: #00ff9c;
+  text-align: center;
 }
 
 /* BODY */
@@ -4250,6 +4260,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
