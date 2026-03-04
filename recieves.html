@@ -3430,8 +3430,11 @@ async function buildMenuCategoryMap() {
 
   menu.forEach(item => {
 
-    menuCategoryMap[item.nama] =
-      item.kategori.toLowerCase();
+    if (!item || !item.nama) return;
+
+    const kategori = String(item.kategori || "uncategorized").toLowerCase();
+
+    menuCategoryMap[item.nama] = kategori;
 
   });
 
@@ -3440,7 +3443,6 @@ async function buildMenuCategoryMap() {
   return menuCategoryMap;
 
 }
-
 
 async function getAllMenu() {
 
@@ -4158,6 +4160,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
