@@ -3458,6 +3458,16 @@ async function buildMenuCategoryMap() {
 
   return menuCategoryMap;
 }
+
+  async function getAllMenuPromo() {
+  try {
+    const data = await MENUVA_DB.getAll("menuPromo");
+    return data || [];
+  } catch (err) {
+    console.error("❌ getAllMenuPromo error:", err);
+    return [];
+  }
+}
   
 async function getAllMenu() {
 
@@ -4175,6 +4185,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
