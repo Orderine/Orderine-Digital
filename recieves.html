@@ -3429,8 +3429,20 @@ async function buildMenuCategoryMap() {
 
     if (!item || !item.name) return;
 
-    const kategori =
-      String(item.category || "uncategorized").toLowerCase();
+    let kategori = item.category;
+
+    // 🔥 kalau object, ambil property yang benar
+    if (typeof kategori === "object" && kategori !== null) {
+      kategori =
+        kategori.name ||
+        kategori.label ||
+        kategori.value ||
+        "uncategorized";
+    }
+
+    kategori =
+      String(kategori || "uncategorized")
+      .toLowerCase();
 
     menuCategoryMap[item.name] = kategori;
 
@@ -3440,7 +3452,7 @@ async function buildMenuCategoryMap() {
 
   return menuCategoryMap;
 }
-
+  
 async function getAllMenu() {
 
   return new Promise((resolve, reject) => {
@@ -4157,6 +4169,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
