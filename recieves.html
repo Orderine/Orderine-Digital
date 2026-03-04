@@ -3319,104 +3319,101 @@ async function renderTopItemsChart(startDate, endDate) {
 async function renderCategoryChart(startDate, endDate) {
 
   const orders = await getAllOrders();
+  const categoryMap = await buildMenuCategoryMap();
 
-  const categoryMap =
-    await buildMenuCategoryMap();
+  const start = new Date(startDate).setHours(0,0,0,0);
+  const end   = new Date(endDate).setHours(23,59,59,999);
 
-  let food = 0;
-  let drink = 0;
-
-  const start = new Date(startDate)
-    .setHours(0,0,0,0);
-
-  const end = new Date(endDate)
-    .setHours(23,59,59,999);
+  const categoryRevenue = {};
 
   orders.forEach(order => {
 
-    const time =
-      new Date(order.date).getTime();
-
-    if (time < start || time > end)
-      return;
+    const time = new Date(order.date).getTime();
+    if (time < start || time > end) return;
 
     order.items.forEach(item => {
 
       if (item.void) return;
 
-      const revenue =
-        item.harga * item.qty;
+      const revenue = item.harga * item.qty;
 
       const kategori =
-        categoryMap[item.nama] || "food";
+        String(categoryMap[item.nama] || "uncategorized").toLowerCase();
 
-      if (kategori === "drink")
-        drink += revenue;
-      else
-        food += revenue;
+      categoryRevenue[kategori] =
+        (categoryRevenue[kategori] || 0) + revenue;
 
     });
 
   });
 
-  const ctx =
-    document.getElementById("categoryChart");
+  const labels = Object.keys(categoryRevenue);
+  const data   = Object.values(categoryRevenue);
+
+  const ctx = document.getElementById("categoryChart");
 
   if (window.categoryChartInstance)
     window.categoryChartInstance.destroy();
 
-  window.categoryChartInstance =
-    new Chart(ctx, {
+  window.categoryChartInstance = new Chart(ctx, {
 
-      type: "doughnut",
+    type: "doughnut",
 
-      data: {
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: [
+          "#3b82f6",
+          "#10b981",
+          "#f59e0b",
+          "#ef4444",
+          "#8b5cf6",
+          "#14b8a6"
+        ]
+      }]
+    },
 
-        labels: ["Food", "Drink"],
+    options: {
 
-        datasets: [{
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "65%",
 
-          data: [food, drink],
+      plugins: {
 
-          backgroundColor: [
-            "#3b82f6",
-            "#10b981"
-          ]
-
-        }]
-
-      },
-
-      options: {
-
-        responsive: true,
-
-        maintainAspectRatio: false,
-
-        cutout: "65%",
-
-        plugins: {
-
-          legend: {
-
-            position: "bottom",
-
-            labels: {
-
-              color: "#cbd5e1"
-
-            }
-
+        legend: {
+          position: "bottom",
+          labels: {
+            color: "#cbd5e1"
           }
+        },
 
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+
+              const total = context.dataset.data
+                .reduce((a,b)=>a+b,0);
+
+              const value = context.raw;
+
+              const percentage =
+                ((value / total) * 100).toFixed(1);
+
+              return `${context.label}: ${percentage}%`;
+            }
+          }
         }
 
       }
 
-    });
+    }
+
+  });
 
 }
-
+  
 let menuCategoryMap = null;
 
 async function buildMenuCategoryMap() {
@@ -4160,6 +4157,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
