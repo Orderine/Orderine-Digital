@@ -3422,30 +3422,36 @@ async function buildMenuCategoryMap() {
     return menuCategoryMap;
 
   const menu = await getAllMenu();
+  const promo = await getAllMenuPromo(); // ⬅ ambil promo juga
 
   menuCategoryMap = {};
 
+  // 🔹 MENU BIASA
   menu.forEach(item => {
 
     if (!item || !item.name) return;
 
     let kategori = item.category;
 
-    // 🔥 kalau object, ambil property yang benar
     if (typeof kategori === "object" && kategori !== null) {
       kategori =
         kategori.name ||
         kategori.label ||
-        kategori.value ||
-        "uncategorized";
+        kategori.value;
     }
 
-    kategori =
-      String(kategori || "uncategorized")
+    kategori = String(kategori || "uncategorized")
       .toLowerCase();
 
     menuCategoryMap[item.name] = kategori;
+  });
 
+  // 🔹 PROMO STORE
+  promo.forEach(item => {
+
+    if (!item || !item.name) return;
+
+    menuCategoryMap[item.name] = "promo";
   });
 
   console.log("CategoryMap:", menuCategoryMap);
@@ -4169,6 +4175,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
