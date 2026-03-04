@@ -961,38 +961,55 @@ header{
 .report-overlay {
   position: fixed;
   inset: 0;
-  z-index: 999999; /* 🔥 WAJIB */
-  background: rgba(0,0,0,.75);
-  backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
 
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-
-  overflow-y: auto;
-  overflow-x: hidden;
-
-  padding: 20px;
-  box-sizing: border-box;
+  display: block; /* jangan flex */
 }
 /* ===== TERMINAL BOX ===== */
 .report-terminal {
-  width: 100%;
-  height: 100%;
-  max-width: none;   /* penting kalau sebelumnya ada max-width */
-  margin: 0;         /* hilangkan auto center */
-  border-radius: 0;  /* biar full edge */
-  overflow-y: auto;  /* scroll hanya di dalam modal */
-  background: var(--surface);
-}
+  width: 100vw;
+  height: 100vh;
+  max-width: 100%;
+  margin: 0;
+  border-radius: 0;
 
+  background: #0c0f14; /* dark terminal */
+  color: #00ff88;       /* bloomberg neon */
+  font-family: "Courier New", monospace;
+
+  padding: 20px;
+  box-sizing: border-box;
+
+  overflow-y: auto;
+}
+.report-terminal {
+  box-shadow: inset 0 0 80px rgba(0,255,136,0.05);
+}
 /* ===== HEADER ===== */
 .terminal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
+.report-card {
+  background: #111827;
+  border: 1px solid #1f2937;
+  padding: 16px;
+  margin-bottom: 16px; /* ini yang bikin nggak numpuk */
+  border-radius: 6px;
+}
+.report-terminal h1,
+.report-terminal h2,
+.report-terminal h3 {
+  color: #00ff88;
+}
 
+.report-terminal p,
+.report-terminal span {
+  color: #8affc1;
+}
 .terminal-title {
   font-size: 20px;
   font-weight: bold;
@@ -4226,6 +4243,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
