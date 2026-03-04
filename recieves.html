@@ -1430,8 +1430,71 @@ canvas {
   <canvas id="revenueTrendChart" height="120"></canvas>
 </div>
 
+<div class="terminal-chart-card">
+  <div class="chart-card-header">
+    <div class="chart-card-title">
+      ORDERS BY HOUR
+    </div>
+    <div class="chart-card-sub">
+      Peak Activity Analysis
+    </div>
+  </div>
+  <div class="chart-card-body">
+    <canvas id="ordersByHourChart"></canvas>
+  </div>
+</div>
 
-    </section>
+      <div class="terminal-chart-card">
+  <div class="chart-card-header">
+    <div class="chart-card-title">
+      ORDER STATUS BREAKDOWN
+    </div>
+    <div class="chart-card-sub">
+      Operational Monitoring
+    </div>
+  </div>
+  <div class="chart-card-body">
+    <canvas id="orderStatusChart"></canvas>
+  </div>
+</div>
+
+      <div class="terminal-chart-card">
+  <div class="chart-card-header">
+    <div class="chart-card-title">
+      PAYMENT METHOD DISTRIBUTION
+    </div>
+    <div class="chart-card-sub">
+      Cashflow Snapshot
+    </div>
+  </div>
+  <div class="chart-card-body">
+    <canvas id="paymentMethodChart"></canvas>
+  </div>
+</div>
+
+      <div class="terminal-chart-card">
+  <div class="chart-card-header">
+    <div class="chart-card-title">
+      FAST MOVING ITEMS
+    </div>
+    <div class="chart-card-sub">
+      Quantity Sold Ranking
+    </div>
+  </div>
+  <div class="chart-card-body">
+    <canvas id="fastMovingChart"></canvas>
+  </div>
+</div>
+</section>
+
+    <div class="terminal-card alert-card">
+  <div class="distribution-header">
+    OPERATIONAL ALERT
+  </div>
+  <div id="operationalAlertBox">
+    No alerts detected.
+  </div>
+</div>
 
   </div>
 
@@ -4260,6 +4323,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
