@@ -3429,24 +3429,31 @@ async function buildMenuCategoryMap() {
   menuCategoryMap = {};
 
   // 🔹 MENU BIASA
-  menu.forEach(item => {
+ menu.forEach(item => {
 
-    if (!item || !item.name) return;
+  if (!item || !item.name) return;
 
-    let kategori = item.category;
-
-    if (typeof kategori === "object" && kategori !== null) {
-      kategori =
-        kategori.name ||
-        kategori.label ||
-        kategori.value;
-    }
-
-    kategori = String(kategori || "uncategorized")
+  const key =
+    item.name
+      .trim()
       .toLowerCase();
 
-    menuCategoryMap[item.name] = kategori;
-  });
+  let kategori = item.category;
+
+  if (typeof kategori === "object" && kategori !== null) {
+    kategori =
+      kategori.name ||
+      kategori.label ||
+      kategori.value;
+  }
+
+  kategori =
+    String(kategori || "uncategorized")
+      .trim()
+      .toLowerCase();
+
+  menuCategoryMap[key] = kategori;
+});
 
   // 🔹 PROMO STORE
  promo.forEach(item => {
@@ -4192,6 +4199,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
