@@ -1504,28 +1504,24 @@ canvas {
 
 
       <!-- ================= EXTRA CHART SECTION ================= -->
-      <section class="dashboard-row">
+    <section class="dashboard-row">
 
-        <div class="card-rectangle revenue-chart-card">
-          <div class="chart-card-header">
-            <div class="chart-card-title">ORDER STATUS BREAKDOWN</div>
-          </div>
-            <canvas id="orderStatusChart"></canvas>
-          </div>
-      </section>
+  <div class="card-rectangle revenue-chart-card">
+    <div class="chart-card-header">
+      <div class="chart-card-title">ORDER STATUS BREAKDOWN</div>
+    </div>
+    <canvas id="orderStatusChart"></canvas>
+  </div>
 
+  <div class="card-rectangle revenue-chart-card">
+    <div class="chart-card-header">
+      <div class="chart-card-title">PAYMENT METHOD DISTRIBUTION</div>
+      <div class="chart-card-sub">Cashflow Snapshot</div>
+    </div>
+    <canvas id="paymentMethodChart"></canvas>
+  </div>
 
-      <section class="dashboard-row">
-
-        <div class="card-rectangle revenue-chart-card">
-          <div class="chart-card-header">
-            <div class="chart-card-title">PAYMENT METHOD DISTRIBUTION</div>
-            <div class="chart-card-sub">Cashflow Snapshot</div>
-          </div>
-            <canvas id="paymentMethodChart"></canvas>
-          </div>
-        </div>
-      </section>
+</section>
     
       <section>
         <div class="card-rectangle revenue-chart-card">
@@ -1535,7 +1531,6 @@ canvas {
           </div>
             <canvas id="fastMovingChart"></canvas>
           </div>
-        </div>
         </section>
       
       <!-- ================= ALERT SECTION ================= -->
@@ -4543,6 +4538,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
