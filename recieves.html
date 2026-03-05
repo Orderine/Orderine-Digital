@@ -4441,7 +4441,7 @@ async function initTheme(){
   const savedTheme = session?.theme;
 
   if(savedTheme === "dark"){
-    document.body.classList.add("dark");
+    document.body.classList.add("dark-mode");
     icon.textContent = "☀️";
   }else{
     icon.textContent = "🌙";
@@ -4455,9 +4455,9 @@ themeBtn.addEventListener("click", async ()=>{
 
   const session = await MENUVA_DB.getSession();
 
-  document.body.classList.toggle("dark");
+  document.body.classList.toggle("dark-mode");
 
-  if(document.body.classList.contains("dark")){
+  if(document.body.classList.contains("dark-mode")){
     icon.textContent="☀️";
     session.theme="dark";
   }else{
@@ -4601,5 +4601,6 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
