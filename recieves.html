@@ -1534,7 +1534,7 @@ canvas {
       <!-- ================= ALERT SECTION ================= -->
       <section>
         <div class="terminal-card alert-card">
-          <div class="distribution-header">
+          <div class="chart-card-header">
             OPERATIONAL ALERT
           </div>
           <div id="operationalAlertBox">
@@ -1809,6 +1809,176 @@ async function hashPIN(pin) {
     document.getElementById("revDiscount").textContent = formatHarga(discount);
 }
 
+function analyzeOrders(orders) {
+
+  const ordersByHour = new Array(24).fill(0);
+  const statusCount = {};
+  const paymentCount = {};
+  const itemSales = {};
+
+  orders.forEach(order => {
+
+    // ================= HOUR ANALYSIS =================
+    const date = new Date(order.waktu);
+    const hour = date.getHours();
+    ordersByHour[hour]++;
+
+    // ================= STATUS =================
+    const status = order.status || "unknown";
+    statusCount[status] = (statusCount[status] || 0) + 1;
+
+    // ================= PAYMENT =================
+    const payment = order.paymentMethod || "unknown";
+    paymentCount[payment] = (paymentCount[payment] || 0) + 1;
+
+    // ================= ITEMS =================
+    order.items.forEach(item => {
+
+      const nama = item.nama;
+      const qty = item.qty;
+
+      if (!itemSales[nama]) {
+        itemSales[nama] = 0;
+      }
+
+      itemSales[nama] += qty;
+
+    });
+
+  });
+
+  return {
+    ordersByHour,
+    statusCount,
+    paymentCount,
+    itemSales
+  };
+}
+
+function renderDashboardCharts(orders) {
+
+  const data = analyzeOrders(orders);
+
+  renderOrdersByHour(data.ordersByHour);
+  renderStatusChart(data.statusCount);
+  renderPaymentChart(data.paymentCount);
+  renderFastMovingChart(data.itemSales);
+
+}
+
+function renderOrdersByHour(hourData){
+
+  const ctx = document.getElementById("ordersByHourChart");
+
+  new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:[
+        "00","01","02","03","04","05","06","07",
+        "08","09","10","11","12","13","14","15",
+        "16","17","18","19","20","21","22","23"
+      ],
+      datasets:[{
+        label:"Orders",
+        data:hourData
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false}}
+    }
+  });
+
+}
+
+function renderStatusChart(statusData){
+
+  const ctx = document.getElementById("orderStatusChart");
+
+  new Chart(ctx,{
+    type:"doughnut",
+    data:{
+      labels:Object.keys(statusData),
+      datasets:[{
+        data:Object.values(statusData)
+      }]
+    },
+    options:{
+      responsive:true
+    }
+  });
+
+}
+
+function renderPaymentChart(paymentData){
+
+  const ctx = document.getElementById("paymentMethodChart");
+
+  new Chart(ctx,{
+    type:"pie",
+    data:{
+      labels:Object.keys(paymentData),
+      datasets:[{
+        data:Object.values(paymentData)
+      }]
+    },
+    options:{
+      responsive:true
+    }
+  });
+
+}
+
+function renderFastMovingChart(itemSales){
+
+  const sorted = Object.entries(itemSales)
+  .sort((a,b)=>b[1]-a[1])
+  .slice(0,5);
+
+  const labels = sorted.map(i=>i[0]);
+  const data = sorted.map(i=>i[1]);
+
+  const ctx = document.getElementById("fastMovingChart");
+
+  new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:labels,
+      datasets:[{
+        label:"Qty Sold",
+        data:data
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false}}
+    }
+  });
+
+}
+  function generateOperationalAlert(data){
+
+  const alertBox = document.getElementById("operationalAlertBox");
+
+  let alerts = [];
+
+  const peak = Math.max(...data.ordersByHour);
+
+  if(peak > 20){
+    alerts.push("⚠️ Peak hour overload detected");
+  }
+
+  if(data.statusCount.pending > 10){
+    alerts.push("⚠️ Too many pending orders");
+  }
+
+  if(alerts.length === 0){
+    alertBox.innerHTML = "No alerts detected.";
+  }else{
+    alertBox.innerHTML = alerts.join("<br>");
+  }
+
+}
 
 function getTodayDate() {
   const d = new Date();
@@ -4217,6 +4387,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const allOrders = await updateTodayInsights();
 
     renderRevenueTrendChart(allOrders);
+    renderDashboardCharts(allOrders); // 👈 panggil disini
 
   } catch (err) {
 
@@ -4388,5 +4559,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
