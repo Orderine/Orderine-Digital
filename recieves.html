@@ -1508,14 +1508,6 @@ canvas {
 
         <div class="card-rectangle revenue-chart-card">
           <div class="chart-card-header">
-            <div class="chart-card-title">ORDERS BY HOUR</div>
-            <div class="chart-card-sub">Peak Activity Analysis</div>
-          </div>
-            <canvas id="ordersByHourChart"></canvas>
-          </div>
-       
-        <div class="card-rectangle revenue-chart-card">
-          <div class="chart-card-header">
             <div class="chart-card-title">ORDER STATUS BREAKDOWN</div>
           </div>
             <canvas id="orderStatusChart"></canvas>
@@ -1878,31 +1870,6 @@ function renderDashboardCharts(orders) {
   renderStatusChart(data.statusCount);
   renderPaymentChart(data.paymentCount);
   renderFastMovingChart(data.itemSales);
-
-}
-
-function renderOrdersByHour(hourData){
-
-  const ctx = document.getElementById("ordersByHourChart");
-
-  new Chart(ctx,{
-    type:"bar",
-    data:{
-      labels:[
-        "00","01","02","03","04","05","06","07",
-        "08","09","10","11","12","13","14","15",
-        "16","17","18","19","20","21","22","23"
-      ],
-      datasets:[{
-        label:"Orders",
-        data:hourData
-      }]
-    },
-    options:{
-      responsive:true,
-      plugins:{legend:{display:false}}
-    }
-  });
 
 }
 
@@ -4584,6 +4551,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
