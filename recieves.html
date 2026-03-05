@@ -4459,13 +4459,13 @@ themeBtn.addEventListener("click", async ()=>{
 
   if(document.body.classList.contains("dark")){
     icon.textContent="☀️";
-    session.theme = "dark";
+    session.theme="dark";
   }else{
     icon.textContent="🌙";
-    session.theme = "light";
+    session.theme="light";
   }
 
-  await MENUVA_DB.set("session", session.id, session);
+  await MENUVA_DB.update("session", session);
 
 });
 
@@ -4601,4 +4601,5 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
