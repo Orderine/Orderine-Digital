@@ -1357,6 +1357,29 @@ canvas {
   max-height: 0;
   opacity: 0;
 }
+
+/* ===== OPERATIONAL ALERT BLOOMBERG STYLE ===== */
+
+.alert-card {
+  background: #0b0f14;
+  border: 1px solid #1f2937;
+}
+
+.alert-card .chart-card-header {
+  color: #facc15; /* kuning terminal */
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+#operationalAlertBox {
+  color: #00ff9c; /* hijau terminal */
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 8px 0;
+
+  text-shadow: 0 0 6px rgba(0,255,156,0.4); /* glow tipis */
+}
 </style>
 
 </head>
@@ -1494,7 +1517,6 @@ canvas {
         <div class="card-rectangle revenue-chart-card">
           <div class="chart-card-header">
             <div class="chart-card-title">ORDER STATUS BREAKDOWN</div>
-            <div class="chart-card-sub">Operational Monitoring</div>
           </div>
             <canvas id="orderStatusChart"></canvas>
           </div>
@@ -1508,7 +1530,6 @@ canvas {
             <div class="chart-card-title">PAYMENT METHOD DISTRIBUTION</div>
             <div class="chart-card-sub">Cashflow Snapshot</div>
           </div>
-          <div class="chart-card-body">
             <canvas id="paymentMethodChart"></canvas>
           </div>
         </div>
@@ -1518,7 +1539,6 @@ canvas {
             <div class="chart-card-title">FAST MOVING ITEMS</div>
             <div class="chart-card-sub">Quantity Sold Ranking</div>
           </div>
-          <div class="chart-card-body">
             <canvas id="fastMovingChart"></canvas>
           </div>
         </div>
@@ -4554,6 +4574,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
