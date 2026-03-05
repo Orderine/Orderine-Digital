@@ -4437,12 +4437,13 @@ const icon = document.getElementById("themeIcon");
 
 async function initTheme(){
 
-  const savedTheme = await MENUVA_DB.get("theme");
+  const session = await MENUVA_DB.getSession();
+  const savedTheme = session?.theme;
 
   if(savedTheme === "dark"){
     document.body.classList.add("dark");
     icon.textContent = "☀️";
-  } else {
+  }else{
     icon.textContent = "🌙";
   }
 
@@ -4452,15 +4453,19 @@ initTheme();
 
 themeBtn.addEventListener("click", async ()=>{
 
+  const session = await MENUVA_DB.getSession();
+
   document.body.classList.toggle("dark");
 
   if(document.body.classList.contains("dark")){
-    icon.textContent = "☀️";
-    await MENUVA_DB.set("theme","dark");
+    icon.textContent="☀️";
+    session.theme = "dark";
   }else{
-    icon.textContent = "🌙";
-    await MENUVA_DB.set("theme","light");
+    icon.textContent="🌙";
+    session.theme = "light";
   }
+
+  await MENUVA_DB.set("session", session.id, session);
 
 });
 
@@ -4596,3 +4601,4 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
