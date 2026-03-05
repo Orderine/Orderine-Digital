@@ -4435,23 +4435,31 @@ document.addEventListener("DOMContentLoaded", async () => {
 const themeBtn = document.getElementById("themeToggle");
 const icon = document.getElementById("themeIcon");
 
-const savedTheme = localStorage.getItem("theme");
+async function initTheme(){
 
-if(savedTheme === "dark"){
-  document.body.classList.add("dark");
-  icon.textContent="☀️";
+  const savedTheme = await MENUVA_DB.get("theme");
+
+  if(savedTheme === "dark"){
+    document.body.classList.add("dark");
+    icon.textContent = "☀️";
+  } else {
+    icon.textContent = "🌙";
+  }
+
 }
 
-themeBtn.addEventListener("click",()=>{
+initTheme();
+
+themeBtn.addEventListener("click", async ()=>{
 
   document.body.classList.toggle("dark");
 
   if(document.body.classList.contains("dark")){
-    icon.textContent="☀️";
-    localStorage.setItem("theme","dark");
+    icon.textContent = "☀️";
+    await MENUVA_DB.set("theme","dark");
   }else{
-    icon.textContent="🌙";
-    localStorage.setItem("theme","light");
+    icon.textContent = "🌙";
+    await MENUVA_DB.set("theme","light");
   }
 
 });
@@ -4588,19 +4596,3 @@ themeBtn.addEventListener("click",()=>{
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
