@@ -1818,17 +1818,11 @@ async function hashPIN(pin) {
 
 function analyzeOrders(orders) {
 
-  const ordersByHour = new Array(24).fill(0);
   const statusCount = {};
   const paymentCount = {};
   const itemSales = {};
 
   orders.forEach(order => {
-
-    // ================= HOUR ANALYSIS =================
-    const date = new Date(order.waktu);
-    const hour = date.getHours();
-    ordersByHour[hour]++;
 
     // ================= STATUS =================
     const status = order.status || "unknown";
@@ -1855,7 +1849,6 @@ function analyzeOrders(orders) {
   });
 
   return {
-    ordersByHour,
     statusCount,
     paymentCount,
     itemSales
@@ -1866,7 +1859,6 @@ function renderDashboardCharts(orders) {
 
   const data = analyzeOrders(orders);
 
-  renderOrdersByHour(data.ordersByHour);
   renderStatusChart(data.statusCount);
   renderPaymentChart(data.paymentCount);
   renderFastMovingChart(data.itemSales);
@@ -4551,6 +4543,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
