@@ -65,7 +65,23 @@ header{
   box-shadow:var(--shadow);
 }
 
-.header-inner{display:flex;align-items:center;justify-content:space-between}
+.header-inner{
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items:center;
+}
+
+.header-center{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  justify-self:center;
+  text-align:center;
+}
+
+.header-right{
+  justify-self:end;
+}
 #restoLogo{height:50px;width:50px;border-radius:8px;object-fit:contain;background:rgba(255,255,255,.15)}
 #restoName{margin:0;font-size:18px;font-weight:800}
 
@@ -1391,17 +1407,23 @@ canvas {
 
 <header>
   <div class="header-inner">
-    <div style="display:flex;align-items:center;gap:10px">
+
+    <div class="header-left"></div>
+
+    <div class="header-center">
       <img id="restoLogo" alt="Logo">
       <div>
         <h1 id="restoName">Loading...</h1>
-        <p id="restoAddress" style="font-size:12px;margin:2px 0 0;opacity:0.8"></p>
-        <p id="restoPhone" style="font-size:12px;margin:0;opacity:0.8"></p>
+        <p id="restoAddress"></p>
+        <p id="restoPhone"></p>
       </div>
     </div>
-   <button id="themeToggle" class="theme-btn" aria-label="Toggle Dark Mode">
-  <span id="themeIcon">🌙</span>
-</button>
+
+    <div class="header-right">
+      <button id="themeToggle" class="theme-btn" aria-label="Toggle Dark Mode">
+        <span id="themeIcon">🌙</span>
+      </button>
+    </div>
 
   </div>
 </header>
@@ -4410,6 +4432,30 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 });
 
+const themeBtn = document.getElementById("themeToggle");
+const icon = document.getElementById("themeIcon");
+
+const savedTheme = localStorage.getItem("theme");
+
+if(savedTheme === "dark"){
+  document.body.classList.add("dark");
+  icon.textContent="☀️";
+}
+
+themeBtn.addEventListener("click",()=>{
+
+  document.body.classList.toggle("dark");
+
+  if(document.body.classList.contains("dark")){
+    icon.textContent="☀️";
+    localStorage.setItem("theme","dark");
+  }else{
+    icon.textContent="🌙";
+    localStorage.setItem("theme","light");
+  }
+
+});
+
  function initClock() {
 
   const clockEl = document.getElementById("liveClock");
@@ -4542,6 +4588,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
