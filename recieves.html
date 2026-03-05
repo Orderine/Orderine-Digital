@@ -1961,16 +1961,26 @@ function renderFastMovingChart(itemSales){
       labels:labels,
       datasets:[{
         label:"Qty Sold",
-        data:data
+        data:data,
+        borderWidth:1
       }]
     },
     options:{
       responsive:true,
-      plugins:{legend:{display:false}}
+      indexAxis:'y', // 👈 ini yang bikin jadi horizontal bar
+      plugins:{
+        legend:{display:false}
+      },
+      scales:{
+        x:{
+          beginAtZero:true
+        }
+      }
     }
   });
 
 }
+  
   function generateOperationalAlert(data){
 
   const alertBox = document.getElementById("operationalAlertBox");
@@ -4574,6 +4584,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 
