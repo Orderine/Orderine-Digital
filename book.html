@@ -495,8 +495,8 @@ footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);paddin
       type="number"
       id="custGuests"
       name="custGuests"
-      value="1"
-      min="1"
+      value="0"
+      min="0"
       readonly
     >
     <button type="button" id="guestPlus">+</button>
@@ -1338,7 +1338,7 @@ async function sendOrder() {
     return;
   }
 
-    if (!guests || guests < 1) {
+    if (!guests || guests < 0) {
   showToast('⚠️ Please input number of guests!', "error");
   playSound("error");
   return;
@@ -1567,14 +1567,15 @@ const btnMinus = document.getElementById("guestMinus");
 if (guestInput && btnPlus && btnMinus) {
 
   btnPlus.addEventListener("click", () => {
-    let val = Number(guestInput.value) || 1;
+    let val = Number(guestInput.value) || 0;
     guestInput.value = val + 1;
     saveCustomerForm?.();
   });
 
   btnMinus.addEventListener("click", () => {
-    let val = Number(guestInput.value) || 1;
-    if (val > 1) {
+    let val = Number(guestInput.value) || 0;
+
+    if (val > 0) {
       guestInput.value = val - 1;
       saveCustomerForm?.();
     }
@@ -1669,7 +1670,7 @@ async function clearCustomerData(confirmRequired = true) {
     const timeInput = document.getElementById('custTime');
     const guestInput = document.getElementById('custGuests');
       
-    if (guestInput) guestInput.value = 1;
+    if (guestInput) guestInput.value = 0;
     if (dateInput) dateInput.value = dateStr;
     if (timeInput) timeInput.value = timeStr;
 
@@ -1787,5 +1788,6 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
