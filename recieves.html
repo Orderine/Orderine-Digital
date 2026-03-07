@@ -1405,6 +1405,30 @@ canvas {
   opacity:.8;
   margin-left:6px;
 }
+
+.guest-analytics{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.ga-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:6px 0;
+  border-bottom:1px dashed rgba(255,255,255,.1);
+}
+
+.ga-label{
+  font-size:12px;
+  opacity:.7;
+}
+
+.ga-value{
+  font-weight:bold;
+  color:#00ff9c;
+}
 </style>
 
 </head>
@@ -1565,16 +1589,35 @@ canvas {
         </section>
       
       <!-- ================= ALERT SECTION ================= -->
-      <section>
-        <div class="terminal-card alert-card">
-          <div class="chart-card-header">
-            OPERATIONAL ALERT
-          </div>
-          <div id="operationalAlertBox">
-            No alerts detected.
-          </div>
-        </div>
-      </section>
+    <div class="terminal-card alert-card">
+  <div class="chart-card-header">
+    TODAY ANALYTICS
+  </div>
+
+  <div id="guestAnalyticsBox" class="guest-analytics">
+
+    <div class="ga-item">
+      <div class="ga-label">Orders Today</div>
+      <div id="gaOrders" class="ga-value">0</div>
+    </div>
+
+    <div class="ga-item">
+      <div class="ga-label">Guests Today</div>
+      <div id="gaGuests" class="ga-value">0</div>
+    </div>
+
+    <div class="ga-item">
+      <div class="ga-label">Avg Check</div>
+      <div id="gaAvgCheck" class="ga-value">Rp 0</div>
+    </div>
+
+    <div class="ga-item">
+      <div class="ga-label">Revenue</div>
+      <div id="gaRevenue" class="ga-value">Rp 0</div>
+    </div>
+
+  </div>
+</div>
 
     </div> <!-- END page-container -->
 
@@ -1806,7 +1849,7 @@ async function hashPIN(pin) {
   }
 }
 
- function updateRevenueDashboard(orders, date) {
+function updateRevenueDashboard(orders, date) {
 
   const todayOrders = orders.filter(o => o.date === date);
 
@@ -1816,7 +1859,12 @@ async function hashPIN(pin) {
   let open = 0;
   let paid = 0;
 
+  // 🔥 analytics baru
+  let totalGuests = 0;
+
   todayOrders.forEach(order => {
+
+    const guests = Number(order.guests) || 0;
 
     if (order.status === "paid") {
       gross += Number(order.subtotal) || 0;
@@ -1827,21 +1875,39 @@ async function hashPIN(pin) {
       open++;
     }
 
+    totalGuests += guests;
+
   });
+
+  /* ================= EXISTING UI ================= */
 
   document.getElementById("revTotal").textContent = formatHarga(net);
   document.getElementById("revOrders").textContent = todayOrders.length;
   document.getElementById("revOpen").textContent = open;
   document.getElementById("revPaid").textContent = paid;
 
-  // OPTIONAL kalau ada UI
   if (document.getElementById("revGross"))
     document.getElementById("revGross").textContent = formatHarga(gross);
 
   if (document.getElementById("revDiscount"))
     document.getElementById("revDiscount").textContent = formatHarga(discount);
-}
 
+  /* ================= NEW ANALYTICS ================= */
+
+  const avgCheck = totalGuests > 0 ? net / totalGuests : 0;
+
+  const elOrders = document.getElementById("gaOrders");
+  const elGuests = document.getElementById("gaGuests");
+  const elAvgCheck = document.getElementById("gaAvgCheck");
+  const elRevenue = document.getElementById("gaRevenue");
+
+  if (elOrders) elOrders.textContent = todayOrders.length;
+  if (elGuests) elGuests.textContent = totalGuests;
+  if (elAvgCheck) elAvgCheck.textContent = formatHarga(avgCheck);
+  if (elRevenue) elRevenue.textContent = formatHarga(net);
+
+}
+  
 function analyzeOrders(orders) {
 
   const statusCount = {};
@@ -4614,6 +4680,7 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
 
