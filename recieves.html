@@ -2185,6 +2185,34 @@ function renderOrders(data) {
   });
 }
 
+function getTodayKey(){
+  const d = new Date()
+  const day = String(d.getDate()).padStart(2,"0")
+  const month = String(d.getMonth()+1).padStart(2,"0")
+  const year = d.getFullYear()
+
+  return `${year}-${month}-${day}`
+}
+
+  function generateCaptainOrder(){
+
+  const todayKey = getTodayKey()
+
+  let counter = JSON.parse(localStorage.getItem("orderine_co_counter")) || {}
+
+  if(!counter[todayKey]){
+    counter[todayKey] = 0
+  }
+
+  counter[todayKey]++
+
+  localStorage.setItem("orderine_co_counter", JSON.stringify(counter))
+
+  const number = String(counter[todayKey]).padStart(3,"0")
+
+  return `CO-${number}`
+}
+
 function renderOrdersByDate(data, date) {
   const list = document.getElementById("ordersList");
   if (!list) return;
@@ -2194,6 +2222,14 @@ function renderOrdersByDate(data, date) {
   if (!Array.isArray(data)) return;
 
   const filtered = data.filter(o => o && o.date === date);
+
+  // urutkan order berdasarkan waktu
+filtered.sort((a,b)=>(a.orderTime||0)-(b.orderTime||0));
+
+// generate Captain Order Number
+filtered.forEach((o,i)=>{
+  o.con = `CO-${String(i+1).padStart(3,"0")}`;
+});
 
   if (filtered.length === 0) {
     list.innerHTML = `<div style="opacity:.6">Tidak ada order di tanggal ini</div>`;
@@ -2276,7 +2312,8 @@ function renderOrdersByDate(data, date) {
           - ${order.customer || "-"}
           <span class="guest-count">👥 ${order.guests || 0}</span>
           </h3>
-          <small>Order #${order.id}</small>
+         <small>Order #${order.id}</small><br>
+        <small>CON #${order.con}</small>
         </div>
         <div class="status-badge ${statusClass}">
           ${status}
@@ -4684,6 +4721,7 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
 
