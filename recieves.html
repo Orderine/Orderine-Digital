@@ -4127,7 +4127,7 @@ async function renderDailySummary() {
   paidOrders.forEach(order => {
     if (!order.createdAt) return;
 
-    const date = new Date(order.createdAt).toISOString().slice(0, 10);
+    const date = new Date(order.createdAt).toLocaleDateString("sv-SE");
 
     if (!grouped[date]) {
       grouped[date] = {
@@ -4726,6 +4726,7 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
 
