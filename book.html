@@ -452,6 +452,10 @@ footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);paddin
         <input type="text" id="custTable" name="custTable" placeholder="e.g. A12">
       </div>
       <div>
+      <label for="custGuests">Total Guests</label>
+      <input type="number" id="custGuests" name="custGuests" min="1" value="1" required>
+      </div>
+      <div>
         <label for="custDate">Date</label>
         <input type="text" id="custDate" name="custDate" readonly>
       </div>
@@ -717,6 +721,7 @@ async function saveCustomerForm() {
   const formData = {
     name: document.getElementById('custName')?.value || '',
     table: document.getElementById('custTable')?.value || '',
+    guests: Number(document.getElementById('custGuests')?.value) || 1,
     date: document.getElementById('custDate')?.value || '',
     time: document.getElementById('custTime')?.value || '',
     note: document.getElementById('custNote')?.value || ''
@@ -737,6 +742,7 @@ async function loadCustomerForm() {
 
     if (v.name) document.getElementById('custName').value = v.name;
     if (v.table) document.getElementById('custTable').value = v.table;
+    if (v.guests) document.getElementById('custGuests').value = v.guests;
     if (v.date) document.getElementById('custDate').value = v.date;
     if (v.time) document.getElementById('custTime').value = v.time;
     if (v.note) document.getElementById('custNote').value = v.note;
@@ -1268,6 +1274,7 @@ input.addEventListener("input", async () => {
 async function sendOrder() {
   const name = (document.getElementById('custName')?.value || '').trim();
   const table = (document.getElementById('custTable')?.value || '').trim();
+  const guests = Number(document.getElementById('custGuests')?.value) || 0;
   const date = document.getElementById('custDate')?.value || '';
   const time = document.getElementById('custTime')?.value || '';
   const note = (document.getElementById('custNote')?.value || '').trim();
@@ -1283,6 +1290,12 @@ async function sendOrder() {
     playSound("error");
     return;
   }
+
+    if (!guests || guests < 1) {
+  showToast('⚠️ Please input number of guests!', "error");
+  playSound("error");
+  return;
+}
 
   if (!cart || !cart.length) {
     showToast('⚠️ Please add items to cart before submitting!', "error");
@@ -1313,6 +1326,7 @@ async function sendOrder() {
     resto: restoData?.namaRestoran || '',
     customer: name,
     table,
+    guests,
     date,
     time,
     note: note || '-',
@@ -1568,7 +1582,7 @@ async function clearCustomerData(confirmRequired = true) {
     // =============================
     // 3️⃣ Reset form fields
     // =============================
-    const idsToClear = ['custName', 'custTable', 'custNote'];
+    const idsToClear = ['custName', 'custTable', 'custNote', 'custGuests'];
     idsToClear.forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
@@ -1583,7 +1597,9 @@ async function clearCustomerData(confirmRequired = true) {
 
     const dateInput = document.getElementById('custDate');
     const timeInput = document.getElementById('custTime');
-
+    const guestInput = document.getElementById('custGuests');
+      
+    if (guestInput) guestInput.value = 1;
     if (dateInput) dateInput.value = dateStr;
     if (timeInput) timeInput.value = timeStr;
 
@@ -1600,6 +1616,7 @@ async function clearCustomerData(confirmRequired = true) {
       value: {
         name: '',
         table: '',
+        guests: 1,
         date: dateStr,
         time: timeStr,
         note: ''
@@ -1700,3 +1717,4 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
