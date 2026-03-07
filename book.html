@@ -352,6 +352,42 @@ footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);paddin
   margin-top: 6px;
 }
 /* End of CSS */
+
+.guest-counter label{
+  display:block;
+  margin-bottom:6px;
+}
+
+.guest-stepper{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.guest-stepper button{
+  width:36px;
+  height:36px;
+  border:none;
+  background:#111827;
+  color:#00ff9c;
+  font-size:18px;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.guest-stepper button:active{
+  transform:scale(0.95);
+}
+
+.guest-stepper input{
+  width:60px;
+  text-align:center;
+  border:1px solid #333;
+  border-radius:6px;
+  background:#000;
+  color:#fff;
+  font-weight:bold;
+}
 </style>
 
 
@@ -451,9 +487,20 @@ footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);paddin
         <label for="custTable">Table No</label>
         <input type="text" id="custTable" name="custTable" placeholder="e.g. A12">
       </div>
-      <div>
-      <label for="custGuests">Total Guests</label>
-      <input type="number" id="custGuests" name="custGuests" min="1" value="1" required>
+  <div class="guest-counter">
+  <label>Guests</label>
+  <div class="guest-stepper">
+    <button type="button" id="guestMinus">−</button>
+    <input
+      type="number"
+      id="custGuests"
+      name="custGuests"
+      value="1"
+      min="1"
+      readonly
+    >
+    <button type="button" id="guestPlus">+</button>
+      </div>
       </div>
       <div>
         <label for="custDate">Date</label>
@@ -1512,6 +1559,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     await restoreVoucherFromStorage();
     applyVoucherAndUpdateSummary();
 
+    // 9️⃣ GUEST STEPPER LOGIC
+const guestInput = document.getElementById("custGuests");
+const btnPlus = document.getElementById("guestPlus");
+const btnMinus = document.getElementById("guestMinus");
+
+if (guestInput && btnPlus && btnMinus) {
+
+  btnPlus.addEventListener("click", () => {
+    let val = Number(guestInput.value) || 1;
+    guestInput.value = val + 1;
+    saveCustomerForm?.();
+  });
+
+  btnMinus.addEventListener("click", () => {
+    let val = Number(guestInput.value) || 1;
+    if (val > 1) {
+      guestInput.value = val - 1;
+      saveCustomerForm?.();
+    }
+  });
+
+}
+
     console.log("✅ book.html init DONE");
 
   } catch (err) {
@@ -1717,4 +1787,5 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
 
