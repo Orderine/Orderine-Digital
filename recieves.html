@@ -2313,7 +2313,7 @@ filtered.forEach((o,i)=>{
           <span class="guest-count">👥 ${order.guests || 0}</span>
           </h3>
          <small>Order #${order.id}</small><br>
-        <small>CON #${order.con}</small>
+        <small>${order.con}</small>
         </div>
         <div class="status-badge ${statusClass}">
           ${status}
@@ -4721,6 +4721,7 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
 
