@@ -1913,6 +1913,11 @@ function updateRevenueDashboard(orders, date) {
   
 function analyzeOrders(orders) {
 
+  const today = getTodayDate();
+
+  // FILTER ORDER HARI INI SAJA
+  orders = orders.filter(o => o && o.date === today);
+
   const statusCount = {};
   const paymentCount = {};
   const itemSales = {};
@@ -1928,7 +1933,7 @@ function analyzeOrders(orders) {
     paymentCount[payment] = (paymentCount[payment] || 0) + 1;
 
     // ================= ITEMS =================
-    order.items.forEach(item => {
+    (order.items || []).forEach(item => {
 
       const nama = item.nama;
       const qty = item.qty;
@@ -4721,6 +4726,7 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
 
