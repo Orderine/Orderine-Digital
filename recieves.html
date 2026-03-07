@@ -2938,7 +2938,7 @@ async function renderSummaryPage() {
 
   const summaryPage = document.getElementById("summaryPage");
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = new Date().toLocaleDateString("sv-SE");
 
   summaryPage.innerHTML = `
     <main class="container">
@@ -3167,7 +3167,7 @@ async function renderSummaryDetail(mode) {
     const raw = o.createdAt || o.orderTime;
     if (!raw) return false;
 
-    const d = new Date(Number(raw)).toISOString().slice(0,10);
+    const d = new Date(Number(raw)).toLocaleDateString("sv-SE");
     return d >= startDate && d <= endDate;
   });
 }
@@ -4665,11 +4665,11 @@ themeBtn.addEventListener("click", async ()=>{
 
   const orders = await MENUVA_DB.getAll("ordersData");
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = new Date().toLocaleDateString("sv-SE");
 
   const todayOrders = orders.filter(o => {
     const d = new Date(Number(o.createdAt))
-      .toISOString().slice(0,10);
+      .toLocaleDateString("sv-SE");
     return d === today;
   });
 
