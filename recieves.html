@@ -1400,6 +1400,11 @@ canvas {
   .page-container section{
   margin-bottom: 24px;
 }
+.guest-count{
+  font-size:12px;
+  opacity:.8;
+  margin-left:6px;
+}
 </style>
 
 </head>
@@ -2133,6 +2138,8 @@ function renderOrdersByDate(data, date) {
     order.discount = Number(order.discount) || 0;
     order.subtotal = Number(order.subtotal) || 0;
     order.grandTotal = Number(order.grandTotal) || 0;
+    order.guests = Number(order.guests) || 0;
+    
 
     /* ================= RECALC ONLY IF NOT PAID ================= */
     if ((order.status || "").toLowerCase() !== "paid") {
@@ -2194,7 +2201,11 @@ function renderOrdersByDate(data, date) {
     div.innerHTML = `
       <div class="order-header">
         <div>
-          <h3>Table ${order.table || "-"} - ${order.customer || "-"}</h3>
+          <h3>
+          Table ${order.table || "-"} 
+          - ${order.customer || "-"}
+          <span class="guest-count">👥 ${order.guests || 0}</span>
+          </h3>
           <small>Order #${order.id}</small>
         </div>
         <div class="status-badge ${statusClass}">
@@ -2203,9 +2214,10 @@ function renderOrdersByDate(data, date) {
       </div>
 
       <div class="order-time">
-        ${typeof formatDateTime === "function" ? formatDateTime(order.orderTime) : ""}
+       ${typeof formatDateTime === "function" ? formatDateTime(order.orderTime) : ""}
+       • 👥 Guests: ${order.guests || 0}
       </div>
-
+      
       ${order.note && order.note !== "-" ? `
         <div class="order-note">
           📝 Note: ${order.note}
@@ -2773,6 +2785,7 @@ document.addEventListener("click", async (e) => {
     order.subtotal = Number(order.subtotal) || 0;
     order.discount = Number(order.discount) || 0;
     order.grandTotal = Number(order.grandTotal) || 0;
+    
 
     // buka modal dulu
     openCashPaymentModal(order);
@@ -4601,6 +4614,7 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
 
