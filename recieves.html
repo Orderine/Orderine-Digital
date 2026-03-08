@@ -4742,12 +4742,12 @@ themeBtn.addEventListener("click", async ()=>{
 
   const session = await MENUVA_DB.getSession();
 
-  if(!session || !session.restoId){
+  if(!session || !session.restoID){
     alert("restoId tidak ditemukan di session");
     return;
   }
 
-  window.open(`book.html?restoId=${session.restoId}`, "_blank");
+  window.open(`book.html?restoId=${session.restoID}`, "_blank");
 
 });
   
@@ -4762,5 +4762,6 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
