@@ -1437,6 +1437,16 @@ canvas {
   font-weight:600;
   color:#00ff9c; /* hijau terminal */
 }
+
+.rev-book {
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.rev-book:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,.15);
+}
 </style>
 
 </head>
@@ -1501,6 +1511,11 @@ canvas {
         <div class="rev-card">
           <div class="rev-title">PAID</div>
           <div class="rev-value" id="revPaid">0</div>
+        </div>
+
+        <div class="rev-card rev-book">
+        <div class="rev-title">BOOK MENU</div>
+        <div class="rev-value">📖</div>
         </div>
       </section>
 
@@ -4720,6 +4735,13 @@ themeBtn.addEventListener("click", async ()=>{
 
 }
 
+  document.addEventListener("click", function(e){
+  const card = e.target.closest(".rev-book");
+  if(card){
+    window.open("book.html", "_blank");
+  }
+});
+
   function goBackToAdmin() {
     window.location.href = "admin.html";
   }
@@ -4731,20 +4753,3 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
