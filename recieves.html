@@ -4738,7 +4738,16 @@ themeBtn.addEventListener("click", async ()=>{
   document.addEventListener("click", function(e){
   const card = e.target.closest(".rev-book");
   if(card){
-    window.open("book.html", "_blank");
+
+    const params = new URLSearchParams(window.location.search);
+    const restoId = params.get("restoId");
+
+    if(!restoId){
+      alert("restoId tidak ditemukan");
+      return;
+    }
+
+    window.open(`book.html?restoId=${restoId}`, "_blank");
   }
 });
 
@@ -4753,3 +4762,4 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
