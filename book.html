@@ -1515,22 +1515,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderBookHeader(restoData);
 
     // ==============================
-    // 5️⃣ LOAD STORE TERPISAH (v19)
-    // ==============================
-    menuData = (await MENUVA_DB.getAll("menuData") || [])
-      .filter(m => m.restoId === restoId);
+// 5️⃣ LOAD STORE TERPISAH (v19 FAST)
+// ==============================
 
-    menuPromo = (await MENUVA_DB.getAll("menuPromo") || [])
-      .filter(p => p.restoId === restoId);
+const [menuDataRaw, menuPromoRaw, voucherRaw] = await Promise.all([
+  MENUVA_DB.getAll("menuData"),
+  MENUVA_DB.getAll("menuPromo"),
+  MENUVA_DB.getAll("menuVoucher")
+]);
 
-    const voucherRaw = (await MENUVA_DB.getAll("menuVoucher") || [])
-      .filter(v => v.restoId === restoId);
+menuData = (menuDataRaw || []).filter(m => m.restoId === restoId);
+menuPromo = (menuPromoRaw || []).filter(p => p.restoId === restoId);
 
-    cachedVoucherList = voucherRaw.map(normalizeVoucher);
+cachedVoucherList = (voucherRaw || [])
+  .filter(v => v.restoId === restoId)
+  .map(normalizeVoucher);
 
-    console.log("🔥 menuData loaded:", menuData.length);
-    console.log("🔥 menuPromo loaded:", menuPromo.length);
-    console.log("🔥 voucher loaded:", cachedVoucherList.length);
+console.log("🔥 menuData loaded:", menuData.length);
+console.log("🔥 menuPromo loaded:", menuPromo.length);
+console.log("🔥 voucher loaded:", cachedVoucherList.length);
 
     // ==============================
     // 6️⃣ DEFAULT DATE & TIME
@@ -1556,13 +1559,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderPromo(menuPromo);
 
     // ==============================
-    // 8️⃣ RESTORE SESSION
-    // ==============================
-    await loadCartFromStorage();
-    await loadCustomerForm();
-    renderCart();
-    await restoreVoucherFromStorage();
-    applyVoucherAndUpdateSummary();
+// 8️⃣ RESTORE SESSION
+// ==============================
+await loadCartFromStorage();
+await loadCustomerForm();
+await restoreVoucherFromStorage();
+
+renderCart();
+applyVoucherAndUpdateSummary();
 
     // 9️⃣ GUEST STEPPER LOGIC
 const guestInput = document.getElementById("custGuests");
@@ -1793,6 +1797,7 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
 
