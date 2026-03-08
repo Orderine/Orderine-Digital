@@ -4735,22 +4735,22 @@ themeBtn.addEventListener("click", async ()=>{
 
 }
 
-  document.addEventListener("click", function(e){
+ document.addEventListener("click", async function(e){
+
   const card = e.target.closest(".rev-book");
-  if(card){
+  if(!card) return;
 
-    const params = new URLSearchParams(window.location.search);
-    const restoId = params.get("restoId");
+  const session = await MENUVA_DB.getSession();
 
-    if(!restoId){
-      alert("restoId tidak ditemukan");
-      return;
-    }
-
-    window.open(`book.html?restoId=${restoId}`, "_blank");
+  if(!session || !session.restoId){
+    alert("restoId tidak ditemukan di session");
+    return;
   }
-});
 
+  window.open(`book.html?restoId=${session.restoId}`, "_blank");
+
+});
+  
   function goBackToAdmin() {
     window.location.href = "admin.html";
   }
@@ -4762,4 +4762,5 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
