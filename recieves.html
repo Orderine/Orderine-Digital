@@ -483,18 +483,21 @@ header{
   transition: all 0.2s ease;
 }
 
-/* Hover */
-.void-item-btn:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 8px 18px rgba(198,40,40,0.5),
-    inset 0 1px 0 rgba(255,255,255,0.35);
+/* Active Click */
+.void-item-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;       /* abu-abu halus */
+  font-size: 12px;
+  padding: 2px 6px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
 }
 
-/* Active Click */
-.void-item-btn:active {
-  transform: scale(0.95);
-  box-shadow: 0 3px 8px rgba(198,40,40,0.4);
+.void-item-btn:hover {
+  color: #ef4444;       /* merah saat disentuh */
+  background: rgba(239, 68, 68, 0.08);
 }
 
   .item-row {
@@ -2350,12 +2353,12 @@ filtered.forEach((o,i)=>{
 
             <div class="item-right">
               ${!item?.void ? `
-                <button 
-                  class="void-item-btn"
-                  data-order="${order.id}"
-                  data-index="${idx}">
-                  ❌ Void
-                </button>
+               <button 
+               class="void-item-btn"
+               data-order="${order.id}"
+               data-index="${idx}">
+                ✕ void
+              </button>
               ` : ""}
             </div>
 
@@ -4726,6 +4729,7 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
 
