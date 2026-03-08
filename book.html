@@ -1471,11 +1471,11 @@ function playSound(type) {
   if (activeTab) activeTab.classList.add('active');
 }
 
-  function getQueryRestoId() {
+ function getQueryRestoId() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("restoId");
+  const id = params.get("restoId") || params.get("resto");
+  return id ? id.trim() : null;
 }
-
   
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("▶️ book.html init start");
@@ -1797,6 +1797,7 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
 
