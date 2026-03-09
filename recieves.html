@@ -1451,8 +1451,8 @@ canvas {
 }
 
 .rev-book:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,.15);
+ transform: translateY(-3px);
+ box-shadow: 0 8px 20px rgba(0,0,0,0.25);
 }
 
   .reservation-item{
@@ -1568,7 +1568,7 @@ canvas {
           <div class="rev-value" id="revPaid">0</div>
         </div>
 
-        <div class="rev-card summary-card">
+        <div class="rev-card rev-book">
           <div class="rev-title">BOOK MENU</div>
           <div class="rev-value">📖</div>
         </div>
@@ -4906,15 +4906,6 @@ themeBtn.addEventListener("click", async ()=>{
     window.location.href = "admin.html";
   }
 
-const card = document.querySelector(".reservation-card");
-
-card.addEventListener("touchstart", function () {
-  card.classList.add("card-active");
-});
-
-card.addEventListener("touchend", function () {
-  card.classList.remove("card-active");
-});
 </script>
 
   
@@ -4923,6 +4914,5 @@ card.addEventListener("touchend", function () {
 
 </body>
 </html>
-
 
 
