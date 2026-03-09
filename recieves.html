@@ -1519,6 +1519,7 @@ canvas {
 
       <!-- ================= TOP REVENUE ================= -->
       <section class="revenue-dashboard">
+
         <div class="rev-card">
           <div class="rev-title">Revenue</div>
           <div class="rev-value" id="revTotal">Rp 0</div>
@@ -1543,8 +1544,8 @@ canvas {
           <div class="rev-title">BOOK MENU</div>
           <div class="rev-value">📖</div>
         </div>
-      </section>
 
+      </section>
 
       <!-- ================= ROW 2 ================= -->
       <section class="dashboard-row">
@@ -1583,19 +1584,20 @@ canvas {
 
       </section>
 
-
       <!-- ================= ROW 3 ================= -->
       <section class="dashboard-row">
 
         <div class="card-square reservation-card" onclick="renderReservationPage()">
+
           <div class="card-icon">📅</div>
           <div class="card-title">Reservations</div>
           <div class="card-desc">Customer bookings</div>
+
           <div class="reservation-count" id="reservationCount">0</div>
+
         </div>
 
       </section>
-
 
       <!-- ================= ROW 4 ================= -->
       <section class="dashboard-row">
@@ -1615,8 +1617,7 @@ canvas {
 
       </section>
 
-
-      <!-- ================= EXTRA CHART ================= -->
+      <!-- ================= EXTRA CHART SECTION ================= -->
       <section class="dashboard-row">
 
         <div class="card-rectangle revenue-chart-card">
@@ -1636,7 +1637,6 @@ canvas {
 
       </section>
 
-
       <!-- ================= FAST MOVING ================= -->
       <section>
         <div class="card-rectangle revenue-chart-card">
@@ -1648,8 +1648,7 @@ canvas {
         </div>
       </section>
 
-
-      <!-- ================= ANALYTICS ================= -->
+      <!-- ================= ALERT SECTION ================= -->
       <div class="terminal-card alert-card">
 
         <div class="chart-card-header">
@@ -1682,11 +1681,11 @@ canvas {
 
       </div>
 
-    </div> <!-- page-container -->
+    </div> <!-- END page-container -->
 
-  </div> <!-- dashboardContent -->
+  </div> <!-- END dashboardContent -->
 
-</div> <!-- dashboard-wrapper -->
+</div> <!-- END dashboard-wrapper -->
 
 
 <!-- ================= ORDERS ================= -->
@@ -1703,6 +1702,90 @@ canvas {
 
 <!-- ================= RESERVATION PAGE ================= -->
 <div id="reservationPage" style="display:none"></div>
+
+
+<!-- ================= VOID AUTH MODAL ================= -->
+<div id="voidAuthModal" class="modal hidden">
+
+  <div class="modal-box" style="
+    background: #2b0f0f;
+    color: white;
+    border: 1px solid #5a1a1a;
+  ">
+
+    <h3 style="margin-bottom:16px; color:#ff4d4d;">
+      🔐 Void Authorization
+    </h3>
+
+    <input 
+      type="password"
+      id="voidPinInput"
+      placeholder="Masukkan PIN"
+    />
+
+    <select id="voidReasonSelect">
+      <option value="">Pilih Alasan</option>
+      <option value="Salah Input">Salah Input</option>
+      <option value="Customer Batal">Customer Batal</option>
+      <option value="Lainnya">Lainnya</option>
+    </select>
+
+    <input 
+      type="text"
+      id="voidReasonOther"
+      placeholder="Alasan lainnya..."
+    />
+
+   <div class="modal-actions">
+      <button type="button" id="voidCancelBtn" class="btn-cancel">
+        Cancel
+      </button>
+
+      <button type="button" id="voidConfirmBtn" class="btn-confirm">
+        Confirm
+      </button>
+   </div>
+
+  </div>
+</div>
+
+
+<!-- ================= CASH PAYMENT MODAL ================= -->
+<div id="cashPaymentModal" class="modal-overlay" style="display:none;">
+  <div class="modal-content cash-modal">
+
+    <div class="modal-header">
+      <h3>💰 Pembayaran Cash</h3>
+      <button id="closeCashModal" class="modal-close">✕</button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="payment-row">
+        <span>Total Tagihan</span>
+        <strong id="cashTotal">Rp 0</strong>
+      </div>
+
+      <div class="payment-row">
+        <span>Uang Diterima</span>
+        <input type="number" id="cashReceived" placeholder="Masukkan jumlah uang"/>
+      </div>
+
+      <div class="payment-row">
+        <span>Kembalian</span>
+        <strong id="cashChange">Rp 0</strong>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button id="confirmCashBtn" class="btn btn-confirm">
+        ✔ Konfirmasi Pembayaran
+      </button>
+    </div>
+
+  </div>
+</div>
  
  
 <script src="db-core.js"></script>
@@ -4708,3 +4791,4 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
