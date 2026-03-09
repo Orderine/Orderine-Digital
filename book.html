@@ -76,20 +76,30 @@ header{
   color:#fff;
   padding:16px;
   box-shadow:var(--shadow);
+
   position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 9999;
+  top:0;
+  left:0;
+  z-index:9999;
 }
 
 /* HEADER CENTER WRAPPER */
-.header-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 4px;
+.header-center{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  gap:4px;
+}
+
+/* ================= MOBILE ================= */
+@media (max-width:768px){
+
+  header{
+    position: relative;   /* ikut scroll */
+  }
+
 }
 
 /* LOGO */
@@ -1797,6 +1807,7 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
 
