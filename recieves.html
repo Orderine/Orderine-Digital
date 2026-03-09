@@ -4631,6 +4631,19 @@ function renderRevenueTrendChart(allOrders) {
     reservations.length;
 
 }
+
+  function backToOrders(){
+
+  const orderPage = document.getElementById("orderPage");
+  const summaryPage = document.getElementById("summaryPage");
+  const reservationPage = document.getElementById("reservationPage");
+
+  if(summaryPage) summaryPage.style.display = "none";
+  if(reservationPage) reservationPage.style.display = "none";
+
+  orderPage.style.display = "block";
+
+}
   
 document.addEventListener("DOMContentLoaded", async () => {
 
@@ -4868,6 +4881,7 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
 
