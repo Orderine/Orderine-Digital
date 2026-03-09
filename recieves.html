@@ -1473,6 +1473,25 @@ canvas {
   margin-top:6px;
   opacity:.7;
 }
+
+.reservation-card{
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+/* saat disentuh / diklik */
+.reservation-card:active{
+  background-color:#2f6bff;
+  color:white;
+  transform:scale(0.97);
+}
+
+/* supaya text ikut berubah */
+.reservation-card:active .card-title,
+.reservation-card:active .card-desc,
+.reservation-card:active .reservation-count{
+  color:white;
+}
 </style>
 
 </head>
@@ -4884,5 +4903,6 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
