@@ -6,12 +6,9 @@
   <title>Dine-In Book</title>
   
  <style>
-  :root{
-  --header-height:120px;
-}
-
-body{
-  padding-top:var(--header-height);
+   body{
+  margin:0;
+  padding:0;
 }
 /* =====================
    THEME (Light / Dark) & ROOT VARS
@@ -77,13 +74,13 @@ img{max-width:100%;display:block}
    HEADER
    ===================== */
 header{
-  width:100%;
+  width:98%;
   background: linear-gradient(90deg,var(--brand-2),var(--brand-3));
   color:#fff;
   padding:16px;
   box-shadow:var(--shadow);
 
-  position: fixed;
+  position:static;
   top:0;
   left:0;
   z-index:9999;
@@ -105,11 +102,6 @@ header{
   body{
     padding-top:0;
   }
-
-  header{
-    position:static; /* ikut scroll */
-  }
-
 }
 /* LOGO */
 #restoLogo {
@@ -1804,30 +1796,6 @@ async function initDarkMode() {
 
 
 </script>
-  <script>
-  function adjustContentOffset() {
-    const header = document.querySelector("header");
-    const headerHeight = header.offsetHeight;
-    document.body.style.paddingTop = headerHeight + "px";
-  }
-
-  window.addEventListener("load", adjustContentOffset);
-  window.addEventListener("resize", adjustContentOffset);
-</script>
+ 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
