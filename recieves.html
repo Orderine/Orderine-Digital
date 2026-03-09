@@ -1351,22 +1351,29 @@ canvas {
   background: #111827;
   color: #00ff9c;
 
-  padding: 14px 20px;
+  padding: 16px 32px; /* diperbesar */
+
   cursor: pointer;
   font-weight: 600;
 
   display: flex;
-  align-items: right;
-  justify-content: center;   /* Bikin text rata tengah */
+  justify-content: center;
   text-align: center;
 
-  border-radius: 0;          /* Kalau mau full nempel body */
+  border-radius: 0;
 }
 
 /* Kalau ada icon di kanan/kiri dan mau tetap seimbang */
 .dashboard-toggle span {
   flex: 1;
   text-align: right;
+}
+
+.dashboard-toggle{
+  border-bottom:1px solid rgba(0,255,156,0.3);
+}
+.dashboard-toggle:hover{
+  background:#1f2937;
 }
 
 .dashboard-content {
@@ -1561,7 +1568,7 @@ canvas {
           <div class="rev-value" id="revPaid">0</div>
         </div>
 
-        <div class="rev-card rev-book">
+        <div class="summary-card">
           <div class="rev-title">BOOK MENU</div>
           <div class="rev-value">📖</div>
         </div>
@@ -1576,6 +1583,21 @@ canvas {
           <div class="card-title">Summary</div>
           <div class="card-desc">Lihat laporan lengkap</div>
         </div>
+
+         <div class="card-square summary-card" onclick="renderReservationPage()">
+
+          <div class="card-icon">📅</div>
+          <div class="card-title">Reservations</div>
+          <div class="card-desc">Customer bookings</div>
+
+          <div class="reservation-count" id="reservationCount">0</div>
+
+        </div>
+       
+      </section>
+
+      <!-- ================= ROW 3 ================= -->
+      <section class="dashboard-row">
 
         <div class="card-rectangle insight-card">
 
@@ -1603,20 +1625,6 @@ canvas {
 
         </div>
 
-      </section>
-
-      <!-- ================= ROW 3 ================= -->
-      <section class="dashboard-row">
-
-        <div class="card-square summary-card" onclick="renderReservationPage()">
-
-          <div class="card-icon">📅</div>
-          <div class="card-title">Reservations</div>
-          <div class="card-desc">Customer bookings</div>
-
-          <div class="reservation-count" id="reservationCount">0</div>
-
-        </div>
 
       </section>
 
@@ -4915,4 +4923,5 @@ card.addEventListener("touchend", function () {
 
 </body>
 </html>
+
 
