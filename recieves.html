@@ -1519,6 +1519,7 @@ canvas {
 
       <!-- ================= TOP REVENUE ================= -->
       <section class="revenue-dashboard">
+
         <div class="rev-card">
           <div class="rev-title">Revenue</div>
           <div class="rev-value" id="revTotal">Rp 0</div>
@@ -1540,9 +1541,10 @@ canvas {
         </div>
 
         <div class="rev-card rev-book">
-        <div class="rev-title">BOOK MENU</div>
-        <div class="rev-value">📖</div>
+          <div class="rev-title">BOOK MENU</div>
+          <div class="rev-value">📖</div>
         </div>
+
       </section>
 
 
@@ -1584,19 +1586,42 @@ canvas {
         </div>
 
       </section>
-  <div id="reservationPage" style="display:none"></div>
-  <div class="card-square reservation-card" onclick="renderReservationPage()">
 
-  <div class="card-icon">📅</div>
-  <div class="card-title">Reservations</div>
-  <div class="card-desc">Customer bookings</div>
-
-  <div class="reservation-count" id="reservationCount">0</div>
-
-   </div>
-  
 
       <!-- ================= ROW 3 ================= -->
+      <section class="dashboard-row">
+
+        <!-- Reservation Card -->
+        <div class="card-square reservation-card" onclick="renderReservationPage()">
+
+          <div class="card-icon">📅</div>
+          <div class="card-title">Reservations</div>
+          <div class="card-desc">Customer bookings</div>
+
+          <div class="reservation-count" id="reservationCount">0</div>
+
+        </div>
+
+      </section>
+
+    </div> <!-- page-container -->
+
+  </div> <!-- dashboardContent -->
+
+</div> <!-- dashboard-wrapper -->
+
+</div> <!-- END orderPage -->
+
+
+<!-- ================= SUMMARY PAGE ================= -->
+<div id="summaryPage" style="display:none"></div>
+
+
+<!-- ================= RESERVATION PAGE ================= -->
+<div id="reservationPage" style="display:none"></div>
+  
+
+      <!-- ================= ROW 4 ================= -->
       <section class="dashboard-row">
 
         <!-- Live Info -->
@@ -4881,6 +4906,7 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
 
