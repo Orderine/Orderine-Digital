@@ -1474,23 +1474,25 @@ canvas {
   opacity:.7;
 }
 
-.reservation-card{
-  transition: all 0.2s ease;
-  cursor: pointer;
+.card-square{
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 
-/* saat disentuh / diklik */
-.reservation-card:active{
-  background-color:#2f6bff;
-  color:white;
-  transform:scale(0.97);
+.card-square:hover{
+  box-shadow:0 6px 18px rgba(0,0,0,0.15);
 }
 
-/* supaya text ikut berubah */
-.reservation-card:active .card-title,
-.reservation-card:active .card-desc,
-.reservation-card:active .reservation-count{
-  color:white;
+.card-active{
+  background:#2f6bff !important;
+  color:white !important;
+  transform:scale(0.96);
+  transition:all 0.15s ease;
+}
+
+.card-active .card-title,
+.card-active .card-desc,
+.card-active .reservation-count{
+  color:white !important;
 }
 </style>
 
@@ -4895,6 +4897,28 @@ themeBtn.addEventListener("click", async ()=>{
   function goBackToAdmin() {
     window.location.href = "admin.html";
   }
+
+  document.querySelectorAll(".reservation-card").forEach(card => {
+
+  card.addEventListener("touchstart", () => {
+    card.classList.add("card-active");
+  });
+
+  card.addEventListener("touchend", () => {
+    setTimeout(()=>{
+      card.classList.remove("card-active");
+    },150);
+  });
+
+  card.addEventListener("mousedown", () => {
+    card.classList.add("card-active");
+  });
+
+  card.addEventListener("mouseup", () => {
+    card.classList.remove("card-active");
+  });
+
+});
 </script>
 
   
@@ -4903,6 +4927,7 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
 
