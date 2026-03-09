@@ -1445,14 +1445,37 @@ canvas {
   color:#00ff9c; /* hijau terminal */
 }
 
-.rev-book {
-  cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease;
+.rev-book{
+  background:#0f172a;
+  border:1px solid rgba(0,255,156,0.25);
+  color:#00ff9c;
+
+  cursor:pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.12s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
-.rev-book:hover {
- transform: translateY(-3px);
- box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+/* HOVER DESKTOP */
+.rev-book:hover{
+  background:#111827;
+  border-color:#00ff9c;
+  box-shadow:0 0 10px rgba(0,255,156,0.35);
+}
+
+/* TOUCH / CLICK */
+.rev-book:active{
+  background:#00ff9c;
+  color:#02140d;
+
+  transform:scale(0.96);
+
+  box-shadow:
+    0 0 14px rgba(0,255,156,0.6),
+    inset 0 0 6px rgba(0,0,0,0.4);
 }
 
   .reservation-item{
@@ -4914,5 +4937,6 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
