@@ -198,7 +198,11 @@ body.dark-mode .promo-badge{background:#ffcc00;color:#111}
    CART / FOOTER
    ===================== */
 footer{background:var(--surface);margin-top:24px;box-shadow:var(--shadow);padding-bottom:calc(var(--fixed-bar-height) + 20px)}
-.footer-inner{padding:18px 0 24px}
+.footer-inner{
+  padding:18px 16px 24px;
+  max-width:900px;
+  margin:auto;
+}
 .cart{border:1px solid var(--border);border-radius:16px;padding:12px;background:var(--surface)}
 .cart h3{margin:6px 6px 10px;font-size:18px;position:relative;padding-right:56px}
 .cart-empty{color:var(--muted);padding:8px}
@@ -1806,6 +1810,7 @@ async function initDarkMode() {
  
 </body>
 </html>
+
 
 
 
