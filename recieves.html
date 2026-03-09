@@ -1786,6 +1786,99 @@ canvas {
 
   </div>
 </div>
+
+  <!-- ================= REPORT MODAL ================= -->
+<div id="reportModal" class="report-overlay hidden">
+
+  <div class="report-terminal">
+
+    <!-- HEADER -->
+    <div class="terminal-header">
+      <div class="terminal-title">
+        📊 REVENUE ANALYTICS TERMINAL
+        <span class="terminal-sub">Enterprise Performance Monitor</span>
+      </div>
+
+      <button class="terminal-close" onclick="closeReportModal()">
+        Close Terminal
+      </button>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="terminal-stats">
+
+      <div class="terminal-card orders">
+        <div class="card-label">TOTAL ORDERS</div>
+        <div class="card-value" id="reportOrders">0</div>
+      </div>
+
+      <div class="terminal-card highlight">
+        <div class="card-label">TOTAL REVENUE</div>
+        <div class="card-value" id="reportRevenue">Rp 0</div>
+      </div>
+
+      <div class="terminal-card period">
+        <div class="card-label">PERIOD</div>
+        <div class="card-value" id="reportPeriod">-</div>
+      </div>
+
+    </div>
+
+    <!-- CHART -->
+    <div class="terminal-chart">
+      <canvas id="reportChart"></canvas>
+    </div>
+
+    <!-- TOP ITEMS -->
+    <div class="terminal-chart-card">
+
+      <div class="chart-card-header">
+        <div class="chart-card-title">
+          TOP ITEMS PERFORMANCE
+        </div>
+        <div class="chart-card-sub">
+          Item Sales Distribution
+        </div>
+      </div>
+
+      <div class="chart-card-body">
+        <canvas id="topItemsChart"></canvas>
+      </div>
+
+    </div>
+
+    <!-- DISTRIBUTION -->
+    <div class="terminal-card distribution-card">
+
+      <div class="distribution-header">
+        SALES DISTRIBUTION INTELLIGENCE
+      </div>
+
+      <div class="distribution-grid">
+
+        <div class="distribution-box">
+          <div class="distribution-title">Revenue Share</div>
+          <canvas id="revenueShareChart"></canvas>
+        </div>
+
+        <div class="distribution-box">
+          <div class="distribution-title">Food vs Drink</div>
+          <canvas id="categoryChart"></canvas>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="terminal-footer">
+      <button class="terminal-export" onclick="exportReport()">
+        ⬇ Export CSV
+      </button>
+    </div>
+
+  </div>
+
+</div>
  
  
 <script src="db-core.js"></script>
@@ -4791,4 +4884,5 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
