@@ -6,6 +6,12 @@
   <title>Dine-In Book</title>
   
  <style>
+   body{
+  display:block;
+}
+   body{
+  padding-top:200px; /* untuk desktop */
+}
 /* =====================
    THEME (Light / Dark) & ROOT VARS
    ===================== */
@@ -52,7 +58,9 @@ body.dark-mode{
    BASE
    ===================== */
 *{box-sizing:border-box}
-html,body{height:100%}
+html,body{
+  min-height:100%;
+}
 body{
   margin:0;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
@@ -95,10 +103,7 @@ header{
 
   header{
     position:static;
-  }
-
-  body{
-    padding-top:0;
+    width:100%;
   }
 
 }
@@ -1808,6 +1813,7 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
 
