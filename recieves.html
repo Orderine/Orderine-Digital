@@ -4898,26 +4898,14 @@ themeBtn.addEventListener("click", async ()=>{
     window.location.href = "admin.html";
   }
 
-  document.querySelectorAll(".reservation-card").forEach(card => {
+const card = document.querySelector(".reservation-card");
 
-  card.addEventListener("touchstart", () => {
-    card.classList.add("card-active");
-  });
+card.addEventListener("touchstart", function () {
+  card.classList.add("card-active");
+});
 
-  card.addEventListener("touchend", () => {
-    setTimeout(()=>{
-      card.classList.remove("card-active");
-    },150);
-  });
-
-  card.addEventListener("mousedown", () => {
-    card.classList.add("card-active");
-  });
-
-  card.addEventListener("mouseup", () => {
-    card.classList.remove("card-active");
-  });
-
+card.addEventListener("touchend", function () {
+  card.classList.remove("card-active");
 });
 </script>
 
@@ -4927,7 +4915,3 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
-
-
-
-
