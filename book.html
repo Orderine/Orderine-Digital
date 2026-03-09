@@ -6,11 +6,12 @@
   <title>Dine-In Book</title>
   
  <style>
-   body{
-  display:block;
+  :root{
+  --header-height:120px;
 }
-   body{
-  padding-top:200px; /* untuk desktop */
+
+body{
+  padding-top:var(--header-height);
 }
 /* =====================
    THEME (Light / Dark) & ROOT VARS
@@ -100,14 +101,10 @@ header{
 
 /* ================= MOBILE ================= */
 @media (max-width:768px){
-
-  header{
-    position:static;
-    padding:10px 12px; /* lebih kecil */
+  body{
+    padding-top:0;
   }
-
 }
-
 /* LOGO */
 #restoLogo {
   height: 42px;
@@ -1813,6 +1810,7 @@ async function initDarkMode() {
 </script>
 </body>
 </html>
+
 
 
 
