@@ -1447,6 +1447,32 @@ canvas {
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0,0,0,.15);
 }
+
+  .reservation-item{
+  background:#fff;
+  border-radius:10px;
+  padding:12px;
+  margin-bottom:10px;
+  border:1px solid rgba(0,0,0,.08);
+}
+
+.res-top{
+  display:flex;
+  justify-content:space-between;
+  font-size:14px;
+}
+
+.res-info{
+  font-size:13px;
+  opacity:.8;
+  margin-top:4px;
+}
+
+.res-note{
+  font-size:12px;
+  margin-top:6px;
+  opacity:.7;
+}
 </style>
 
 </head>
@@ -1559,6 +1585,15 @@ canvas {
 
       </section>
 
+  <div class="card-square reservation-card" onclick="renderReservationPage()">
+
+  <div class="card-icon">📅</div>
+  <div class="card-title">Reservations</div>
+  <div class="card-desc">Customer bookings</div>
+
+  <div class="reservation-count" id="reservationCount">0</div>
+
+   </div>
 
       <!-- ================= ROW 3 ================= -->
       <section class="dashboard-row">
@@ -1579,8 +1614,7 @@ canvas {
         </div>
 
       </section>
-
-
+      
       <!-- ================= EXTRA CHART SECTION ================= -->
     <section class="dashboard-row">
 
@@ -1831,7 +1865,8 @@ MODAL PEMBAYARAN CASH
 
 </div>
 
-
+<div id="reservationPage" style="display:none"></div>
+    
     <!-- FOOTER -->
     <div class="terminal-footer">
       <button class="terminal-export" onclick="exportReport()">
@@ -4525,6 +4560,77 @@ function renderRevenueTrendChart(allOrders) {
 
 }
 
+  async function renderReservationPage(){
+
+  // toggle halaman
+  document.getElementById("orderPage").style.display = "none";
+  document.getElementById("reservationPage").style.display = "block";
+
+  const reservationPage = document.getElementById("reservationPage");
+
+  reservationPage.innerHTML = `
+    <main class="container">
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2>📅 Reservations</h2>
+        <button class="back-btn" onclick="backToOrders()">⬅ Back</button>
+      </div>
+
+      <div id="reservationContent"></div>
+
+    </main>
+  `;
+
+  renderReservationList();
+
+}
+
+  async function renderReservationList(){
+
+  const orders = await getAllOrders();
+
+  const reservations = orders.filter(o =>
+    (o.type || "").toUpperCase() === "RESERVATION"
+  );
+
+  const box = document.getElementById("reservationContent");
+
+  if(!reservations.length){
+    box.innerHTML = "<p>Tidak ada reservasi.</p>";
+    return;
+  }
+
+  box.innerHTML = reservations.map(r => `
+    <div class="reservation-item">
+
+      <div class="res-top">
+        <strong>${r.name || "Guest"}</strong>
+        <span>${r.date || "-"}</span>
+      </div>
+
+      <div class="res-info">
+        ⏰ ${r.time || "-"} • 👥 ${r.guests || 0} guests
+      </div>
+
+      ${r.note ? `<div class="res-note">📝 ${r.note}</div>` : ""}
+
+    </div>
+  `).join("");
+
+}
+
+  async function updateReservationCount(){
+
+  const orders = await getAllOrders();
+
+  const reservations = orders.filter(o =>
+    (o.type || "").toUpperCase() === "RESERVATION"
+  );
+
+  document.getElementById("reservationCount").textContent =
+    reservations.length;
+
+}
   
 document.addEventListener("DOMContentLoaded", async () => {
 
@@ -4762,6 +4868,7 @@ themeBtn.addEventListener("click", async ()=>{
 
 </body>
 </html>
+
 
 
 
