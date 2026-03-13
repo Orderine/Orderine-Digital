@@ -585,15 +585,15 @@ outline:2px solid #00ff9c;
 <input type="date" id="resDate">
 
 <label>Guests</label>
-<select id="resGuests">
-<option>2</option>
-<option>3</option>
-<option>4</option>
-<option>5</option>
-<option>6</option>
-<option>8</option>
-<option>10</option>
-</select>
+<input 
+type="number"
+id="resGuests"
+min="1"
+placeholder="Example: 2, 10, 70"
+/>
+<small style="color:#9aa4af">
+For large groups (50+), restaurant may contact you.
+</small>
 
 <label>Available Slots</label>
 
@@ -945,7 +945,11 @@ document.getElementById("resDate").value;
 const guests =
 parseInt(
 document.getElementById("resGuests").value
-);
+) || 0;
+
+if(guests <= 0){
+return;
+}
 
 const slots =
 generateTimeSlots("17:00","22:00",30);
@@ -1047,7 +1051,11 @@ document.getElementById("resDate").value;
 const guests =
 parseInt(
 document.getElementById("resGuests").value
-);
+) || 0;
+
+if(guests <= 0){
+return;
+}
 
 const name =
 document.getElementById("resName").value;
