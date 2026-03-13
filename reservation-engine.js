@@ -1,31 +1,66 @@
-/* ================================
+/* =====================================
    ORDERINE RESERVATION ENGINE
-   Core Logic
-================================ */
+   Production Core
+===================================== */
 
-/* ================================
-   TIME OVERLAP CHECK
-================================ */
 
-function isTimeOverlap(startA, endA, startB, endB) {
+/* =====================================
+   TIME UTILITIES
+===================================== */
 
-  return startA < endB && endA > startB;
+function timeToMinutes(time){
+
+  const [h,m] = time.split(":").map(Number);
+
+  return h * 60 + m;
 
 }
 
 
-/* ================================
+function minutesToTime(minutes){
+
+  const h =
+  String(Math.floor(minutes / 60)).padStart(2,"0");
+
+  const m =
+  String(minutes % 60).padStart(2,"0");
+
+  return `${h}:${m}`;
+
+}
+
+
+/* =====================================
+   TIME OVERLAP CHECK
+===================================== */
+
+function isTimeOverlap(startA,endA,startB,endB){
+
+  const a1 = timeToMinutes(startA);
+  const a2 = timeToMinutes(endA);
+
+  const b1 = timeToMinutes(startB);
+  const b2 = timeToMinutes(endB);
+
+  return a1 < b2 && a2 > b1;
+
+}
+
+
+/* =====================================
    CHECK TABLE AVAILABILITY
-================================ */
+===================================== */
 
-function isTableAvailable(tableId, start, end, reservations) {
+function isTableAvailable(tableId,start,end,reservations){
 
-  for (const r of reservations) {
+  for(const r of reservations){
 
-    if (!r.tables.includes(tableId)) continue;
+    if(!r.tables.includes(tableId)) continue;
 
-    if (isTimeOverlap(start, end, r.startTime, r.endTime)) {
+    if(isTimeOverlap(start,end,r.startTime,r.endTime)){
+
       return false;
+
     }
 
   }
@@ -35,197 +70,64 @@ function isTableAvailable(tableId, start, end, reservations) {
 }
 
 
-/* ================================
+/* =====================================
    GET AVAILABLE TABLES
-================================ */
+===================================== */
 
-function getAvailableTables(start, end, tables, reservations) {
+function getAvailableTables(start,end,tables,reservations){
 
   return tables.filter(table =>
-    isTableAvailable(table.id, start, end, reservations)
+    isTableAvailable(
+      table.id,
+      start,
+      end,
+      reservations
+    )
   );
 
 }
 
 
-/* ================================
+/* =====================================
    TABLE COMBINATION ENGINE
-================================ */
+===================================== */
 
-function findTableCombination(tables, guests) {
+function findTableCombination(tables,guests){
 
   const results = [];
 
-  function search(combo, startIndex) {
+  function search(combo,startIndex){
 
     const capacity =
-      combo.reduce((sum, t) => sum + t.capacity, 0);
+    combo.reduce((sum,t)=>sum+t.capacity,0);
 
-    if (capacity >= guests) {
+    if(capacity >= guests){
+
       results.push(combo);
       return;
+
     }
 
-    for (let i = startIndex; i < tables.length; i++) {
+    for(let i=startIndex;i<tables.length;i++){
 
-      search([...combo, tables[i]], i + 1);
+      search([...combo,tables[i]],i+1);
 
     }
 
   }
 
-  search([], 0);
+  search([],0);
 
   return results;
 
 }
 
-/* ================================
-   TEST DATA
-================================ */
 
-const tables = [
+/* =====================================
+   BEST TABLE COMBINATION
+===================================== */
 
-    { id:"T1", capacity:2 },
-    { id:"T2", capacity:2 },
-   
-    { id:"T3", capacity:4 },
-    { id:"T4", capacity:4 },
-   
-    { id:"T5", capacity:6 }
-   
-   ];
-   
-   
-   const reservations = [
-   
-    {
-      id:"R1",
-      date:"2026-03-14",
-      startTime:"18:00",
-      endTime:"19:30",
-      tables:["T3"],
-      guests:4
-    }
-   
-   ];
-
-   /* ================================
-   ENGINE TEST
-================================ */
-
-const start = "18:30";
-const end = "20:00";
-const guests = 5;
-
-const availableTables =
-  getAvailableTables(start, end, tables, reservations);
-
-console.log("Available Tables:", availableTables);
-
-
-const combos =
-  findTableCombination(availableTables, guests);
-
-
-console.log("Possible Table Combos:", combos);
-
-
-/* ================================
-   GENERATE TIME SLOTS
-================================ */
-
-function generateTimeSlots(open, close, interval) {
-
-  const slots = [];
-
-  let current = open;
-
-  while (current < close) {
-
-    slots.push(current);
-
-    const [h,m] = current.split(":").map(Number);
-
-    const date = new Date(0,0,0,h,m);
-    date.setMinutes(date.getMinutes() + interval);
-
-    const nh = String(date.getHours()).padStart(2,"0");
-    const nm = String(date.getMinutes()).padStart(2,"0");
-
-    current = `${nh}:${nm}`;
-
-  }
-
-  return slots;
-
-}
-
-console.log("---- SLOT TEST ----");
-
-const slots =
-  generateTimeSlots("17:00","22:00",30);
-
-console.log(slots);
-
-
-/* ================================
-   SLOT AVAILABILITY ENGINE
-================================ */
-
-function checkSlotAvailability(slot, duration, tables, reservations, guests){
-
-  const start = slot;
-
-  const [h,m] = slot.split(":").map(Number);
-
-  const date = new Date(0,0,0,h,m);
-  date.setMinutes(date.getMinutes() + duration);
-
-  const end =
-    String(date.getHours()).padStart(2,"0") +
-    ":" +
-    String(date.getMinutes()).padStart(2,"0");
-
-  const availableTables =
-    getAvailableTables(start,end,tables,reservations);
-
-  const combos =
-    findTableCombination(availableTables,guests);
-
-  if(combos.length === 0) return "FULL";
-
-  if(combos.length <= 2) return "LIMITED";
-
-  return "AVAILABLE";
-
-}
-
-console.log("---- SLOT STATUS TEST ----");
-
-const daySlots =
-  generateTimeSlots("17:00","22:00",30);
-
-daySlots.forEach(slot=>{
-
-  const status =
-    checkSlotAvailability(
-      slot,
-      90,
-      tables,
-      reservations,
-      4
-    );
-
-  console.log(slot,"→",status);
-
-});
-
-/* ================================
-   FIND BEST TABLE COMBINATION
-================================ */
-
-function findBestCombination(combos, guests){
+function findBestCombination(combos,guests){
 
   let best = null;
   let smallestWaste = Infinity;
@@ -233,9 +135,10 @@ function findBestCombination(combos, guests){
   combos.forEach(combo=>{
 
     const capacity =
-      combo.reduce((sum,t)=>sum+t.capacity,0);
+    combo.reduce((sum,t)=>sum+t.capacity,0);
 
-    const waste = capacity - guests;
+    const waste =
+    capacity - guests;
 
     if(waste < smallestWaste){
 
@@ -250,73 +153,138 @@ function findBestCombination(combos, guests){
 
 }
 
-console.log("---- BEST TABLE TEST ----");
 
-const testStart = "18:30";
-const testEnd = "20:00";
-const testGuests = 5;
+/* =====================================
+   GENERATE TIME SLOTS
+===================================== */
 
-const availableTables2 =
-  getAvailableTables(testStart,testEnd,tables,reservations);
+function generateTimeSlots(open,close,interval){
 
-const combos2 =
-  findTableCombination(availableTables2,testGuests);
+  const slots = [];
 
-const best =
-  findBestCombination(combos2,testGuests);
+  let current =
+  timeToMinutes(open);
 
-console.log("BEST TABLE COMBO:");
+  const end =
+  timeToMinutes(close);
 
-console.log(
-  best.map(t=>t.id).join(" + ")
-);
+  while(current < end){
+
+    slots.push(
+      minutesToTime(current)
+    );
+
+    current += interval;
+
+  }
+
+  return slots;
+
+}
 
 
-/* ================================
+/* =====================================
+   SLOT STATUS ENGINE
+===================================== */
+
+function getSlotStatus({
+
+  slot,
+  duration,
+  guests,
+  tables,
+  reservations
+
+}){
+
+  const start = slot;
+
+  const end =
+  minutesToTime(
+    timeToMinutes(slot) + duration
+  );
+
+  const availableTables =
+  getAvailableTables(
+    start,
+    end,
+    tables,
+    reservations
+  );
+
+  const combos =
+  findTableCombination(
+    availableTables,
+    guests
+  );
+
+  if(combos.length === 0)
+  return "FULL";
+
+  if(combos.length <= 2)
+  return "LIMITED";
+
+  return "AVAILABLE";
+
+}
+
+
+/* =====================================
    CREATE RESERVATION
-================================ */
+===================================== */
 
 function createReservation({
+
   date,
   startTime,
   duration,
   guests,
   name,
-  phone
+  phone,
+  tables,
+  reservations
+
 }){
 
-  const [h,m] = startTime.split(":").map(Number);
-
-  const d = new Date(0,0,0,h,m);
-  d.setMinutes(d.getMinutes() + duration);
-
   const endTime =
-    String(d.getHours()).padStart(2,"0") +
-    ":" +
-    String(d.getMinutes()).padStart(2,"0");
-
+  minutesToTime(
+    timeToMinutes(startTime) + duration
+  );
 
   const availableTables =
-    getAvailableTables(startTime,endTime,tables,reservations);
+  getAvailableTables(
+    startTime,
+    endTime,
+    tables,
+    reservations
+  );
 
   const combos =
-    findTableCombination(availableTables,guests);
+  findTableCombination(
+    availableTables,
+    guests
+  );
 
   if(combos.length === 0){
 
-    console.log("❌ NO TABLE AVAILABLE");
+    return {
 
-    return null;
+      success:false,
+      reason:"NO_TABLE"
+
+    };
 
   }
 
   const best =
-    findBestCombination(combos,guests);
-
+  findBestCombination(
+    combos,
+    guests
+  );
 
   const reservation = {
 
-    id: "RSV-" + Date.now(),
+    id:"RSV-"+Date.now(),
 
     date,
 
@@ -325,41 +293,63 @@ function createReservation({
 
     guests,
 
-    tables: best.map(t=>t.id),
+    tables:
+    best.map(t=>t.id),
 
     name,
     phone,
 
-    status: "CONFIRMED",
+    status:"CONFIRMED",
 
-    createdAt: Date.now()
+    checkIn:false,
+
+    createdAt:Date.now()
 
   };
 
-  reservations.push(reservation);
+  return {
 
-  return reservation;
+    success:true,
+    reservation
+
+  };
 
 }
 
-console.log("---- CREATE RESERVATION TEST ----");
 
-const newReservation =
-  createReservation({
+/* =====================================
+   AUTO TABLE RELEASE
+===================================== */
 
-    date:"2026-03-14",
+function autoReleaseTables(reservations){
 
-    startTime:"18:30",
+  const now = new Date();
 
-    duration:90,
+  reservations.forEach(r=>{
 
-    guests:5,
+    if(r.status !== "CONFIRMED") return;
 
-    name:"John Doe",
+    if(r.checkIn) return;
 
-    phone:"08123456789"
+    const [h,m] =
+    r.startTime.split(":").map(Number);
+
+    const resTime =
+    new Date();
+
+    resTime.setHours(h);
+    resTime.setMinutes(m);
+    resTime.setSeconds(0);
+
+    const diff =
+    (now - resTime) / 60000;
+
+    if(diff > 15){
+
+      r.status = "NO_SHOW";
+
+    }
 
   });
 
-console.log(newReservation);
-
+}
