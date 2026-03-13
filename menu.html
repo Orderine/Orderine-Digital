@@ -1111,7 +1111,12 @@ setInterval(()=>{
 const modal =
 document.getElementById("reservationModal");
 
-if(modal.style.display === "flex"){
+if(!modal) return;
+
+const visible =
+getComputedStyle(modal).display;
+
+if(visible === "flex"){
 
 loadSlots();
 
