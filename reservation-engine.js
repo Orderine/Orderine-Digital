@@ -1,7 +1,15 @@
 /* =====================================
    ORDERINE RESERVATION ENGINE
-   Production Core
+   FULL SYNC WITH menu.html
 ===================================== */
+
+
+/* =====================================
+   GLOBAL SAFETY
+===================================== */
+
+if(typeof tables === "undefined") window.tables = [];
+if(typeof reservations === "undefined") window.reservations = [];
 
 
 /* =====================================
@@ -10,77 +18,74 @@
 
 function timeToMinutes(time){
 
-  const [h,m] = time.split(":").map(Number);
+const [h,m] = time.split(":").map(Number);
 
-  return h * 60 + m;
+return h*60 + m;
 
 }
-
 
 function minutesToTime(minutes){
 
-  const h =
-  String(Math.floor(minutes / 60)).padStart(2,"0");
+const h = String(Math.floor(minutes/60)).padStart(2,"0");
+const m = String(minutes%60).padStart(2,"0");
 
-  const m =
-  String(minutes % 60).padStart(2,"0");
-
-  return `${h}:${m}`;
+return `${h}:${m}`;
 
 }
 
+
 /* =====================================
-   SMART DINING DURATION ENGINE
+   DINING DURATION
 ===================================== */
 
 function getDiningDuration(guests){
 
-  if(guests <= 2) return 90;     // 1–2 pax
-  if(guests <= 4) return 120;    // 3–4 pax
-  if(guests <= 6) return 150;    // 5–6 pax
-  if(guests <= 8) return 180;    // 7–8 pax
+if(guests<=2) return 90;
+if(guests<=4) return 120;
+if(guests<=6) return 150;
+if(guests<=8) return 180;
 
-  return 180; // default
+return 180;
 
 }
 
 
 /* =====================================
-   TIME OVERLAP CHECK
+   TIME OVERLAP
 ===================================== */
 
 function isTimeOverlap(startA,endA,startB,endB){
 
-  const a1 = timeToMinutes(startA);
-  const a2 = timeToMinutes(endA);
+const a1 = timeToMinutes(startA);
+const a2 = timeToMinutes(endA);
 
-  const b1 = timeToMinutes(startB);
-  const b2 = timeToMinutes(endB);
+const b1 = timeToMinutes(startB);
+const b2 = timeToMinutes(endB);
 
-  return a1 < b2 && a2 > b1;
+return a1 < b2 && a2 > b1;
 
 }
 
 
 /* =====================================
-   CHECK TABLE AVAILABILITY
+   TABLE AVAILABILITY
 ===================================== */
 
-function isTableAvailable(tableId,start,end,reservations){
+function isTableAvailable(tableId,start,end,date,reservations){
 
-  for(const r of reservations){
+for(const r of reservations){
 
-    if(!r.tables.includes(tableId)) continue;
+if(r.date !== date) continue;
 
-    if(isTimeOverlap(start,end,r.startTime,r.endTime)){
+if(!r.tables.includes(tableId)) continue;
 
-      return false;
+if(isTimeOverlap(start,end,r.startTime,r.endTime)){
+return false;
+}
 
-    }
+}
 
-  }
-
-  return true;
+return true;
 
 }
 
@@ -89,16 +94,19 @@ function isTableAvailable(tableId,start,end,reservations){
    GET AVAILABLE TABLES
 ===================================== */
 
-function getAvailableTables(start,end,tables,reservations){
+function getAvailableTables(start,end,date,tables,reservations){
 
-  return tables.filter(table =>
-    isTableAvailable(
-      table.id,
-      start,
-      end,
-      reservations
-    )
-  );
+return tables.filter(table =>
+
+isTableAvailable(
+table.id,
+start,
+end,
+date,
+reservations
+)
+
+);
 
 }
 
@@ -109,88 +117,82 @@ function getAvailableTables(start,end,tables,reservations){
 
 function findTableCombination(tables,guests){
 
-  const results = [];
+const results=[];
 
-  function search(combo,startIndex){
+function search(combo,startIndex){
 
-    const capacity =
-    combo.reduce((sum,t)=>sum+t.capacity,0);
+const capacity =
+combo.reduce((s,t)=>s+t.capacity,0);
 
-    if(capacity >= guests){
+if(capacity>=guests){
 
-      results.push(combo);
-      return;
+results.push(combo);
+return;
 
-    }
+}
 
-    for(let i=startIndex;i<tables.length;i++){
+for(let i=startIndex;i<tables.length;i++){
 
-      search([...combo,tables[i]],i+1);
+search([...combo,tables[i]],i+1);
 
-    }
+}
 
-  }
+}
 
-  search([],0);
+search([],0);
 
-  return results;
+return results;
 
 }
 
 
 /* =====================================
-   BEST TABLE COMBINATION
+   BEST COMBINATION
 ===================================== */
 
-function findBestCombination(combos, guests){
+function findBestCombination(combos,guests){
 
-  let best = null;
+let best=null;
+let bestScore=Infinity;
 
-  let bestScore = Infinity;
+combos.forEach(combo=>{
 
-  combos.forEach(combo=>{
+const score=calculateTableScore(combo,guests);
 
-    const score =
-    calculateTableScore(combo,guests);
+if(score<bestScore){
 
-    if(score < bestScore){
-
-      bestScore = score;
-      best = combo;
-
-    }
-
-  });
-
-  return best;
+bestScore=score;
+best=combo;
 
 }
 
+});
+
+return best;
+
+}
+
+
 /* =====================================
-   GENERATE TIME SLOTS
+   TIME SLOT GENERATOR
 ===================================== */
 
 function generateTimeSlots(open,close,interval){
 
-  const slots = [];
+const slots=[];
 
-  let current =
-  timeToMinutes(open);
+let current=timeToMinutes(open);
+const end=timeToMinutes(close);
 
-  const end =
-  timeToMinutes(close);
+while(current<end){
 
-  while(current < end){
+slots.push(minutesToTime(current));
 
-    slots.push(
-      minutesToTime(current)
-    );
+current+=interval;
 
-    current += interval;
+}
 
-  }
-
-  return slots;
+return slots;
 
 }
 
@@ -208,20 +210,28 @@ reservations
 
 }){
 
+if(!tables || !reservations) return "FULL";
+
+const date =
+document.getElementById("resDate")?.value;
+
+if(!date) return "AVAILABLE";
+
 const duration =
 getDiningDuration(guests);
 
-const start = slot;
+const start=slot;
 
 const end =
 minutesToTime(
-timeToMinutes(slot) + duration
+timeToMinutes(slot)+duration
 );
 
 const availableTables =
 getAvailableTables(
 start,
 end,
+date,
 tables,
 reservations
 );
@@ -232,10 +242,10 @@ availableTables,
 guests
 );
 
-if(combos.length === 0)
+if(combos.length===0)
 return "FULL";
 
-if(combos.length <= 2)
+if(combos.length<=2)
 return "LIMITED";
 
 return "AVAILABLE";
@@ -255,7 +265,8 @@ guests,
 name,
 phone,
 tables,
-reservations
+reservations,
+forcedTables
 
 }){
 
@@ -264,16 +275,30 @@ getDiningDuration(guests);
 
 const endTime =
 minutesToTime(
-timeToMinutes(startTime) + duration
+timeToMinutes(startTime)+duration
 );
 
-const availableTables =
+let availableTables;
+
+if(forcedTables){
+
+availableTables =
+tables.filter(t =>
+forcedTables.includes(t.id)
+);
+
+}else{
+
+availableTables =
 getAvailableTables(
 startTime,
 endTime,
+date,
 tables,
 reservations
 );
+
+}
 
 const combos =
 findTableCombination(
@@ -281,7 +306,7 @@ availableTables,
 guests
 );
 
-if(combos.length === 0){
+if(combos.length===0){
 
 return {
 success:false,
@@ -296,7 +321,7 @@ combos,
 guests
 );
 
-const reservation = {
+const reservation={
 
 id:"RSV-"+Date.now(),
 
@@ -334,65 +359,57 @@ reservation
 
 
 /* =====================================
-   AUTO TABLE RELEASE
+   AUTO RELEASE (NO SHOW)
 ===================================== */
 
 function autoReleaseTables(reservations){
 
-  const now = new Date();
+const now=new Date();
 
-  reservations.forEach(r=>{
+reservations.forEach(r=>{
 
-    if(r.status !== "CONFIRMED") return;
+if(r.status!=="CONFIRMED") return;
 
-    if(r.checkIn) return;
+if(r.checkIn) return;
 
-    const [h,m] =
-    r.startTime.split(":").map(Number);
+const [h,m]=
+r.startTime.split(":").map(Number);
 
-    const resTime =
-    new Date();
+const resTime=new Date();
 
-    resTime.setHours(h);
-    resTime.setMinutes(m);
-    resTime.setSeconds(0);
+resTime.setHours(h);
+resTime.setMinutes(m);
+resTime.setSeconds(0);
 
-    const diff =
-    (now - resTime) / 60000;
+const diff=(now-resTime)/60000;
 
-    if(diff > 15){
+if(diff>15){
 
-      r.status = "NO_SHOW";
-
-    }
-
-  });
+r.status="NO_SHOW";
 
 }
 
+});
+
+}
+
+
 /* =====================================
-   TABLE TURNOVER SCORE
+   TABLE SCORE
 ===================================== */
 
-function calculateTableScore(combo, guests){
+function calculateTableScore(combo,guests){
 
-  const capacity =
-  combo.reduce((sum,t)=>sum+t.capacity,0);
+const capacity=
+combo.reduce((s,t)=>s+t.capacity,0);
 
-  const waste =
-  capacity - guests;
+const waste=capacity-guests;
 
-  const tableCount =
-  combo.length;
+const tableCount=combo.length;
 
-  const priority =
-  combo.reduce((sum,t)=>sum+(t.priority||1),0);
+const priority=
+combo.reduce((s,t)=>s+(t.priority||1),0);
 
-  const score =
-  (waste * 10) +
-  tableCount +
-  priority;
-
-  return score;
+return (waste*10)+tableCount+priority;
 
 }
