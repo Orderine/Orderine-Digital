@@ -557,8 +557,7 @@ outline:2px solid #00ff9c;
   <span class="label">Dine-in Book</span>
 </button>
 
- <!-- NEW BUTTON -->
-<button class="nav-btn" onclick="openReservationPanel()">
+ <button class="nav-btn" onclick="openReservation()">
   <span class="icon">🍽️</span>
   <span class="label">Reservation</span>
 </button>
@@ -918,16 +917,18 @@ async function initMenuPage() {
 
 function openReservation(){
 
-document
-.getElementById("reservationModal")
-.style.display="flex";
+const modal =
+document.getElementById("reservationModal");
+
+if(!modal) return;
+
+modal.style.display = "flex";
 
 loadSlots();
-
 renderTableMap();
 
 }
-
+ 
 function closeReservationPanel(){
 
 document.getElementById("reservationPanel")
