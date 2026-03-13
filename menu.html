@@ -321,6 +321,120 @@ flex-direction:column;
 gap:10px;
 
 }
+
+ .reservation-box{
+
+background:#0b0f14;
+color:#00ff9c;
+
+border:1px solid #00ff9c;
+
+padding:20px;
+
+border-radius:6px;
+
+width:340px;
+
+display:flex;
+flex-direction:column;
+gap:10px;
+
+font-family:monospace;
+
+}
+
+.reservation-box input,
+.reservation-box select{
+
+background:#020617;
+
+border:1px solid #00ff9c;
+
+color:#00ff9c;
+
+padding:8px;
+
+}
+
+.res-actions{
+
+display:flex;
+gap:10px;
+
+}
+
+.res-actions button{
+
+flex:1;
+
+background:#00ff9c;
+
+border:none;
+
+padding:10px;
+
+font-weight:bold;
+
+cursor:pointer;
+
+}
+
+.slot-grid{
+
+display:grid;
+
+grid-template-columns:repeat(4,1fr);
+
+gap:6px;
+
+margin-top:6px;
+
+}
+
+.slot{
+
+padding:8px;
+
+text-align:center;
+
+font-size:12px;
+
+cursor:pointer;
+
+border-radius:4px;
+
+font-weight:bold;
+
+}
+
+.slot.available{
+
+background:#064e3b;
+color:#6ee7b7;
+
+}
+
+.slot.limited{
+
+background:#78350f;
+color:#facc15;
+
+}
+
+.slot.full{
+
+background:#7f1d1d;
+color:#fca5a5;
+
+cursor:not-allowed;
+
+}
+
+.slot.selected{
+
+outline:2px solid #00ff9c;
+
+}
 </style>
 </head>
 <body>
@@ -382,12 +496,12 @@ gap:10px;
  <!-- NEW BUTTON -->
 <button class="nav-btn" onclick="openReservationPanel()">
   <span class="icon">🍽️</span>
-  <span class="label">Reserve Table</span>
+  <span class="label">Reservation</span>
 </button>
 
 <button class="nav-btn" onclick="goToPage('order.html')">
   <span class="icon">🛒</span>
-  <span class="label">Reserve & Delivery</span>
+  <span class="label">Delivery Order</span>
 </button>
 
 <button class="nav-btn" onclick="goToPage('room.html')">
@@ -396,22 +510,31 @@ gap:10px;
 </button>
 </div>
 
- <!-- RESERVATION PANEL -->
+<!-- RESERVATION PANEL -->
 
 <div id="reservationPanel" class="reservation-modal">
 
 <div class="reservation-box">
 
-<h2>Reserve Table</h2>
+<h2>TABLE RESERVATION</h2>
 
 <label>Date</label>
 <input type="date" id="resDate">
 
 <label>Guests</label>
-<input type="number" id="resGuests" value="2" min="1">
+<select id="resGuests">
+<option>2</option>
+<option>3</option>
+<option>4</option>
+<option>5</option>
+<option>6</option>
+<option>8</option>
+<option>10</option>
+</select>
 
-<label>Time</label>
-<select id="resTime"></select>
+<label>Available Slots</label>
+
+<div id="slotGrid" class="slot-grid"></div>
 
 <label>Name</label>
 <input type="text" id="resName">
@@ -419,13 +542,20 @@ gap:10px;
 <label>Phone</label>
 <input type="text" id="resPhone">
 
+<label>Deposit (optional)</label>
+<input type="number" id="resDeposit">
+
+<div class="res-actions">
+
 <button onclick="submitReservation()">
-Confirm Reservation
+CONFIRM
 </button>
 
 <button onclick="closeReservationPanel()">
-Close
+CANCEL
 </button>
+
+</div>
 
 </div>
 
@@ -731,27 +861,122 @@ document.getElementById("reservationPanel")
 
 }
 
- function loadReservationSlots(){
+let selectedSlot = null;
 
-const select =
-document.getElementById("resTime");
+function loadReservationSlots(){
 
-select.innerHTML = "";
+const grid =
+document.getElementById("slotGrid");
+
+grid.innerHTML = "";
+
+const guests =
+Number(document.getElementById("resGuests").value);
 
 const slots =
 generateTimeSlots("17:00","22:00",30);
 
 slots.forEach(slot=>{
 
-const option =
-document.createElement("option");
+const status =
+checkSlotAvailability(
+slot,
+90,
+tables,
+reservations,
+guests
+);
 
-option.value = slot;
-option.textContent = slot;
+const div =
+document.createElement("div");
 
-select.appendChild(option);
+div.classList.add("slot");
+
+if(status === "AVAILABLE")
+div.classList.add("available");
+
+if(status === "LIMITED")
+div.classList.add("limited");
+
+if(status === "FULL")
+div.classList.add("full");
+
+div.innerText = slot;
+
+if(status !== "FULL"){
+
+div.onclick = ()=>{
+
+document
+.querySelectorAll(".slot")
+.forEach(s=>s.classList.remove("selected"));
+
+div.classList.add("selected");
+
+selectedSlot = slot;
+
+};
+
+}
+
+grid.appendChild(div);
 
 });
+
+}
+
+ document
+.getElementById("resGuests")
+.addEventListener("change",loadReservationSlots);
+
+ function submitReservation(){
+
+if(!selectedSlot){
+
+alert("Select time slot");
+
+return;
+
+}
+
+const date =
+document.getElementById("resDate").value;
+
+const guests =
+Number(document.getElementById("resGuests").value);
+
+const name =
+document.getElementById("resName").value;
+
+const phone =
+document.getElementById("resPhone").value;
+
+const reservation =
+createReservation({
+
+date,
+startTime:selectedSlot,
+duration:90,
+guests,
+name,
+phone
+
+});
+
+if(!reservation){
+
+alert("No table available");
+
+return;
+
+}
+
+alert(
+"Reservation Confirmed\nTable: " +
+reservation.tables.join(", ")
+);
+
+closeReservationPanel();
 
 }
   
@@ -784,6 +1009,7 @@ async function goToPage(page) {
 
 </body>
 </html>
+
 
 
 
