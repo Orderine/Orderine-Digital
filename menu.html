@@ -730,6 +730,30 @@ document.getElementById("reservationPanel")
 .style.display = "none";
 
 }
+
+ function loadReservationSlots(){
+
+const select =
+document.getElementById("resTime");
+
+select.innerHTML = "";
+
+const slots =
+generateTimeSlots("17:00","22:00",30);
+
+slots.forEach(slot=>{
+
+const option =
+document.createElement("option");
+
+option.value = slot;
+option.textContent = slot;
+
+select.appendChild(option);
+
+});
+
+}
   
 /* =======================
    START
@@ -760,6 +784,7 @@ async function goToPage(page) {
 
 </body>
 </html>
+
 
 
 
