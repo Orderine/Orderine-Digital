@@ -863,63 +863,93 @@ document.getElementById("reservationPanel")
 
 let selectedSlot = null;
 
-function loadReservationSlots(){
+const RES_DURATION = 90; // menit
 
-const grid =
-document.getElementById("slotGrid");
+function loadSlots(){
 
-grid.innerHTML = "";
+const date =
+document.getElementById("resDate").value;
 
 const guests =
-Number(document.getElementById("resGuests").value);
+parseInt(
+document.getElementById("resGuests").value
+);
 
 const slots =
 generateTimeSlots("17:00","22:00",30);
 
+const container =
+document.getElementById("slotContainer");
+
+container.innerHTML="";
+
 slots.forEach(slot=>{
 
 const status =
-checkSlotAvailability(
-slot,
-90,
-tables,
-reservations,
-guests
-);
+getSlotStatus({
 
-const div =
-document.createElement("div");
+slot:slot,
+duration:RES_DURATION,
+guests:guests,
+tables:tables,
+reservations:reservations
 
-div.classList.add("slot");
+});
 
-if(status === "AVAILABLE")
-div.classList.add("available");
+const btn =
+document.createElement("button");
 
-if(status === "LIMITED")
-div.classList.add("limited");
+btn.innerText = slot;
 
-if(status === "FULL")
-div.classList.add("full");
+btn.className="slot-btn";
 
-div.innerText = slot;
+if(status === "AVAILABLE"){
 
-if(status !== "FULL"){
+btn.classList.add("slot-available");
 
-div.onclick = ()=>{
-
-document
-.querySelectorAll(".slot")
-.forEach(s=>s.classList.remove("selected"));
-
-div.classList.add("selected");
-
-selectedSlot = slot;
-
-};
+btn.onclick=()=>selectSlot(slot);
 
 }
 
-grid.appendChild(div);
+if(status === "LIMITED"){
+
+btn.classList.add("slot-limited");
+
+btn.onclick=()=>selectSlot(slot);
+
+}
+
+if(status === "FULL"){
+
+btn.classList.add("slot-full");
+
+btn.disabled=true;
+
+}
+
+container.appendChild(btn);
+
+});
+
+}
+
+ function selectSlot(slot){
+
+selectedSlot = slot;
+
+document
+.querySelectorAll(".slot-btn")
+.forEach(b=>{
+
+if(b.innerText === slot){
+
+b.classList.add("slot-selected");
+
+}else{
+
+b.classList.remove("slot-selected");
+
+}
 
 });
 
@@ -931,6 +961,20 @@ grid.appendChild(div);
 
  function submitReservation(){
 
+const date =
+document.getElementById("resDate").value;
+
+const guests =
+parseInt(
+document.getElementById("resGuests").value
+);
+
+const name =
+document.getElementById("resName").value;
+
+const phone =
+document.getElementById("resPhone").value;
+
 if(!selectedSlot){
 
 alert("Select time slot");
@@ -939,31 +983,28 @@ return;
 
 }
 
-const date =
-document.getElementById("resDate").value;
-
-const guests =
-Number(document.getElementById("resGuests").value);
-
-const name =
-document.getElementById("resName").value;
-
-const phone =
-document.getElementById("resPhone").value;
-
-const reservation =
+const result =
 createReservation({
 
-date,
+date:date,
+
 startTime:selectedSlot,
-duration:90,
-guests,
-name,
-phone
+
+duration:RES_DURATION,
+
+guests:guests,
+
+name:name,
+
+phone:phone,
+
+tables:tables,
+
+reservations:reservations
 
 });
 
-if(!reservation){
+if(!result.success){
 
 alert("No table available");
 
@@ -971,14 +1012,34 @@ return;
 
 }
 
-alert(
-"Reservation Confirmed\nTable: " +
-reservation.tables.join(", ")
+reservations.push(
+result.reservation
 );
 
-closeReservationPanel();
+alert("Reservation Confirmed");
+
+closeReservation();
+
+loadSlots();
 
 }
+
+ /* ===============================
+   LIVE SLOT REFRESH
+=============================== */
+
+setInterval(()=>{
+
+const modal =
+document.getElementById("reservationModal");
+
+if(modal.style.display === "flex"){
+
+loadSlots();
+
+}
+
+},5000);
   
 /* =======================
    START
