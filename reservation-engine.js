@@ -142,22 +142,20 @@ function findTableCombination(tables,guests){
    BEST TABLE COMBINATION
 ===================================== */
 
-function findBestCombination(combos,guests){
+function findBestCombination(combos, guests){
 
   let best = null;
-  let smallestWaste = Infinity;
+
+  let bestScore = Infinity;
 
   combos.forEach(combo=>{
 
-    const capacity =
-    combo.reduce((sum,t)=>sum+t.capacity,0);
+    const score =
+    calculateTableScore(combo,guests);
 
-    const waste =
-    capacity - guests;
+    if(score < bestScore){
 
-    if(waste < smallestWaste){
-
-      smallestWaste = waste;
+      bestScore = score;
       best = combo;
 
     }
@@ -167,7 +165,6 @@ function findBestCombination(combos,guests){
   return best;
 
 }
-
 
 /* =====================================
    GENERATE TIME SLOTS
@@ -370,5 +367,32 @@ function autoReleaseTables(reservations){
     }
 
   });
+
+}
+
+/* =====================================
+   TABLE TURNOVER SCORE
+===================================== */
+
+function calculateTableScore(combo, guests){
+
+  const capacity =
+  combo.reduce((sum,t)=>sum+t.capacity,0);
+
+  const waste =
+  capacity - guests;
+
+  const tableCount =
+  combo.length;
+
+  const priority =
+  combo.reduce((sum,t)=>sum+(t.priority||1),0);
+
+  const score =
+  (waste * 10) +
+  tableCount +
+  priority;
+
+  return score;
 
 }
