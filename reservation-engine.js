@@ -29,6 +29,21 @@ function minutesToTime(minutes){
 
 }
 
+/* =====================================
+   SMART DINING DURATION ENGINE
+===================================== */
+
+function getDiningDuration(guests){
+
+  if(guests <= 2) return 90;     // 1–2 pax
+  if(guests <= 4) return 120;    // 3–4 pax
+  if(guests <= 6) return 150;    // 5–6 pax
+  if(guests <= 8) return 180;    // 7–8 pax
+
+  return 180; // default
+
+}
+
 
 /* =====================================
    TIME OVERLAP CHECK
@@ -189,42 +204,44 @@ function generateTimeSlots(open,close,interval){
 
 function getSlotStatus({
 
-  slot,
-  duration,
-  guests,
-  tables,
-  reservations
+slot,
+guests,
+tables,
+reservations
 
 }){
 
-  const start = slot;
+const duration =
+getDiningDuration(guests);
 
-  const end =
-  minutesToTime(
-    timeToMinutes(slot) + duration
-  );
+const start = slot;
 
-  const availableTables =
-  getAvailableTables(
-    start,
-    end,
-    tables,
-    reservations
-  );
+const end =
+minutesToTime(
+timeToMinutes(slot) + duration
+);
 
-  const combos =
-  findTableCombination(
-    availableTables,
-    guests
-  );
+const availableTables =
+getAvailableTables(
+start,
+end,
+tables,
+reservations
+);
 
-  if(combos.length === 0)
-  return "FULL";
+const combos =
+findTableCombination(
+availableTables,
+guests
+);
 
-  if(combos.length <= 2)
-  return "LIMITED";
+if(combos.length === 0)
+return "FULL";
 
-  return "AVAILABLE";
+if(combos.length <= 2)
+return "LIMITED";
+
+return "AVAILABLE";
 
 }
 
@@ -235,84 +252,86 @@ function getSlotStatus({
 
 function createReservation({
 
-  date,
-  startTime,
-  duration,
-  guests,
-  name,
-  phone,
-  tables,
-  reservations
+date,
+startTime,
+guests,
+name,
+phone,
+tables,
+reservations
 
 }){
 
-  const endTime =
-  minutesToTime(
-    timeToMinutes(startTime) + duration
-  );
+const duration =
+getDiningDuration(guests);
 
-  const availableTables =
-  getAvailableTables(
-    startTime,
-    endTime,
-    tables,
-    reservations
-  );
+const endTime =
+minutesToTime(
+timeToMinutes(startTime) + duration
+);
 
-  const combos =
-  findTableCombination(
-    availableTables,
-    guests
-  );
+const availableTables =
+getAvailableTables(
+startTime,
+endTime,
+tables,
+reservations
+);
 
-  if(combos.length === 0){
+const combos =
+findTableCombination(
+availableTables,
+guests
+);
 
-    return {
+if(combos.length === 0){
 
-      success:false,
-      reason:"NO_TABLE"
+return {
+success:false,
+reason:"NO_TABLE"
+};
 
-    };
+}
 
-  }
+const best =
+findBestCombination(
+combos,
+guests
+);
 
-  const best =
-  findBestCombination(
-    combos,
-    guests
-  );
+const reservation = {
 
-  const reservation = {
+id:"RSV-"+Date.now(),
 
-    id:"RSV-"+Date.now(),
+date,
 
-    date,
+startTime,
+endTime,
 
-    startTime,
-    endTime,
+duration,
 
-    guests,
+guests,
 
-    tables:
-    best.map(t=>t.id),
+tables:
+best.map(t=>t.id),
 
-    name,
-    phone,
+name,
+phone,
 
-    status:"CONFIRMED",
+status:"CONFIRMED",
 
-    checkIn:false,
+checkIn:false,
 
-    createdAt:Date.now()
+createdAt:Date.now()
 
-  };
+};
 
-  return {
+return {
 
-    success:true,
-    reservation
+success:true,
+reservation
 
-  };
+};
 
 }
 
