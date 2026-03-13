@@ -272,4 +272,94 @@ console.log(
 );
 
 
+/* ================================
+   CREATE RESERVATION
+================================ */
+
+function createReservation({
+  date,
+  startTime,
+  duration,
+  guests,
+  name,
+  phone
+}){
+
+  const [h,m] = startTime.split(":").map(Number);
+
+  const d = new Date(0,0,0,h,m);
+  d.setMinutes(d.getMinutes() + duration);
+
+  const endTime =
+    String(d.getHours()).padStart(2,"0") +
+    ":" +
+    String(d.getMinutes()).padStart(2,"0");
+
+
+  const availableTables =
+    getAvailableTables(startTime,endTime,tables,reservations);
+
+  const combos =
+    findTableCombination(availableTables,guests);
+
+  if(combos.length === 0){
+
+    console.log("❌ NO TABLE AVAILABLE");
+
+    return null;
+
+  }
+
+  const best =
+    findBestCombination(combos,guests);
+
+
+  const reservation = {
+
+    id: "RSV-" + Date.now(),
+
+    date,
+
+    startTime,
+    endTime,
+
+    guests,
+
+    tables: best.map(t=>t.id),
+
+    name,
+    phone,
+
+    status: "CONFIRMED",
+
+    createdAt: Date.now()
+
+  };
+
+  reservations.push(reservation);
+
+  return reservation;
+
+}
+
+console.log("---- CREATE RESERVATION TEST ----");
+
+const newReservation =
+  createReservation({
+
+    date:"2026-03-14",
+
+    startTime:"18:30",
+
+    duration:90,
+
+    guests:5,
+
+    name:"John Doe",
+
+    phone:"08123456789"
+
+  });
+
+console.log(newReservation);
 
