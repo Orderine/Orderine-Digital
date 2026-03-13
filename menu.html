@@ -285,6 +285,42 @@ html, body {
 .promo-countdown {
   text-align: center;
 }
+
+ .reservation-modal{
+
+position:fixed;
+top:0;
+left:0;
+
+width:100%;
+height:100%;
+
+background:rgba(0,0,0,0.6);
+
+display:none;
+
+align-items:center;
+justify-content:center;
+
+z-index:9999;
+
+}
+
+.reservation-box{
+
+background:white;
+
+padding:20px;
+
+border-radius:10px;
+
+width:320px;
+
+display:flex;
+flex-direction:column;
+gap:10px;
+
+}
 </style>
 </head>
 <body>
@@ -337,9 +373,16 @@ html, body {
 
 <!-- Fixed Button Bar -->
 <div class="fixed-bar">
- <button class="nav-btn" onclick="goToPage('book.html')">
+
+<button class="nav-btn" onclick="goToPage('book.html')">
   <span class="icon">📖</span>
   <span class="label">Dine-in Book</span>
+</button>
+
+ <!-- NEW BUTTON -->
+<button class="nav-btn" onclick="openReservationPanel()">
+  <span class="icon">🍽️</span>
+  <span class="label">Reserve Table</span>
 </button>
 
 <button class="nav-btn" onclick="goToPage('order.html')">
@@ -352,7 +395,42 @@ html, body {
   <span class="label">Room & Package</span>
 </button>
 </div>
-  
+
+ <!-- RESERVATION PANEL -->
+
+<div id="reservationPanel" class="reservation-modal">
+
+<div class="reservation-box">
+
+<h2>Reserve Table</h2>
+
+<label>Date</label>
+<input type="date" id="resDate">
+
+<label>Guests</label>
+<input type="number" id="resGuests" value="2" min="1">
+
+<label>Time</label>
+<select id="resTime"></select>
+
+<label>Name</label>
+<input type="text" id="resName">
+
+<label>Phone</label>
+<input type="text" id="resPhone">
+
+<button onclick="submitReservation()">
+Confirm Reservation
+</button>
+
+<button onclick="closeReservationPanel()">
+Close
+</button>
+
+</div>
+
+</div>
+ 
 <script src="./db-core.js"></script>
 <script>
 /* =======================
@@ -632,6 +710,26 @@ async function initMenuPage() {
 
   console.log("✅ Menu ready");
 }
+
+ /* =======================
+   reservation modal
+======================= */
+
+ function openReservationPanel(){
+
+document.getElementById("reservationPanel")
+.style.display = "flex";
+
+loadReservationSlots();
+
+}
+
+function closeReservationPanel(){
+
+document.getElementById("reservationPanel")
+.style.display = "none";
+
+}
   
 /* =======================
    START
@@ -662,6 +760,7 @@ async function goToPage(page) {
 
 </body>
 </html>
+
 
 
 
