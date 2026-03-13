@@ -221,3 +221,54 @@ daySlots.forEach(slot=>{
 
 });
 
+/* ================================
+   FIND BEST TABLE COMBINATION
+================================ */
+
+function findBestCombination(combos, guests){
+
+  let best = null;
+  let smallestWaste = Infinity;
+
+  combos.forEach(combo=>{
+
+    const capacity =
+      combo.reduce((sum,t)=>sum+t.capacity,0);
+
+    const waste = capacity - guests;
+
+    if(waste < smallestWaste){
+
+      smallestWaste = waste;
+      best = combo;
+
+    }
+
+  });
+
+  return best;
+
+}
+
+console.log("---- BEST TABLE TEST ----");
+
+const start = "18:30";
+const end = "20:00";
+const guests = 5;
+
+const availableTables =
+  getAvailableTables(start,end,tables,reservations);
+
+const combos =
+  findTableCombination(availableTables,guests);
+
+const best =
+  findBestCombination(combos,guests);
+
+console.log("BEST TABLE COMBO:");
+
+console.log(
+  best.map(t=>t.id).join(" + ")
+);
+
+
