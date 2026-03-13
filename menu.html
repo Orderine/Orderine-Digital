@@ -918,7 +918,7 @@ async function initMenuPage() {
 function openReservation(){
 
 const modal =
-document.getElementById("reservationModal");
+document.getElementById("reservationPanel");
 
 if(!modal) return;
 
@@ -951,7 +951,7 @@ const slots =
 generateTimeSlots("17:00","22:00",30);
 
 const container =
-document.getElementById("slotContainer");
+document.getElementById("slotGrid");
 
 container.innerHTML="";
 
@@ -1097,7 +1097,7 @@ result.reservation
 
 alert("Reservation Confirmed");
 
-closeReservation();
+closeReservationPanel();
 
 loadSlots();
 
