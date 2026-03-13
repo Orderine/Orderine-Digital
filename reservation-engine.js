@@ -167,3 +167,55 @@ const slots =
   generateTimeSlots("17:00","22:00",30);
 
 console.log(slots);
+
+
+/* ================================
+   SLOT AVAILABILITY ENGINE
+================================ */
+
+function checkSlotAvailability(slot, duration, tables, reservations, guests){
+
+  const start = slot;
+
+  const [h,m] = slot.split(":").map(Number);
+
+  const date = new Date(0,0,0,h,m);
+  date.setMinutes(date.getMinutes() + duration);
+
+  const end =
+    String(date.getHours()).padStart(2,"0") +
+    ":" +
+    String(date.getMinutes()).padStart(2,"0");
+
+  const availableTables =
+    getAvailableTables(start,end,tables,reservations);
+
+  const combos =
+    findTableCombination(availableTables,guests);
+
+  if(combos.length === 0) return "FULL";
+
+  if(combos.length <= 2) return "LIMITED";
+
+  return "AVAILABLE";
+
+}
+
+console.log("---- SLOT STATUS TEST ----");
+
+const slots = generateTimeSlots("17:00","22:00",30);
+
+slots.forEach(slot=>{
+
+  const status =
+    checkSlotAvailability(
+      slot,
+      90, // dining duration
+      tables,
+      reservations,
+      4 // guests
+    );
+
+  console.log(slot,"→",status);
+
+});
