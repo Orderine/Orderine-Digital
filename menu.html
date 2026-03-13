@@ -435,6 +435,70 @@ cursor:not-allowed;
 outline:2px solid #00ff9c;
 
 }
+
+ /* =========================
+   TABLE MAP
+========================= */
+
+.table-map{
+
+display:grid;
+
+grid-template-columns:repeat(3,1fr);
+
+gap:10px;
+
+margin-top:10px;
+
+}
+
+
+.table-box{
+
+padding:12px;
+
+text-align:center;
+
+font-family:monospace;
+
+border:1px solid #1f2937;
+
+cursor:pointer;
+
+}
+
+
+.table-available{
+
+background:#064e3b;
+color:#34d399;
+
+}
+
+
+.table-limited{
+
+background:#78350f;
+color:#fbbf24;
+
+}
+
+
+.table-full{
+
+background:#7f1d1d;
+color:#fca5a5;
+
+cursor:not-allowed;
+
+}
+
+
+.table-selected{
+
+outline:2px solid #00ff9c;
+
+}
 </style>
 </head>
 <body>
@@ -544,6 +608,10 @@ outline:2px solid #00ff9c;
 
 <label>Deposit (optional)</label>
 <input type="number" id="resDeposit">
+
+ <label>Table Map</label>
+
+<div id="tableMap" class="table-map"></div>
 
 <div class="res-actions">
 
@@ -845,12 +913,15 @@ async function initMenuPage() {
    reservation modal
 ======================= */
 
- function openReservationPanel(){
+function openReservation(){
 
-document.getElementById("reservationPanel")
-.style.display = "flex";
+document
+.getElementById("reservationModal")
+.style.display="flex";
 
-loadReservationSlots();
+loadSlots();
+
+renderTableMap();
 
 }
 
@@ -958,6 +1029,15 @@ b.classList.remove("slot-selected");
 .getElementById("resGuests")
 .addEventListener("change",loadSlots);
 
+ let forcedTables = null;
+
+if(selectedTable){
+
+forcedTables =
+tables.filter(t=>t.id === selectedTable);
+
+}
+
  function submitReservation(){
 
 const date =
@@ -1037,6 +1117,70 @@ loadSlots();
 }
 
 },5000);
+
+ function renderTableMap(){
+
+const map =
+document.getElementById("tableMap");
+
+map.innerHTML="";
+
+tables.forEach(table=>{
+
+const box =
+document.createElement("div");
+
+box.className="table-box";
+
+box.innerText =
+table.id + "\n" + table.capacity + "p";
+
+const reserved =
+reservations.some(r =>
+r.tables.includes(table.id)
+);
+
+if(reserved){
+
+box.classList.add("table-full");
+
+}else{
+
+box.classList.add("table-available");
+
+box.onclick=()=>selectTable(table.id);
+
+}
+
+map.appendChild(box);
+
+});
+
+}
+
+ let selectedTable = null;
+
+ function selectTable(tableId){
+
+selectedTable = tableId;
+
+document
+.querySelectorAll(".table-box")
+.forEach(b=>{
+
+if(b.innerText.includes(tableId)){
+
+b.classList.add("table-selected");
+
+}else{
+
+b.classList.remove("table-selected");
+
+}
+
+});
+
+}
   
 /* =======================
    START
