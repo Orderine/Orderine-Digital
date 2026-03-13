@@ -203,19 +203,21 @@ function checkSlotAvailability(slot, duration, tables, reservations, guests){
 
 console.log("---- SLOT STATUS TEST ----");
 
-const slots = generateTimeSlots("17:00","22:00",30);
+const daySlots =
+  generateTimeSlots("17:00","22:00",30);
 
-slots.forEach(slot=>{
+daySlots.forEach(slot=>{
 
   const status =
     checkSlotAvailability(
       slot,
-      90, // dining duration
+      90,
       tables,
       reservations,
-      4 // guests
+      4
     );
 
   console.log(slot,"→",status);
 
 });
+
