@@ -127,4 +127,43 @@ console.log("Available Tables:", availableTables);
 const combos =
   findTableCombination(availableTables, guests);
 
+
 console.log("Possible Table Combos:", combos);
+
+
+/* ================================
+   GENERATE TIME SLOTS
+================================ */
+
+function generateTimeSlots(open, close, interval) {
+
+  const slots = [];
+
+  let current = open;
+
+  while (current < close) {
+
+    slots.push(current);
+
+    const [h,m] = current.split(":").map(Number);
+
+    const date = new Date(0,0,0,h,m);
+    date.setMinutes(date.getMinutes() + interval);
+
+    const nh = String(date.getHours()).padStart(2,"0");
+    const nm = String(date.getMinutes()).padStart(2,"0");
+
+    current = `${nh}:${nm}`;
+
+  }
+
+  return slots;
+
+}
+
+console.log("---- SLOT TEST ----");
+
+const slots =
+  generateTimeSlots("17:00","22:00",30);
+
+console.log(slots);
