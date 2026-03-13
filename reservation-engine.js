@@ -252,23 +252,24 @@ function findBestCombination(combos, guests){
 
 console.log("---- BEST TABLE TEST ----");
 
-const start = "18:30";
-const end = "20:00";
-const guests = 5;
+const testStart = "18:30";
+const testEnd = "20:00";
+const testGuests = 5;
 
-const availableTables =
-  getAvailableTables(start,end,tables,reservations);
+const availableTables2 =
+  getAvailableTables(testStart,testEnd,tables,reservations);
 
-const combos =
-  findTableCombination(availableTables,guests);
+const combos2 =
+  findTableCombination(availableTables2,testGuests);
 
 const best =
-  findBestCombination(combos,guests);
+  findBestCombination(combos2,testGuests);
 
 console.log("BEST TABLE COMBO:");
 
 console.log(
   best.map(t=>t.id).join(" + ")
 );
+
 
 
