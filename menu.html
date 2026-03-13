@@ -631,6 +631,9 @@ CANCEL
  
 <script src="./db-core.js"></script>
 <script>
+
+ let selectedSlot = null;
+ let selectedTable = null;
 /* =======================
    RESTO ID
 ======================= */
@@ -932,8 +935,6 @@ document.getElementById("reservationPanel")
 
 }
 
-let selectedSlot = null;
-
 
 function loadSlots(){
 
@@ -1157,8 +1158,6 @@ map.appendChild(box);
 });
 
 }
-
- let selectedTable = null;
 
  function selectTable(tableId){
 
