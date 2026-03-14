@@ -212,8 +212,8 @@ return Promise.race([dbOpeningPromise, timeoutPromise]);
       "menuData",
       "ordersData",
       "promoData",
-      "flipbookData"
-      "restaurantTables",
+      "flipbookData",
+      "restaurantTables"
     ],
 
     openDB,
