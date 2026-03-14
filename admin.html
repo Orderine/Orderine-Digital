@@ -2723,6 +2723,66 @@ Available : 0
 
 </div>
 
+  <div class="terminal-card">
+
+<div class="terminal-card-header">
+<span class="terminal-title">RESERVATION DEPOSIT</span>
+</div>
+
+<div class="terminal-card-body">
+
+<label class="promo-toggle">
+<input type="checkbox" id="depositToggle">
+Enable Deposit
+</label>
+
+<input
+type="text"
+id="depositBankName"
+placeholder="Bank Name"
+/>
+
+<input
+type="text"
+id="depositAccountNumber"
+placeholder="Account Number"
+/>
+
+<input
+type="text"
+id="depositAccountHolder"
+placeholder="Account Holder"
+/>
+
+<input
+type="number"
+id="depositAmount"
+placeholder="Deposit Amount"
+/>
+
+<div class="table-image-upload">
+
+<label>Upload QR Payment</label>
+
+<input
+type="file"
+id="depositQRInput"
+accept="image/*"
+onchange="previewDepositQR(event)"
+/>
+
+<img id="depositQRPreview">
+
+</div>
+
+<button onclick="saveDepositSetting()">
+SAVE DEPOSIT SETTING
+</button>
+
+</div>
+
+</div>
+
 
 <div class="section-box" id="waContainerBox">
   <h3>📱 Admin WhatsApp Number (Order/Reservation Recipient)</h3>
