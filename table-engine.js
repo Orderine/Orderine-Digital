@@ -1,7 +1,68 @@
+/* ================================
+   TABLE ENGINE ORDERINE
+================================ */
+
+let currentTableFilter = "all";
+let currentSearch = "";
+let editingTableId = null;
+
+
+/* ================================
+   FILTER TABLE
+================================ */
+
+function filterTables(zone){
+
+currentTableFilter = zone;
+
+renderTables();
+
+}
+
+
+/* ================================
+   SEARCH TABLE
+================================ */
+
+function searchTables(){
+
+currentSearch =
+document
+.getElementById("tableSearchInput")
+.value
+.toLowerCase();
+
+renderTables();
+
+}
+
+
+/* ================================
+   AUTO TABLE NAME GENERATOR
+================================ */
+
+async function generateTableName(){
+
+const tables =
+await MENUVA_DB.getAll("restaurantTables");
+
+const next = tables.length + 1;
+
+return "T" + String(next).padStart(2,"0");
+
+}
+
+
+/* ================================
+   SAVE / UPDATE TABLE
+================================ */
+
 async function saveTable(){
 
-const name =
-document.getElementById("tableNameInput").value;
+const nameInput =
+document.getElementById("tableNameInput");
+
+let name = nameInput.value;
 
 const capacity =
 parseInt(
@@ -11,17 +72,40 @@ document.getElementById("tableCapacityInput").value
 const zone =
 document.getElementById("tableZoneInput").value;
 
+const category =
+document.getElementById("tableCategoryInput")?.value || "";
+
+const notes =
+document.getElementById("tableNotesInput")?.value || "";
+
 const active =
 document.getElementById("tableActiveToggle").checked;
 
+const image =
+document.getElementById("tableImagePreview")?.src || "";
+
+
+/* AUTO NAME */
+
+if(!name){
+
+name = await generateTableName();
+
+}
+
+
+/* SESSION */
 
 const session = await MENUVA_DB.getSession();
+
 const restoId = session?.restoId || "default";
 
 
+/* TABLE OBJECT */
+
 const tableData = {
 
-id: "TB_" + Date.now(),
+id: editingTableId || "TB_" + Date.now(),
 
 restoId,
 
@@ -31,7 +115,15 @@ capacity,
 
 zone,
 
+category,
+
+notes,
+
+image,
+
 status: "available",
+
+currentGuest: null,
 
 active,
 
@@ -40,40 +132,274 @@ createdAt: Date.now()
 };
 
 
+/* SAVE OR UPDATE */
+
+if(editingTableId){
+
+await MENUVA_DB.update(
+"restaurantTables",
+tableData
+);
+
+editingTableId = null;
+
+}else{
+
 await MENUVA_DB.add(
 "restaurantTables",
 tableData
 );
 
+}
+
+
+clearTableForm();
 
 renderTables();
 
 }
 
+
+/* ================================
+   CLEAR FORM
+================================ */
+
+function clearTableForm(){
+
+document.getElementById("tableNameInput").value = "";
+
+document.getElementById("tableCapacityInput").value = "";
+
+document.getElementById("tableZoneInput").value = "indoor";
+
+if(document.getElementById("tableCategoryInput"))
+document.getElementById("tableCategoryInput").value = "dining";
+
+if(document.getElementById("tableNotesInput"))
+document.getElementById("tableNotesInput").value = "";
+
+document.getElementById("tableActiveToggle").checked = true;
+
+const preview =
+document.getElementById("tableImagePreview");
+
+if(preview){
+
+preview.src = "";
+preview.style.display = "none";
+
+}
+
+editingTableId = null;
+
+}
+
+
+/* ================================
+   EDIT TABLE
+================================ */
+
+async function editTable(id){
+
+const tables =
+await MENUVA_DB.getAll("restaurantTables");
+
+const table =
+tables.find(t=>t.id===id);
+
+if(!table) return;
+
+editingTableId = id;
+
+document.getElementById("tableNameInput").value =
+table.name;
+
+document.getElementById("tableCapacityInput").value =
+table.capacity;
+
+document.getElementById("tableZoneInput").value =
+table.zone;
+
+if(document.getElementById("tableCategoryInput"))
+document.getElementById("tableCategoryInput").value =
+table.category || "";
+
+if(document.getElementById("tableNotesInput"))
+document.getElementById("tableNotesInput").value =
+table.notes || "";
+
+document.getElementById("tableActiveToggle").checked =
+table.active;
+
+const preview =
+document.getElementById("tableImagePreview");
+
+if(preview && table.image){
+
+preview.src = table.image;
+
+preview.style.display = "block";
+
+}
+
+}
+
+
+/* ================================
+   DELETE TABLE
+================================ */
+
+async function deleteTable(id){
+
+if(!confirm("Delete this table?")) return;
+
+await MENUVA_DB.delete(
+"restaurantTables",
+id
+);
+
+renderTables();
+
+}
+
+
+/* ================================
+   IMAGE PREVIEW
+================================ */
+
+function previewTableImage(event){
+
+const file = event.target.files[0];
+
+if(!file) return;
+
+const reader = new FileReader();
+
+reader.onload = function(e){
+
+const preview =
+document.getElementById("tableImagePreview");
+
+preview.src = e.target.result;
+
+preview.style.display = "block";
+
+}
+
+reader.readAsDataURL(file);
+
+}
+
+
+/* ================================
+   STATUS COLOR
+================================ */
+
+function getTableStatusColor(status){
+
+switch(status){
+
+case "available":
+return "#10b981";
+
+case "reserved":
+return "#f59e0b";
+
+case "occupied":
+return "#ef4444";
+
+case "cleaning":
+return "#3b82f6";
+
+case "disabled":
+return "#6b7280";
+
+default:
+return "#9ca3af";
+
+}
+
+}
+
+
+/* ================================
+   RENDER TABLES
+================================ */
+
 async function renderTables(){
 
-const session = await MENUVA_DB.getSession();
-const restoId = session?.restoId;
+const session =
+await MENUVA_DB.getSession();
+
+const restoId =
+session?.restoId || "default";
+
 
 const tables =
 await MENUVA_DB.getAll("restaurantTables");
 
 
-const filtered =
+let filtered =
 tables.filter(t => t.restoId === restoId);
 
+
+/* FILTER ZONE */
+
+if(currentTableFilter !== "all"){
+
+filtered =
+filtered.filter(t =>
+t.zone === currentTableFilter
+);
+
+}
+
+
+/* SEARCH */
+
+if(currentSearch){
+
+filtered =
+filtered.filter(t =>
+t.name.toLowerCase()
+.includes(currentSearch)
+);
+
+}
+
+
+/* GRID */
 
 const grid =
 document.getElementById("tablePreviewGrid");
 
-grid.innerHTML = "";
+let html = "";
 
+
+/* LOOP */
 
 filtered.forEach(table => {
 
-grid.innerHTML += `
+const statusColor =
+getTableStatusColor(table.status);
 
-<div class="terminal-card">
+const opacity =
+table.active ? "1" : "0.4";
+
+html += `
+
+<div class="terminal-card"
+style="opacity:${opacity}">
+
+${table.image ? `
+<img src="${table.image}"
+style="
+width:100%;
+height:90px;
+object-fit:cover;
+border-bottom:1px solid #1f2937;
+">
+` : ""}
 
 <div class="terminal-card-header">
 
@@ -89,9 +415,29 @@ Capacity : ${table.capacity}<br>
 
 Zone : ${table.zone}<br>
 
-Status : ${table.status}
+Category : ${table.category || "-"}<br>
+
+Notes : ${table.notes || "-"}<br>
+
+<div style="
+background:${statusColor};
+color:black;
+padding:2px 6px;
+border-radius:4px;
+font-size:11px;
+display:inline-block;
+margin-top:6px;
+">
+
+${table.status}
+
+</div>
 
 <br><br>
+
+<button onclick="editTable('${table.id}')">
+Edit
+</button>
 
 <button onclick="deleteTable('${table.id}')">
 Delete
@@ -105,21 +451,51 @@ Delete
 
 });
 
-}
 
-async function deleteTable(id){
+grid.innerHTML = html;
 
-await MENUVA_DB.delete(
-"restaurantTables",
-id
-);
 
-renderTables();
+/* UPDATE STATS */
+
+updateTableStats(filtered);
 
 }
+
+
+/* ================================
+   TABLE STATS
+================================ */
+
+function updateTableStats(tables){
+
+const total =
+tables.length;
+
+const active =
+tables.filter(t=>t.active).length;
+
+const available =
+tables.filter(t=>t.status==="available").length;
+
+const stats =
+document.getElementById("tableStats");
+
+if(!stats) return;
+
+stats.innerHTML = `
+Total Tables : ${total} |
+Active : ${active} |
+Available : ${available}
+`;
+
+}
+
+
+/* ================================
+   INIT
+================================ */
 
 document.addEventListener(
 "DOMContentLoaded",
 renderTables
 );
-
