@@ -486,6 +486,94 @@ Available : ${available}
 
 }
 
+function previewDepositQR(event){
+
+const file = event.target.files[0];
+
+if(!file) return;
+
+const reader = new FileReader();
+
+reader.onload = function(e){
+
+const preview =
+document.getElementById("depositQRPreview");
+
+preview.src = e.target.result;
+
+preview.style.display = "block";
+
+}
+
+reader.readAsDataURL(file);
+
+}
+
+function previewDepositQR(event){
+
+const file = event.target.files[0];
+
+if(!file) return;
+
+const reader = new FileReader();
+
+reader.onload = function(e){
+
+const preview =
+document.getElementById("depositQRPreview");
+
+preview.src = e.target.result;
+
+preview.style.display = "block";
+
+}
+
+reader.readAsDataURL(file);
+
+}
+
+async function loadDepositSetting(){
+
+const session = await MENUVA_DB.getSession();
+
+const restoId = session?.restoId;
+
+const data =
+await MENUVA_DB.get(
+"reservationSettings",
+"reservation_settings"
+);
+
+if(!data) return;
+
+document.getElementById("depositToggle").checked =
+data.depositEnabled || false;
+
+document.getElementById("depositBankName").value =
+data.bankName || "";
+
+document.getElementById("depositAccountNumber").value =
+data.accountNumber || "";
+
+document.getElementById("depositAccountHolder").value =
+data.accountHolder || "";
+
+document.getElementById("depositAmount").value =
+data.depositAmount || "";
+
+if(data.qrImage){
+
+const preview =
+document.getElementById("depositQRPreview");
+
+preview.src = data.qrImage;
+
+preview.style.display = "block";
+
+}
+
+}
+
 
 /* ================================
    INIT
@@ -493,5 +581,11 @@ Available : ${available}
 
 document.addEventListener(
 "DOMContentLoaded",
-renderTables
+function(){
+
+renderTables();
+
+loadDepositSetting();
+
+}
 );
