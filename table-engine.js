@@ -1,20 +1,12 @@
-function openTableEditor(){
-
-document
-.getElementById("tableEditorPanel")
-.style.display="block";
-
-}
-
-
-
-function saveTable(){
+async function saveTable(){
 
 const name =
 document.getElementById("tableNameInput").value;
 
 const capacity =
-document.getElementById("tableCapacityInput").value;
+parseInt(
+document.getElementById("tableCapacityInput").value
+);
 
 const zone =
 document.getElementById("tableZoneInput").value;
@@ -23,32 +15,34 @@ const active =
 document.getElementById("tableActiveToggle").checked;
 
 
-let tables =
-JSON.parse(localStorage.getItem("restaurantTables")) || [];
+const session = await MENUVA_DB.getSession();
+const restoId = session?.restoId || "default";
 
 
-const newTable = {
+const tableData = {
 
-id:"TB"+Date.now(),
+id: "TB_" + Date.now(),
 
-name:name,
+restoId,
 
-capacity:parseInt(capacity),
+name,
 
-zone:zone,
+capacity,
 
-active:active,
+zone,
 
-status:"available"
+status: "available",
+
+active,
+
+createdAt: Date.now()
 
 };
 
 
-tables.push(newTable);
-
-localStorage.setItem(
+await MENUVA_DB.add(
 "restaurantTables",
-JSON.stringify(tables)
+tableData
 );
 
 
@@ -56,58 +50,75 @@ renderTables();
 
 }
 
-function renderTables(){
+async function renderTables(){
 
-    let tables =
-    JSON.parse(localStorage.getItem("restaurantTables")) || [];
-    
-    
-    const grid =
-    document.getElementById("tablePreviewGrid");
-    
-    
-    grid.innerHTML="";
-    
-    
-    tables.forEach(table=>{
-    
-    grid.innerHTML += `
-    
-    <div class="terminal-card">
-    
-    <div class="terminal-card-header">
-    
-    <span class="terminal-title">
-    ${table.name}
-    </span>
-    
-    </div>
-    
-    <div class="terminal-card-body">
-    
-    Capacity : ${table.capacity}<br>
-    
-    Zone : ${table.zone}<br>
-    
-    Status : ${table.status}
-    
-    <br><br>
-    
-    <button onclick="deleteTable('${table.id}')">
-    Delete
-    </button>
-    
-    </div>
-    
-    </div>
-    
-    `;
-    
-    });
-    
-    }
+const session = await MENUVA_DB.getSession();
+const restoId = session?.restoId;
 
-    document.addEventListener(
+const tables =
+await MENUVA_DB.getAll("restaurantTables");
+
+
+const filtered =
+tables.filter(t => t.restoId === restoId);
+
+
+const grid =
+document.getElementById("tablePreviewGrid");
+
+grid.innerHTML = "";
+
+
+filtered.forEach(table => {
+
+grid.innerHTML += `
+
+<div class="terminal-card">
+
+<div class="terminal-card-header">
+
+<span class="terminal-title">
+${table.name}
+</span>
+
+</div>
+
+<div class="terminal-card-body">
+
+Capacity : ${table.capacity}<br>
+
+Zone : ${table.zone}<br>
+
+Status : ${table.status}
+
+<br><br>
+
+<button onclick="deleteTable('${table.id}')">
+Delete
+</button>
+
+</div>
+
+</div>
+
+`;
+
+});
+
+}
+
+async function deleteTable(id){
+
+await MENUVA_DB.delete(
+"restaurantTables",
+id
+);
+
+renderTables();
+
+}
+
+document.addEventListener(
 "DOMContentLoaded",
 renderTables
 );
