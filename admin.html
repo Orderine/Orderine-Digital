@@ -2126,6 +2126,78 @@ resize:none;
 height:60px;
 font-size:12px;
 }
+.editor-header{
+display:flex;
+flex-direction:column;
+gap:4px;
+margin-bottom:10px;
+}
+
+.editor-hint{
+font-size:11px;
+color:#6b7280;
+}
+
+.table-editor-actions{
+display:flex;
+gap:10px;
+margin-top:10px;
+}
+
+.table-search-bar{
+margin-bottom:10px;
+}
+
+.table-search-bar input{
+
+width:100%;
+background:#020617;
+
+border:1px solid #1f2937;
+
+padding:8px;
+
+color:#00ff9c;
+
+border-radius:4px;
+
+font-size:12px;
+
+}
+
+.table-image-preview-box{
+
+margin-top:6px;
+
+border:1px solid #1f2937;
+
+border-radius:4px;
+
+overflow:hidden;
+
+}
+
+#tableImagePreview{
+
+width:100%;
+
+max-height:120px;
+
+object-fit:cover;
+
+display:none;
+
+}
+
+.table-stats{
+
+font-size:12px;
+
+margin:8px 0;
+
+color:#00ff9c;
+
+}
 </style>
 </head>
 <body>
@@ -2346,7 +2418,7 @@ font-size:12px;
   </div>
 </div>
 
-  <div class="terminal-room">
+ <div class="terminal-room">
 
 <h4 class="menu-categories-title">TABLE RESERVATION</h4>
 
@@ -2359,6 +2431,7 @@ font-size:12px;
 <!-- LEFT PANEL -->
 <div class="terminal-left">
 
+<!-- ADD TABLE CARD -->
 <div class="terminal-card add-category-card" onclick="openTableEditor()">
 <div class="terminal-card-header">
 <span class="terminal-title">TABLE SYSTEM</span>
@@ -2370,9 +2443,18 @@ font-size:12px;
 </div>
 
 
+<!-- ================= TABLE EDITOR ================= -->
+
 <div id="tableEditorPanel" class="terminal-editor">
 
+<!-- EDITOR HEADER -->
+<div class="editor-header">
 <h3>TABLE EDITOR</h3>
+<span class="editor-hint">
+Create / Update Restaurant Tables
+</span>
+</div>
+
 
 <input
 type="text"
@@ -2380,11 +2462,13 @@ id="tableNameInput"
 placeholder="Table Name / Number"
 />
 
+
 <input
 type="number"
 id="tableCapacityInput"
 placeholder="Capacity"
 />
+
 
 <select id="tableZoneInput">
 <option value="indoor">Indoor</option>
@@ -2422,7 +2506,9 @@ accept="image/*"
 onchange="previewTableImage(event)"
 />
 
+<div class="table-image-preview-box">
 <img id="tableImagePreview" />
+</div>
 
 </div>
 
@@ -2432,25 +2518,74 @@ onchange="previewTableImage(event)"
 Table Active
 </label>
 
-<button onclick="saveTable()">SAVE TABLE</button>
+
+<!-- ACTION BUTTONS -->
+<div class="table-editor-actions">
+
+<button onclick="saveTable()">
+SAVE TABLE
+</button>
+
+<button onclick="clearTableForm()">
+CLEAR
+</button>
 
 </div>
+
+</div>
+
 </div>
 
 
-<!-- RIGHT PANEL -->
+<!-- ================= RIGHT PANEL ================= -->
+
 <div class="terminal-right">
 
+
+<!-- TABLE SEARCH -->
+<div class="table-search-bar">
+
+<input
+type="text"
+id="tableSearchInput"
+placeholder="Search Table (ex: T01)"
+onkeyup="searchTables()"
+/>
+
+</div>
+
+
+<!-- TABLE FILTER -->
 <div class="terminal-filter-bar">
 
 <button onclick="filterTables('all')">ALL</button>
-<button onclick="filterTables('indoor')">INDOOR</button>
-<button onclick="filterTables('outdoor')">OUTDOOR</button>
-<button onclick="filterTables('vip')">VIP</button>
+
+<button onclick="filterTables('indoor')">
+INDOOR
+</button>
+
+<button onclick="filterTables('outdoor')">
+OUTDOOR
+</button>
+
+<button onclick="filterTables('vip')">
+VIP
+</button>
 
 </div>
 
 
+<!-- TABLE STATS -->
+<div id="tableStats" class="table-stats">
+
+Total Tables : 0 |
+Active : 0 |
+Available : 0
+
+</div>
+
+
+<!-- TABLE GRID -->
 <div id="tablePreviewGrid" class="terminal-grid"></div>
 
 </div>
