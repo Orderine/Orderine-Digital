@@ -15,7 +15,7 @@
   const DEBUG_DB = false;
 
   const DB_NAME = "MenuvaDB";
-  const DB_VERSION = 20;
+  const DB_VERSION = 21;
 
   let dbOpeningPromise = null;
   let dbInstance = null;
@@ -156,29 +156,39 @@
         }
 
 
-        /* ======================================================
-           RESERVATION SYSTEM
-        ====================================================== */
+      /* ======================================================
+   RESERVATION SYSTEM
+====================================================== */
 
-        if (!db.objectStoreNames.contains("reservations")) {
+if (!db.objectStoreNames.contains("reservations")) {
 
-          const r = db.createObjectStore("reservations",{keyPath:"id"});
+  const r = db.createObjectStore("reservations",{keyPath:"id"});
 
-          r.createIndex("restoId","restoId",{unique:false});
-          r.createIndex("date","date",{unique:false});
-          r.createIndex("status","status",{unique:false});
+  r.createIndex("restoId","restoId",{unique:false});
+  r.createIndex("date","date",{unique:false});
+  r.createIndex("status","status",{unique:false});
 
-        }
+}
 
-        if (!db.objectStoreNames.contains("reservationSlots")) {
+if (!db.objectStoreNames.contains("reservationSlots")) {
 
-          const rs = db.createObjectStore("reservationSlots",{keyPath:"id"});
+  const rs = db.createObjectStore("reservationSlots",{keyPath:"id"});
 
-          rs.createIndex("restoId","restoId",{unique:false});
-          rs.createIndex("slot","slot",{unique:false});
+  rs.createIndex("restoId","restoId",{unique:false});
+  rs.createIndex("slot","slot",{unique:false});
 
-        }
+}
 
+/* ✅ TAMBAHKAN INI */
+
+if (!db.objectStoreNames.contains("reservationSettings")) {
+
+  const set = db.createObjectStore("reservationSettings",{keyPath:"id"});
+
+  set.createIndex("restoId","restoId",{unique:false});
+
+}
+         
 
         /* ======================================================
            ORDER SYSTEM
@@ -395,6 +405,7 @@
 
       "reservations",
       "reservationSlots",
+      "reservationSettings",
 
       "ordersData",
       "orderItems",
