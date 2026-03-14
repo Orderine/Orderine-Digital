@@ -509,34 +509,64 @@ reader.readAsDataURL(file);
 
 }
 
-function previewDepositQR(event){
+async function saveDepositSetting(){
 
-const file = event.target.files[0];
+const session = await MENUVA_DB.getSession();
 
-if(!file) return;
+const restoId = session?.restoId || "default";
 
-const reader = new FileReader();
+const depositEnabled =
+document.getElementById("depositToggle").checked;
 
-reader.onload = function(e){
+const bankName =
+document.getElementById("depositBankName").value;
 
-const preview =
-document.getElementById("depositQRPreview");
+const accountNumber =
+document.getElementById("depositAccountNumber").value;
 
-preview.src = e.target.result;
+const accountHolder =
+document.getElementById("depositAccountHolder").value;
 
-preview.style.display = "block";
+const depositAmount =
+parseInt(
+document.getElementById("depositAmount").value
+) || 0;
 
-}
+const qrImage =
+document.getElementById("depositQRPreview").src || "";
 
-reader.readAsDataURL(file);
+const data = {
+
+id:"reservation_settings",
+
+restoId,
+
+depositEnabled,
+
+bankName,
+
+accountNumber,
+
+accountHolder,
+
+depositAmount,
+
+qrImage,
+
+updatedAt:Date.now()
+
+};
+
+await MENUVA_DB.add(
+"reservationSettings",
+data
+);
+
+alert("Deposit setting saved");
 
 }
 
 async function loadDepositSetting(){
-
-const session = await MENUVA_DB.getSession();
-
-const restoId = session?.restoId;
 
 const data =
 await MENUVA_DB.get(
@@ -573,7 +603,6 @@ preview.style.display = "block";
 }
 
 }
-
 
 /* ================================
    INIT
