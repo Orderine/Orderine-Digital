@@ -70,6 +70,20 @@ function openDB() {
 }
 
        /* =========================
+   RESTAURANT TABLES
+========================= */
+if (!db.objectStoreNames.contains("restaurantTables")) {
+  const tables = db.createObjectStore("restaurantTables", {
+    keyPath: "id"
+  });
+
+  tables.createIndex("restoId", "restoId", { unique: false });
+  tables.createIndex("zone", "zone", { unique: false });
+  tables.createIndex("capacity", "capacity", { unique: false });
+  tables.createIndex("active", "active", { unique: false });
+}
+
+       /* =========================
    MENU PROMO (NEW CLEAN)
 ========================= */
 if (!db.objectStoreNames.contains("menuPromo")) {
@@ -199,6 +213,7 @@ return Promise.race([dbOpeningPromise, timeoutPromise]);
       "ordersData",
       "promoData",
       "flipbookData"
+      "restaurantTables",
     ],
 
     openDB,
