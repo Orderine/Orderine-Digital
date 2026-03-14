@@ -2320,6 +2320,89 @@ button#btnResetData.btn-danger:active {
   </div>
 </div>
 
+  <div class="terminal-room">
+
+<h4 class="menu-categories-title">TABLE RESERVATION</h4>
+
+<div class="terminal-header">
+<span></span>
+</div>
+
+<div class="terminal-body">
+
+<!-- LEFT PANEL -->
+<div class="terminal-left">
+
+<div class="terminal-card add-category-card" onclick="openTableEditor()">
+<div class="terminal-card-header">
+<span class="terminal-title">TABLE SYSTEM</span>
+</div>
+
+<div class="terminal-card-body">
+<h3>+ ADD TABLE</h3>
+</div>
+</div>
+
+
+<div id="tableEditorPanel" class="terminal-editor">
+
+<h3>TABLE EDITOR</h3>
+
+<input
+type="text"
+id="tableNameInput"
+placeholder="Table Name / Number"
+/>
+
+<input
+type="number"
+id="tableCapacityInput"
+placeholder="Capacity"
+/>
+
+<select id="tableZoneInput">
+
+<option value="indoor">Indoor</option>
+
+<option value="outdoor">Outdoor</option>
+
+<option value="vip">VIP</option>
+
+</select>
+
+<label class="promo-toggle">
+<input type="checkbox" id="tableActiveToggle" checked />
+Table Active
+</label>
+
+<button onclick="saveTable()">SAVE TABLE</button>
+
+</div>
+
+</div>
+
+
+<!-- RIGHT PANEL -->
+<div class="terminal-right">
+
+<div class="terminal-filter-bar">
+
+<button onclick="filterTables('all')">ALL</button>
+<button onclick="filterTables('indoor')">INDOOR</button>
+<button onclick="filterTables('outdoor')">OUTDOOR</button>
+<button onclick="filterTables('vip')">VIP</button>
+
+</div>
+
+
+<div id="tablePreviewGrid" class="terminal-grid"></div>
+
+</div>
+
+</div>
+
+</div>
+
 
 <div class="section-box" id="waContainerBox">
   <h3>📱 Admin WhatsApp Number (Order/Reservation Recipient)</h3>
@@ -5217,29 +5300,6 @@ function openInviteAdmin() {
   window.location.href = "invite-admin.html";
 }
 </script>
-
+<script src="table-engine.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
