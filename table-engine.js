@@ -388,17 +388,13 @@ table.active ? "1" : "0.4";
 
 html += `
 
-<div class="terminal-card"
+<div class="terminal-card table-card"
 style="opacity:${opacity}">
 
 ${table.image ? `
-<img src="${table.image}"
-style="
-width:100%;
-height:90px;
-object-fit:cover;
-border-bottom:1px solid #1f2937;
-">
+<img 
+src="${table.image}"
+class="table-card-image">
 ` : ""}
 
 <div class="terminal-card-header">
@@ -409,31 +405,29 @@ ${table.name}
 
 </div>
 
-<div class="terminal-card-body">
+<div class="terminal-card-body table-info">
 
-Capacity : ${table.capacity}<br>
+<div class="table-meta">
+<span>👥 ${table.capacity} Pax</span>
+<span>📍 ${table.zone}</span>
+</div>
 
-Zone : ${table.zone}<br>
+<div class="table-meta">
+<span>🍽 ${table.category || "-"}</span>
+</div>
 
-Category : ${table.category || "-"}<br>
+<div class="table-notes">
+${table.notes || ""}
+</div>
 
-Notes : ${table.notes || "-"}<br>
-
-<div style="
-background:${statusColor};
-color:black;
-padding:2px 6px;
-border-radius:4px;
-font-size:11px;
-display:inline-block;
-margin-top:6px;
-">
+<div class="table-status"
+style="background:${statusColor}">
 
 ${table.status}
 
 </div>
 
-<br><br>
+<div class="table-actions">
 
 <button onclick="editTable('${table.id}')">
 Edit
@@ -442,6 +436,8 @@ Edit
 <button onclick="deleteTable('${table.id}')">
 Delete
 </button>
+
+</div>
 
 </div>
 
