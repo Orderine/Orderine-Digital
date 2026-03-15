@@ -3,6 +3,13 @@
    FULL SYNC WITH menu.html
 ===================================== */
 
+/* =====================================
+   UI STATE
+===================================== */
+
+let selectedSlot = null;
+let selectedTables = [];
+
 
 /* =====================================
    GLOBAL SAFETY
@@ -196,6 +203,64 @@ return slots;
 
 }
 
+/* =====================================
+   RENDER TIME SLOTS
+===================================== */
+
+function renderSlots(){
+
+const grid = document.getElementById("slotGrid");
+
+if(!grid) return;
+
+grid.innerHTML="";
+
+const guests =
+Number(document.getElementById("resGuests").value || 1);
+
+const slots =
+generateTimeSlots("17:00","23:00",30);
+
+slots.forEach(slot=>{
+
+const status =
+getSlotStatus({
+slot,
+guests,
+tables,
+reservations
+});
+
+const btn =
+document.createElement("button");
+
+btn.className =
+"slot-btn "+status.toLowerCase();
+
+btn.innerText = slot;
+
+if(status==="FULL"){
+btn.disabled=true;
+}
+
+btn.onclick=()=>{
+
+selectedSlot=slot;
+
+document
+.querySelectorAll(".slot-btn")
+.forEach(b=>b.classList.remove("selected"));
+
+btn.classList.add("selected");
+
+};
+
+grid.appendChild(btn);
+
+});
+
+}
+
 
 /* =====================================
    SLOT STATUS ENGINE
@@ -249,6 +314,143 @@ if(combos.length<=2)
 return "LIMITED";
 
 return "AVAILABLE";
+
+}
+
+/* =====================================
+   RENDER TABLE MAP
+===================================== */
+
+function renderTableMap(){
+
+const map =
+document.getElementById("tableMap");
+
+if(!map) return;
+
+map.innerHTML="";
+
+tables.forEach(table=>{
+
+const div =
+document.createElement("div");
+
+div.className="table-box";
+
+div.innerText =
+table.name+" ("+table.capacity+")";
+
+div.onclick=()=>{
+
+if(selectedTables.includes(table.id)){
+
+selectedTables =
+selectedTables.filter(
+t=>t!==table.id
+);
+
+div.classList.remove("selected");
+
+}else{
+
+selectedTables.push(table.id);
+
+div.classList.add("selected");
+
+}
+
+};
+
+map.appendChild(div);
+
+});
+
+}
+
+function openReservationPanel(){
+
+document
+.getElementById("reservationPanel")
+.style.display="flex";
+
+renderSlots();
+
+renderTableMap();
+
+}
+
+function closeReservationPanel(){
+
+document
+.getElementById("reservationPanel")
+.style.display="none";
+
+selectedSlot=null;
+selectedTables=[];
+
+}
+
+function submitReservation(){
+
+const date =
+document.getElementById("resDate").value;
+
+const guests =
+Number(
+document.getElementById("resGuests").value
+);
+
+const name =
+document.getElementById("resName").value;
+
+const phone =
+document.getElementById("resPhone").value;
+
+if(!selectedSlot){
+
+alert("Select time slot");
+
+return;
+
+}
+
+const result =
+createReservation({
+
+date,
+startTime:selectedSlot,
+guests,
+name,
+phone,
+
+tables,
+reservations,
+
+forcedTables:
+selectedTables.length
+? selectedTables
+: null
+
+});
+
+if(!result.success){
+
+alert("No table available");
+
+return;
+
+}
+
+reservations.push(result.reservation);
+
+localStorage.setItem(
+"orderine_reservations",
+JSON.stringify(reservations)
+);
+
+alert("Reservation Confirmed");
+
+closeReservationPanel();
 
 }
 
@@ -413,3 +615,31 @@ combo.reduce((s,t)=>s+(t.priority||1),0);
 return (waste*10)+tableCount+priority;
 
 }
+
+document
+.getElementById("resGuests")
+?.addEventListener("input",()=>{
+
+renderSlots();
+
+});
+
+/* =====================================
+   LOAD DATA
+===================================== */
+
+function loadReservationData(){
+
+tables =
+JSON.parse(
+localStorage.getItem("orderine_tables")
+) || [];
+
+reservations =
+JSON.parse(
+localStorage.getItem("orderine_reservations")
+) || [];
+
+}
+
+loadReservationData();
