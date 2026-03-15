@@ -286,6 +286,8 @@ html, body {
   text-align: center;
 }
  
+/* OVERLAY */
+
 #reservationPanel{
 
 position:fixed;
@@ -298,24 +300,30 @@ height:100%;
 background:rgba(0,0,0,0.85);
 
 display:none;
+
 align-items:center;
 justify-content:center;
 
 z-index:9999;
 
 }
- 
+
+
+
+/* MODAL */
+
 .reservation-modal{
 
-width:90%;
-max-width:1200px;
+width:95%;
+max-width:1100px;
 
 height:90vh;
 
-background:#111;
-color:#fff;
+background:#0b0f14;
 
-border-radius:10px;
+border:1px solid #1f2937;
+
+border-radius:12px;
 
 display:flex;
 flex-direction:column;
@@ -324,110 +332,58 @@ overflow:hidden;
 
 }
 
- .reservation-body{
 
-flex:1;
 
-overflow-y:auto;
+/* HEADER */
 
-padding:20px;
-
-}
-
- .reservation-header{
+.reservation-header{
 
 padding:16px 20px;
 
-border-bottom:1px solid #333;
+border-bottom:1px solid #1f2937;
 
 display:flex;
 justify-content:space-between;
 align-items:center;
 
-}
-
- #tableMap{
-
-display:grid;
-
-grid-template-columns:
-repeat(auto-fill,minmax(100px,1fr));
-
-gap:10px;
-
-margin-top:20px;
+font-family:monospace;
 
 }
 
- #slotGrid{
+.reservation-header button{
 
-display:grid;
-
-grid-template-columns:
-repeat(auto-fill,minmax(90px,1fr));
-
-gap:10px;
-
-margin-top:15px;
-
-}
-
- .table-box{
-
-background:#1a1a1a;
-
-border:1px solid #333;
-
-border-radius:6px;
-
-padding:12px;
-
-text-align:center;
-
+background:none;
+border:none;
+color:#fff;
+font-size:18px;
 cursor:pointer;
 
-font-size:14px;
-
-white-space:pre-line;
-
-transition:0.2s;
-
 }
 
-.table-box:hover{
 
-background:#222;
 
-}
+/* BODY */
 
-.reservation-box{
+.reservation-body{
 
-background:white;
+flex:1;
+
+display:grid;
+grid-template-columns:380px 1fr;
+
+gap:20px;
 
 padding:20px;
 
-border-radius:10px;
-
-width:320px;
-
-display:flex;
-flex-direction:column;
-gap:10px;
+overflow-y:auto;
 
 }
 
- .reservation-box{
 
-background:#0b0f14;
-color:#00ff9c;
 
-border:1px solid #00ff9c;
+/* LEFT FORM */
 
-padding:20px;
-
-border-radius:6px;
-
-width:340px;
+.reservation-left{
 
 display:flex;
 flex-direction:column;
@@ -437,8 +393,7 @@ font-family:monospace;
 
 }
 
-.reservation-box input,
-.reservation-box select{
+.reservation-left input{
 
 background:#020617;
 
@@ -446,14 +401,121 @@ border:1px solid #00ff9c;
 
 color:#00ff9c;
 
-padding:8px;
+padding:10px;
 
 }
+
+
+
+/* SLOT GRID */
+
+.slot-grid{
+
+display:grid;
+
+grid-template-columns:
+repeat(auto-fill,minmax(90px,1fr));
+
+gap:8px;
+
+}
+
+
+
+/* RIGHT TABLE MAP */
+
+.reservation-right{
+
+background:#020617;
+
+border:1px solid #1f2937;
+
+border-radius:8px;
+
+padding:16px;
+
+display:flex;
+flex-direction:column;
+
+}
+
+.table-hint{
+
+margin-top:10px;
+font-size:12px;
+color:#9aa4af;
+
+}
+
+
+
+/* TABLE GRID */
+
+.table-map{
+
+display:grid;
+
+grid-template-columns:
+repeat(auto-fill,minmax(110px,1fr));
+
+gap:10px;
+
+margin-top:10px;
+
+}
+
+.table-box{
+
+padding:12px;
+
+border:1px solid #1f2937;
+
+text-align:center;
+
+font-family:monospace;
+
+cursor:pointer;
+
+}
+
+.table-available{
+
+background:#064e3b;
+color:#34d399;
+
+}
+
+.table-limited{
+
+background:#78350f;
+color:#fbbf24;
+
+}
+
+.table-full{
+
+background:#7f1d1d;
+color:#fca5a5;
+
+cursor:not-allowed;
+
+}
+
+.table-selected{
+
+outline:2px solid #00ff9c;
+
+}
+
+
+
+/* ACTIONS */
 
 .res-actions{
 
 display:flex;
 gap:10px;
+margin-top:10px;
 
 }
 
@@ -465,181 +527,25 @@ background:#00ff9c;
 
 border:none;
 
-padding:10px;
-
-font-weight:bold;
-
-cursor:pointer;
-
-}
-
-.slot-grid{
-
-display:grid;
-
-grid-template-columns:repeat(4,1fr);
-
-gap:6px;
-
-margin-top:6px;
-
-}
-
-.slot{
-
-padding:8px;
-
-text-align:center;
-
-font-size:12px;
-
-cursor:pointer;
-
-border-radius:4px;
-
-font-weight:bold;
-
-}
-
-.slot.available{
-
-background:#064e3b;
-color:#6ee7b7;
-
-}
-
-.slot.limited{
-
-background:#78350f;
-color:#facc15;
-
-}
-
-.slot.full{
-
-background:#7f1d1d;
-color:#fca5a5;
-
-cursor:not-allowed;
-
-}
-
-.slot.selected{
-
-outline:2px solid #00ff9c;
-
-}
-
- /* =========================
-   TABLE MAP
-========================= */
-
-.table-map{
-
-display:grid;
-
-grid-template-columns:repeat(3,1fr);
-
-gap:10px;
-
-margin-top:10px;
-
-}
-
-
-.table-box{
-
 padding:12px;
 
-text-align:center;
-
-font-family:monospace;
-
-border:1px solid #1f2937;
+font-weight:bold;
 
 cursor:pointer;
 
 }
 
 
-.table-available{
 
-background:#064e3b;
-color:#34d399;
+/* MOBILE */
 
-}
+@media(max-width:900px){
 
+.reservation-body{
 
-.table-limited{
-
-background:#78350f;
-color:#fbbf24;
+grid-template-columns:1fr;
 
 }
-
-
-.table-full{
-
-background:#7f1d1d;
-color:#fca5a5;
-
-cursor:not-allowed;
-
-}
-
-
-.table-selected{
-
-outline:2px solid #00ff9c;
-
-}
-
- .slot-btn{
-
-padding:10px;
-border:1px solid #333;
-background:#111;
-color:#fff;
-cursor:pointer;
-
-}
-
-.slot-btn.available{
-
-border-color:#2ecc71;
-
-}
-
-.slot-btn.limited{
-
-border-color:#f39c12;
-
-}
-
-.slot-btn.full{
-
-border-color:#e74c3c;
-opacity:.4;
-
-}
-
-.slot-btn.selected{
-
-background:#2ecc71;
-
-}
-
-.table-box{
-
-padding:10px;
-border:1px solid #444;
-cursor:pointer;
-
-}
-
-.table-box.selected{
-
-background:#2ecc71;
 
 }
  
@@ -718,58 +624,81 @@ background:#2ecc71;
 </div>
 
 <!-- RESERVATION PANEL -->
+<div id="reservationPanel">
 
-<div id="reservationPanel" class="reservation-modal">
+<div class="reservation-modal">
 
-<div class="reservation-box">
+<div class="reservation-header">
 
-<h2>TABLE RESERVATION</h2>
+<h2>🍽 TABLE RESERVATION</h2>
+
+<button onclick="closeReservationPanel()">✕</button>
+
+</div>
+
+
+<div class="reservation-body">
+
+
+<!-- LEFT : FORM -->
+<div class="reservation-left">
 
 <label>Date</label>
 <input type="date" id="resDate">
 
+
 <label>Guests</label>
-<input 
-type="number"
-id="resGuests"
-min="1"
-placeholder="Example: 2, 10, 70"
-/>
-<small style="color:#9aa4af">
-For large groups (50+), restaurant may contact you.
+<input type="number" id="resGuests" min="1" placeholder="Example: 2, 10, 70">
+
+<small>
+For large groups (50+), restaurant may contact you
 </small>
 
-<label>Available Slots</label>
 
+<label>Available Slots</label>
 <div id="slotGrid" class="slot-grid"></div>
+
 
 <label>Name</label>
 <input type="text" id="resName">
 
+
 <label>Phone</label>
 <input type="text" id="resPhone">
+
 
 <label>Deposit (optional)</label>
 <input type="number" id="resDeposit">
 
- <label>Table Map</label>
-
-<div id="tableMap" class="table-map"></div>
 
 <div class="res-actions">
 
-<button onclick="submitReservation()">
-CONFIRM
-</button>
+<button onclick="submitReservation()">CONFIRM</button>
 
-<button onclick="closeReservationPanel()">
-CANCEL
-</button>
+<button onclick="closeReservationPanel()">CANCEL</button>
 
 </div>
 
 </div>
 
+
+
+<!-- RIGHT : TABLE MAP -->
+<div class="reservation-right">
+
+<h3>Table Map</h3>
+
+<div id="tableMap" class="table-map"></div>
+
+<div id="tableHint" class="table-hint">
+Select slot to see available tables
+</div>
+
+</div>
+
+
+</div>
+</div>
 </div>
  
 <script src="./db-core.js"></script>
@@ -1305,6 +1234,8 @@ document
 
 btn.classList.add("selected");
 
+highlightAvailableTables();
+
 };
 
 grid.appendChild(btn);
@@ -1321,8 +1252,6 @@ function renderTableMap(){
 
 const map=document.getElementById("tableMap");
 
-if(!map) return;
-
 map.innerHTML="";
 
 tables.forEach(t=>{
@@ -1331,8 +1260,10 @@ const div=document.createElement("div");
 
 div.className="table-box";
 
+div.dataset.id=t.id;
+
 div.innerText=
-t.id+"\n"+t.capacity+"p";
+`${t.id}\n${t.capacity}p`;
 
 map.appendChild(div);
 
@@ -1505,6 +1436,56 @@ await MENUVA_DB.getAll("restaurantTables") || [];
 
 reservations =
 await MENUVA_DB.getAll("reservations") || [];
+
+}
+ 
+
+ function highlightAvailableTables(){
+
+if(!selectedSlot) return;
+
+const guests = Number(
+document.getElementById("resGuests").value
+);
+
+const date =
+document.getElementById("resDate").value;
+
+const dur = getDiningDuration(guests);
+
+const end =
+minutesToTime(
+timeToMinutes(selectedSlot)+dur
+);
+
+const available =
+getAvailableTables(
+selectedSlot,
+end,
+date
+);
+
+document.querySelectorAll(".table-box")
+.forEach(box=>{
+
+const id = box.dataset.id;
+
+box.classList.remove(
+"table-available",
+"table-full"
+);
+
+if(available.find(t=>t.id==id)){
+
+box.classList.add("table-available");
+
+}else{
+
+box.classList.add("table-full");
+
+}
+
+});
 
 }
 
