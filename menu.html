@@ -606,7 +606,7 @@ background:#2ecc71;
   <span class="label">Dine-in Book</span>
 </button>
 
- <button class="nav-btn" onclick="openReservation()">
+ <button class="nav-btn" onclick="openReservationPanel()">
   <span class="icon">🍽️</span>
   <span class="label">Reservation</span>
 </button>
@@ -678,10 +678,14 @@ CANCEL
 </div>
  
 <script src="./db-core.js"></script>
+<script src="reservation-engine.js"></script>
 <script>
 
- let selectedSlot = null;
  let selectedTable = null;
+
+ if(typeof selectedSlot === "undefined"){
+window.selectedSlot = null;
+}
 /* =======================
    RESTO ID
 ======================= */
@@ -960,32 +964,6 @@ async function initMenuPage() {
   console.log("✅ Menu ready");
 }
 
- /* =======================
-   reservation modal
-======================= */
-
-function openReservation(){
-
-const modal =
-document.getElementById("reservationPanel");
-
-if(!modal) return;
-
-modal.style.display = "flex";
-
-loadSlots();
-renderTableMap();
-
-}
- 
-function closeReservationPanel(){
-
-document.getElementById("reservationPanel")
-.style.display = "none";
-
-}
-
-
 function loadSlots(){
 
 const date =
@@ -1079,20 +1057,7 @@ b.classList.remove("slot-selected");
 
 }
 
- document
-.getElementById("resGuests")
-.addEventListener("change",loadSlots);
-
- let forcedTables = null;
-
-if(selectedTable){
-
-forcedTables =
-tables.filter(t=>t.id === selectedTable);
-
-}
-
- function submitReservation(){
+async function submitReservation(){
 
 const date =
 document.getElementById("resDate").value;
@@ -1102,9 +1067,7 @@ parseInt(
 document.getElementById("resGuests").value
 ) || 0;
 
-if(guests <= 0){
-return;
-}
+if(guests <= 0) return;
 
 const name =
 document.getElementById("resName").value;
@@ -1115,7 +1078,6 @@ document.getElementById("resPhone").value;
 if(!selectedSlot){
 
 alert("Select time slot");
-
 return;
 
 }
@@ -1124,17 +1086,11 @@ const result =
 createReservation({
 
 date:date,
-
 startTime:selectedSlot,
-
 guests:guests,
-
 name:name,
-
 phone:phone,
-
 tables:tables,
-
 reservations:reservations
 
 });
@@ -1142,19 +1098,20 @@ reservations:reservations
 if(!result.success){
 
 alert("No table available");
-
 return;
 
 }
 
-reservations.push(
+await MENUVA_DB.add(
+"reservations",
 result.reservation
 );
+
+reservations.push(result.reservation);
 
 alert("Reservation Confirmed");
 
 closeReservationPanel();
-
 loadSlots();
 
 }
@@ -1166,7 +1123,7 @@ loadSlots();
 setInterval(()=>{
 
 const modal =
-document.getElementById("reservationModal");
+document.getElementById("reservationPanel");
 
 if(!modal) return;
 
@@ -1187,6 +1144,13 @@ const map =
 document.getElementById("tableMap");
 
 map.innerHTML="";
+
+if(!tables || tables.length === 0){
+
+map.innerHTML="No tables";
+return;
+
+}
 
 tables.forEach(table=>{
 
@@ -1246,9 +1210,15 @@ b.classList.remove("table-selected");
 /* =======================
    START
 ======================= */
-document.addEventListener("DOMContentLoaded", async () => {
-  await window.MENUVA_DB.openDB(); // ✅ sesuai kontrak
-  initMenuPage();
+document.addEventListener("DOMContentLoaded", () => {
+
+const guestInput =
+document.getElementById("resGuests");
+
+if(guestInput){
+guestInput.addEventListener("change",loadSlots);
+}
+
 });
 
 /* =======================
@@ -1268,7 +1238,7 @@ async function goToPage(page) {
 
 </script>
 
- <script src="reservation-engine.js"></script>
+
 
 </body>
 </html>
