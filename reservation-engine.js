@@ -604,11 +604,18 @@ return (waste*10)+tableCount+priority;
 
 }
 
-document
-.getElementById("resGuests")
-?.addEventListener("input",()=>{
+window.addEventListener("DOMContentLoaded",()=>{
 
+const guestInput =
+document.getElementById("resGuests");
+
+if(guestInput){
+
+guestInput.addEventListener("input",()=>{
 renderSlots();
+});
+
+}
 
 });
 
