@@ -678,401 +678,659 @@ CANCEL
 </div>
  
 <script src="./db-core.js"></script>
-<script src="reservation-engine.js"></script>
 <script>
 
- let selectedTable = null;
+let tables = [];
+let reservations = [];
 
- if(typeof selectedSlot === "undefined"){
-window.selectedSlot = null;
-}
+let selectedSlot = null;
+let selectedTables = [];
+let selectedTable = null;
+
 /* =======================
    RESTO ID
 ======================= */
-async function getRestoId() {
-  const params = new URLSearchParams(location.search);
-  const resto = params.get("resto");
+async function getRestoId(){
 
-  if (resto) {
-    await MENUVA_DB.add("session", {
-      id: "activeResto",
-      value: resto
-    });
-    return resto;
-  }
+const params = new URLSearchParams(location.search);
+const resto = params.get("resto");
 
-  const stored = await MENUVA_DB.get("session", "activeResto");
-  return stored?.value || null;
+if(resto){
+
+await MENUVA_DB.add("session",{
+id:"activeResto",
+value:resto
+});
+
+return resto;
+
 }
 
+const stored =
+await MENUVA_DB.get("session","activeResto");
 
-/* =======================
-   LOAD MENU PAGE DATA (FINAL)
-   ⛔ TANPA flipbookData
-======================= */
-async function loadMenuPageData(restoId) {
-  const resto = await MENUVA_DB.get("restos", restoId);
-  if (!resto) return null;
+return stored?.value || null;
 
-  // 🔥 Ambil promo dari store menuPromo
-  const allPromos = await MENUVA_DB.getAll("menuPromo");
-
-  const filteredPromos = allPromos.filter(
-    p => p.restoId === restoId
-  );
-
-  return {
-    resto,
-    promo: filteredPromos,
-
-    flipbookRuangan: Array.isArray(resto.flipbookRuanganImages)
-      ? resto.flipbookRuanganImages
-      : [],
-
-    flipbookMenu: Array.isArray(resto.flipbookMenuImages)
-      ? resto.flipbookMenuImages
-      : []
-  };
-}
-/* =======================
-   RENDER
-======================= */
-function renderHeader(data) {
-  const logo = document.getElementById("logoResto");
-  if (logo) {
-    logo.style.display = data.logo ? "block" : "none";
-    if (data.logo) logo.src = data.logo;
-  }
-
-  document.getElementById("namaRestoDisplay").textContent =
-    data.namaRestoran || "Menu Restoran";
-
-  document.getElementById("alamatResto").innerText =
-    `📍 Address: ${data.restoAddress || "-"}`;
-
-  document.getElementById("teleponResto").innerText =
-    `📞 Telephone: ${data.restoPhone || "-"}`;
-}
-
-  function normalizePromo(raw) {
-  return {
-    id: raw.id || crypto.randomUUID(),
-
-    namaPromo: raw.namaPromo || raw.name || "Untitled",
-
-    deskripsi: raw.deskripsi || raw.description || "",
-
-    harga: raw.harga ?? raw.price ?? 0,
-
-    kategori: raw.kategori || raw.type || "PROMO",
-
-    tanggalAkhir: raw.tanggalAkhir || raw.endDate || null,
-
-    image: raw.image || raw.imageUrl || null,
-
-    isActive:
-      raw.isActive ??
-      raw.aktif ??
-      raw.enabled ??
-      (raw.status === "active")
-  };
-}
-  
-function renderPromo(list = []) {
-  const box = document.getElementById("promoContainer");
-  const warn = document.getElementById("promoWarning");
-
-  box.innerHTML = "";
-  warn.textContent = "";
-
-  if (!list.length) {
-    warn.textContent = "❌ No promo available";
-    return;
-  }
-
-  let visibleCount = 0; // 🔥 counter promo yang benar-benar tampil
-
-  list.forEach(raw => {
-    const p = normalizePromo(raw);
-
-    if (!p.isActive) return;
-
-    if (p.tanggalAkhir) {
-      const end = new Date(p.tanggalAkhir);
-      end.setHours(23,59,59,999);
-      if (end < new Date()) return;
-    }
-
-    visibleCount++;
-
-    const card = document.createElement("div");
-    card.className = "promo-item";
-
-    if (p.kategori) {
-      const badge = document.createElement("div");
-      badge.className = "promo-badge";
-      badge.textContent = p.kategori;
-      card.appendChild(badge);
-    }
-
-    if (p.image) {
-      const img = document.createElement("img");
-      img.src = p.image;
-      card.appendChild(img);
-    }
-
-    const countdownId = `cd-${p.id}`;
-
-    card.innerHTML += `
-      <h3>${p.namaPromo}</h3>
-      <p>${p.deskripsi}</p>
-      <div class="promo-price">
-        Rp ${Number(p.harga).toLocaleString("id-ID")}
-      </div>
-      <div class="promo-countdown" id="${countdownId}"></div>
-    `;
-
-    box.appendChild(card);
-
-    startPromoCountdown(p);
-  });
-
-  if (visibleCount === 0) {
-    warn.textContent = "❌ No active promo available";
-  }
-}
-
-  function renderMenuPromoUI(promos = []) {
-  const container = document.getElementById("menuPromoContainer");
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  promos.forEach(promo => {
-    renderMenuPromo(promo);
-  });
-}
-
- function startPromoCountdown(promo) {
-  const el = document.getElementById(`cd-${promo.id}`);
-  if (!el || !promo.tanggalAkhir) return;
-
-  const end = new Date(promo.tanggalAkhir);
-  end.setHours(23, 59, 59, 999);
-
-  function update() {
-    const now = new Date();
-    const diff = end - now;
-
-    if (diff <= 0) {
-  el.textContent = "❌ PROMO EXPIRED";
-
-  const card = el.closest(".promo-item");
-  if (card) {
-    setTimeout(() => {
-      card.remove();
-    }, 2000);
-  }
-
-  return;
-}
-
-    const totalSeconds = Math.floor(diff / 1000);
-    const days = Math.floor(totalSeconds / (3600 * 24));
-    const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    el.textContent =
-      `⏳ ${days}d ${hours}h ${minutes}m ${seconds}s`;
-
-    // 🔥 Bloomberg danger mode
-    if (days === 0 && hours < 24) {
-      el.classList.add("pulse");
-    } else {
-      el.classList.remove("pulse");
-    }
-  }
-
-  update();
-  setInterval(update, 1000);
 }
 
 /* =======================
-   FLIPBOOK (FINAL)
+   LOAD MENU PAGE DATA
 ======================= */
-function renderFlipbookGallery(id, images = [], warnId) {
-  const box = document.getElementById(id);
-  const warn = document.getElementById(warnId);
-  if (!box || !warn) return;
 
-  box.innerHTML = "";
-  warn.textContent = "";
+async function loadMenuPageData(restoId){
 
-  const validImages = Array.isArray(images)
-    ? images.filter(src => typeof src === "string" && src.trim() !== "")
-    : [];
+const resto =
+await MENUVA_DB.get("restos",restoId);
 
-  if (!validImages.length) {
-    warn.textContent = "No pictures.";
-    return;
-  }
+if(!resto) return null;
 
-  validImages.forEach(src => {
-    const img = document.createElement("img");
-    img.src = src;
-    img.loading = "lazy";
-    box.appendChild(img);
-  });
+const allPromos =
+await MENUVA_DB.getAll("menuPromo");
+
+const filteredPromos =
+allPromos.filter(p=>p.restoId===restoId);
+
+return {
+
+resto,
+promo:filteredPromos,
+
+flipbookRuangan:
+Array.isArray(resto.flipbookRuanganImages)
+? resto.flipbookRuanganImages
+:[],
+
+flipbookMenu:
+Array.isArray(resto.flipbookMenuImages)
+? resto.flipbookMenuImages
+:[]
+
+};
+
 }
 
 /* =======================
-   INIT MENU (SIMPLE)
+   RENDER HEADER
 ======================= */
-async function initMenuPage() {
-  console.log("▶️ initMenuPage");
 
-  const restoId = await getRestoId();
-  if (!restoId) {
-    console.warn("❌ Resto ID tidak ditemukan");
-    return;
-  }
+function renderHeader(data){
 
-  const data = await loadMenuPageData(restoId);
-  if (!data) {
-    showFallbackUI("Menu belum tersedia");
-    return;
-  }
+const logo =
+document.getElementById("logoResto");
 
-  renderHeader(data.resto);
+if(logo){
 
-  // 🔥 INI YANG BENAR
-  renderPromo(data.promo);
+logo.style.display =
+data.logo ? "block":"none";
 
-  renderFlipbookGallery(
-    "flipbookRuanganGallery",
-    data.flipbookRuangan,
-    "ruanganWarning"
-  );
+if(data.logo) logo.src=data.logo;
 
-  renderFlipbookGallery(
-    "flipbookMenuGallery",
-    data.flipbookMenu,
-    "menuWarning"
-  );
-
-  console.log("✅ Menu ready");
 }
+
+document.getElementById("namaRestoDisplay")
+.textContent =
+data.namaRestoran || "Menu Restoran";
+
+document.getElementById("alamatResto")
+.innerText =
+`📍 Address: ${data.restoAddress||"-"}`;
+
+document.getElementById("teleponResto")
+.innerText =
+`📞 Telephone: ${data.restoPhone||"-"}`;
+
+}
+
+/* =======================
+   PROMO
+======================= */
+
+function normalizePromo(raw){
+
+return{
+
+id:raw.id || crypto.randomUUID(),
+
+namaPromo:
+raw.namaPromo || raw.name || "Untitled",
+
+deskripsi:
+raw.deskripsi || raw.description || "",
+
+harga:
+raw.harga ?? raw.price ?? 0,
+
+kategori:
+raw.kategori || raw.type || "PROMO",
+
+tanggalAkhir:
+raw.tanggalAkhir || raw.endDate || null,
+
+image:
+raw.image || raw.imageUrl || null,
+
+isActive:
+raw.isActive ??
+raw.aktif ??
+raw.enabled ??
+(raw.status==="active")
+
+};
+
+}
+
+function renderPromo(list=[]){
+
+const box =
+document.getElementById("promoContainer");
+
+const warn =
+document.getElementById("promoWarning");
+
+if(!box) return;
+
+box.innerHTML="";
+warn.textContent="";
+
+if(!list.length){
+
+warn.textContent="❌ No promo available";
+return;
+
+}
+
+let visible=0;
+
+list.forEach(raw=>{
+
+const p=normalizePromo(raw);
+
+if(!p.isActive) return;
+
+if(p.tanggalAkhir){
+
+const end=new Date(p.tanggalAkhir);
+end.setHours(23,59,59,999);
+
+if(end < new Date()) return;
+
+}
+
+visible++;
+
+const card=document.createElement("div");
+card.className="promo-item";
+
+if(p.image){
+
+const img=document.createElement("img");
+img.src=p.image;
+card.appendChild(img);
+
+}
+
+const countdownId=`cd-${p.id}`;
+
+card.innerHTML+=`
+
+<h3>${p.namaPromo}</h3>
+<p>${p.deskripsi}</p>
+<div class="promo-price">
+Rp ${Number(p.harga).toLocaleString("id-ID")}
+</div>
+<div class="promo-countdown" id="${countdownId}"></div>
+
+`;
+
+box.appendChild(card);
+
+startPromoCountdown(p);
+
+});
+
+if(visible===0)
+warn.textContent="❌ No active promo";
+
+}
+
+/* =======================
+   PROMO COUNTDOWN
+======================= */
+
+function startPromoCountdown(promo){
+
+const el =
+document.getElementById(`cd-${promo.id}`);
+
+if(!el || !promo.tanggalAkhir) return;
+
+const end=new Date(promo.tanggalAkhir);
+end.setHours(23,59,59,999);
+
+function update(){
+
+const diff=end-new Date();
+
+if(diff<=0){
+
+el.textContent="❌ PROMO EXPIRED";
+
+const card=el.closest(".promo-item");
+
+if(card){
+setTimeout(()=>card.remove(),2000);
+}
+
+return;
+
+}
+
+const s=Math.floor(diff/1000);
+
+const d=Math.floor(s/86400);
+const h=Math.floor((s%86400)/3600);
+const m=Math.floor((s%3600)/60);
+const sec=s%60;
+
+el.textContent=
+`⏳ ${d}d ${h}h ${m}m ${sec}s`;
+
+}
+
+update();
+setInterval(update,1000);
+
+}
+
+/* =======================
+   FLIPBOOK
+======================= */
+
+function renderFlipbookGallery(id,images=[],warnId){
+
+const box=document.getElementById(id);
+const warn=document.getElementById(warnId);
+
+if(!box||!warn) return;
+
+box.innerHTML="";
+warn.textContent="";
+
+const valid=images.filter(
+src=>typeof src==="string" && src.trim()
+);
+
+if(!valid.length){
+
+warn.textContent="No pictures.";
+return;
+
+}
+
+valid.forEach(src=>{
+
+const img=document.createElement("img");
+img.src=src;
+img.loading="lazy";
+
+box.appendChild(img);
+
+});
+
+}
+
+/* =======================
+   RESERVATION ENGINE
+======================= */
+
+function timeToMinutes(t){
+
+const [h,m]=t.split(":").map(Number);
+return h*60+m;
+
+}
+
+function minutesToTime(m){
+
+const h=String(Math.floor(m/60)).padStart(2,"0");
+const min=String(m%60).padStart(2,"0");
+
+return `${h}:${min}`;
+
+}
+
+function getDiningDuration(g){
+
+if(g<=2) return 90;
+if(g<=4) return 120;
+if(g<=6) return 150;
+if(g<=8) return 180;
+
+return 180;
+
+}
+
+function isTimeOverlap(a1,a2,b1,b2){
+
+const A1=timeToMinutes(a1);
+const A2=timeToMinutes(a2);
+
+const B1=timeToMinutes(b1);
+const B2=timeToMinutes(b2);
+
+return A1<B2 && A2>B1;
+
+}
+
+function isTableAvailable(tableId,start,end,date){
+
+for(const r of reservations){
+
+if(r.date!==date) continue;
+
+if(!r.tables.includes(tableId)) continue;
+
+if(isTimeOverlap(
+start,end,r.startTime,r.endTime
+)) return false;
+
+}
+
+return true;
+
+}
+
+function getAvailableTables(start,end,date){
+
+return tables.filter(t=>
+
+isTableAvailable(
+t.id,start,end,date
+)
+
+);
+
+}
+
+/* =======================
+   TABLE COMBO ENGINE
+======================= */
+
+function findTableCombination(tables,guests){
+
+const results=[];
+
+function search(combo,i){
+
+const cap=
+combo.reduce((s,t)=>s+t.capacity,0);
+
+if(cap>=guests){
+
+results.push(combo);
+return;
+
+}
+
+for(let x=i;x<tables.length;x++){
+
+search([...combo,tables[x]],x+1);
+
+}
+
+}
+
+search([],0);
+
+return results;
+
+}
+
+function findBestCombination(combos,guests){
+
+let best=null;
+let bestScore=Infinity;
+
+combos.forEach(c=>{
+
+const cap=
+c.reduce((s,t)=>s+t.capacity,0);
+
+const waste=cap-guests;
+
+const score=waste*10+c.length;
+
+if(score<bestScore){
+
+bestScore=score;
+best=c;
+
+}
+
+});
+
+return best;
+
+}
+
+/* =======================
+   SLOT ENGINE
+======================= */
+
+function generateTimeSlots(open,close,interval){
+
+const slots=[];
+
+let cur=timeToMinutes(open);
+const end=timeToMinutes(close);
+
+while(cur<end){
+
+slots.push(minutesToTime(cur));
+cur+=interval;
+
+}
+
+return slots;
+
+}
+
+function getSlotStatus({slot,guests}){
+
+const date=
+document.getElementById("resDate")?.value;
+
+if(!date) return "AVAILABLE";
+
+const dur=getDiningDuration(guests);
+
+const end=
+minutesToTime(
+timeToMinutes(slot)+dur
+);
+
+const available=
+getAvailableTables(slot,end,date);
+
+const combos=
+findTableCombination(available,guests);
+
+if(combos.length===0) return "FULL";
+if(combos.length<=2) return "LIMITED";
+
+return "AVAILABLE";
+
+}
+
+/* =======================
+   RENDER SLOTS
+======================= */
 
 function loadSlots(){
 
-const date =
-document.getElementById("resDate").value;
+const guests=
+Number(
+document.getElementById("resGuests")?.value
+);
 
-const guests =
-parseInt(
-document.getElementById("resGuests").value
-) || 0;
+if(!guests) return;
 
-if(guests <= 0){
-return;
-}
-
-const slots =
-generateTimeSlots("17:00","22:00",30);
-
-const container =
+const grid=
 document.getElementById("slotGrid");
 
-container.innerHTML="";
+if(!grid) return;
+
+grid.innerHTML="";
+
+const slots=
+generateTimeSlots("17:00","23:00",30);
 
 slots.forEach(slot=>{
 
-const status =
-getSlotStatus({
+const status=
+getSlotStatus({slot,guests});
 
-slot:slot,
-guests:guests,
-tables:tables,
-reservations:reservations
+const btn=document.createElement("button");
 
-});
+btn.className=
+"slot-btn "+status.toLowerCase();
 
-const btn =
-document.createElement("button");
+btn.innerText=slot;
 
-btn.innerText = slot;
-
-btn.className="slot-btn";
-
-if(status === "AVAILABLE"){
-
-btn.classList.add("slot-available");
-
-btn.onclick=()=>selectSlot(slot);
-
-}
-
-if(status === "LIMITED"){
-
-btn.classList.add("slot-limited");
-
-btn.onclick=()=>selectSlot(slot);
-
-}
-
-if(status === "FULL"){
-
-btn.classList.add("slot-full");
-
+if(status==="FULL")
 btn.disabled=true;
 
-}
+btn.onclick=()=>{
 
-container.appendChild(btn);
-
-});
-
-}
-
- function selectSlot(slot){
-
-selectedSlot = slot;
+selectedSlot=slot;
 
 document
 .querySelectorAll(".slot-btn")
-.forEach(b=>{
+.forEach(b=>b.classList.remove("selected"));
 
-if(b.innerText === slot){
+btn.classList.add("selected");
 
-b.classList.add("slot-selected");
+};
 
-}else{
-
-b.classList.remove("slot-selected");
-
-}
+grid.appendChild(btn);
 
 });
 
 }
 
+/* =======================
+   TABLE MAP
+======================= */
+
+function renderTableMap(){
+
+const map=document.getElementById("tableMap");
+
+if(!map) return;
+
+map.innerHTML="";
+
+tables.forEach(t=>{
+
+const div=document.createElement("div");
+
+div.className="table-box";
+
+div.innerText=
+t.id+"\n"+t.capacity+"p";
+
+map.appendChild(div);
+
+});
+
+}
+
+/* =======================
+   CREATE RESERVATION
+======================= */
+
+function createReservation({
+date,startTime,guests,name,phone
+}){
+
+const dur=getDiningDuration(guests);
+
+const endTime=
+minutesToTime(
+timeToMinutes(startTime)+dur
+);
+
+const available=
+getAvailableTables(
+startTime,endTime,date
+);
+
+const combos=
+findTableCombination(
+available,guests
+);
+
+if(!combos.length){
+
+return{
+success:false
+};
+
+}
+
+const best=
+findBestCombination(combos,guests);
+
+const reservation={
+
+id:"RSV-"+Date.now(),
+
+date,
+
+startTime,
+endTime,
+
+duration:dur,
+
+guests,
+
+tables:
+best.map(t=>t.id),
+
+name,
+phone,
+
+status:"CONFIRMED",
+
+createdAt:Date.now()
+
+};
+
+return{
+success:true,
+reservation
+};
+
+}
+
+/* =======================
+   SUBMIT
+======================= */
+
 async function submitReservation(){
 
-const date =
+const date=
 document.getElementById("resDate").value;
 
-const guests =
-parseInt(
+const guests=
+Number(
 document.getElementById("resGuests").value
-) || 0;
+);
 
-if(guests <= 0) return;
-
-const name =
+const name=
 document.getElementById("resName").value;
 
-const phone =
+const phone=
 document.getElementById("resPhone").value;
 
 if(!selectedSlot){
@@ -1082,17 +1340,13 @@ return;
 
 }
 
-const result =
+const result=
 createReservation({
-
-date:date,
+date,
 startTime:selectedSlot,
-guests:guests,
-name:name,
-phone:phone,
-tables:tables,
-reservations:reservations
-
+guests,
+name,
+phone
 });
 
 if(!result.success){
@@ -1107,138 +1361,134 @@ await MENUVA_DB.add(
 result.reservation
 );
 
-reservations.push(result.reservation);
+reservations.push(
+result.reservation
+);
 
 alert("Reservation Confirmed");
 
 closeReservationPanel();
-loadSlots();
 
 }
 
- /* ===============================
-   LIVE SLOT REFRESH
-=============================== */
+/* =======================
+   PANEL
+======================= */
 
-setInterval(()=>{
+async function openReservationPanel(){
 
-const modal =
-document.getElementById("reservationPanel");
+await loadReservationData();
 
-if(!modal) return;
-
-const visible =
-getComputedStyle(modal).display;
-
-if(visible === "flex"){
+document
+.getElementById("reservationPanel")
+.style.display="flex";
 
 loadSlots();
+renderTableMap();
 
 }
 
-},5000);
+function closeReservationPanel(){
 
- function renderTableMap(){
+document
+.getElementById("reservationPanel")
+.style.display="none";
 
-const map =
-document.getElementById("tableMap");
+selectedSlot=null;
+selectedTables=[];
 
-map.innerHTML="";
+}
 
-if(!tables || tables.length === 0){
+/* =======================
+   LOAD DATA
+======================= */
 
-map.innerHTML="No tables";
+async function loadReservationData(){
+
+tables =
+await MENUVA_DB.getAll("tables");
+
+reservations =
+await MENUVA_DB.getAll("reservations");
+
+}
+
+/* =======================
+   INIT
+======================= */
+
+document.addEventListener("DOMContentLoaded",async()=>{
+
+await MENUVA_DB.openDB();
+
+const restoId=await getRestoId();
+
+const data=
+await loadMenuPageData(restoId);
+
+if(!data){
+
+showFallbackUI("Menu belum tersedia");
 return;
 
 }
 
-tables.forEach(table=>{
+renderHeader(data.resto);
 
-const box =
-document.createElement("div");
+renderPromo(data.promo);
 
-box.className="table-box";
-
-box.innerText =
-table.id + "\n" + table.capacity + "p";
-
-const reserved =
-reservations.some(r =>
-r.tables.includes(table.id)
+renderFlipbookGallery(
+"flipbookRuanganGallery",
+data.flipbookRuangan,
+"ruanganWarning"
 );
 
-if(reserved){
+renderFlipbookGallery(
+"flipbookMenuGallery",
+data.flipbookMenu,
+"menuWarning"
+);
 
-box.classList.add("table-full");
-
-}else{
-
-box.classList.add("table-available");
-
-box.onclick=()=>selectTable(table.id);
-
-}
-
-map.appendChild(box);
-
-});
-
-}
-
- function selectTable(tableId){
-
-selectedTable = tableId;
-
-document
-.querySelectorAll(".table-box")
-.forEach(b=>{
-
-if(b.innerText.includes(tableId)){
-
-b.classList.add("table-selected");
-
-}else{
-
-b.classList.remove("table-selected");
-
-}
-
-});
-
-}
-  
-/* =======================
-   START
-======================= */
-document.addEventListener("DOMContentLoaded", () => {
-
-const guestInput =
+const guestInput=
 document.getElementById("resGuests");
 
-if(guestInput){
-guestInput.addEventListener("change",loadSlots);
-}
+if(guestInput)
+guestInput.addEventListener(
+"change",loadSlots
+);
 
 });
 
 /* =======================
    UTIL
 ======================= */
-function showFallbackUI(msg) {
-  document.querySelector(".container-section").innerHTML =
-    `<div style="text-align:center;padding:40px">${msg}</div>`;
+
+function showFallbackUI(msg){
+
+document
+.querySelector(".container-section")
+.innerHTML=
+`<div style="text-align:center;padding:40px">${msg}</div>`;
+
 }
 
-async function goToPage(page) {
-  const stored = await MENUVA_DB.get("session", "activeResto");
-  const id = stored?.value;
+async function goToPage(page){
 
-  location.href = id ? `${page}?resto=${id}` : page;
+const stored=
+await MENUVA_DB.get(
+"session",
+"activeResto"
+);
+
+const id=stored?.value;
+
+location.href =
+id
+? `${page}?resto=${id}`
+: page;
+
 }
 
 </script>
-
-
-
 </body>
 </html>
