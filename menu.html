@@ -1406,10 +1406,10 @@ selectedTables=[];
 async function loadReservationData(){
 
 tables =
-await MENUVA_DB.getAll("tables");
+await MENUVA_DB.getAll("restaurantTables") || [];
 
 reservations =
-await MENUVA_DB.getAll("reservations");
+await MENUVA_DB.getAll("reservations") || [];
 
 }
 
