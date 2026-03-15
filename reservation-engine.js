@@ -330,6 +330,14 @@ if(!map) return;
 
 map.innerHTML="";
 
+if(!tables || tables.length===0){
+
+map.innerHTML="No tables configured";
+
+return;
+
+}
+
 tables.forEach(table=>{
 
 const div =
@@ -337,29 +345,8 @@ document.createElement("div");
 
 div.className="table-box";
 
-div.innerText =
+div.innerText=
 table.name+" ("+table.capacity+")";
-
-div.onclick=()=>{
-
-if(selectedTables.includes(table.id)){
-
-selectedTables =
-selectedTables.filter(
-t=>t!==table.id
-);
-
-div.classList.remove("selected");
-
-}else{
-
-selectedTables.push(table.id);
-
-div.classList.add("selected");
-
-}
-
-};
 
 map.appendChild(div);
 
@@ -369,12 +356,13 @@ map.appendChild(div);
 
 function openReservationPanel(){
 
+loadReservationData();
+
 document
 .getElementById("reservationPanel")
 .style.display="flex";
 
 renderSlots();
-
 renderTableMap();
 
 }
@@ -628,14 +616,18 @@ renderSlots();
    LOAD DATA
 ===================================== */
 
+/* =====================================
+   LOAD TABLES & RESERVATIONS
+===================================== */
+
 function loadReservationData(){
 
-tables =
+window.tables =
 JSON.parse(
 localStorage.getItem("orderine_tables")
 ) || [];
 
-reservations =
+window.reservations =
 JSON.parse(
 localStorage.getItem("orderine_reservations")
 ) || [];
