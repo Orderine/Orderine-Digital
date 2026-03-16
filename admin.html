@@ -2679,6 +2679,35 @@ cursor:nwse-resize;
 border-radius:2px;
 
 }
+.layout-shape.selected{
+
+outline:2px solid #facc15;
+
+}
+.delete-shape-btn{
+
+position:absolute;
+
+bottom:10px;
+right:10px;
+
+width:40px;
+height:40px;
+
+border:none;
+
+border-radius:8px;
+
+background:#ef4444;
+color:white;
+
+font-size:18px;
+
+display:none;
+
+z-index:50;
+
+}
 </style>
 </head>
 <body>
@@ -3030,12 +3059,16 @@ TABLE LAYOUT MAP
 </div>
 
 <div class="terminal-note">
-Drag tables to arrange restaurant layout
+Drag tables/Shape to arrange restaurant layout & Long Press to delete shape
 </div>
 
 <div id="tableEditorMap" class="table-editor-map"></div>
 
 </div>
+
+  <button id="deleteShapeBtn" class="delete-shape-btn">
+🗑
+</button>
 
 
 <label class="promo-toggle">
