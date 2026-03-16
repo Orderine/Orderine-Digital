@@ -2401,34 +2401,43 @@ cursor:move;
 
 display:flex;
 gap:10px;
-margin-bottom:10px;
+margin-bottom:12px;
 
 }
 
 .zone{
 
 padding:4px 10px;
-font-size:11px;
+font-size:12px;
 border-radius:4px;
+
+font-weight:600;
+
+color:#ffffff;
+
+border:1px solid rgba(255,255,255,0.25);
+
+letter-spacing:0.5px;
 
 }
 
+/* ZONE COLORS */
+
 .zone.indoor{
-background:rgba(16,185,129,0.3);
+background:rgba(16,185,129,0.35);
 }
 
 .zone.outdoor{
-background:rgba(59,130,246,0.3);
+background:rgba(59,130,246,0.35);
 }
 
 .zone.vip{
-background:rgba(168,85,247,0.3);
+background:rgba(168,85,247,0.35);
 }
 
 .zone.bar{
-background:rgba(249,115,22,0.3);
+background:rgba(249,115,22,0.35);
 }
-
 .table-node{
 
 position:absolute;
@@ -2450,6 +2459,24 @@ cursor:move;
 border:2px solid #ffffff33;
 
 backdrop-filter: blur(4px);
+
+}
+
+.terminal-note{
+
+color:#9ca3af;
+
+font-size:11px;
+
+letter-spacing:0.5px;
+
+}
+
+.zone:hover{
+
+transform:scale(1.05);
+
+box-shadow:0 0 6px rgba(255,255,255,0.2);
 
 }
 </style>
