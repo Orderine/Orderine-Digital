@@ -6,6 +6,8 @@ let currentTableFilter = "all";
 let currentSearch = "";
 let editingTableId = null;
 
+const GRID_SIZE = 20;
+
 
 /* ================================
    FILTER TABLE
@@ -121,6 +123,12 @@ notes,
 
 image,
 
+/* NEW */
+
+x: tableData?.x || 100,
+y: tableData?.y || 100,
+shape: "round",
+
 status: "available",
 
 currentGuest: null,
@@ -130,7 +138,6 @@ active,
 createdAt: Date.now()
 
 };
-
 
 /* SAVE OR UPDATE */
 
@@ -156,6 +163,90 @@ tableData
 clearTableForm();
 
 renderTables();
+
+renderTableMap();
+
+}
+
+async function renderTableMap(){
+
+const tables =
+await MENUVA_DB.getAll("restaurantTables");
+
+const map =
+document.getElementById("tableEditorMap");
+
+if(!map) return;
+
+map.innerHTML = "";
+
+tables.forEach(table=>{
+
+const node = document.createElement("div");
+
+node.className = "table-node";
+
+node.innerText = table.name;
+
+node.style.left = (table.x || 100) + "px";
+node.style.top = (table.y || 100) + "px";
+
+node.dataset.id = table.id;
+
+enableTableDrag(node);
+
+map.appendChild(node);
+
+});
+
+}
+
+function enableTableDrag(node){
+
+let offsetX=0;
+let offsetY=0;
+
+node.onmousedown = function(e){
+
+offsetX = e.offsetX;
+offsetY = e.offsetY;
+
+document.onmousemove = function(e){
+
+let x = e.pageX - offsetX;
+let y = e.pageY - offsetY;
+
+x = snapToGrid(x);
+y = snapToGrid(y);
+
+node.style.left = x + "px";
+node.style.top = y + "px";
+
+}
+
+document.onmouseup = async function(){
+
+document.onmousemove = null;
+
+const id = node.dataset.id;
+
+const tables =
+await MENUVA_DB.getAll("restaurantTables");
+
+const table =
+tables.find(t=>t.id===id);
+
+table.x = parseInt(node.style.left);
+table.y = parseInt(node.style.top);
+
+await MENUVA_DB.update(
+"restaurantTables",
+table
+);
+
+}
+
+}
 
 }
 
@@ -259,6 +350,8 @@ id
 );
 
 renderTables();
+
+renderTableMap();
 
 }
 
@@ -604,17 +697,28 @@ preview.style.display = "block";
 
 }
 
+function snapToGrid(value){
+
+return Math.round(value / GRID_SIZE) * GRID_SIZE;
+
+}
+
 /* ================================
    INIT
 ================================ */
 
 document.addEventListener(
 "DOMContentLoaded",
-function(){
+async function(){
 
-renderTables();
+/* LOAD TABLE LIST */
+await renderTables();
 
-loadDepositSetting();
+/* LOAD TABLE LAYOUT MAP */
+await renderTableMap();
+
+/* LOAD DEPOSIT SETTINGS */
+await loadDepositSetting();
 
 }
 );
