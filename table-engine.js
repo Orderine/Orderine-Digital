@@ -6,6 +6,99 @@ let currentTableFilter = "all";
 let currentSearch = "";
 let editingTableId = null;
 
+let selectedShape = null;
+let pressTimer = null;
+
+function initLayoutEditor(){
+
+const map =
+document.getElementById("tableEditorMap");
+
+if(!map) return;
+
+/* =========================
+   SELECT SHAPE (DESKTOP)
+========================= */
+
+map.addEventListener("click",function(e){
+
+document
+.querySelectorAll(".layout-shape")
+.forEach(el=>el.classList.remove("selected"));
+
+if(e.target.classList.contains("layout-shape")){
+
+selectedShape = e.target;
+
+selectedShape.classList.add("selected");
+
+}else{
+
+selectedShape = null;
+
+}
+
+});
+
+/* =========================
+   SELECT SHAPE (ANDROID)
+========================= */
+
+map.addEventListener("touchstart",function(e){
+
+if(!e.target.classList.contains("layout-shape")) return;
+
+selectedShape = e.target;
+
+document
+.querySelectorAll(".layout-shape")
+.forEach(el=>el.classList.remove("selected"));
+
+selectedShape.classList.add("selected");
+
+/* LONG PRESS DELETE */
+
+pressTimer = setTimeout(function(){
+
+navigator.vibrate?.(40);
+
+if(confirm("Delete this shape?")){
+
+selectedShape.remove();
+selectedShape = null;
+
+}
+
+},800);
+
+});
+
+/* CANCEL LONG PRESS */
+
+map.addEventListener("touchend",function(){
+
+clearTimeout(pressTimer);
+
+});
+
+/* =========================
+   DESKTOP DELETE KEY
+========================= */
+
+document.addEventListener("keydown",function(e){
+
+if(e.key === "Delete" && selectedShape){
+
+selectedShape.remove();
+
+selectedShape = null;
+
+}
+
+});
+
+}
+
 const GRID_SIZE = 20;
 
 const ZONE_COLORS = {
@@ -886,25 +979,6 @@ return Math.round(value / GRID_SIZE) * GRID_SIZE;
 
 }
 
-function addLayoutShape(type){
-
-const map =
-document.getElementById("tableEditorMap");
-
-const shape =
-document.createElement("div");
-
-shape.className = "layout-shape " + type;
-
-shape.style.left = "120px";
-shape.style.top = "120px";
-
-enableShapeDrag(shape);
-
-map.appendChild(shape);
-
-}
-
 function enableShapeDrag(node){
 
 let offsetX=0;
@@ -946,6 +1020,100 @@ document.onmousemove = null;
 
 }
 
+function rotateShape(node){
+
+let angle =
+node.dataset.rotate
+? parseInt(node.dataset.rotate)
+: 0;
+
+angle += 90;
+
+node.dataset.rotate = angle;
+
+node.style.transform =
+"rotate(" + angle + "deg)";
+
+}
+
+function addLayoutShape(type){
+
+const map =
+document.getElementById("tableEditorMap");
+
+const shape =
+document.createElement("div");
+
+shape.className = "layout-shape " + type;
+
+shape.style.left = "120px";
+shape.style.top = "120px";
+
+shape.style.zIndex = 1;
+
+/* RESIZE HANDLE */
+
+const resize =
+document.createElement("div");
+
+resize.className = "resize-handle";
+
+shape.appendChild(resize);
+
+/* ENABLE DRAG */
+
+enableShapeDrag(shape);
+
+/* ENABLE RESIZE */
+
+enableShapeResize(shape,resize);
+
+/* DOUBLE CLICK ROTATE */
+
+shape.ondblclick = function(){
+rotateShape(shape);
+};
+
+map.appendChild(shape);
+
+}
+
+
+function enableShapeResize(node,handle){
+
+handle.onmousedown = function(e){
+
+e.stopPropagation();
+
+const startX = e.clientX;
+const startY = e.clientY;
+
+const startWidth = node.offsetWidth;
+const startHeight = node.offsetHeight;
+
+document.onmousemove = function(e){
+
+let newWidth =
+startWidth + (e.clientX - startX);
+
+let newHeight =
+startHeight + (e.clientY - startY);
+
+node.style.width = newWidth + "px";
+node.style.height = newHeight + "px";
+
+}
+
+document.onmouseup = function(){
+
+document.onmousemove = null;
+
+}
+
+}
+
+}
+
 /* ================================
    INIT
 ================================ */
@@ -962,6 +1130,9 @@ await renderTableMap();
 
 /* LOAD DEPOSIT SETTINGS */
 await loadDepositSetting();
+
+/* INIT MAP EVENTS */
+initLayoutEditor();
 
 }
 );
