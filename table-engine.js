@@ -251,15 +251,25 @@ function enableTableDrag(node){
 let offsetX=0;
 let offsetY=0;
 
+const map =
+document.getElementById("tableEditorMap");
+
 node.onmousedown = function(e){
+
+const rect = map.getBoundingClientRect();
 
 offsetX = e.offsetX;
 offsetY = e.offsetY;
 
 document.onmousemove = function(e){
 
-let x = e.pageX - offsetX;
-let y = e.pageY - offsetY;
+let x =
+e.clientX - rect.left - offsetX;
+
+let y =
+e.clientY - rect.top - offsetY;
+
+/* SNAP GRID */
 
 x = snapToGrid(x);
 y = snapToGrid(y);
@@ -281,8 +291,13 @@ await MENUVA_DB.getAll("restaurantTables");
 const table =
 tables.find(t=>t.id===id);
 
-table.x = parseInt(node.style.left);
-table.y = parseInt(node.style.top);
+if(table){
+
+table.x =
+parseInt(node.style.left);
+
+table.y =
+parseInt(node.style.top);
 
 await MENUVA_DB.update(
 "restaurantTables",
@@ -295,6 +310,7 @@ table
 
 }
 
+}
 
 /* ================================
    CLEAR FORM
