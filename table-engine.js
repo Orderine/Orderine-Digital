@@ -208,8 +208,19 @@ renderTableMap();
 
 async function renderTableMap(){
 
+const session =
+await MENUVA_DB.getSession();
+
+const restoId =
+session?.restoId || "default";
+
 const tables =
 await MENUVA_DB.getAll("restaurantTables");
+
+/* FILTER RESTO */
+
+const filtered =
+tables.filter(t => t.restoId === restoId);
 
 const map =
 document.getElementById("tableEditorMap");
@@ -218,23 +229,22 @@ if(!map) return;
 
 map.innerHTML = "";
 
-tables.forEach(table=>{
+/* RENDER */
 
-const node = document.createElement("div");
+filtered.forEach(table=>{
+
+const node =
+document.createElement("div");
 
 node.className = "table-node";
 
 node.innerText = table.name;
 
-node.style.left = (table.x || 100) + "px";
-node.style.top = (table.y || 100) + "px";
+node.style.left =
+(table.x || 100) + "px";
 
-/* ZONE COLOR */
-
-const zoneColor =
-ZONE_COLORS[table.zone] || "rgba(255,255,255,0.1)";
-
-node.style.background = zoneColor;
+node.style.top =
+(table.y || 100) + "px";
 
 node.dataset.id = table.id;
 
