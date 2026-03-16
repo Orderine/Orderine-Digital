@@ -2556,6 +2556,62 @@ background:#7c2d12;
 box-shadow:0 0 10px #f97316;
 
 }
+
+.layout-shape{
+
+position:absolute;
+
+cursor:move;
+
+border-radius:4px;
+
+}
+
+/* WALL */
+
+.layout-shape.wall{
+
+width:160px;
+height:10px;
+
+background:#374151;
+
+}
+
+/* PARTITION */
+
+.layout-shape.partition{
+
+width:120px;
+height:6px;
+
+background:#6b7280;
+
+}
+
+/* BAR COUNTER */
+
+.layout-shape.bar{
+
+width:140px;
+height:60px;
+
+background:#78350f;
+
+}
+
+/* VIP AREA */
+
+.layout-shape.vip-area{
+
+width:200px;
+height:120px;
+
+background:rgba(168,85,247,0.15);
+
+border:1px dashed #a855f7;
+
+}
 </style>
 </head>
 <body>
@@ -2870,10 +2926,18 @@ onchange="previewTableImage(event)"
 
 </div>
 
-<button onclick="generateAutoLayout()" class="terminal-btn">
-Generate Layout
-</button>
+<div class="layout-tools">
 
+<button onclick="addLayoutShape('wall')">Wall</button>
+
+<button onclick="addLayoutShape('partition')">Partition</button>
+
+<button onclick="addLayoutShape('bar')">Bar</button>
+
+<button onclick="addLayoutShape('vip-area')">VIP Area</button>
+
+</div>
+  
 <div class="terminal-card">
 
 <div class="zone-legend">
@@ -2916,6 +2980,10 @@ SAVE TABLE
 
 <button onclick="clearTableForm()">
 CLEAR
+</button>
+
+<button onclick="generateAutoLayout()" class="terminal-btn">
+Reset Layout
 </button>
 
 </div>
