@@ -300,6 +300,11 @@ e.clientX - rect.left - offsetX;
 let y =
 e.clientY - rect.top - offsetY;
 
+/* LIMIT AREA */
+
+x = Math.max(0, Math.min(x, map.clientWidth - 60));
+y = Math.max(0, Math.min(y, map.clientHeight - 60));
+
 /* SNAP GRID */
 
 x = snapToGrid(x);
@@ -340,6 +345,62 @@ table
 }
 
 }
+
+}
+
+ async function generateAutoLayout(){
+
+const session = await MENUVA_DB.getSession();
+const restoId = session?.restoId || "default";
+
+const tables = await MENUVA_DB.getAll("restaurantTables");
+
+/* FILTER RESTO */
+
+const filtered =
+tables.filter(t => t.restoId === restoId);
+
+if(!filtered.length) return;
+
+/* MAP SIZE */
+
+const map =
+document.getElementById("tableEditorMap");
+
+const width = map.clientWidth;
+
+/* GRID CONFIG */
+
+const spacingX = 120;
+const spacingY = 120;
+
+const cols =
+Math.floor(width / spacingX) || 4;
+
+/* LOOP TABLES */
+
+for(let i=0;i<filtered.length;i++){
+
+let table = filtered[i];
+
+let col = i % cols;
+let row = Math.floor(i / cols);
+
+table.x = 60 + col * spacingX;
+table.y = 60 + row * spacingY;
+
+/* SAVE */
+
+await MENUVA_DB.update(
+"restaurantTables",
+table
+);
+
+}
+
+/* RELOAD MAP */
+
+renderTableMap();
 
 }
 
