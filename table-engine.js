@@ -257,8 +257,10 @@ const node =
 document.createElement("div");
 
 node.className =
-"table-node " + (table.shape || "circle");
-
+"table-node "
++ (table.shape || "circle") + " "
++ table.zone;
+   
 node.innerText = table.name;
 
 node.style.left =
