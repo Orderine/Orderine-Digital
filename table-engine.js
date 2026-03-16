@@ -114,21 +114,23 @@ const session = await MENUVA_DB.getSession();
 
 const restoId = session?.restoId || "default";
 
-
 /* DEFAULT POSITION */
 
 let posX = 100;
 let posY = 100;
 
-/* kalau edit table ambil posisi lama */
-
-if(editingTableId){
-
 const tables =
 await MENUVA_DB.getAll("restaurantTables");
 
+
+/* =========================
+   EDIT TABLE → pakai posisi lama
+========================= */
+
+if(editingTableId){
+
 const existing =
-tables.find(t=>t.id===editingTableId);
+tables.find(t => t.id === editingTableId);
 
 if(existing){
 
@@ -136,6 +138,23 @@ posX = existing.x || 100;
 posY = existing.y || 100;
 
 }
+
+}
+
+/* =========================
+   CREATE TABLE → auto grid
+========================= */
+
+else{
+
+const count = tables.length;
+
+const cols = 5;      // meja per baris
+const spacingX = 90; // jarak horizontal
+const spacingY = 90; // jarak vertical
+
+posX = 80 + (count % cols) * spacingX;
+posY = 80 + Math.floor(count / cols) * spacingY;
 
 }
 
@@ -165,7 +184,8 @@ image,
 x: posX,
 y: posY,
 
-shape: "round",
+shape: getTableShape(capacity),
+
 
 status: "available",
 
@@ -236,7 +256,8 @@ filtered.forEach(table=>{
 const node =
 document.createElement("div");
 
-node.className = "table-node";
+node.className =
+"table-node " + (table.shape || "circle");
 
 node.innerText = table.name;
 
@@ -319,6 +340,34 @@ table
 }
 
 }
+
+}
+
+/* ================================
+   SMART TABLE SHAPE
+================================ */
+
+function getTableShape(capacity){
+
+if(capacity <= 2){
+
+return "small-circle";
+
+}
+
+if(capacity <= 4){
+
+return "circle";
+
+}
+
+if(capacity <= 6){
+
+return "oval";
+
+}
+
+return "rectangle";
 
 }
 
