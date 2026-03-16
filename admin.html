@@ -2565,6 +2565,8 @@ cursor:move;
 
 border-radius:4px;
 
+transform-origin:center;
+
 }
 
 /* WALL */
@@ -2589,7 +2591,7 @@ background:#6b7280;
 
 }
 
-/* BAR COUNTER */
+/* BAR */
 
 .layout-shape.bar{
 
@@ -2610,6 +2612,71 @@ height:120px;
 background:rgba(168,85,247,0.15);
 
 border:1px dashed #a855f7;
+
+}
+
+/* DOOR */
+
+.layout-shape.door{
+
+width:40px;
+height:10px;
+
+background:#22c55e;
+
+}
+
+/* WINDOW */
+
+.layout-shape.window{
+
+width:60px;
+height:8px;
+
+background:#38bdf8;
+
+}
+
+/* FLOOR AREA */
+
+.layout-shape.floor{
+
+width:220px;
+height:160px;
+
+background:rgba(16,185,129,0.08);
+
+border:1px dashed #10b981;
+
+}
+
+/* VIP AREA */
+
+.layout-shape.vip-area{
+
+width:200px;
+height:120px;
+
+background:rgba(168,85,247,0.15);
+
+border:1px dashed #a855f7;
+
+}
+.resize-handle{
+
+position:absolute;
+
+right:-4px;
+bottom:-4px;
+
+width:10px;
+height:10px;
+
+background:#facc15;
+
+cursor:nwse-resize;
+
+border-radius:2px;
 
 }
 </style>
@@ -2935,6 +3002,12 @@ onchange="previewTableImage(event)"
 <button onclick="addLayoutShape('bar')">Bar</button>
 
 <button onclick="addLayoutShape('vip-area')">VIP Area</button>
+
+<button onclick="addLayoutShape('door')">Door</button>
+
+<button onclick="addLayoutShape('window')">Window</button>
+
+<button onclick="addLayoutShape('floor')">Floor</button>
 
 </div>
   
