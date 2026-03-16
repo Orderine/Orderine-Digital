@@ -8,6 +8,18 @@ let editingTableId = null;
 
 const GRID_SIZE = 20;
 
+const ZONE_COLORS = {
+
+indoor: "rgba(16,185,129,0.25)",
+
+outdoor: "rgba(59,130,246,0.25)",
+
+vip: "rgba(168,85,247,0.25)",
+
+bar: "rgba(249,115,22,0.25)"
+
+};
+
 
 /* ================================
    FILTER TABLE
@@ -103,6 +115,31 @@ const session = await MENUVA_DB.getSession();
 const restoId = session?.restoId || "default";
 
 
+/* DEFAULT POSITION */
+
+let posX = 100;
+let posY = 100;
+
+/* kalau edit table ambil posisi lama */
+
+if(editingTableId){
+
+const tables =
+await MENUVA_DB.getAll("restaurantTables");
+
+const existing =
+tables.find(t=>t.id===editingTableId);
+
+if(existing){
+
+posX = existing.x || 100;
+posY = existing.y || 100;
+
+}
+
+}
+
+
 /* TABLE OBJECT */
 
 const tableData = {
@@ -123,10 +160,11 @@ notes,
 
 image,
 
-/* NEW */
+/* POSITION */
 
-x: tableData?.x || 100,
-y: tableData?.y || 100,
+x: posX,
+y: posY,
+
 shape: "round",
 
 status: "available",
@@ -190,6 +228,13 @@ node.innerText = table.name;
 
 node.style.left = (table.x || 100) + "px";
 node.style.top = (table.y || 100) + "px";
+
+/* ZONE COLOR */
+
+const zoneColor =
+ZONE_COLORS[table.zone] || "rgba(255,255,255,0.1)";
+
+node.style.background = zoneColor;
 
 node.dataset.id = table.id;
 
