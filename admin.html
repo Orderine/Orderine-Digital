@@ -2352,6 +2352,50 @@ background:#020617;
 display:none;
 
 }
+
+.table-editor-map{
+
+position:relative;
+
+height:420px;
+
+background:#0f1116;
+
+border:1px solid #333;
+
+overflow:hidden;
+
+background-image:
+linear-gradient(#1f2937 1px, transparent 1px),
+linear-gradient(90deg,#1f2937 1px, transparent 1px);
+
+background-size:20px 20px;
+
+}
+
+.table-node{
+
+position:absolute;
+
+width:70px;
+height:70px;
+
+background:#10b981;
+
+color:#000;
+
+display:flex;
+
+align-items:center;
+justify-content:center;
+
+border-radius:50%;
+
+font-size:12px;
+
+cursor:move;
+
+}
 </style>
 </head>
 <body>
@@ -2663,6 +2707,16 @@ onchange="previewTableImage(event)"
 <div class="table-image-preview-box">
 <img id="tableImagePreview" />
 </div>
+
+</div>
+
+<div class="terminal-card">
+
+<div class="terminal-title">
+TABLE LAYOUT MAP
+</div>
+
+<div id="tableEditorMap" class="table-editor-map"></div>
 
 </div>
 
