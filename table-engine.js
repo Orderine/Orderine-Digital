@@ -886,6 +886,66 @@ return Math.round(value / GRID_SIZE) * GRID_SIZE;
 
 }
 
+function addLayoutShape(type){
+
+const map =
+document.getElementById("tableEditorMap");
+
+const shape =
+document.createElement("div");
+
+shape.className = "layout-shape " + type;
+
+shape.style.left = "120px";
+shape.style.top = "120px";
+
+enableShapeDrag(shape);
+
+map.appendChild(shape);
+
+}
+
+function enableShapeDrag(node){
+
+let offsetX=0;
+let offsetY=0;
+
+const map =
+document.getElementById("tableEditorMap");
+
+node.onmousedown = function(e){
+
+const rect = map.getBoundingClientRect();
+
+offsetX = e.offsetX;
+offsetY = e.offsetY;
+
+document.onmousemove = function(e){
+
+let x =
+e.clientX - rect.left - offsetX;
+
+let y =
+e.clientY - rect.top - offsetY;
+
+x = snapToGrid(x);
+y = snapToGrid(y);
+
+node.style.left = x + "px";
+node.style.top = y + "px";
+
+}
+
+document.onmouseup = function(){
+
+document.onmousemove = null;
+
+}
+
+}
+
+}
+
 /* ================================
    INIT
 ================================ */
