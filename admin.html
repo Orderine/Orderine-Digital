@@ -2396,6 +2396,62 @@ font-size:12px;
 cursor:move;
 
 }
+
+.zone-legend{
+
+display:flex;
+gap:10px;
+margin-bottom:10px;
+
+}
+
+.zone{
+
+padding:4px 10px;
+font-size:11px;
+border-radius:4px;
+
+}
+
+.zone.indoor{
+background:rgba(16,185,129,0.3);
+}
+
+.zone.outdoor{
+background:rgba(59,130,246,0.3);
+}
+
+.zone.vip{
+background:rgba(168,85,247,0.3);
+}
+
+.zone.bar{
+background:rgba(249,115,22,0.3);
+}
+
+.table-node{
+
+position:absolute;
+
+width:70px;
+height:70px;
+
+border-radius:50%;
+
+display:flex;
+
+align-items:center;
+justify-content:center;
+
+font-size:12px;
+
+cursor:move;
+
+border:2px solid #ffffff33;
+
+backdrop-filter: blur(4px);
+
+}
 </style>
 </head>
 <body>
@@ -2712,8 +2768,24 @@ onchange="previewTableImage(event)"
 
 <div class="terminal-card">
 
+<div class="zone-legend">
+
+<span class="zone indoor">INDOOR</span>
+
+<span class="zone outdoor">OUTDOOR</span>
+
+<span class="zone vip">VIP</span>
+
+<span class="zone bar">BAR</span>
+
+</div>
+
 <div class="terminal-title">
 TABLE LAYOUT MAP
+</div>
+
+<div class="terminal-note">
+Drag tables to arrange restaurant layout
 </div>
 
 <div id="tableEditorMap" class="table-editor-map"></div>
