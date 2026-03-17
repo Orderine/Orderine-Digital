@@ -2713,22 +2713,28 @@ background:#1f2937;
 border-color:#555;
 }
 
+.map-wrapper {
+  position: relative;
+  display: inline-block; /* biar ikut ukuran map */
+}
+
+/* MAP */
+.table-editor-map {
+  position: relative;
+}
+
+/* DELETE BUTTON */
 .delete-shape-btn {
   position: absolute;
-  top: 12px;
-  right: 16px;
+
+  top: 10px;
+  right: 10px;
 
   width: 34px;
   height: 28px;
 
-  min-width: unset;   /* 🔥 fix global button */
-  max-width: unset;   /* 🔥 fix global button */
+  display: none; /* default hidden */
 
-  flex: none;         /* 🔥 anti stretch */
-
-  z-index: 9999;      /* 🔥 biar gak ketiban shape */
-
-  display: flex;
   align-items: center;
   justify-content: center;
 
@@ -2742,9 +2748,11 @@ border-color:#555;
 
   cursor: pointer;
 
-  transition: all 0.15s ease;
+  z-index: 9999;
 
+  transition: all 0.15s ease;
   backdrop-filter: blur(6px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
 /* HOVER */
@@ -2752,22 +2760,13 @@ border-color:#555;
   background: rgba(239, 68, 68, 0.15);
   border-color: #ef4444;
   color: #ff6b6b;
-}
-.delete-shape-btn:hover {
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
 }
 
-/* ACTIVE (klik) */
+/* ACTIVE */
 .delete-shape-btn:active {
   transform: scale(0.92);
-  background: rgba(239, 68, 68, 0.25);
 }
-
-/* HIDDEN DEFAULT */
-.delete-shape-btn {
-  display: none;
-}
-    
 .layout-shape,
 .table-node {
   touch-action: none;
@@ -3197,13 +3196,14 @@ TABLE LAYOUT MAP
 Drag tables/Shape to arrange restaurant layout & Long Press to delete shape
 </div>
 
-<div id="tableEditorMap" class="table-editor-map">
+<div class="map-wrapper">
 
+  <div id="tableEditorMap" class="table-editor-map"></div>
 
   <button id="deleteShapeBtn" class="delete-shape-btn" title="Delete Shape">
-🗑
-</button>
-  
+    🗑
+  </button>
+
 </div>
 </div>
 
