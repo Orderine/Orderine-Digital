@@ -2721,17 +2721,23 @@ border-color:#555;
   width: 34px;
   height: 28px;
 
+  min-width: unset;   /* 🔥 fix global button */
+  max-width: unset;   /* 🔥 fix global button */
+
+  flex: none;         /* 🔥 anti stretch */
+
+  z-index: 9999;      /* 🔥 biar gak ketiban shape */
+
   display: flex;
   align-items: center;
   justify-content: center;
 
   font-size: 14px;
 
-  background: rgba(15, 23, 42, 0.9); /* dark glass */
-  color: #ef4444; /* danger red */
+  background: rgba(15, 23, 42, 0.9);
+  color: #ef4444;
 
   border: 1px solid rgba(239, 68, 68, 0.4);
-
   border-radius: 6px;
 
   cursor: pointer;
@@ -3191,12 +3197,14 @@ TABLE LAYOUT MAP
 Drag tables/Shape to arrange restaurant layout & Long Press to delete shape
 </div>
 
-<div id="tableEditorMap" class="table-editor-map"></div>
+<div id="tableEditorMap" class="table-editor-map">
 
-<button id="deleteShapeBtn" class="delete-shape-btn" title="Delete Shape">
+
+  <button id="deleteShapeBtn" class="delete-shape-btn" title="Delete Shape">
 🗑
 </button>
-
+  
+</div>
 </div>
 
 <label class="switch">
