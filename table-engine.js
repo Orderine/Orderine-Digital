@@ -10,6 +10,7 @@ let selectedShape = null;
 let pressTimer = null;
 
 let activeDrag = null;
+let touchMoved = false;
 
 function initLayoutEditor(){
 
@@ -70,7 +71,7 @@ selectedShape.classList.add("selected");
 /* LONG PRESS */
 pressTimer = setTimeout(function(){
 
-if(!isDragging){
+if(!touchMoved){
 
 navigator.vibrate?.(40);
 
@@ -1040,8 +1041,8 @@ e.stopPropagation();
 
 const rect = map.getBoundingClientRect();
 
-offsetX = e.clientX - node.offsetLeft;
-offsetY = e.clientY - node.offsetTop;
+offsetX = e.clientX - nodeRect.left;
+offsetY = e.clientY - nodeRect.top;
 
 node.classList.add("dragging");
 
@@ -1075,7 +1076,7 @@ node.classList.remove("dragging");
 };
 
 /* =========================
-   MOBILE
+   MOBILE (FIX FINAL)
 ========================= */
 
 node.ontouchstart = function(e){
@@ -1084,19 +1085,26 @@ if(activeDrag) return;
 activeDrag = node;
 
 e.stopPropagation();
-e.preventDefault(); // 🔥 penting
+// ❌ jangan pakai preventDefault di sini
+
+touchMoved = false; // 🔥 detect drag vs hold
 
 clearTimeout(pressTimer);
 
 const touch = e.touches[0];
 const rect = map.getBoundingClientRect();
+const nodeRect = node.getBoundingClientRect(); // 🔥 FIX OFFSET
 
-offsetX = touch.clientX - node.offsetLeft;
-offsetY = touch.clientY - node.offsetTop;
+offsetX = touch.clientX - nodeRect.left;
+offsetY = touch.clientY - nodeRect.top;
 
 node.classList.add("dragging");
 
 document.ontouchmove = function(e){
+
+touchMoved = true; // 🔥 berarti ini drag
+
+e.preventDefault(); // ✅ TARO DI SINI (bukan di start)
 
 const touch = e.touches[0];
 
@@ -1124,7 +1132,6 @@ activeDrag = null;
 node.classList.remove("dragging");
 
 };
-
 };
 
 }
