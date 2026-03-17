@@ -209,18 +209,15 @@ return "T" + String(next).padStart(2,"0");
 
 async function saveTable(){
 
-const nameInput =
-document.getElementById("tableNameInput");
+const nameInput = document.getElementById("tableNameInput");
 
 let name = nameInput.value;
 
-const capacity =
-parseInt(
+const capacity = parseInt(
 document.getElementById("tableCapacityInput").value
 );
 
-const zone =
-document.getElementById("tableZoneInput").value;
+const zone = document.getElementById("tableZoneInput").value;
 
 const category =
 document.getElementById("tableCategoryInput")?.value || "";
@@ -234,45 +231,31 @@ document.getElementById("tableActiveToggle").checked;
 const image =
 document.getElementById("tableImagePreview")?.src || "";
 
-
 /* AUTO NAME */
-
 if(!name){
-
 name = await generateTableName();
-
 }
 
-
 /* SESSION */
-
 const session = await MENUVA_DB.getSession();
-
 const restoId = session?.restoId || "default";
 
 /* DEFAULT POSITION */
-
 let posX = 100;
 let posY = 100;
 
-const tables =
-await MENUVA_DB.getAll("restaurantTables");
-
+const tables = await MENUVA_DB.getAll("restaurantTables");
 
 /* =========================
    EDIT TABLE → pakai posisi lama
 ========================= */
-
 if(editingTableId){
 
-const existing =
-tables.find(t => t.id === editingTableId);
+const existing = tables.find(t => t.id === editingTableId);
 
 if(existing){
-
 posX = existing.x || 100;
 posY = existing.y || 100;
-
 }
 
 }
@@ -280,130 +263,158 @@ posY = existing.y || 100;
 /* =========================
    CREATE TABLE → auto grid
 ========================= */
-
 else{
 
 const count = tables.length;
 
-const cols = 5;      // meja per baris
-const spacingX = 90; // jarak horizontal
-const spacingY = 90; // jarak vertical
+const cols = 5;
+const spacingX = 90;
+const spacingY = 90;
 
 posX = 80 + (count % cols) * spacingX;
 posY = 80 + Math.floor(count / cols) * spacingY;
 
 }
 
+/* =========================
+   🔥 AMBIL LAYOUT DI SINI
+========================= */
+const layoutData = getLayoutData();
 
-/* TABLE OBJECT */
-
+/* =========================
+   TABLE OBJECT (SATU AJA!)
+========================= */
 const tableData = {
 
 id: editingTableId || "TB_" + Date.now(),
 
 restoId,
-
 name,
-
 capacity,
-
 zone,
-
 category,
-
 notes,
-
 image,
-
-/* POSITION */
 
 x: posX,
 y: posY,
 
 shape: getTableShape(capacity),
 
-
 status: "available",
-
 currentGuest: null,
-
 active,
+
+/* 🔥 INI POSISINYA */
+layout: layoutData,
 
 createdAt: Date.now()
 
 };
 
 /* SAVE OR UPDATE */
-
 if(editingTableId){
 
-await MENUVA_DB.update(
-"restaurantTables",
-tableData
-);
-
+await MENUVA_DB.update("restaurantTables", tableData);
 editingTableId = null;
 
 }else{
 
-await MENUVA_DB.add(
-"restaurantTables",
-tableData
-);
+await MENUVA_DB.add("restaurantTables", tableData);
 
 }
 
-
 clearTableForm();
-
 renderTables();
-
 renderTableMap();
 
 }
 
 async function renderTableMap(){
 
-const session =
-await MENUVA_DB.getSession();
+const session = await MENUVA_DB.getSession();
+const restoId = session?.restoId || "default";
 
-const restoId =
-session?.restoId || "default";
-
-const tables =
-await MENUVA_DB.getAll("restaurantTables");
+const tables = await MENUVA_DB.getAll("restaurantTables");
 
 /* FILTER RESTO */
+const filtered = tables.filter(t => t.restoId === restoId);
 
-const filtered =
-tables.filter(t => t.restoId === restoId);
-
-const map =
-document.getElementById("tableEditorMap");
-
+const map = document.getElementById("tableEditorMap");
 if(!map) return;
 
 map.innerHTML = "";
 
-/* RENDER */
+/* =========================
+   🔥 LOAD LAYOUT SHAPES
+========================= */
+
+let layoutLoaded = false;
+
+filtered.forEach(table => {
+
+if(!layoutLoaded && table.layout && table.layout.length){
+
+table.layout.forEach(item => {
+
+const shape = document.createElement("div");
+
+shape.className = "layout-shape " + item.type;
+
+shape.style.left = item.x + "px";
+shape.style.top = item.y + "px";
+
+shape.style.width = item.width + "px";
+shape.style.height = item.height + "px";
+
+shape.style.zIndex = item.zIndex || 1;
+
+/* ROTATION */
+if(item.rotation){
+shape.dataset.rotate = item.rotation;
+shape.style.transform = "rotate(" + item.rotation + "deg)";
+}
+
+/* RESIZE HANDLE */
+const resize = document.createElement("div");
+resize.className = "resize-handle";
+shape.appendChild(resize);
+
+/* ENABLE */
+enableShapeDrag(shape);
+enableShapeResize(shape, resize);
+
+shape.ondblclick = function(){
+rotateShape(shape);
+};
+
+map.appendChild(shape);
+
+});
+
+layoutLoaded = true;
+
+}
+
+});
+
+/* =========================
+   RENDER TABLE
+========================= */
 
 filtered.forEach(table=>{
 
-const node =
-document.createElement("div");
+const node = document.createElement("div");
 
 node.className =
 "table-node "
 + (table.shape || "circle") + " "
 + table.zone;
-   
+
 node.innerText = table.name;
 
-node.style.left =
-(table.x || 100) + "px";
-
-node.style.top =
-(table.y || 100) + "px";
+node.style.left = (table.x || 100) + "px";
+node.style.top = (table.y || 100) + "px";
 
 node.dataset.id = table.id;
 
@@ -1209,6 +1220,71 @@ document.addEventListener("touchend", onTouchEnd);
 
 }
 
+function getLayoutData(){
+
+const shapes = document.querySelectorAll(".layout-shape");
+
+return Array.from(shapes).map(shape => ({
+
+type: shape.dataset.type || "",
+
+x: parseInt(shape.style.left) || 0,
+y: parseInt(shape.style.top) || 0,
+
+width: shape.offsetWidth,
+height: shape.offsetHeight,
+
+rotation: parseFloat(shape.dataset.rotate || 0),
+
+zIndex: shape.style.zIndex || 1
+
+}));
+
+}
+
+function renderLayoutShapes(layout){
+
+const map = document.getElementById("tableEditorMap");
+if(!map || !layout) return;
+
+layout.forEach(item => {
+
+const shape = document.createElement("div");
+
+shape.className = "layout-shape " + item.type;
+
+shape.style.left = item.x + "px";
+shape.style.top = item.y + "px";
+
+shape.style.width = item.width + "px";
+shape.style.height = item.height + "px";
+
+shape.style.zIndex = item.zIndex || 1;
+
+/* ROTATION */
+if(item.rotation){
+shape.dataset.rotate = item.rotation;
+shape.style.transform = "rotate(" + item.rotation + "deg)";
+}
+
+/* ENABLE FEATURE */
+const resize = document.createElement("div");
+resize.className = "resize-handle";
+shape.appendChild(resize);
+
+enableShapeDrag(shape);
+enableShapeResize(shape, resize);
+
+shape.ondblclick = function(){
+rotateShape(shape);
+};
+
+map.appendChild(shape);
+
+});
+
+}
+
 function rotateShape(node){
 
 let angle =
@@ -1227,38 +1303,31 @@ node.style.transform =
 
 function addLayoutShape(type){
 
-const map =
-document.getElementById("tableEditorMap");
+const map = document.getElementById("tableEditorMap");
 
-const shape =
-document.createElement("div");
+const shape = document.createElement("div");
 
+/* 🔥 PENTING */
 shape.className = "layout-shape " + type;
+shape.dataset.type = type;
 
 shape.style.left = "120px";
 shape.style.top = "120px";
-
 shape.style.zIndex = 1;
 
 /* RESIZE HANDLE */
-
-const resize =
-document.createElement("div");
-
+const resize = document.createElement("div");
 resize.className = "resize-handle";
 
 shape.appendChild(resize);
 
 /* ENABLE DRAG */
-
 enableShapeDrag(shape);
 
 /* ENABLE RESIZE */
+enableShapeResize(shape, resize);
 
-enableShapeResize(shape,resize);
-
-/* DOUBLE CLICK ROTATE */
-
+/* ROTATE */
 shape.ondblclick = function(){
 rotateShape(shape);
 };
@@ -1266,7 +1335,6 @@ rotateShape(shape);
 map.appendChild(shape);
 
 }
-
 
 function enableShapeResize(node,handle){
 
