@@ -2692,15 +2692,19 @@ margin-bottom:8px;
 }
 
 .layout-tools button{
-padding:4px 8px;
+width:auto !important;        /* 🔥 INI KUNCI */
+flex:0 0 auto !important;     /* 🔥 biar gak stretch di flex */
+display:inline-block;
+
+padding:3px 8px;
 font-size:11px;
+
 border-radius:6px;
 background:#111;
 color:#fff;
 border:1px solid #333;
-cursor:pointer;
-transition:all 0.2s ease;
-white-space:nowrap;
+
+white-space:nowrap;           /* biar gak turun */
 }
 
 /* HOVER EFFECT */
@@ -2722,7 +2726,12 @@ cursor:pointer;
 display:none;
 z-index:999;
 }
-
+.delete-shape-btn{
+padding:4px 6px;
+font-size:12px;
+width:auto;
+height:auto;
+}
 .delete-shape-btn:hover{
 background:#dc2626;
 border-color:#ef4444;
