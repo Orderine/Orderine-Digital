@@ -9,6 +9,8 @@ let editingTableId = null;
 let selectedShape = null;
 let pressTimer = null;
 
+let activeDrag = null;
+
 function initLayoutEditor(){
 
 const map = document.getElementById("tableEditorMap");
@@ -50,6 +52,9 @@ if(deleteBtn) deleteBtn.style.display = "none";
 ========================= */
 
 map.addEventListener("touchstart",function(e){
+
+/* 🔥 JANGAN GANGGU DRAG */
+if(e.target.closest(".dragging")) return;
 
 if(!e.target.classList.contains("layout-shape")) return;
 
@@ -404,46 +409,55 @@ map.appendChild(node);
 
 function enableTableDrag(node){
 
-let offsetX=0;
-let offsetY=0;
+let offsetX = 0;
+let offsetY = 0;
 
-const map =
-document.getElementById("tableEditorMap");
+const map = document.getElementById("tableEditorMap");
+
+/* =========================
+   DESKTOP
+========================= */
 
 node.onmousedown = function(e){
 
+if(activeDrag) return;
+activeDrag = node;
+
+e.stopPropagation();
+
 const rect = map.getBoundingClientRect();
 
-offsetX = e.offsetX;
-offsetY = e.offsetY;
+offsetX = e.clientX - node.offsetLeft;
+offsetY = e.clientY - node.offsetTop;
+
+node.classList.add("dragging");
 
 document.onmousemove = function(e){
 
-let x =
-e.clientX - rect.left - offsetX;
+let x = e.clientX - rect.left - offsetX;
+let y = e.clientY - rect.top - offsetY;
 
-let y =
-e.clientY - rect.top - offsetY;
-
-/* LIMIT AREA */
-
-x = Math.max(0, Math.min(x, map.clientWidth - 60));
-y = Math.max(0, Math.min(y, map.clientHeight - 60));
+/* 🔥 BOUNDARY */
+x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
+y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
 
 /* SNAP GRID */
-
 x = snapToGrid(x);
 y = snapToGrid(y);
 
 node.style.left = x + "px";
 node.style.top = y + "px";
 
-}
+};
 
 document.onmouseup = async function(){
 
 document.onmousemove = null;
 
+activeDrag = null;
+node.classList.remove("dragging");
+
+/* SAVE POSITION */
 const id = node.dataset.id;
 
 const tables =
@@ -454,11 +468,8 @@ tables.find(t=>t.id===id);
 
 if(table){
 
-table.x =
-parseInt(node.style.left);
-
-table.y =
-parseInt(node.style.top);
+table.x = parseInt(node.style.left);
+table.y = parseInt(node.style.top);
 
 await MENUVA_DB.update(
 "restaurantTables",
@@ -467,9 +478,9 @@ table
 
 }
 
-}
+};
 
-}
+};
 
 }
 
@@ -1022,16 +1033,28 @@ const map = document.getElementById("tableEditorMap");
 
 node.onmousedown = function(e){
 
+if(activeDrag) return;
+activeDrag = node;
+
+e.stopPropagation();
+
 const rect = map.getBoundingClientRect();
 
 offsetX = e.clientX - node.offsetLeft;
 offsetY = e.clientY - node.offsetTop;
+
+node.classList.add("dragging");
 
 document.onmousemove = function(e){
 
 let x = e.clientX - rect.left - offsetX;
 let y = e.clientY - rect.top - offsetY;
 
+/* 🔥 BOUNDARY */
+x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
+y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
+
+/* SNAP */
 x = snapToGrid(x);
 y = snapToGrid(y);
 
@@ -1041,7 +1064,12 @@ node.style.top = y + "px";
 };
 
 document.onmouseup = function(){
+
 document.onmousemove = null;
+
+activeDrag = null;
+node.classList.remove("dragging");
+
 };
 
 };
@@ -1052,7 +1080,12 @@ document.onmousemove = null;
 
 node.ontouchstart = function(e){
 
+if(activeDrag) return;
+activeDrag = node;
+
 e.stopPropagation();
+e.preventDefault(); // 🔥 penting
+
 clearTimeout(pressTimer);
 
 const touch = e.touches[0];
@@ -1061,6 +1094,8 @@ const rect = map.getBoundingClientRect();
 offsetX = touch.clientX - node.offsetLeft;
 offsetY = touch.clientY - node.offsetTop;
 
+node.classList.add("dragging");
+
 document.ontouchmove = function(e){
 
 const touch = e.touches[0];
@@ -1068,6 +1103,11 @@ const touch = e.touches[0];
 let x = touch.clientX - rect.left - offsetX;
 let y = touch.clientY - rect.top - offsetY;
 
+/* 🔥 BOUNDARY */
+x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
+y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
+
+/* SNAP */
 x = snapToGrid(x);
 y = snapToGrid(y);
 
@@ -1077,7 +1117,12 @@ node.style.top = y + "px";
 };
 
 document.ontouchend = function(){
+
 document.ontouchmove = null;
+
+activeDrag = null;
+node.classList.remove("dragging");
+
 };
 
 };
