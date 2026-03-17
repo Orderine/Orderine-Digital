@@ -1256,6 +1256,25 @@ document.ontouchmove = null;
 };
 
 }
+
+const toggle = document.getElementById("tableActiveToggle");
+const text = document.getElementById("tableActiveText");
+
+function updateToggleUI(){
+  if(toggle.checked){
+    text.innerText = "ACTIVE";
+    text.style.color = "#10b981";
+  } else {
+    text.innerText = "INACTIVE";
+    text.style.color = "#ef4444";
+  }
+}
+
+toggle.addEventListener("change", updateToggleUI);
+
+// init
+updateToggleUI();
+
 /* ================================
    INIT
 ================================ */
