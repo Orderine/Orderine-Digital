@@ -410,78 +410,143 @@ map.appendChild(node);
 
 function enableTableDrag(node){
 
+const map = document.getElementById("tableEditorMap");
+
 let offsetX = 0;
 let offsetY = 0;
-
-const map = document.getElementById("tableEditorMap");
 
 /* =========================
    DESKTOP
 ========================= */
 
-node.onmousedown = function(e){
+function onMouseMove(e){
+
+const rect = map.getBoundingClientRect();
+
+let x = e.clientX - rect.left - offsetX;
+let y = e.clientY - rect.top - offsetY;
+
+/* BOUNDARY */
+x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
+y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
+
+x = snapToGrid(x);
+y = snapToGrid(y);
+
+node.style.left = x + "px";
+node.style.top = y + "px";
+}
+
+async function onMouseUp(){
+
+document.removeEventListener("mousemove", onMouseMove);
+document.removeEventListener("mouseup", onMouseUp);
+
+activeDrag = null;
+node.classList.remove("dragging");
+
+/* SAVE */
+const id = node.dataset.id;
+
+const tables = await MENUVA_DB.getAll("restaurantTables");
+const table = tables.find(t=>t.id===id);
+
+if(table){
+table.x = parseInt(node.style.left);
+table.y = parseInt(node.style.top);
+
+await MENUVA_DB.update("restaurantTables", table);
+}
+}
+
+node.addEventListener("mousedown", function(e){
 
 if(activeDrag) return;
 activeDrag = node;
 
 e.stopPropagation();
 
-const rect = map.getBoundingClientRect();
+const nodeRect = node.getBoundingClientRect();
 
-offsetX = e.clientX - node.offsetLeft;
-offsetY = e.clientY - node.offsetTop;
+offsetX = e.clientX - nodeRect.left;
+offsetY = e.clientY - nodeRect.top;
 
 node.classList.add("dragging");
 
-document.onmousemove = function(e){
+document.addEventListener("mousemove", onMouseMove);
+document.addEventListener("mouseup", onMouseUp);
 
-let x = e.clientX - rect.left - offsetX;
-let y = e.clientY - rect.top - offsetY;
+});
 
-/* 🔥 BOUNDARY */
+/* =========================
+   MOBILE
+========================= */
+
+function onTouchMove(e){
+
+touchMoved = true;
+e.preventDefault();
+
+const touch = e.touches[0];
+const rect = map.getBoundingClientRect();
+
+let x = touch.clientX - rect.left - offsetX;
+let y = touch.clientY - rect.top - offsetY;
+
+/* BOUNDARY */
 x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
 y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
 
-/* SNAP GRID */
 x = snapToGrid(x);
 y = snapToGrid(y);
 
 node.style.left = x + "px";
 node.style.top = y + "px";
+}
 
-};
+async function onTouchEnd(){
 
-document.onmouseup = async function(){
-
-document.onmousemove = null;
+document.removeEventListener("touchmove", onTouchMove);
+document.removeEventListener("touchend", onTouchEnd);
 
 activeDrag = null;
 node.classList.remove("dragging");
 
-/* SAVE POSITION */
+/* SAVE */
 const id = node.dataset.id;
 
-const tables =
-await MENUVA_DB.getAll("restaurantTables");
-
-const table =
-tables.find(t=>t.id===id);
+const tables = await MENUVA_DB.getAll("restaurantTables");
+const table = tables.find(t=>t.id===id);
 
 if(table){
-
 table.x = parseInt(node.style.left);
 table.y = parseInt(node.style.top);
 
-await MENUVA_DB.update(
-"restaurantTables",
-table
-);
-
+await MENUVA_DB.update("restaurantTables", table);
+}
 }
 
-};
+node.addEventListener("touchstart", function(e){
 
-};
+if(activeDrag) return;
+activeDrag = node;
+
+e.stopPropagation();
+
+touchMoved = false;
+
+const touch = e.touches[0];
+const nodeRect = node.getBoundingClientRect();
+
+offsetX = touch.clientX - nodeRect.left;
+offsetY = touch.clientY - nodeRect.top;
+
+node.classList.add("dragging");
+
+document.addEventListener("touchmove", onTouchMove, { passive:false });
+document.addEventListener("touchend", onTouchEnd);
+
+});
 
 }
 
@@ -1023,116 +1088,117 @@ return Math.round(value / GRID_SIZE) * GRID_SIZE;
 
 function enableShapeDrag(node){
 
+const map = document.getElementById("tableEditorMap");
+
 let offsetX = 0;
 let offsetY = 0;
-
-const map = document.getElementById("tableEditorMap");
 
 /* =========================
    DESKTOP
 ========================= */
 
-node.onmousedown = function(e){
+function onMouseMove(e){
+
+const rect = map.getBoundingClientRect();
+
+let x = e.clientX - rect.left - offsetX;
+let y = e.clientY - rect.top - offsetY;
+
+/* BOUNDARY */
+x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
+y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
+
+x = snapToGrid(x);
+y = snapToGrid(y);
+
+node.style.left = x + "px";
+node.style.top = y + "px";
+}
+
+function onMouseUp(){
+
+document.removeEventListener("mousemove", onMouseMove);
+document.removeEventListener("mouseup", onMouseUp);
+
+activeDrag = null;
+node.classList.remove("dragging");
+}
+
+node.addEventListener("mousedown", function(e){
 
 if(activeDrag) return;
 activeDrag = node;
 
 e.stopPropagation();
 
-const rect = map.getBoundingClientRect();
+const nodeRect = node.getBoundingClientRect();
 
 offsetX = e.clientX - nodeRect.left;
 offsetY = e.clientY - nodeRect.top;
 
 node.classList.add("dragging");
 
-document.onmousemove = function(e){
+document.addEventListener("mousemove", onMouseMove);
+document.addEventListener("mouseup", onMouseUp);
 
-let x = e.clientX - rect.left - offsetX;
-let y = e.clientY - rect.top - offsetY;
+});
 
-/* 🔥 BOUNDARY */
+/* =========================
+   MOBILE
+========================= */
+
+function onTouchMove(e){
+
+touchMoved = true;
+e.preventDefault();
+
+const touch = e.touches[0];
+const rect = map.getBoundingClientRect();
+
+let x = touch.clientX - rect.left - offsetX;
+let y = touch.clientY - rect.top - offsetY;
+
+/* BOUNDARY */
 x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
 y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
 
-/* SNAP */
 x = snapToGrid(x);
 y = snapToGrid(y);
 
 node.style.left = x + "px";
 node.style.top = y + "px";
+}
 
-};
+function onTouchEnd(){
 
-document.onmouseup = function(){
-
-document.onmousemove = null;
+document.removeEventListener("touchmove", onTouchMove);
+document.removeEventListener("touchend", onTouchEnd);
 
 activeDrag = null;
 node.classList.remove("dragging");
+}
 
-};
-
-};
-
-/* =========================
-   MOBILE (FIX FINAL)
-========================= */
-
-node.ontouchstart = function(e){
+node.addEventListener("touchstart", function(e){
 
 if(activeDrag) return;
 activeDrag = node;
 
 e.stopPropagation();
-// ❌ jangan pakai preventDefault di sini
 
-touchMoved = false; // 🔥 detect drag vs hold
-
-clearTimeout(pressTimer);
+touchMoved = false;
 
 const touch = e.touches[0];
-const rect = map.getBoundingClientRect();
-const nodeRect = node.getBoundingClientRect(); // 🔥 FIX OFFSET
+const nodeRect = node.getBoundingClientRect();
 
 offsetX = touch.clientX - nodeRect.left;
 offsetY = touch.clientY - nodeRect.top;
 
 node.classList.add("dragging");
 
-document.ontouchmove = function(e){
+document.addEventListener("touchmove", onTouchMove, { passive:false });
+document.addEventListener("touchend", onTouchEnd);
 
-touchMoved = true; // 🔥 berarti ini drag
-
-e.preventDefault(); // ✅ TARO DI SINI (bukan di start)
-
-const touch = e.touches[0];
-
-let x = touch.clientX - rect.left - offsetX;
-let y = touch.clientY - rect.top - offsetY;
-
-/* 🔥 BOUNDARY */
-x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
-y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
-
-/* SNAP */
-x = snapToGrid(x);
-y = snapToGrid(y);
-
-node.style.left = x + "px";
-node.style.top = y + "px";
-
-};
-
-document.ontouchend = function(){
-
-document.ontouchmove = null;
-
-activeDrag = null;
-node.classList.remove("dragging");
-
-};
-};
+});
 
 }
 
@@ -1274,6 +1340,9 @@ toggle.addEventListener("change", updateToggleUI);
 
 // init
 updateToggleUI();
+
+window.addEventListener("mouseup", () => activeDrag = null);
+window.addEventListener("touchend", () => activeDrag = null);
 
 /* ================================
    INIT
