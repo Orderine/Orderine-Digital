@@ -25,18 +25,23 @@ let isDragging = false;
    SELECT (DESKTOP + MOBILE)
 ========================= */
 
-map.addEventListener("click",function(e){
+map.addEventListener("click", function(e){
+
+// 🔥 JANGAN HILANGIN SAAT KLIK TOMBOL DELETE
+if(e.target.closest("#deleteShapeBtn")) return;
+
+const shape = e.target.closest(".layout-shape");
 
 document
 .querySelectorAll(".layout-shape")
-.forEach(el=>el.classList.remove("selected"));
+.forEach(el => el.classList.remove("selected"));
 
-if(e.target.classList.contains("layout-shape")){
+if(shape){
 
-selectedShape = e.target;
+selectedShape = shape;
 selectedShape.classList.add("selected");
 
-if(deleteBtn) deleteBtn.style.display = "block";
+if(deleteBtn) deleteBtn.style.display = "flex";
 
 }else{
 
@@ -47,31 +52,33 @@ if(deleteBtn) deleteBtn.style.display = "none";
 }
 
 });
-
+   
 /* =========================
    TOUCH (LONG PRESS DELETE)
 ========================= */
 
-map.addEventListener("touchstart",function(e){
+map.addEventListener("touchstart", function(e){
 
-/* 🔥 JANGAN GANGGU DRAG */
+// 🔥 JANGAN GANGGU DRAG
 if(e.target.closest(".dragging")) return;
 
-if(!e.target.classList.contains("layout-shape")) return;
+// 🔥 FIX: ambil parent shape
+const shape = e.target.closest(".layout-shape");
+if(!shape) return;
 
-selectedShape = e.target;
+selectedShape = shape;
 isDragging = false;
 
 document
 .querySelectorAll(".layout-shape")
-.forEach(el=>el.classList.remove("selected"));
+.forEach(el => el.classList.remove("selected"));
 
 selectedShape.classList.add("selected");
 
 /* LONG PRESS */
 pressTimer = setTimeout(function(){
 
-if(!touchMoved){
+if(!isDragging){
 
 navigator.vibrate?.(40);
 
@@ -86,8 +93,8 @@ if(deleteBtn) deleteBtn.style.display = "none";
 },800);
 
 });
-
-map.addEventListener("touchmove",function(){
+   
+map.addEventListener("touchmove", function(){
 isDragging = true;
 clearTimeout(pressTimer);
 });
