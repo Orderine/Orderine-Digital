@@ -11,13 +11,15 @@ let pressTimer = null;
 
 function initLayoutEditor(){
 
-const map =
-document.getElementById("tableEditorMap");
+const map = document.getElementById("tableEditorMap");
+const deleteBtn = document.getElementById("deleteShapeBtn");
 
 if(!map) return;
 
+let isDragging = false;
+
 /* =========================
-   SELECT SHAPE (DESKTOP)
+   SELECT (DESKTOP + MOBILE)
 ========================= */
 
 map.addEventListener("click",function(e){
@@ -29,19 +31,22 @@ document
 if(e.target.classList.contains("layout-shape")){
 
 selectedShape = e.target;
-
 selectedShape.classList.add("selected");
+
+if(deleteBtn) deleteBtn.style.display = "block";
 
 }else{
 
 selectedShape = null;
+
+if(deleteBtn) deleteBtn.style.display = "none";
 
 }
 
 });
 
 /* =========================
-   SELECT SHAPE (ANDROID)
+   TOUCH (LONG PRESS DELETE)
 ========================= */
 
 map.addEventListener("touchstart",function(e){
@@ -49,6 +54,7 @@ map.addEventListener("touchstart",function(e){
 if(!e.target.classList.contains("layout-shape")) return;
 
 selectedShape = e.target;
+isDragging = false;
 
 document
 .querySelectorAll(".layout-shape")
@@ -56,16 +62,18 @@ document
 
 selectedShape.classList.add("selected");
 
-/* LONG PRESS DELETE */
-
+/* LONG PRESS */
 pressTimer = setTimeout(function(){
+
+if(!isDragging){
 
 navigator.vibrate?.(40);
 
 if(confirm("Delete this shape?")){
-
 selectedShape.remove();
 selectedShape = null;
+if(deleteBtn) deleteBtn.style.display = "none";
+}
 
 }
 
@@ -73,16 +81,37 @@ selectedShape = null;
 
 });
 
-/* CANCEL LONG PRESS */
+map.addEventListener("touchmove",function(){
+isDragging = true;
+clearTimeout(pressTimer);
+});
 
 map.addEventListener("touchend",function(){
-
 clearTimeout(pressTimer);
-
 });
 
 /* =========================
-   DESKTOP DELETE KEY
+   DELETE BUTTON
+========================= */
+
+if(deleteBtn){
+deleteBtn.onclick = function(){
+
+if(!selectedShape) return;
+
+if(confirm("Delete this shape?")){
+
+selectedShape.remove();
+selectedShape = null;
+deleteBtn.style.display = "none";
+
+}
+
+};
+}
+
+/* =========================
+   DELETE KEY (DESKTOP)
 ========================= */
 
 document.addEventListener("keydown",function(e){
@@ -90,8 +119,9 @@ document.addEventListener("keydown",function(e){
 if(e.key === "Delete" && selectedShape){
 
 selectedShape.remove();
-
 selectedShape = null;
+
+if(deleteBtn) deleteBtn.style.display = "none";
 
 }
 
@@ -981,26 +1011,26 @@ return Math.round(value / GRID_SIZE) * GRID_SIZE;
 
 function enableShapeDrag(node){
 
-let offsetX=0;
-let offsetY=0;
+let offsetX = 0;
+let offsetY = 0;
 
-const map =
-document.getElementById("tableEditorMap");
+const map = document.getElementById("tableEditorMap");
+
+/* =========================
+   DESKTOP
+========================= */
 
 node.onmousedown = function(e){
 
 const rect = map.getBoundingClientRect();
 
-offsetX = e.offsetX;
-offsetY = e.offsetY;
+offsetX = e.clientX - node.offsetLeft;
+offsetY = e.clientY - node.offsetTop;
 
 document.onmousemove = function(e){
 
-let x =
-e.clientX - rect.left - offsetX;
-
-let y =
-e.clientY - rect.top - offsetY;
+let x = e.clientX - rect.left - offsetX;
+let y = e.clientY - rect.top - offsetY;
 
 x = snapToGrid(x);
 y = snapToGrid(y);
@@ -1008,15 +1038,49 @@ y = snapToGrid(y);
 node.style.left = x + "px";
 node.style.top = y + "px";
 
-}
+};
 
 document.onmouseup = function(){
-
 document.onmousemove = null;
+};
 
-}
+};
 
-}
+/* =========================
+   MOBILE
+========================= */
+
+node.ontouchstart = function(e){
+
+e.stopPropagation();
+clearTimeout(pressTimer);
+
+const touch = e.touches[0];
+const rect = map.getBoundingClientRect();
+
+offsetX = touch.clientX - node.offsetLeft;
+offsetY = touch.clientY - node.offsetTop;
+
+document.ontouchmove = function(e){
+
+const touch = e.touches[0];
+
+let x = touch.clientX - rect.left - offsetX;
+let y = touch.clientY - rect.top - offsetY;
+
+x = snapToGrid(x);
+y = snapToGrid(y);
+
+node.style.left = x + "px";
+node.style.top = y + "px";
+
+};
+
+document.ontouchend = function(){
+document.ontouchmove = null;
+};
+
+};
 
 }
 
@@ -1081,6 +1145,7 @@ map.appendChild(shape);
 
 function enableShapeResize(node,handle){
 
+/* DESKTOP */
 handle.onmousedown = function(e){
 
 e.stopPropagation();
@@ -1093,27 +1158,52 @@ const startHeight = node.offsetHeight;
 
 document.onmousemove = function(e){
 
-let newWidth =
-startWidth + (e.clientX - startX);
-
-let newHeight =
-startHeight + (e.clientY - startY);
+let newWidth = startWidth + (e.clientX - startX);
+let newHeight = startHeight + (e.clientY - startY);
 
 node.style.width = newWidth + "px";
 node.style.height = newHeight + "px";
 
-}
+};
 
 document.onmouseup = function(){
-
 document.onmousemove = null;
+};
+
+};
+
+/* MOBILE */
+handle.ontouchstart = function(e){
+
+e.stopPropagation();
+
+const touch = e.touches[0];
+
+const startX = touch.clientX;
+const startY = touch.clientY;
+
+const startWidth = node.offsetWidth;
+const startHeight = node.offsetHeight;
+
+document.ontouchmove = function(e){
+
+const touch = e.touches[0];
+
+let newWidth = startWidth + (touch.clientX - startX);
+let newHeight = startHeight + (touch.clientY - startY);
+
+node.style.width = newWidth + "px";
+node.style.height = newHeight + "px";
+
+};
+
+document.ontouchend = function(){
+document.ontouchmove = null;
+};
+
+};
 
 }
-
-}
-
-}
-
 /* ================================
    INIT
 ================================ */
