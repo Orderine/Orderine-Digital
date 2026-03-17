@@ -2712,29 +2712,130 @@ white-space:nowrap;           /* biar gak turun */
 background:#1f2937;
 border-color:#555;
 }
-.delete-shape-btn{
-position:absolute;
-top:10px;
-right:10px;
-padding:4px 6px;
-font-size:12px;
-border-radius:6px;
-background:#111;
-color:#fff;
-border:1px solid #333;
-cursor:pointer;
-display:none;
-z-index:999;
+
+.delete-shape-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+
+  width: 34px;
+  height: 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 14px;
+
+  background: rgba(15, 23, 42, 0.9); /* dark glass */
+  color: #ef4444; /* danger red */
+
+  border: 1px solid rgba(239, 68, 68, 0.4);
+
+  border-radius: 6px;
+
+  cursor: pointer;
+
+  transition: all 0.15s ease;
+
+  backdrop-filter: blur(6px);
 }
-.delete-shape-btn{
-padding:4px 6px;
-font-size:12px;
-width:auto;
-height:auto;
+
+/* HOVER */
+.delete-shape-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #ff6b6b;
 }
-.delete-shape-btn:hover{
-background:#dc2626;
-border-color:#ef4444;
+.delete-shape-btn:hover {
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+/* ACTIVE (klik) */
+.delete-shape-btn:active {
+  transform: scale(0.92);
+  background: rgba(239, 68, 68, 0.25);
+}
+
+/* HIDDEN DEFAULT */
+.delete-shape-btn {
+  display: none;
+}
+    
+.layout-shape,
+.table-node {
+  touch-action: none;
+}
+/* WRAPPER (optional kalau mau sejajar) */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 22px;
+}
+
+/* HIDE DEFAULT CHECKBOX */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* SLIDER */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+
+  background-color: #1f2937; /* dark */
+  border: 1px solid #374151;
+
+  border-radius: 999px;
+
+  transition: all 0.2s ease;
+}
+
+/* BULATAN */
+.slider::before {
+  content: "";
+  position: absolute;
+
+  height: 16px;
+  width: 16px;
+
+  left: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  background-color: #9ca3af;
+  border-radius: 50%;
+
+  transition: all 0.2s ease;
+}
+
+/* ACTIVE STATE */
+.switch input:checked + .slider {
+  background-color: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+}
+
+.switch input:checked + .slider::before {
+  transform: translate(20px, -50%);
+  background-color: #10b981;
+}
+
+/* LABEL TEXT */
+.switch-label {
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+  letter-spacing: 0.5px;
+}
+
+/* ACTIVE TEXT */
+.switch.active + .switch-label {
+  color: #10b981;
 }
 </style>
 </head>
@@ -3092,16 +3193,18 @@ Drag tables/Shape to arrange restaurant layout & Long Press to delete shape
 
 <div id="tableEditorMap" class="table-editor-map"></div>
 
-<button id="deleteShapeBtn" class="delete-shape-btn">
-🗑
-</button>
-
 </div>
 
-<label class="promo-toggle">
-<input type="checkbox" id="tableActiveToggle" checked />
-Table Active
+<button id="deleteShapeBtn" class="delete-shape-btn" title="Delete Shape">
+🗑
+</button>
+  
+<label class="switch">
+  <input type="checkbox" id="tableActiveToggle" checked>
+  <span class="slider"></span>
 </label>
+
+<span class="switch-label" id="tableActiveText">ACTIVE</span>
 
 
 <!-- ACTION BUTTONS -->
@@ -3116,7 +3219,7 @@ CLEAR
 </button>
 
 <button onclick="generateAutoLayout()" class="terminal-btn">
-Reset Layout
+RESET LAYOUT
 </button>
 
 </div>
