@@ -15,7 +15,7 @@
   const DEBUG_DB = false;
 
   const DB_NAME = "MenuvaDB";
-  const DB_VERSION = 21;
+  const DB_VERSION = 22;
 
   let dbOpeningPromise = null;
   let dbInstance = null;
@@ -154,6 +154,18 @@
           w.createIndex("tableId","tableId",{unique:false});
 
         }
+
+         /* ================================
+   TABLE LAYOUT (NEW)
+================================ */
+
+if (!db.objectStoreNames.contains("restaurantLayouts")) {
+
+  const layout = db.createObjectStore("restaurantLayouts",{keyPath:"id"});
+
+  layout.createIndex("restoId","restoId",{unique:false});
+
+}
 
 
       /* ======================================================
@@ -385,41 +397,44 @@ if (!db.objectStoreNames.contains("reservationSettings")) {
     NAME: DB_NAME,
     VERSION: DB_VERSION,
 
-    STORES: [
+   STORES: [
 
-      "users",
-      "session",
-      "restos",
-      "admin_invites",
-      "admins",
+  "users",
+  "session",
+  "restos",
+  "admin_invites",
+  "admins",
 
-      "void_logs",
+  "void_logs",
 
-      "menuData",
-      "menuPromo",
-      "menuVoucher",
+  "menuData",
+  "menuPromo",
+  "menuVoucher",
 
-      "restaurantTables",
-      "tableStatus",
-      "tableWalkins",
+  "restaurantTables",
+  "tableStatus",
+  "tableWalkins",
 
-      "reservations",
-      "reservationSlots",
-      "reservationSettings",
+  "reservations",
+  "reservationSlots",
+  "reservationSettings",
 
-      "ordersData",
-      "orderItems",
-      "payments",
+  "ordersData",
+  "orderItems",
+  "payments",
 
-      "inventoryItems",
-      "inventoryLogs",
+  "inventoryItems",
+  "inventoryLogs",
 
-      "promoData",
-      "flipbookData",
+  "promoData",
+  "flipbookData",
 
-      "dailyStats"
+  "dailyStats",
 
-    ],
+  // 🔥 TAMBAH INI
+  "restaurantLayouts"
+
+],
 
     openDB,
 
