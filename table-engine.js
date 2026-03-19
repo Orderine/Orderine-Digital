@@ -929,6 +929,52 @@ async function deleteTable(id){
 
 }
 
+const depositToggle = document.getElementById("depositToggle");
+const depositText = document.getElementById("depositToggleText");
+
+function updateDepositToggleUI(){
+  if(!depositToggle || !depositText) return;
+
+  if(depositToggle.checked){
+    depositText.innerText = "ENABLED";
+    depositText.style.color = "#10b981";
+  } else {
+    depositText.innerText = "DISABLED";
+    depositText.style.color = "#ef4444";
+  }
+}
+
+depositToggle?.addEventListener("change", updateDepositToggleUI);
+
+// init
+updateDepositToggleUI();
+
+async function clearDepositSetting(){
+
+  if(!confirm("Delete / reset deposit setting?")) return;
+
+  // reset UI
+  document.getElementById("depositToggle").checked = false;
+  document.getElementById("depositBankName").value = "";
+  document.getElementById("depositAccountNumber").value = "";
+  document.getElementById("depositAccountHolder").value = "";
+  document.getElementById("depositAmount").value = "";
+
+  const preview = document.getElementById("depositQRPreview");
+  if(preview){
+    preview.src = "";
+    preview.style.display = "none";
+  }
+
+  updateDepositToggleUI();
+
+  // hapus dari DB (optional tapi recommended)
+  await MENUVA_DB.delete("reservationSettings", "reservation_settings");
+
+  alert("Deposit setting cleared bro 🧹");
+
+}
+
 /* =========================
    INIT
 ========================= */
