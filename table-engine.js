@@ -415,3 +415,119 @@ async function saveLayout(){
 
   alert("Layout saved 🔥");
 }
+
+/* ================================
+   RENDER TABLE LIST
+================================ */
+async function renderTables(){
+
+  const session = await MENUVA_DB.getSession();
+  const restoId = session?.restoId || "default";
+
+  const tables = await MENUVA_DB.getAll("restaurantTables");
+
+  const grid = document.getElementById("tablePreviewGrid");
+  if(!grid) return;
+
+  const filtered = tables.filter(t => t.restoId === restoId);
+
+  let html = "";
+
+  filtered.forEach(table => {
+
+    html += `
+      <div class="terminal-card table-card">
+
+        <div class="terminal-card-header">
+          <span>${table.name}</span>
+        </div>
+
+        <div class="terminal-card-body">
+
+          <div>👥 ${table.capacity} Pax</div>
+          <div>📍 ${table.zone}</div>
+
+          <div style="margin-top:8px;">
+            <button onclick="editTable('${table.id}')">Edit</button>
+            <button onclick="deleteTable('${table.id}')">Delete</button>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+  });
+
+  grid.innerHTML = html;
+}
+
+async function deleteTable(id){
+  if(!confirm("Delete this table?")) return;
+
+  await MENUVA_DB.delete("restaurantTables", id);
+
+  renderTables();
+  renderTableMap();
+}
+
+/* ================================
+   LOAD DEPOSIT SETTING (SAFE)
+================================ */
+async function loadDepositSetting(){
+
+  try{
+
+    const data = await MENUVA_DB.get(
+      "reservationSettings",
+      "reservation_settings"
+    );
+
+    if(!data) return;
+
+    const toggle = document.getElementById("depositToggle");
+    const bank = document.getElementById("depositBankName");
+    const accNum = document.getElementById("depositAccountNumber");
+    const accName = document.getElementById("depositAccountHolder");
+    const amount = document.getElementById("depositAmount");
+    const preview = document.getElementById("depositQRPreview");
+
+    if(toggle) toggle.checked = data.depositEnabled || false;
+    if(bank) bank.value = data.bankName || "";
+    if(accNum) accNum.value = data.accountNumber || "";
+    if(accName) accName.value = data.accountHolder || "";
+    if(amount) amount.value = data.depositAmount || "";
+
+    if(preview && data.qrImage){
+      preview.src = data.qrImage;
+      preview.style.display = "block";
+    }
+
+  }catch(err){
+    console.error("❌ loadDepositSetting error:", err);
+  }
+}
+
+/* ================================
+   SAVE DEPOSIT SETTING (SAFE)
+================================ */
+async function saveDepositSetting(){
+
+  const session = await MENUVA_DB.getSession();
+  const restoId = session?.restoId || "default";
+
+  const data = {
+    id: "reservation_settings",
+    restoId,
+    depositEnabled: document.getElementById("depositToggle")?.checked || false,
+    bankName: document.getElementById("depositBankName")?.value || "",
+    accountNumber: document.getElementById("depositAccountNumber")?.value || "",
+    accountHolder: document.getElementById("depositAccountHolder")?.value || "",
+    depositAmount: parseInt(document.getElementById("depositAmount")?.value) || 0,
+    qrImage: document.getElementById("depositQRPreview")?.src || "",
+    updatedAt: Date.now()
+  };
+
+  await MENUVA_DB.add("reservationSettings", data);
+
+  alert("Deposit setting saved bro 🔥");
+}
