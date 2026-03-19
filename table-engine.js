@@ -545,3 +545,51 @@ async function saveDepositSetting(){
 
   alert("Deposit setting saved bro 🔥");
 }
+
+/* ================================
+   AUTO GENERATE TABLE LAYOUT
+================================ */
+async function generateAutoLayout(){
+
+  const session = await MENUVA_DB.getSession();
+  const restoId = session?.restoId || "default";
+
+  const tables = await MENUVA_DB.getAll("restaurantTables");
+  const filtered = tables.filter(t => t.restoId === restoId);
+
+  if(!filtered.length) return;
+
+  const map = document.getElementById("tableEditorMap");
+  if(!map) return;
+
+  const mapWidth = map.clientWidth;
+  const mapHeight = map.clientHeight;
+
+  const spacingX = 120;
+  const spacingY = 120;
+
+  const cols = Math.floor(mapWidth / spacingX) || 4;
+
+  const totalWidth = cols * spacingX;
+  const rows = Math.ceil(filtered.length / cols);
+  const totalHeight = rows * spacingY;
+
+  const offsetX = (mapWidth - totalWidth) / 2;
+  const offsetY = (mapHeight - totalHeight) / 2;
+
+  for(let i = 0; i < filtered.length; i++){
+
+    const table = filtered[i];
+
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+
+    table.x = offsetX + col * spacingX;
+    table.y = offsetY + row * spacingY;
+
+    await MENUVA_DB.update("restaurantTables", table);
+  }
+
+  renderTableMap();
+
+}
