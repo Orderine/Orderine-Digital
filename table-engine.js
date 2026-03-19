@@ -409,7 +409,12 @@ async function renderTableMap(){
 
 }
 
+let isRotating = false;
+
 function rotateTable(node){
+
+  if(isRotating) return; // 🔥 cegah spam
+  isRotating = true;
 
   let angle = node.dataset.rotate
     ? parseInt(node.dataset.rotate)
@@ -420,14 +425,16 @@ function rotateTable(node){
   node.dataset.rotate = angle;
 
   node.style.transform = "rotate(" + angle + "deg)";
+  node.style.transformOrigin = "center";
+
+  updateMemory();
+
+  // 🔥 cooldown biar gak dobel trigger
+  setTimeout(() => {
+    isRotating = false;
+  }, 200);
+
 }
-
-function enableTableDrag(node){
-
-const map = document.getElementById("tableEditorMap");
-
-let offsetX = 0;
-let offsetY = 0;
 
 /* =========================
    UPDATE MEMORY ONLY
@@ -473,7 +480,11 @@ node.style.top = y + "px";
    ROTATE DESKTOP (DOUBLE CLICK)
 ========================= */
 node.addEventListener("dblclick", function(e){
+  e.preventDefault();
   e.stopPropagation();
+
+  if(node.classList.contains("dragging")) return; // 🔥 jangan rotate saat drag
+
   rotateTable(node);
 });
 
@@ -485,15 +496,16 @@ let lastTap = 0;
 
 node.addEventListener("touchend", function(e){
 
-  if(touchMoved) return; // 🔥 biar gak ke-trigger saat drag
+  if(touchMoved) return; // 🔥 kalau drag, skip
 
   const now = Date.now();
 
-  if(now - lastTap < 300){
+  if(now - lastTap < 250){
     rotateTable(node);
+    lastTap = 0; // 🔥 reset biar gak triple
+  } else {
+    lastTap = now;
   }
-
-  lastTap = now;
 
 });
 }
