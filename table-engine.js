@@ -1,5 +1,5 @@
 /* ================================
-   TABLE ENGINE ORDERINE
+   TABLE ENGINE ORDERINE (CLEAN)
 ================================ */
 
 let currentTableFilter = "all";
@@ -8,7 +8,6 @@ let editingTableId = null;
 
 let selectedShape = null;
 let pressTimer = null;
-
 let activeDrag = null;
 let touchMoved = false;
 
@@ -17,331 +16,175 @@ let CURRENT_LAYOUT = {
   shapes: []
 };
 
-function initLayoutEditor(){
-
-const map = document.getElementById("tableEditorMap");
-const deleteBtn = document.getElementById("deleteShapeBtn");
-
-if(!map) return;
-
-let isDragging = false;
-
-/* =========================
-   SELECT (DESKTOP + MOBILE)
-========================= */
-
-map.addEventListener("click", function(e){
-
-// 🔥 JANGAN HILANGIN SAAT KLIK TOMBOL DELETE
-if(e.target.closest("#deleteShapeBtn")) return;
-
-const shape = e.target.closest(".layout-shape");
-
-document
-.querySelectorAll(".layout-shape")
-.forEach(el => el.classList.remove("selected"));
-
-if(shape){
-
-selectedShape = shape;
-selectedShape.classList.add("selected");
-
-if(deleteBtn) deleteBtn.style.display = "flex";
-
-}else{
-
-selectedShape = null;
-
-if(deleteBtn) deleteBtn.style.display = "none";
-
-}
-
-});
-   
-/* =========================
-   TOUCH (LONG PRESS DELETE)
-========================= */
-
-map.addEventListener("touchstart", function(e){
-
-// 🔥 JANGAN GANGGU DRAG
-if(e.target.closest(".dragging")) return;
-
-// 🔥 FIX: ambil parent shape
-const shape = e.target.closest(".layout-shape");
-if(!shape) return;
-
-selectedShape = shape;
-isDragging = false;
-
-document
-.querySelectorAll(".layout-shape")
-.forEach(el => el.classList.remove("selected"));
-
-selectedShape.classList.add("selected");
-
-/* LONG PRESS */
-pressTimer = setTimeout(function(){
-
-if(!isDragging){
-
-navigator.vibrate?.(40);
-
-if(confirm("Delete this shape?")){
-selectedShape.remove();
-selectedShape = null;
-if(deleteBtn) deleteBtn.style.display = "none";
-}
-
-}
-
-},800);
-
-});
-   
-map.addEventListener("touchmove", function(){
-isDragging = true;
-clearTimeout(pressTimer);
-});
-
-map.addEventListener("touchend",function(){
-clearTimeout(pressTimer);
-});
-
-/* =========================
-   DELETE BUTTON
-========================= */
-
-if(deleteBtn){
-deleteBtn.onclick = function(){
-
-if(!selectedShape) return;
-
-if(confirm("Delete this shape?")){
-
-selectedShape.remove();
-selectedShape = null;
-deleteBtn.style.display = "none";
-
-}
-
-};
-}
-
-/* =========================
-   DELETE KEY (DESKTOP)
-========================= */
-
-document.addEventListener("keydown",function(e){
-
-if(e.key === "Delete" && selectedShape){
-
-selectedShape.remove();
-selectedShape = null;
-
-if(deleteBtn) deleteBtn.style.display = "none";
-
-}
-
-});
-
-}
-
 const GRID_SIZE = 20;
 
-const ZONE_COLORS = {
-
-indoor: "rgba(16,185,129,0.25)",
-
-outdoor: "rgba(59,130,246,0.25)",
-
-vip: "rgba(168,85,247,0.25)",
-
-bar: "rgba(249,115,22,0.25)"
-
-};
-
+/* ================================
+   INIT
+================================ */
+document.addEventListener("DOMContentLoaded", async () => {
+  await renderTables();
+  await renderTableMap();
+  await loadDepositSetting();
+  initLayoutEditor();
+});
 
 /* ================================
-   FILTER TABLE
+   UTIL
 ================================ */
-
-function filterTables(zone){
-
-currentTableFilter = zone;
-
-renderTables();
-
+function snapToGrid(v){
+  return Math.round(v / GRID_SIZE) * GRID_SIZE;
 }
 
-
 /* ================================
-   SEARCH TABLE
+   INIT LAYOUT EDITOR
 ================================ */
+function initLayoutEditor(){
 
-function searchTables(){
+  const map = document.getElementById("tableEditorMap");
+  const deleteBtn = document.getElementById("deleteShapeBtn");
 
-currentSearch =
-document
-.getElementById("tableSearchInput")
-.value
-.toLowerCase();
+  if(!map) return;
 
-renderTables();
+  let isDragging = false;
 
+  /* SELECT */
+  map.addEventListener("click", e => {
+
+    if(e.target.closest("#deleteShapeBtn")) return;
+
+    const shape = e.target.closest(".layout-shape");
+
+    document.querySelectorAll(".layout-shape")
+      .forEach(el => el.classList.remove("selected"));
+
+    if(shape){
+      selectedShape = shape;
+      shape.classList.add("selected");
+      if(deleteBtn) deleteBtn.style.display = "flex";
+    }else{
+      selectedShape = null;
+      if(deleteBtn) deleteBtn.style.display = "none";
+    }
+  });
+
+  /* LONG PRESS DELETE */
+  map.addEventListener("touchstart", e => {
+
+    const shape = e.target.closest(".layout-shape");
+    if(!shape) return;
+
+    selectedShape = shape;
+    isDragging = false;
+
+    pressTimer = setTimeout(()=>{
+      if(!isDragging){
+        if(confirm("Delete this shape?")){
+          shape.remove();
+          selectedShape = null;
+        }
+      }
+    },700);
+  });
+
+  map.addEventListener("touchmove", ()=>{
+    isDragging = true;
+    clearTimeout(pressTimer);
+  });
+
+  map.addEventListener("touchend", ()=>{
+    clearTimeout(pressTimer);
+  });
+
+  /* DELETE BTN */
+  if(deleteBtn){
+    deleteBtn.onclick = ()=>{
+      if(!selectedShape) return;
+      if(confirm("Delete this shape?")){
+        selectedShape.remove();
+        selectedShape = null;
+        deleteBtn.style.display = "none";
+      }
+    };
+  }
+
+  /* DELETE KEY */
+  document.addEventListener("keydown", e=>{
+    if(e.key === "Delete" && selectedShape){
+      selectedShape.remove();
+      selectedShape = null;
+    }
+  });
 }
 
-
 /* ================================
-   AUTO TABLE NAME GENERATOR
+   TABLE CRUD
 ================================ */
-
 async function generateTableName(){
-
-const tables =
-await MENUVA_DB.getAll("restaurantTables");
-
-const next = tables.length + 1;
-
-return "T" + String(next).padStart(2,"0");
-
+  const tables = await MENUVA_DB.getAll("restaurantTables");
+  return "T" + String(tables.length + 1).padStart(2,"0");
 }
 
-
-/* ================================
-   SAVE / UPDATE TABLE
-================================ */
+function getTableShape(cap){
+  if(cap <= 2) return "small-circle";
+  if(cap <= 4) return "circle";
+  if(cap <= 6) return "oval";
+  return "rectangle";
+}
 
 async function saveTable(){
 
-const nameInput = document.getElementById("tableNameInput");
+  let name = document.getElementById("tableNameInput").value;
+  const capacity = parseInt(document.getElementById("tableCapacityInput").value);
+  const zone = document.getElementById("tableZoneInput").value;
 
-let name = nameInput.value;
+  if(!name) name = await generateTableName();
 
-const capacity = parseInt(
-document.getElementById("tableCapacityInput").value
-);
+  const session = await MENUVA_DB.getSession();
+  const restoId = session?.restoId || "default";
 
-const zone = document.getElementById("tableZoneInput").value;
+  const tableData = {
+    id: editingTableId || "TB_" + Date.now(),
+    restoId,
+    name,
+    capacity,
+    zone,
+    shape: getTableShape(capacity),
+    status:"available",
+    active:true,
+    createdAt:Date.now()
+  };
 
-const category =
-document.getElementById("tableCategoryInput")?.value || "";
+  if(editingTableId){
+    await MENUVA_DB.update("restaurantTables", tableData);
+    editingTableId = null;
+  }else{
+    await MENUVA_DB.add("restaurantTables", tableData);
+  }
 
-const notes =
-document.getElementById("tableNotesInput")?.value || "";
-
-const active =
-document.getElementById("tableActiveToggle").checked;
-
-const image =
-document.getElementById("tableImagePreview")?.src || "";
-
-/* AUTO NAME */
-if(!name){
-name = await generateTableName();
+  clearTableForm();
+  renderTables();
+  renderTableMap();
 }
 
-/* SESSION */
-const session = await MENUVA_DB.getSession();
-const restoId = session?.restoId || "default";
-
-/* DEFAULT POSITION */
-let posX = 100;
-let posY = 100;
-
-const tables = await MENUVA_DB.getAll("restaurantTables");
-
-/* =========================
-   EDIT TABLE → pakai posisi lama
-========================= */
-if(editingTableId){
-
-const existing = tables.find(t => t.id === editingTableId);
-
-if(existing){
-posX = existing.x || 100;
-posY = existing.y || 100;
+function clearTableForm(){
+  document.getElementById("tableNameInput").value="";
+  document.getElementById("tableCapacityInput").value="";
+  editingTableId=null;
 }
 
-}
-
-/* =========================
-   CREATE TABLE → auto grid
-========================= */
-else{
-
-const count = tables.length;
-
-const cols = 5;
-const spacingX = 90;
-const spacingY = 90;
-
-posX = 80 + (count % cols) * spacingX;
-posY = 80 + Math.floor(count / cols) * spacingY;
-
-}
-
-
-/* =========================
-   TABLE OBJECT (SATU AJA!)
-========================= */
-const tableData = {
-
-id: editingTableId || "TB_" + Date.now(),
-
-restoId,
-name,
-capacity,
-zone,
-category,
-notes,
-image,
-
-shape: getTableShape(capacity),
-
-status: "available",
-currentGuest: null,
-active,
-
-createdAt: Date.now()
-
-};
-
-/* SAVE OR UPDATE */
-if(editingTableId){
-
-await MENUVA_DB.update("restaurantTables", tableData);
-editingTableId = null;
-
-}else{
-
-await MENUVA_DB.add("restaurantTables", tableData);
-
-}
-
-clearTableForm();
-renderTables();
-renderTableMap();
-
-}
-
+/* ================================
+   RENDER TABLE MAP
+================================ */
 async function renderTableMap(){
 
   const session = await MENUVA_DB.getSession();
   const restoId = session?.restoId || "default";
 
   const tables = await MENUVA_DB.getAll("restaurantTables");
+  const filtered = tables.filter(t=>t.restoId===restoId);
 
-  /* FILTER RESTO */
-  const filtered = tables.filter(t => t.restoId === restoId);
+  const layout = await MENUVA_DB.get("restaurantLayouts","layout_"+restoId);
 
-  /* LOAD LAYOUT (SEKALI AJA) */
-  const layout = await MENUVA_DB.get(
-    "restaurantLayouts",
-    "layout_" + restoId
-  );
-
-  /* SYNC MEMORY */
   CURRENT_LAYOUT.tables = layout?.tables || [];
   CURRENT_LAYOUT.shapes = layout?.shapes || [];
 
@@ -350,1175 +193,225 @@ async function renderTableMap(){
 
   map.innerHTML = "";
 
-  /* =========================
-     RENDER SHAPES
-  ========================= */
-  if(CURRENT_LAYOUT.shapes.length){
-    renderLayoutShapes(CURRENT_LAYOUT.shapes);
-  }
+  renderLayoutShapes(CURRENT_LAYOUT.shapes);
 
-  /* =========================
-     RENDER TABLE
-  ========================= */
   filtered.forEach(table=>{
 
-    const layoutTable =
-      CURRENT_LAYOUT.tables.find(t => t.tableId === table.id);
+    const layoutData = CURRENT_LAYOUT.tables.find(t=>t.tableId===table.id);
 
     const node = document.createElement("div");
-
-    node.className =
-      "table-node "
-      + (table.shape || "circle") + " "
-      + table.zone;
-
-    node.innerHTML = `
-  <div class="table-visual">
-    ${
-      table.image
-      ? `<img src="${table.image}" class="table-img">`
-      : `<div class="table-fallback"></div>`
-    }
-    <div class="table-label">${table.name}</div>
-  </div>
-`;
-
-    /* POSITION */
-    const x = layoutTable?.x ?? table.x ?? 100;
-    const y = layoutTable?.y ?? table.y ?? 100;
-
-    node.style.left = x + "px";
-    node.style.top = y + "px";
-
-    /* ROTATION (FIX UTAMA) */
-    const rotation = layoutTable?.rotation ?? table.rotation ?? 0;
-
-    if(rotation){
-      node.dataset.rotate = rotation;
-      node.style.transform = "rotate(" + rotation + "deg)";
-      node.style.transformOrigin = "center";
-    }
+    node.className = "table-node " + table.shape;
 
     node.dataset.id = table.id;
 
+    const x = layoutData?.x ?? 100;
+    const y = layoutData?.y ?? 100;
+
+    node.style.left = x+"px";
+    node.style.top = y+"px";
+
+    const rot = layoutData?.rotation || 0;
+    if(rot){
+      node.style.transform = `rotate(${rot}deg)`;
+      node.dataset.rotate = rot;
+    }
+
+    node.innerHTML = `<div>${table.name}</div>`;
+
     enableTableDrag(node);
+    enableTableRotate(node);
 
     map.appendChild(node);
-
   });
-
 }
 
-let isRotating = false;
-
-function rotateTable(node){
-
-  if(isRotating) return; // 🔥 cegah spam
-  isRotating = true;
-
-  let angle = node.dataset.rotate
-    ? parseInt(node.dataset.rotate)
-    : 0;
-
-  angle += 90;
-
-  node.dataset.rotate = angle;
-
-  node.style.transform = "rotate(" + angle + "deg)";
-  node.style.transformOrigin = "center";
-
-  updateMemory();
-
-  // 🔥 cooldown biar gak dobel trigger
-  setTimeout(() => {
-    isRotating = false;
-  }, 200);
-
-}
-
-/* =========================
-   UPDATE MEMORY ONLY
-========================= */
-function updateMemory(){
-
-  const tableNodes = document.querySelectorAll(".table-node");
-
-  CURRENT_LAYOUT.tables = Array.from(tableNodes).map(node => ({
-    tableId: node.dataset.id,
-    x: parseInt(node.style.left) || 0,
-    y: parseInt(node.style.top) || 0,
-    rotation: parseInt(node.dataset.rotate) || 0
-  }));
-
-  CURRENT_LAYOUT.shapes = getLayoutData();
-
-  console.log("🧠 memory updated", CURRENT_LAYOUT);
-
-}
-
-/* =========================
-   DESKTOP
-========================= */
-
-function onMouseMove(e){
-
-const rect = map.getBoundingClientRect();
-
-let x = e.clientX - rect.left - offsetX;
-let y = e.clientY - rect.top - offsetY;
-
-x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
-y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
-
-x = snapToGrid(x);
-y = snapToGrid(y);
-
-node.style.left = x + "px";
-node.style.top = y + "px";
-
-/* =========================
-   ROTATE DESKTOP (DOUBLE CLICK)
-========================= */
-node.addEventListener("dblclick", function(e){
-  e.preventDefault();
-  e.stopPropagation();
-
-  if(node.classList.contains("dragging")) return; // 🔥 jangan rotate saat drag
-
-  rotateTable(node);
-});
-
-
-/* =========================
-   ROTATE MOBILE (DOUBLE TAP)
-========================= */
-let lastTap = 0;
-
-node.addEventListener("touchend", function(e){
-
-  if(touchMoved) return; // 🔥 kalau drag, skip
-
-  const now = Date.now();
-
-  if(now - lastTap < 250){
-    rotateTable(node);
-    lastTap = 0; // 🔥 reset biar gak triple
-  } else {
-    lastTap = now;
-  }
-
-});
-}
-
-function onMouseUp(){
-
-document.removeEventListener("mousemove", onMouseMove);
-document.removeEventListener("mouseup", onMouseUp);
-
-activeDrag = null;
-node.classList.remove("dragging");
-
-/* 🔥 SAVE TO MEMORY ONLY */
-updateMemory();
-
-}
-
-node.addEventListener("mousedown", function(e){
-
-if(activeDrag) return;
-activeDrag = node;
-
-e.stopPropagation();
-
-const rect = node.getBoundingClientRect();
-
-offsetX = e.clientX - rect.left;
-offsetY = e.clientY - rect.top;
-
-node.classList.add("dragging");
-
-document.addEventListener("mousemove", onMouseMove);
-document.addEventListener("mouseup", onMouseUp);
-
-});
-
-/* =========================
-   MOBILE
-========================= */
-
-function onTouchMove(e){
-
-touchMoved = true;
-e.preventDefault();
-
-const touch = e.touches[0];
-const rect = map.getBoundingClientRect();
-
-let x = touch.clientX - rect.left - offsetX;
-let y = touch.clientY - rect.top - offsetY;
-
-x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
-y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
-
-x = snapToGrid(x);
-y = snapToGrid(y);
-
-node.style.left = x + "px";
-node.style.top = y + "px";
-}
-
-function onTouchEnd(){
-
-document.removeEventListener("touchmove", onTouchMove);
-document.removeEventListener("touchend", onTouchEnd);
-
-activeDrag = null;
-node.classList.remove("dragging");
-
-/* 🔥 SAVE TO MEMORY ONLY */
-updateMemory();
-
-}
-
-node.addEventListener("touchstart", function(e){
-
-if(activeDrag) return;
-activeDrag = node;
-
-e.stopPropagation();
-
-touchMoved = false;
-
-const touch = e.touches[0];
-const rect = node.getBoundingClientRect();
-
-offsetX = touch.clientX - rect.left;
-offsetY = touch.clientY - rect.top;
-
-node.classList.add("dragging");
-
-document.addEventListener("touchmove", onTouchMove, { passive:false });
-document.addEventListener("touchend", onTouchEnd);
-
-});
-
-}
-
-async function generateAutoLayout(){
-
-  const session = await MENUVA_DB.getSession();
-  const restoId = session?.restoId || "default";
-
-  const tables = await MENUVA_DB.getAll("restaurantTables");
-
-  const filtered = tables.filter(t => t.restoId === restoId);
-
-  if(!filtered.length) return;
+/* ================================
+   DRAG TABLE
+================================ */
+function enableTableDrag(node){
 
   const map = document.getElementById("tableEditorMap");
 
-  const mapWidth = map.clientWidth;
-  const mapHeight = map.clientHeight;
+  let offsetX, offsetY;
 
-  /* GRID CONFIG */
-  const spacingX = 120;
-  const spacingY = 120;
+  function move(x,y){
+    x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
+    y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
 
-  const cols = Math.floor(mapWidth / spacingX) || 4;
-  const rows = Math.ceil(filtered.length / cols);
-
-  /* 🔥 CENTER OFFSET (BIAR PRO LOOK) */
-  const totalWidth = cols * spacingX;
-  const totalHeight = rows * spacingY;
-
-  const offsetX = (mapWidth - totalWidth) / 2;
-  const offsetY = (mapHeight - totalHeight) / 2;
-
-  for(let i = 0; i < filtered.length; i++){
-
-    let table = filtered[i];
-
-    let col = i % cols;
-    let row = Math.floor(i / cols);
-
-    table.x = offsetX + col * spacingX + 40;
-    table.y = offsetY + row * spacingY + 40;
-
-    await MENUVA_DB.update("restaurantTables", table);
-
+    node.style.left = snapToGrid(x)+"px";
+    node.style.top = snapToGrid(y)+"px";
   }
 
-  renderTableMap();
+  node.onmousedown = e=>{
+    if(activeDrag) return;
+    activeDrag = node;
 
+    const rect = node.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+
+    document.onmousemove = e=>{
+      const rectMap = map.getBoundingClientRect();
+      move(e.clientX - rectMap.left - offsetX,
+           e.clientY - rectMap.top - offsetY);
+    };
+
+    document.onmouseup = ()=>{
+      document.onmousemove=null;
+      activeDrag=null;
+      updateMemory();
+    };
+  };
+
+  node.ontouchstart = e=>{
+    if(activeDrag) return;
+    activeDrag = node;
+
+    const touch = e.touches[0];
+    const rect = node.getBoundingClientRect();
+
+    offsetX = touch.clientX - rect.left;
+    offsetY = touch.clientY - rect.top;
+
+    document.ontouchmove = e=>{
+      const t = e.touches[0];
+      const rectMap = map.getBoundingClientRect();
+
+      move(t.clientX - rectMap.left - offsetX,
+           t.clientY - rectMap.top - offsetY);
+    };
+
+    document.ontouchend = ()=>{
+      document.ontouchmove=null;
+      activeDrag=null;
+      updateMemory();
+    };
+  };
 }
-/* ================================
-   SMART TABLE SHAPE
-================================ */
-
-function getTableShape(capacity){
-
-if(capacity <= 2){
-
-return "small-circle";
-
-}
-
-if(capacity <= 4){
-
-return "circle";
-
-}
-
-if(capacity <= 6){
-
-return "oval";
-
-}
-
-return "rectangle";
-
-}
-
-/* ================================
-   CLEAR FORM
-================================ */
-
-function clearTableForm(){
-
-document.getElementById("tableNameInput").value = "";
-
-document.getElementById("tableCapacityInput").value = "";
-
-document.getElementById("tableZoneInput").value = "indoor";
-
-if(document.getElementById("tableCategoryInput"))
-document.getElementById("tableCategoryInput").value = "dining";
-
-if(document.getElementById("tableNotesInput"))
-document.getElementById("tableNotesInput").value = "";
-
-document.getElementById("tableActiveToggle").checked = true;
-
-const preview =
-document.getElementById("tableImagePreview");
-
-if(preview){
-
-preview.src = "";
-preview.style.display = "none";
-
-}
-
-editingTableId = null;
-
-}
-
 
 /* ================================
-   EDIT TABLE
+   ROTATE TABLE
 ================================ */
+function enableTableRotate(node){
 
-async function editTable(id){
+  let lastTap = 0;
 
-const tables =
-await MENUVA_DB.getAll("restaurantTables");
+  node.ondblclick = ()=>{
+    rotateTable(node);
+  };
 
-const table =
-tables.find(t=>t.id===id);
-
-if(!table) return;
-
-editingTableId = id;
-
-document.getElementById("tableNameInput").value =
-table.name;
-
-document.getElementById("tableCapacityInput").value =
-table.capacity;
-
-document.getElementById("tableZoneInput").value =
-table.zone;
-
-if(document.getElementById("tableCategoryInput"))
-document.getElementById("tableCategoryInput").value =
-table.category || "";
-
-if(document.getElementById("tableNotesInput"))
-document.getElementById("tableNotesInput").value =
-table.notes || "";
-
-document.getElementById("tableActiveToggle").checked =
-table.active;
-
-const preview =
-document.getElementById("tableImagePreview");
-
-if(preview && table.image){
-
-preview.src = table.image;
-
-preview.style.display = "block";
-
+  node.ontouchend = ()=>{
+    const now = Date.now();
+    if(now - lastTap < 250){
+      rotateTable(node);
+    }
+    lastTap = now;
+  };
 }
 
-}
+function rotateTable(node){
 
+  let angle = parseInt(node.dataset.rotate || 0);
+  angle += 90;
+
+  node.dataset.rotate = angle;
+  node.style.transform = `rotate(${angle}deg)`;
+
+  updateMemory();
+}
 
 /* ================================
-   DELETE TABLE
+   MEMORY
 ================================ */
+function updateMemory(){
 
-async function deleteTable(id){
+  const nodes = document.querySelectorAll(".table-node");
 
-if(!confirm("Delete this table?")) return;
+  CURRENT_LAYOUT.tables = Array.from(nodes).map(n=>({
+    tableId:n.dataset.id,
+    x:parseInt(n.style.left)||0,
+    y:parseInt(n.style.top)||0,
+    rotation:parseInt(n.dataset.rotate)||0
+  }));
 
-await MENUVA_DB.delete(
-"restaurantTables",
-id
-);
-
-renderTables();
-
-renderTableMap();
-
+  CURRENT_LAYOUT.shapes = getLayoutData();
 }
-
 
 /* ================================
-   IMAGE PREVIEW
+   SHAPES
 ================================ */
+function addLayoutShape(type){
 
-function previewTableImage(event){
+  const map = document.getElementById("tableEditorMap");
 
-const file = event.target.files[0];
+  const shape = document.createElement("div");
+  shape.className = "layout-shape " + type;
 
-if(!file) return;
+  shape.style.left="100px";
+  shape.style.top="100px";
 
-const reader = new FileReader();
+  enableShapeDrag(shape);
 
-reader.onload = function(e){
-
-const preview =
-document.getElementById("tableImagePreview");
-
-preview.src = e.target.result;
-
-preview.style.display = "block";
-
-}
-
-reader.readAsDataURL(file);
-
-}
-
-
-/* ================================
-   STATUS COLOR
-================================ */
-
-function getTableStatusColor(status){
-
-switch(status){
-
-case "available":
-return "#10b981";
-
-case "reserved":
-return "#f59e0b";
-
-case "occupied":
-return "#ef4444";
-
-case "cleaning":
-return "#3b82f6";
-
-case "disabled":
-return "#6b7280";
-
-default:
-return "#9ca3af";
-
-}
-
-}
-
-
-/* ================================
-   RENDER TABLES
-================================ */
-
-async function renderTables(){
-
-const session =
-await MENUVA_DB.getSession();
-
-const restoId =
-session?.restoId || "default";
-
-
-const tables =
-await MENUVA_DB.getAll("restaurantTables");
-
-
-let filtered =
-tables.filter(t => t.restoId === restoId);
-
-
-/* FILTER ZONE */
-
-if(currentTableFilter !== "all"){
-
-filtered =
-filtered.filter(t =>
-t.zone === currentTableFilter
-);
-
-}
-
-
-/* SEARCH */
-
-if(currentSearch){
-
-filtered =
-filtered.filter(t =>
-t.name.toLowerCase()
-.includes(currentSearch)
-);
-
-}
-
-
-/* GRID */
-
-const grid =
-document.getElementById("tablePreviewGrid");
-
-let html = "";
-
-
-/* LOOP */
-
-filtered.forEach(table => {
-
-const statusColor =
-getTableStatusColor(table.status);
-
-const opacity =
-table.active ? "1" : "0.4";
-
-html += `
-
-<div class="terminal-card table-card"
-style="opacity:${opacity}">
-
-${table.image ? `
-<img 
-src="${table.image}"
-class="table-card-image">
-` : ""}
-
-<div class="terminal-card-header">
-
-<span class="terminal-title">
-${table.name}
-</span>
-
-</div>
-
-<div class="terminal-card-body table-info">
-
-<div class="table-meta">
-<span>👥 ${table.capacity} Pax</span>
-<span>📍 ${table.zone}</span>
-</div>
-
-<div class="table-meta">
-<span>🍽 ${table.category || "-"}</span>
-</div>
-
-<div class="table-notes">
-${table.notes || ""}
-</div>
-
-<div class="table-status"
-style="background:${statusColor}">
-
-${table.status}
-
-</div>
-
-<div class="table-actions">
-
-<button onclick="editTable('${table.id}')">
-Edit
-</button>
-
-<button onclick="deleteTable('${table.id}')">
-Delete
-</button>
-
-</div>
-
-</div>
-
-</div>
-
-`;
-
-});
-
-
-grid.innerHTML = html;
-
-
-/* UPDATE STATS */
-
-updateTableStats(filtered);
-
-}
-
-
-/* ================================
-   TABLE STATS
-================================ */
-
-function updateTableStats(tables){
-
-const total =
-tables.length;
-
-const active =
-tables.filter(t=>t.active).length;
-
-const available =
-tables.filter(t=>t.status==="available").length;
-
-const stats =
-document.getElementById("tableStats");
-
-if(!stats) return;
-
-stats.innerHTML = `
-Total Tables : ${total} |
-Active : ${active} |
-Available : ${available}
-`;
-
-}
-
-function previewDepositQR(event){
-
-const file = event.target.files[0];
-
-if(!file) return;
-
-const reader = new FileReader();
-
-reader.onload = function(e){
-
-const preview =
-document.getElementById("depositQRPreview");
-
-preview.src = e.target.result;
-
-preview.style.display = "block";
-
-}
-
-reader.readAsDataURL(file);
-
-}
-
-async function saveDepositSetting(){
-
-const session = await MENUVA_DB.getSession();
-
-const restoId = session?.restoId || "default";
-
-const depositEnabled =
-document.getElementById("depositToggle").checked;
-
-const bankName =
-document.getElementById("depositBankName").value;
-
-const accountNumber =
-document.getElementById("depositAccountNumber").value;
-
-const accountHolder =
-document.getElementById("depositAccountHolder").value;
-
-const depositAmount =
-parseInt(
-document.getElementById("depositAmount").value
-) || 0;
-
-const qrImage =
-document.getElementById("depositQRPreview").src || "";
-
-const data = {
-
-id:"reservation_settings",
-
-restoId,
-
-depositEnabled,
-
-bankName,
-
-accountNumber,
-
-accountHolder,
-
-depositAmount,
-
-qrImage,
-
-updatedAt:Date.now()
-
-};
-
-await MENUVA_DB.add(
-"reservationSettings",
-data
-);
-
-alert("Deposit setting saved");
-
-}
-
-async function loadDepositSetting(){
-
-const data =
-await MENUVA_DB.get(
-"reservationSettings",
-"reservation_settings"
-);
-
-if(!data) return;
-
-document.getElementById("depositToggle").checked =
-data.depositEnabled || false;
-
-document.getElementById("depositBankName").value =
-data.bankName || "";
-
-document.getElementById("depositAccountNumber").value =
-data.accountNumber || "";
-
-document.getElementById("depositAccountHolder").value =
-data.accountHolder || "";
-
-document.getElementById("depositAmount").value =
-data.depositAmount || "";
-
-if(data.qrImage){
-
-const preview =
-document.getElementById("depositQRPreview");
-
-preview.src = data.qrImage;
-
-preview.style.display = "block";
-
-}
-
-}
-
-function snapToGrid(value){
-
-return Math.round(value / GRID_SIZE) * GRID_SIZE;
-
+  map.appendChild(shape);
 }
 
 function enableShapeDrag(node){
 
-const map = document.getElementById("tableEditorMap");
+  node.onmousedown = e=>{
+    if(activeDrag) return;
+    activeDrag = node;
 
-let offsetX = 0;
-let offsetY = 0;
+    document.onmousemove = e=>{
+      node.style.left = e.clientX+"px";
+      node.style.top = e.clientY+"px";
+    };
 
-/* =========================
-   DESKTOP
-========================= */
-
-function onMouseMove(e){
-
-const rect = map.getBoundingClientRect();
-
-let x = e.clientX - rect.left - offsetX;
-let y = e.clientY - rect.top - offsetY;
-
-/* BOUNDARY */
-x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
-y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
-
-x = snapToGrid(x);
-y = snapToGrid(y);
-
-node.style.left = x + "px";
-node.style.top = y + "px";
-}
-
-function onMouseUp(){
-
-document.removeEventListener("mousemove", onMouseMove);
-document.removeEventListener("mouseup", onMouseUp);
-
-activeDrag = null;
-node.classList.remove("dragging");
-}
-
-node.addEventListener("mousedown", function(e){
-
-if(activeDrag) return;
-activeDrag = node;
-
-e.stopPropagation();
-
-const nodeRect = node.getBoundingClientRect();
-
-offsetX = e.clientX - nodeRect.left;
-offsetY = e.clientY - nodeRect.top;
-
-node.classList.add("dragging");
-
-document.addEventListener("mousemove", onMouseMove);
-document.addEventListener("mouseup", onMouseUp);
-
-});
-
-/* =========================
-   MOBILE
-========================= */
-
-function onTouchMove(e){
-
-touchMoved = true;
-e.preventDefault();
-
-const touch = e.touches[0];
-const rect = map.getBoundingClientRect();
-
-let x = touch.clientX - rect.left - offsetX;
-let y = touch.clientY - rect.top - offsetY;
-
-/* BOUNDARY */
-x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
-y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
-
-x = snapToGrid(x);
-y = snapToGrid(y);
-
-node.style.left = x + "px";
-node.style.top = y + "px";
-}
-
-function onTouchEnd(){
-
-document.removeEventListener("touchmove", onTouchMove);
-document.removeEventListener("touchend", onTouchEnd);
-
-activeDrag = null;
-node.classList.remove("dragging");
-}
-
-node.addEventListener("touchstart", function(e){
-
-if(activeDrag) return;
-activeDrag = node;
-
-e.stopPropagation();
-
-touchMoved = false;
-
-const touch = e.touches[0];
-const nodeRect = node.getBoundingClientRect();
-
-offsetX = touch.clientX - nodeRect.left;
-offsetY = touch.clientY - nodeRect.top;
-
-node.classList.add("dragging");
-
-document.addEventListener("touchmove", onTouchMove, { passive:false });
-document.addEventListener("touchend", onTouchEnd);
-
-});
-
+    document.onmouseup = ()=>{
+      document.onmousemove=null;
+      activeDrag=null;
+    };
+  };
 }
 
 function getLayoutData(){
-
-const shapes = document.querySelectorAll(".layout-shape");
-
-return Array.from(shapes).map(shape => ({
-
-type: shape.dataset.type || shape.classList[1] || "",
-
-x: parseInt(shape.style.left) || 0,
-y: parseInt(shape.style.top) || 0,
-
-width: shape.offsetWidth,
-height: shape.offsetHeight,
-
-rotation: parseFloat(shape.dataset.rotate || 0),
-
-zIndex: shape.style.zIndex || 1
-
-}));
-
+  return Array.from(document.querySelectorAll(".layout-shape")).map(s=>({
+    type:s.classList[1],
+    x:parseInt(s.style.left)||0,
+    y:parseInt(s.style.top)||0
+  }));
 }
 
 function renderLayoutShapes(layout){
 
-const map = document.getElementById("tableEditorMap");
-if(!map || !layout) return;
+  const map = document.getElementById("tableEditorMap");
 
-layout.forEach(item => {
+  layout.forEach(item=>{
+    const shape = document.createElement("div");
+    shape.className="layout-shape "+item.type;
+    shape.style.left=item.x+"px";
+    shape.style.top=item.y+"px";
 
-const shape = document.createElement("div");
-
-shape.className = "layout-shape " + item.type;
-
-shape.style.left = item.x + "px";
-shape.style.top = item.y + "px";
-
-shape.style.width = item.width + "px";
-shape.style.height = item.height + "px";
-
-shape.style.zIndex = item.zIndex || 1;
-
-/* ROTATION */
-if(item.rotation){
-shape.dataset.rotate = item.rotation;
-shape.style.transform = "rotate(" + item.rotation + "deg)";
+    enableShapeDrag(shape);
+    map.appendChild(shape);
+  });
 }
 
-/* ENABLE FEATURE */
-const resize = document.createElement("div");
-resize.className = "resize-handle";
-shape.appendChild(resize);
-
-enableShapeDrag(shape);
-enableShapeResize(shape, resize);
-
-shape.ondblclick = function(){
-rotateShape(shape);
-};
-
-map.appendChild(shape);
-
-});
-
-}
-
-function rotateShape(node){
-
-let angle =
-node.dataset.rotate
-? parseInt(node.dataset.rotate)
-: 0;
-
-angle += 90;
-
-node.dataset.rotate = angle;
-
-node.style.transform =
-"rotate(" + angle + "deg)";
-
-}
-
-function addLayoutShape(type){
-
-const map = document.getElementById("tableEditorMap");
-
-const shape = document.createElement("div");
-
-/* 🔥 PENTING */
-shape.className = "layout-shape " + type;
-shape.dataset.type = type;
-
-shape.style.left = "120px";
-shape.style.top = "120px";
-shape.style.zIndex = 1;
-
-/* RESIZE HANDLE */
-const resize = document.createElement("div");
-resize.className = "resize-handle";
-
-shape.appendChild(resize);
-
-/* ENABLE DRAG */
-enableShapeDrag(shape);
-
-/* ENABLE RESIZE */
-enableShapeResize(shape, resize);
-
-/* ROTATE */
-shape.ondblclick = function(){
-rotateShape(shape);
-};
-
-map.appendChild(shape);
-
-}
-
+/* ================================
+   SAVE LAYOUT
+================================ */
 async function saveLayout(){
 
   const session = await MENUVA_DB.getSession();
   const restoId = session?.restoId || "default";
 
-  if(!CURRENT_LAYOUT.tables.length && !CURRENT_LAYOUT.shapes.length){
-    alert("Nothing to save bro 😅");
-    return;
-  }
-
   const layout = {
-    id: "layout_" + restoId,
+    id:"layout_"+restoId,
     restoId,
-    tables: CURRENT_LAYOUT.tables,
-    shapes: CURRENT_LAYOUT.shapes,
-    updatedAt: Date.now()
+    tables:CURRENT_LAYOUT.tables,
+    shapes:CURRENT_LAYOUT.shapes
   };
 
   await MENUVA_DB.add("restaurantLayouts", layout);
 
-  alert("Layout saved bro 🔥");
-
+  alert("Layout saved 🔥");
 }
-
-function enableShapeResize(node,handle){
-
-/* DESKTOP */
-handle.onmousedown = function(e){
-
-e.stopPropagation();
-
-const startX = e.clientX;
-const startY = e.clientY;
-
-const startWidth = node.offsetWidth;
-const startHeight = node.offsetHeight;
-
-document.onmousemove = function(e){
-
-let newWidth = startWidth + (e.clientX - startX);
-let newHeight = startHeight + (e.clientY - startY);
-
-node.style.width = newWidth + "px";
-node.style.height = newHeight + "px";
-
-};
-
-document.onmouseup = function(){
-document.onmousemove = null;
-};
-
-};
-
-/* MOBILE */
-handle.ontouchstart = function(e){
-
-e.stopPropagation();
-
-const touch = e.touches[0];
-
-const startX = touch.clientX;
-const startY = touch.clientY;
-
-const startWidth = node.offsetWidth;
-const startHeight = node.offsetHeight;
-
-document.ontouchmove = function(e){
-
-const touch = e.touches[0];
-
-let newWidth = startWidth + (touch.clientX - startX);
-let newHeight = startHeight + (touch.clientY - startY);
-
-node.style.width = newWidth + "px";
-node.style.height = newHeight + "px";
-
-};
-
-document.ontouchend = function(){
-document.ontouchmove = null;
-};
-
-};
-
-}
-
-const toggle = document.getElementById("tableActiveToggle");
-const text = document.getElementById("tableActiveText");
-
-function updateToggleUI(){
-  if(toggle.checked){
-    text.innerText = "ACTIVE";
-    text.style.color = "#10b981";
-  } else {
-    text.innerText = "INACTIVE";
-    text.style.color = "#ef4444";
-  }
-}
-
-toggle.addEventListener("change", updateToggleUI);
-
-// init
-updateToggleUI();
-
-window.addEventListener("mouseup", () => activeDrag = null);
-window.addEventListener("touchend", () => activeDrag = null);
-
-function showEditor(mode){
-
-document.getElementById("tableEditorPanel").style.display =
-mode === "table" ? "block" : "none";
-
-document.getElementById("layoutEditorPanel").style.display =
-mode === "layout" ? "block" : "none";
-
-}
-
-function showEditor(mode){
-
-const tablePanel = document.getElementById("tableEditorPanel");
-const layoutPanel = document.getElementById("layoutEditorPanel");
-
-tablePanel.style.display = mode === "table" ? "block" : "none";
-layoutPanel.style.display = mode === "layout" ? "block" : "none";
-
-/* ACTIVE STYLE */
-document.querySelectorAll(".mode-switch button")
-.forEach(btn => btn.classList.remove("active"));
-
-if(mode === "table"){
-document.querySelector(".mode-switch button:nth-child(1)").classList.add("active");
-}else{
-document.querySelector(".mode-switch button:nth-child(2)").classList.add("active");
-}
-
-}
-
-/* ================================
-   INIT
-================================ */
-
-document.addEventListener(
-"DOMContentLoaded",
-async function(){
-
-/* LOAD TABLE LIST */
-await renderTables();
-
-/* LOAD TABLE LAYOUT MAP */
-await renderTableMap();
-
-/* LOAD DEPOSIT SETTINGS */
-await loadDepositSetting();
-
-/* INIT MAP EVENTS */
-initLayoutEditor();
-
-}
-);
