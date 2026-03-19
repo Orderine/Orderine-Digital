@@ -796,6 +796,61 @@ async function loadDepositSetting(){
 
 }
 
+function updateTableStats(tables){
+
+  const total = tables.length;
+  const active = tables.filter(t => t.active).length;
+  const available = tables.filter(t => t.status === "available").length;
+
+  const stats = document.getElementById("tableStats");
+  if(!stats) return;
+
+  stats.innerHTML = `
+    Total Tables : ${total} |
+    Active : ${active} |
+    Available : ${available}
+  `;
+
+}
+
+function getTableStatusColor(status){
+
+  switch(status){
+    case "available": return "#10b981";
+    case "reserved": return "#f59e0b";
+    case "occupied": return "#ef4444";
+    case "cleaning": return "#3b82f6";
+    case "disabled": return "#6b7280";
+    default: return "#9ca3af";
+  }
+
+}
+
+function clearTableForm(){
+
+  document.getElementById("tableNameInput").value = "";
+  document.getElementById("tableCapacityInput").value = "";
+  document.getElementById("tableZoneInput").value = "indoor";
+
+  if(document.getElementById("tableCategoryInput"))
+    document.getElementById("tableCategoryInput").value = "dining";
+
+  if(document.getElementById("tableNotesInput"))
+    document.getElementById("tableNotesInput").value = "";
+
+  document.getElementById("tableActiveToggle").checked = true;
+
+  const preview = document.getElementById("tableImagePreview");
+
+  if(preview){
+    preview.src = "";
+    preview.style.display = "none";
+  }
+
+  editingTableId = null;
+
+}
+
 /* =========================
    INIT
 ========================= */
