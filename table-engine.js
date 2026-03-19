@@ -327,62 +327,99 @@ renderTableMap();
 
 async function renderTableMap(){
 
-const session = await MENUVA_DB.getSession();
-const restoId = session?.restoId || "default";
+  const session = await MENUVA_DB.getSession();
+  const restoId = session?.restoId || "default";
 
-const tables = await MENUVA_DB.getAll("restaurantTables");
+  const tables = await MENUVA_DB.getAll("restaurantTables");
 
-/* FILTER RESTO */
-const filtered = tables.filter(t => t.restoId === restoId);
+  /* FILTER RESTO */
+  const filtered = tables.filter(t => t.restoId === restoId);
 
-/* LOAD LAYOUT */
-const layout =
-await MENUVA_DB.get("restaurantLayouts", "layout_" + restoId);
+  /* LOAD LAYOUT (SEKALI AJA) */
+  const layout = await MENUVA_DB.get(
+    "restaurantLayouts",
+    "layout_" + restoId
+  );
 
-/* SYNC MEMORY */
-CURRENT_LAYOUT.tables = layout?.tables || [];
-CURRENT_LAYOUT.shapes = layout?.shapes || [];
+  /* SYNC MEMORY */
+  CURRENT_LAYOUT.tables = layout?.tables || [];
+  CURRENT_LAYOUT.shapes = layout?.shapes || [];
 
-const map = document.getElementById("tableEditorMap");
-if(!map) return;
+  const map = document.getElementById("tableEditorMap");
+  if(!map) return;
 
-map.innerHTML = "";
+  map.innerHTML = "";
 
-/* =========================
-   RENDER SHAPES
-========================= */
-if(CURRENT_LAYOUT.shapes.length){
-renderLayoutShapes(CURRENT_LAYOUT.shapes);
+  /* =========================
+     RENDER SHAPES
+  ========================= */
+  if(CURRENT_LAYOUT.shapes.length){
+    renderLayoutShapes(CURRENT_LAYOUT.shapes);
+  }
+
+  /* =========================
+     RENDER TABLE
+  ========================= */
+  filtered.forEach(table=>{
+
+    const layoutTable =
+      CURRENT_LAYOUT.tables.find(t => t.tableId === table.id);
+
+    const node = document.createElement("div");
+
+    node.className =
+      "table-node "
+      + (table.shape || "circle") + " "
+      + table.zone;
+
+    node.innerHTML = `
+  <div class="table-visual">
+    ${
+      table.image
+      ? `<img src="${table.image}" class="table-img">`
+      : `<div class="table-fallback"></div>`
+    }
+    <div class="table-label">${table.name}</div>
+  </div>
+`;
+
+    /* POSITION */
+    const x = layoutTable?.x ?? table.x ?? 100;
+    const y = layoutTable?.y ?? table.y ?? 100;
+
+    node.style.left = x + "px";
+    node.style.top = y + "px";
+
+    /* ROTATION (FIX UTAMA) */
+    const rotation = layoutTable?.rotation ?? table.rotation ?? 0;
+
+    if(rotation){
+      node.dataset.rotate = rotation;
+      node.style.transform = "rotate(" + rotation + "deg)";
+      node.style.transformOrigin = "center";
+    }
+
+    node.dataset.id = table.id;
+
+    enableTableDrag(node);
+
+    map.appendChild(node);
+
+  });
+
 }
 
-/* =========================
-   RENDER TABLE
-========================= */
-filtered.forEach(table=>{
+function rotateTable(node){
 
-const pos =
-CURRENT_LAYOUT.tables.find(t => t.tableId === table.id);
+  let angle = node.dataset.rotate
+    ? parseInt(node.dataset.rotate)
+    : 0;
 
-const node = document.createElement("div");
+  angle += 90;
 
-node.className =
-"table-node "
-+ (table.shape || "circle") + " "
-+ table.zone;
+  node.dataset.rotate = angle;
 
-node.innerText = table.name;
-
-node.style.left = (pos?.x || 100) + "px";
-node.style.top = (pos?.y || 100) + "px";
-
-node.dataset.id = table.id;
-
-enableTableDrag(node);
-
-map.appendChild(node);
-
-});
-
+  node.style.transform = "rotate(" + angle + "deg)";
 }
 
 function enableTableDrag(node){
@@ -397,19 +434,18 @@ let offsetY = 0;
 ========================= */
 function updateMemory(){
 
-const id = node.dataset.id;
-const x = parseInt(node.style.left);
-const y = parseInt(node.style.top);
+  const tableNodes = document.querySelectorAll(".table-node");
 
-const index =
-CURRENT_LAYOUT.tables.findIndex(t => t.tableId === id);
+  CURRENT_LAYOUT.tables = Array.from(tableNodes).map(node => ({
+    tableId: node.dataset.id,
+    x: parseInt(node.style.left) || 0,
+    y: parseInt(node.style.top) || 0,
+    rotation: parseInt(node.dataset.rotate) || 0
+  }));
 
-if(index > -1){
-CURRENT_LAYOUT.tables[index].x = x;
-CURRENT_LAYOUT.tables[index].y = y;
-}else{
-CURRENT_LAYOUT.tables.push({ tableId:id, x, y });
-}
+  CURRENT_LAYOUT.shapes = getLayoutData();
+
+  console.log("🧠 memory updated", CURRENT_LAYOUT);
 
 }
 
@@ -432,6 +468,34 @@ y = snapToGrid(y);
 
 node.style.left = x + "px";
 node.style.top = y + "px";
+
+/* =========================
+   ROTATE DESKTOP (DOUBLE CLICK)
+========================= */
+node.addEventListener("dblclick", function(e){
+  e.stopPropagation();
+  rotateTable(node);
+});
+
+
+/* =========================
+   ROTATE MOBILE (DOUBLE TAP)
+========================= */
+let lastTap = 0;
+
+node.addEventListener("touchend", function(e){
+
+  if(touchMoved) return; // 🔥 biar gak ke-trigger saat drag
+
+  const now = Date.now();
+
+  if(now - lastTap < 300){
+    rotateTable(node);
+  }
+
+  lastTap = now;
+
+});
 }
 
 function onMouseUp(){
@@ -530,44 +594,49 @@ document.addEventListener("touchend", onTouchEnd);
 
 async function generateAutoLayout(){
 
-const session = await MENUVA_DB.getSession();
-const restoId = session?.restoId || "default";
+  const session = await MENUVA_DB.getSession();
+  const restoId = session?.restoId || "default";
 
-const tables = await MENUVA_DB.getAll("restaurantTables");
+  const tables = await MENUVA_DB.getAll("restaurantTables");
 
-const filtered =
-tables.filter(t => t.restoId === restoId);
+  const filtered = tables.filter(t => t.restoId === restoId);
 
-if(!filtered.length) return;
+  if(!filtered.length) return;
 
-const map = document.getElementById("tableEditorMap");
-const width = map.clientWidth;
+  const map = document.getElementById("tableEditorMap");
 
-const spacingX = 120;
-const spacingY = 120;
+  const mapWidth = map.clientWidth;
+  const mapHeight = map.clientHeight;
 
-const cols = Math.floor(width / spacingX) || 4;
+  /* GRID CONFIG */
+  const spacingX = 120;
+  const spacingY = 120;
 
-let layoutTables = [];
+  const cols = Math.floor(mapWidth / spacingX) || 4;
+  const rows = Math.ceil(filtered.length / cols);
 
-for(let i=0;i<filtered.length;i++){
+  /* 🔥 CENTER OFFSET (BIAR PRO LOOK) */
+  const totalWidth = cols * spacingX;
+  const totalHeight = rows * spacingY;
 
-let col = i % cols;
-let row = Math.floor(i / cols);
+  const offsetX = (mapWidth - totalWidth) / 2;
+  const offsetY = (mapHeight - totalHeight) / 2;
 
-layoutTables.push({
-tableId: filtered[i].id,
-x: 60 + col * spacingX,
-y: 60 + row * spacingY
-});
+  for(let i = 0; i < filtered.length; i++){
 
-}
+    let table = filtered[i];
 
-/* SAVE KE MEMORY */
-CURRENT_LAYOUT.tables = layoutTables;
+    let col = i % cols;
+    let row = Math.floor(i / cols);
 
-/* RELOAD */
-renderTableMap();
+    table.x = offsetX + col * spacingX + 40;
+    table.y = offsetY + row * spacingY + 40;
+
+    await MENUVA_DB.update("restaurantTables", table);
+
+  }
+
+  renderTableMap();
 
 }
 /* ================================
@@ -1284,24 +1353,25 @@ map.appendChild(shape);
 
 async function saveLayout(){
 
-const session = await MENUVA_DB.getSession();
-const restoId = session?.restoId || "default";
+  const session = await MENUVA_DB.getSession();
+  const restoId = session?.restoId || "default";
 
-/* SHAPES */
-const shapes = getLayoutData();
+  if(!CURRENT_LAYOUT.tables.length && !CURRENT_LAYOUT.shapes.length){
+    alert("Nothing to save bro 😅");
+    return;
+  }
 
-/* FINAL */
-const layout = {
-id: "layout_" + restoId,
-restoId,
-tables: CURRENT_LAYOUT.tables,
-shapes,
-updatedAt: Date.now()
-};
+  const layout = {
+    id: "layout_" + restoId,
+    restoId,
+    tables: CURRENT_LAYOUT.tables,
+    shapes: CURRENT_LAYOUT.shapes,
+    updatedAt: Date.now()
+  };
 
-await MENUVA_DB.put("restaurantLayouts", layout);
+  await MENUVA_DB.add("restaurantLayouts", layout);
 
-alert("Layout saved bro 🔥");
+  alert("Layout saved bro 🔥");
 
 }
 
