@@ -200,7 +200,7 @@ async function renderTableMap(){
     const layoutData = CURRENT_LAYOUT.tables.find(t=>t.tableId===table.id);
 
     const node = document.createElement("div");
-    node.className = "table-node " + table.shape;
+    node.className = `table-node ${table.shape} ${table.zone}`;
 
     node.dataset.id = table.id;
 
@@ -216,7 +216,21 @@ async function renderTableMap(){
       node.dataset.rotate = rot;
     }
 
-    node.innerHTML = `<div>${table.name}</div>`;
+    node.innerHTML = `
+  <div class="table-visual">
+
+    ${
+      table.image
+      ? `<img src="${table.image}" class="table-img">`
+      : `<div class="table-fallback"></div>`
+    }
+
+    <div class="table-label">
+      ${table.name}
+    </div>
+
+  </div>
+`;
 
     enableTableDrag(node);
     enableTableRotate(node);
