@@ -162,23 +162,47 @@ async function renderTables(){
 
   filtered.forEach(table => {
 
+    const statusColor = getTableStatusColor(table.status);
     const opacity = table.active ? "1" : "0.4";
 
     html += `
       <div class="terminal-card table-card" style="opacity:${opacity}">
+
+        ${table.image ? `
+          <img src="${table.image}" class="table-card-image">
+        ` : ""}
+
         <div class="terminal-card-header">
           <span class="terminal-title">${table.name}</span>
         </div>
 
-        <div class="terminal-card-body">
-          <div>👥 ${table.capacity} Pax</div>
-          <div>📍 ${table.zone}</div>
+        <div class="terminal-card-body table-info">
+
+          <div class="table-meta">
+            <span>👥 ${table.capacity} Pax</span>
+            <span>📍 ${table.zone}</span>
+          </div>
+
+          <div class="table-meta">
+            <span>🍽 ${table.category || "-"}</span>
+          </div>
+
+          <div class="table-notes">
+            ${table.notes || ""}
+          </div>
+
+          <div class="table-status"
+            style="background:${statusColor}">
+            ${table.status}
+          </div>
 
           <div class="table-actions">
             <button onclick="editTable('${table.id}')">Edit</button>
             <button onclick="deleteTable('${table.id}')">Delete</button>
           </div>
+
         </div>
+
       </div>
     `;
 
@@ -189,7 +213,6 @@ async function renderTables(){
   updateTableStats(filtered);
 
 }
-
 /* =========================
    AUTO NAME
 ========================= */
@@ -848,6 +871,61 @@ function clearTableForm(){
   }
 
   editingTableId = null;
+
+}
+
+function rotateShape(node){
+
+  let angle = parseInt(node.dataset.rotate || 0);
+  angle += 90;
+
+  node.dataset.rotate = angle;
+  node.style.transform = `rotate(${angle}deg)`;
+
+  updateMemory();
+
+}
+
+async function editTable(id){
+
+  const tables = await MENUVA_DB.getAll("restaurantTables");
+  const table = tables.find(t => t.id === id);
+
+  if(!table) return;
+
+  editingTableId = id;
+
+  document.getElementById("tableNameInput").value = table.name;
+  document.getElementById("tableCapacityInput").value = table.capacity;
+  document.getElementById("tableZoneInput").value = table.zone;
+
+  if(document.getElementById("tableCategoryInput"))
+    document.getElementById("tableCategoryInput").value = table.category || "";
+
+  if(document.getElementById("tableNotesInput"))
+    document.getElementById("tableNotesInput").value = table.notes || "";
+
+  document.getElementById("tableActiveToggle").checked = table.active;
+
+  const preview = document.getElementById("tableImagePreview");
+
+  if(preview && table.image){
+    preview.src = table.image;
+    preview.style.display = "block";
+  }
+
+  openTableEditor();
+
+}
+
+async function deleteTable(id){
+
+  if(!confirm("Delete this table?")) return;
+
+  await MENUVA_DB.delete("restaurantTables", id);
+
+  renderTables();
+  renderTableMap();
 
 }
 
