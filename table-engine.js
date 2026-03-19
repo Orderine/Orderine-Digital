@@ -137,6 +137,59 @@ function searchTables(){
   renderTables();
 }
 
+async function renderTables(){
+
+  const session = await MENUVA_DB.getSession();
+  const restoId = session?.restoId || "default";
+
+  const tables = await MENUVA_DB.getAll("restaurantTables");
+
+  let filtered = tables.filter(t => t.restoId === restoId);
+
+  if(currentTableFilter !== "all"){
+    filtered = filtered.filter(t => t.zone === currentTableFilter);
+  }
+
+  if(currentSearch){
+    filtered = filtered.filter(t =>
+      t.name.toLowerCase().includes(currentSearch)
+    );
+  }
+
+  const grid = document.getElementById("tablePreviewGrid");
+
+  let html = "";
+
+  filtered.forEach(table => {
+
+    const opacity = table.active ? "1" : "0.4";
+
+    html += `
+      <div class="terminal-card table-card" style="opacity:${opacity}">
+        <div class="terminal-card-header">
+          <span class="terminal-title">${table.name}</span>
+        </div>
+
+        <div class="terminal-card-body">
+          <div>👥 ${table.capacity} Pax</div>
+          <div>📍 ${table.zone}</div>
+
+          <div class="table-actions">
+            <button onclick="editTable('${table.id}')">Edit</button>
+            <button onclick="deleteTable('${table.id}')">Delete</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+  });
+
+  if(grid) grid.innerHTML = html;
+
+  updateTableStats(filtered);
+
+}
+
 /* =========================
    AUTO NAME
 ========================= */
@@ -748,6 +801,11 @@ async function loadDepositSetting(){
 ========================= */
 
 document.addEventListener("DOMContentLoaded", async function(){
+
+  if(typeof renderTables !== "function"){
+    console.error("❌ renderTables NOT FOUND");
+    return;
+  }
 
   await renderTables();
   await renderTableMap();
