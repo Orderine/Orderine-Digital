@@ -2718,7 +2718,7 @@ border-color:#555;
   position: absolute;
 
   top: 10px;
-  right: 2px; /* 🔥 geser ke kanan */
+  right: 0px; /* 🔥 geser ke kanan */
 
   width: 34px;
   height: 28px;
@@ -3239,7 +3239,7 @@ Drag tables / shape • Long press delete
 
 <div id="tableEditorMap" class="table-editor-map"></div>
 
-<button id="deleteShapeBtn" class="delete-shape-btn">🗑</button>
+<button id="deleteShapeBtn" class="delete-shape-btn">🗑 DELETE SHAPE</button>
 
 </div>
 
@@ -3279,66 +3279,77 @@ Drag tables / shape • Long press delete
 </div>
 </div>
 
-  <div class="terminal-card">
+ <div class="terminal-card">
 
-<div class="terminal-card-header">
-<span class="terminal-title">RESERVATION DEPOSIT</span>
+  <div class="terminal-card-header">
+    <span class="terminal-title">RESERVATION DEPOSIT</span>
+  </div>
+
+  <div class="terminal-card-body">
+
+    <!-- 🔥 TOGGLE SLIDER -->
+    <div class="toggle-row">
+      <label class="switch">
+        <input type="checkbox" id="depositToggle">
+        <span class="slider"></span>
+      </label>
+      <span id="depositToggleText" class="switch-label">DISABLED</span>
+    </div>
+
+    <input
+      type="text"
+      id="depositBankName"
+      placeholder="Bank Name"
+    />
+
+    <input
+      type="text"
+      id="depositAccountNumber"
+      placeholder="Account Number"
+    />
+
+    <input
+      type="text"
+      id="depositAccountHolder"
+      placeholder="Account Holder/Account Name"
+    />
+
+    <input
+      type="number"
+      id="depositAmount"
+      placeholder="Deposit Amount / Minimum Deposit"
+    />
+
+    <!-- QR -->
+    <div class="table-image-upload">
+
+      <label>Upload QR Payment</label>
+
+      <input
+        type="file"
+        id="depositQRInput"
+        accept="image/*"
+        onchange="previewDepositQR(event)"
+      />
+
+      <img id="depositQRPreview">
+
+    </div>
+
+    <!-- ACTION -->
+    <div class="table-editor-actions">
+      <button onclick="saveDepositSetting()">
+        💾 SAVE
+      </button>
+
+      <button class="btn-danger" onclick="clearDepositSetting()">
+        🗑 CLEAR
+      </button>
+    </div>
+
+  </div>
+
 </div>
-
-<div class="terminal-card-body">
-
-<label class="promo-toggle">
-<input type="checkbox" id="depositToggle">
-Enable Deposit
-</label>
-
-<input
-type="text"
-id="depositBankName"
-placeholder="Bank Name"
-/>
-
-<input
-type="text"
-id="depositAccountNumber"
-placeholder="Account Number"
-/>
-
-<input
-type="text"
-id="depositAccountHolder"
-placeholder="Account Holder/Account Name"
-/>
-
-<input
-type="number"
-id="depositAmount"
-placeholder="Deposit Amount/Minimum Deposit"
-/>
-
-<div class="table-image-upload">
-
-<label>Upload QR Payment</label>
-
-<input
-type="file"
-id="depositQRInput"
-accept="image/*"
-onchange="previewDepositQR(event)"
-/>
-
-<img id="depositQRPreview">
-
-</div>
-
-<button onclick="saveDepositSetting()">
-SAVE DEPOSIT SETTING
-</button>
-
-</div>
-
-</div>
-
 
 <div class="section-box" id="waContainerBox">
   <h3>📱 Admin WhatsApp Number (Order/Reservation Recipient)</h3>
