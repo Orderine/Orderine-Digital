@@ -1,5 +1,5 @@
 /* ================================
-   TABLE ENGINE ORDERINE (CLEAN)
+   TABLE ENGINE ORDERINE (FIXED)
 ================================ */
 
 let currentTableFilter = "all";
@@ -8,6 +8,7 @@ let editingTableId = null;
 
 let selectedShape = null;
 let pressTimer = null;
+
 let activeDrag = null;
 let touchMoved = false;
 
@@ -18,26 +19,17 @@ let CURRENT_LAYOUT = {
 
 const GRID_SIZE = 20;
 
-/* ================================
-   INIT
-================================ */
-document.addEventListener("DOMContentLoaded", async () => {
-  await renderTables();
-  await renderTableMap();
-  await loadDepositSetting();
-  initLayoutEditor();
-});
+const ZONE_COLORS = {
+  indoor: "rgba(16,185,129,0.25)",
+  outdoor: "rgba(59,130,246,0.25)",
+  vip: "rgba(168,85,247,0.25)",
+  bar: "rgba(249,115,22,0.25)"
+};
 
-/* ================================
-   UTIL
-================================ */
-function snapToGrid(v){
-  return Math.round(v / GRID_SIZE) * GRID_SIZE;
-}
-
-/* ================================
+/* =========================
    INIT LAYOUT EDITOR
-================================ */
+========================= */
+
 function initLayoutEditor(){
 
   const map = document.getElementById("tableEditorMap");
@@ -48,7 +40,7 @@ function initLayoutEditor(){
   let isDragging = false;
 
   /* SELECT */
-  map.addEventListener("click", e => {
+  map.addEventListener("click", function(e){
 
     if(e.target.closest("#deleteShapeBtn")) return;
 
@@ -59,16 +51,19 @@ function initLayoutEditor(){
 
     if(shape){
       selectedShape = shape;
-      shape.classList.add("selected");
+      selectedShape.classList.add("selected");
       if(deleteBtn) deleteBtn.style.display = "flex";
     }else{
       selectedShape = null;
       if(deleteBtn) deleteBtn.style.display = "none";
     }
+
   });
 
   /* LONG PRESS DELETE */
-  map.addEventListener("touchstart", e => {
+  map.addEventListener("touchstart", function(e){
+
+    if(e.target.closest(".dragging")) return;
 
     const shape = e.target.closest(".layout-shape");
     if(!shape) return;
@@ -76,29 +71,36 @@ function initLayoutEditor(){
     selectedShape = shape;
     isDragging = false;
 
-    pressTimer = setTimeout(()=>{
+    pressTimer = setTimeout(() => {
+
       if(!isDragging){
+        navigator.vibrate?.(40);
+
         if(confirm("Delete this shape?")){
-          shape.remove();
+          selectedShape.remove();
           selectedShape = null;
+          if(deleteBtn) deleteBtn.style.display = "none";
         }
       }
-    },700);
+
+    }, 800);
+
   });
 
-  map.addEventListener("touchmove", ()=>{
+  map.addEventListener("touchmove", () => {
     isDragging = true;
     clearTimeout(pressTimer);
   });
 
-  map.addEventListener("touchend", ()=>{
+  map.addEventListener("touchend", () => {
     clearTimeout(pressTimer);
   });
 
-  /* DELETE BTN */
+  /* DELETE BUTTON */
   if(deleteBtn){
-    deleteBtn.onclick = ()=>{
+    deleteBtn.onclick = () => {
       if(!selectedShape) return;
+
       if(confirm("Delete this shape?")){
         selectedShape.remove();
         selectedShape = null;
@@ -108,28 +110,45 @@ function initLayoutEditor(){
   }
 
   /* DELETE KEY */
-  document.addEventListener("keydown", e=>{
+  document.addEventListener("keydown", function(e){
     if(e.key === "Delete" && selectedShape){
       selectedShape.remove();
       selectedShape = null;
+      if(deleteBtn) deleteBtn.style.display = "none";
     }
   });
+
 }
 
-/* ================================
-   TABLE CRUD
-================================ */
+/* =========================
+   FILTER + SEARCH
+========================= */
+
+function filterTables(zone){
+  currentTableFilter = zone;
+  renderTables();
+}
+
+function searchTables(){
+  currentSearch = document
+    .getElementById("tableSearchInput")
+    .value.toLowerCase();
+
+  renderTables();
+}
+
+/* =========================
+   AUTO NAME
+========================= */
+
 async function generateTableName(){
   const tables = await MENUVA_DB.getAll("restaurantTables");
   return "T" + String(tables.length + 1).padStart(2,"0");
 }
 
-function getTableShape(cap){
-  if(cap <= 2) return "small-circle";
-  if(cap <= 4) return "circle";
-  if(cap <= 6) return "oval";
-  return "rectangle";
-}
+/* =========================
+   SAVE TABLE
+========================= */
 
 async function saveTable(){
 
@@ -137,10 +156,34 @@ async function saveTable(){
   const capacity = parseInt(document.getElementById("tableCapacityInput").value);
   const zone = document.getElementById("tableZoneInput").value;
 
+  const category = document.getElementById("tableCategoryInput")?.value || "";
+  const notes = document.getElementById("tableNotesInput")?.value || "";
+  const active = document.getElementById("tableActiveToggle").checked;
+  const image = document.getElementById("tableImagePreview")?.src || "";
+
   if(!name) name = await generateTableName();
 
   const session = await MENUVA_DB.getSession();
   const restoId = session?.restoId || "default";
+
+  const tables = await MENUVA_DB.getAll("restaurantTables");
+
+  let posX = 100;
+  let posY = 100;
+
+  if(editingTableId){
+    const existing = tables.find(t => t.id === editingTableId);
+    if(existing){
+      posX = existing.x || 100;
+      posY = existing.y || 100;
+    }
+  } else {
+    const count = tables.length;
+    const cols = 5;
+
+    posX = 80 + (count % cols) * 90;
+    posY = 80 + Math.floor(count / cols) * 90;
+  }
 
   const tableData = {
     id: editingTableId || "TB_" + Date.now(),
@@ -148,10 +191,16 @@ async function saveTable(){
     name,
     capacity,
     zone,
+    category,
+    notes,
+    image,
     shape: getTableShape(capacity),
-    status:"available",
-    active:true,
-    createdAt:Date.now()
+    status: "available",
+    currentGuest: null,
+    active,
+    createdAt: Date.now(),
+    x: posX,
+    y: posY
   };
 
   if(editingTableId){
@@ -164,26 +213,22 @@ async function saveTable(){
   clearTableForm();
   renderTables();
   renderTableMap();
+
 }
 
-function clearTableForm(){
-  document.getElementById("tableNameInput").value="";
-  document.getElementById("tableCapacityInput").value="";
-  editingTableId=null;
-}
+/* =========================
+   TABLE MAP RENDER
+========================= */
 
-/* ================================
-   RENDER TABLE MAP
-================================ */
 async function renderTableMap(){
 
   const session = await MENUVA_DB.getSession();
   const restoId = session?.restoId || "default";
 
   const tables = await MENUVA_DB.getAll("restaurantTables");
-  const filtered = tables.filter(t=>t.restoId===restoId);
+  const filtered = tables.filter(t => t.restoId === restoId);
 
-  const layout = await MENUVA_DB.get("restaurantLayouts","layout_"+restoId);
+  const layout = await MENUVA_DB.get("restaurantLayouts", "layout_" + restoId);
 
   CURRENT_LAYOUT.tables = layout?.tables || [];
   CURRENT_LAYOUT.shapes = layout?.shapes || [];
@@ -193,93 +238,110 @@ async function renderTableMap(){
 
   map.innerHTML = "";
 
-  renderLayoutShapes(CURRENT_LAYOUT.shapes);
+  if(CURRENT_LAYOUT.shapes.length){
+    renderLayoutShapes(CURRENT_LAYOUT.shapes);
+  }
 
-  filtered.forEach(table=>{
+  filtered.forEach(table => {
 
-    const layoutData = CURRENT_LAYOUT.tables.find(t=>t.tableId===table.id);
+    const layoutTable =
+      CURRENT_LAYOUT.tables.find(t => t.tableId === table.id);
 
     const node = document.createElement("div");
-    node.className = `table-node ${table.shape} ${table.zone}`;
 
+    node.className = `table-node ${table.shape || "circle"} ${table.zone}`;
     node.dataset.id = table.id;
 
-    const x = layoutData?.x ?? 100;
-    const y = layoutData?.y ?? 100;
-
-    node.style.left = x+"px";
-    node.style.top = y+"px";
-
-    const rot = layoutData?.rotation || 0;
-    if(rot){
-      node.style.transform = `rotate(${rot}deg)`;
-      node.dataset.rotate = rot;
-    }
-
     node.innerHTML = `
-  <div class="table-visual">
+      <div class="table-visual">
+        ${table.image
+          ? `<img src="${table.image}" class="table-img">`
+          : `<div class="table-fallback"></div>`}
+        <div class="table-label">${table.name}</div>
+      </div>
+    `;
 
-    ${
-      table.image
-      ? `<img src="${table.image}" class="table-img">`
-      : `<div class="table-fallback"></div>`
+    const x = layoutTable?.x ?? table.x ?? 100;
+    const y = layoutTable?.y ?? table.y ?? 100;
+
+    node.style.left = x + "px";
+    node.style.top = y + "px";
+
+    const rotation = layoutTable?.rotation ?? 0;
+
+    if(rotation){
+      node.dataset.rotate = rotation;
+      node.style.transform = `rotate(${rotation}deg)`;
     }
-
-    <div class="table-label">
-      ${table.name}
-    </div>
-
-  </div>
-`;
 
     enableTableDrag(node);
-    enableTableRotate(node);
-
     map.appendChild(node);
+
   });
+
 }
 
-/* ================================
-   DRAG TABLE
-================================ */
+/* =========================
+   DRAG TABLE (CLEAN)
+========================= */
+
 function enableTableDrag(node){
 
   const map = document.getElementById("tableEditorMap");
 
-  let offsetX, offsetY;
+  let offsetX = 0;
+  let offsetY = 0;
+  let lastTap = 0;
 
   function move(x,y){
     x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
     y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
 
-    node.style.left = snapToGrid(x)+"px";
-    node.style.top = snapToGrid(y)+"px";
+    x = snapToGrid(x);
+    y = snapToGrid(y);
+
+    node.style.left = x + "px";
+    node.style.top = y + "px";
   }
 
-  node.onmousedown = e=>{
+  /* DESKTOP */
+  node.addEventListener("mousedown", e => {
+
     if(activeDrag) return;
     activeDrag = node;
 
     const rect = node.getBoundingClientRect();
+
     offsetX = e.clientX - rect.left;
     offsetY = e.clientY - rect.top;
 
-    document.onmousemove = e=>{
-      const rectMap = map.getBoundingClientRect();
-      move(e.clientX - rectMap.left - offsetX,
-           e.clientY - rectMap.top - offsetY);
-    };
+    node.classList.add("dragging");
 
-    document.onmouseup = ()=>{
-      document.onmousemove=null;
-      activeDrag=null;
+    function onMove(e){
+      const rect = map.getBoundingClientRect();
+      move(e.clientX - rect.left - offsetX, e.clientY - rect.top - offsetY);
+    }
+
+    function onUp(){
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      activeDrag = null;
+      node.classList.remove("dragging");
       updateMemory();
-    };
-  };
+    }
 
-  node.ontouchstart = e=>{
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+
+  });
+
+  /* MOBILE */
+  node.addEventListener("touchstart", e => {
+
     if(activeDrag) return;
     activeDrag = node;
+
+    touchMoved = false;
 
     const touch = e.touches[0];
     const rect = node.getBoundingClientRect();
@@ -287,43 +349,63 @@ function enableTableDrag(node){
     offsetX = touch.clientX - rect.left;
     offsetY = touch.clientY - rect.top;
 
-    document.ontouchmove = e=>{
-      const t = e.touches[0];
-      const rectMap = map.getBoundingClientRect();
+    node.classList.add("dragging");
 
-      move(t.clientX - rectMap.left - offsetX,
-           t.clientY - rectMap.top - offsetY);
-    };
+    function onMove(e){
+      touchMoved = true;
+      const touch = e.touches[0];
+      const rect = map.getBoundingClientRect();
 
-    document.ontouchend = ()=>{
-      document.ontouchmove=null;
-      activeDrag=null;
-      updateMemory();
-    };
-  };
-}
-
-/* ================================
-   ROTATE TABLE
-================================ */
-function enableTableRotate(node){
-
-  let lastTap = 0;
-
-  node.ondblclick = ()=>{
-    rotateTable(node);
-  };
-
-  node.ontouchend = ()=>{
-    const now = Date.now();
-    if(now - lastTap < 250){
-      rotateTable(node);
+      move(
+        touch.clientX - rect.left - offsetX,
+        touch.clientY - rect.top - offsetY
+      );
     }
-    lastTap = now;
-  };
+
+    function onEnd(){
+
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", onEnd);
+
+      activeDrag = null;
+      node.classList.remove("dragging");
+
+      updateMemory();
+
+      /* DOUBLE TAP ROTATE */
+      const now = Date.now();
+      if(!touchMoved && now - lastTap < 250){
+        rotateTable(node);
+        lastTap = 0;
+      } else {
+        lastTap = now;
+      }
+
+    }
+
+    document.addEventListener("touchmove", onMove, { passive:false });
+    document.addEventListener("touchend", onEnd);
+
+  });
+
+  /* DESKTOP ROTATE */
+  node.addEventListener("dblclick", e => {
+    if(node.classList.contains("dragging")) return;
+    rotateTable(node);
+  });
+
 }
+
+/* =========================
+   ROTATE TABLE
+========================= */
+
+let isRotating = false;
 
 function rotateTable(node){
+
+  if(isRotating) return;
+  isRotating = true;
 
   let angle = parseInt(node.dataset.rotate || 0);
   angle += 90;
@@ -332,223 +414,245 @@ function rotateTable(node){
   node.style.transform = `rotate(${angle}deg)`;
 
   updateMemory();
+
+  setTimeout(() => isRotating = false, 200);
+
 }
 
-/* ================================
+/* =========================
    MEMORY
-================================ */
+========================= */
+
 function updateMemory(){
 
-  const nodes = document.querySelectorAll(".table-node");
+  const tableNodes = document.querySelectorAll(".table-node");
 
-  CURRENT_LAYOUT.tables = Array.from(nodes).map(n=>({
-    tableId:n.dataset.id,
-    x:parseInt(n.style.left)||0,
-    y:parseInt(n.style.top)||0,
-    rotation:parseInt(n.dataset.rotate)||0
+  CURRENT_LAYOUT.tables = Array.from(tableNodes).map(node => ({
+    tableId: node.dataset.id,
+    x: parseInt(node.style.left) || 0,
+    y: parseInt(node.style.top) || 0,
+    rotation: parseInt(node.dataset.rotate) || 0
   }));
 
   CURRENT_LAYOUT.shapes = getLayoutData();
+
 }
 
-/* ================================
-   SHAPES
-================================ */
+/* =========================
+   UTIL
+========================= */
+
+function snapToGrid(value){
+  return Math.round(value / GRID_SIZE) * GRID_SIZE;
+}
+
+function getTableShape(capacity){
+  if(capacity <= 2) return "small-circle";
+  if(capacity <= 4) return "circle";
+  if(capacity <= 6) return "oval";
+  return "rectangle";
+}
+
+function openTableEditor(){
+  showEditor("table");
+
+  const panel = document.getElementById("tableEditorPanel");
+  if(panel){
+    panel.scrollIntoView({ behavior:"smooth" });
+  }
+}
+
+function showEditor(mode){
+
+  const tablePanel = document.getElementById("tableEditorPanel");
+  const layoutPanel = document.getElementById("layoutEditorPanel");
+
+  if(tablePanel) tablePanel.style.display = mode === "table" ? "block" : "none";
+  if(layoutPanel) layoutPanel.style.display = mode === "layout" ? "block" : "none";
+
+  document.querySelectorAll(".mode-switch button")
+    .forEach(btn => btn.classList.remove("active"));
+
+  if(mode === "table"){
+    document.querySelector(".mode-switch button:nth-child(1)")?.classList.add("active");
+  }else{
+    document.querySelector(".mode-switch button:nth-child(2)")?.classList.add("active");
+  }
+
+}
+
 function addLayoutShape(type){
 
   const map = document.getElementById("tableEditorMap");
+  if(!map) return;
 
   const shape = document.createElement("div");
-  shape.className = "layout-shape " + type;
 
-  shape.style.left="100px";
-  shape.style.top="100px";
+  shape.className = "layout-shape " + type;
+  shape.dataset.type = type;
+
+  shape.style.left = "120px";
+  shape.style.top = "120px";
+  shape.style.width = "100px";
+  shape.style.height = "60px";
+  shape.style.zIndex = 1;
+
+  const resize = document.createElement("div");
+  resize.className = "resize-handle";
+
+  shape.appendChild(resize);
 
   enableShapeDrag(shape);
+  enableShapeResize(shape, resize);
+
+  shape.ondblclick = () => rotateShape(shape);
 
   map.appendChild(shape);
+
 }
 
 function enableShapeDrag(node){
 
-  node.onmousedown = e=>{
-    if(activeDrag) return;
-    activeDrag = node;
+  const map = document.getElementById("tableEditorMap");
 
-    document.onmousemove = e=>{
-      node.style.left = e.clientX+"px";
-      node.style.top = e.clientY+"px";
+  let offsetX = 0;
+  let offsetY = 0;
+
+  node.addEventListener("mousedown", e => {
+
+    const rect = node.getBoundingClientRect();
+
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+
+    function move(e){
+      const rect = map.getBoundingClientRect();
+
+      let x = e.clientX - rect.left - offsetX;
+      let y = e.clientY - rect.top - offsetY;
+
+      x = snapToGrid(x);
+      y = snapToGrid(y);
+
+      node.style.left = x + "px";
+      node.style.top = y + "px";
+    }
+
+    function up(){
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      updateMemory();
+    }
+
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+
+  });
+
+}
+
+function enableShapeResize(node, handle){
+
+  handle.onmousedown = function(e){
+
+    e.stopPropagation();
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    const startWidth = node.offsetWidth;
+    const startHeight = node.offsetHeight;
+
+    document.onmousemove = function(e){
+
+      node.style.width = startWidth + (e.clientX - startX) + "px";
+      node.style.height = startHeight + (e.clientY - startY) + "px";
+
     };
 
-    document.onmouseup = ()=>{
-      document.onmousemove=null;
-      activeDrag=null;
+    document.onmouseup = function(){
+      document.onmousemove = null;
+      updateMemory();
     };
+
   };
+
 }
 
 function getLayoutData(){
-  return Array.from(document.querySelectorAll(".layout-shape")).map(s=>({
-    type:s.classList[1],
-    x:parseInt(s.style.left)||0,
-    y:parseInt(s.style.top)||0
+
+  const shapes = document.querySelectorAll(".layout-shape");
+
+  return Array.from(shapes).map(shape => ({
+    type: shape.dataset.type || "",
+    x: parseInt(shape.style.left) || 0,
+    y: parseInt(shape.style.top) || 0,
+    width: shape.offsetWidth,
+    height: shape.offsetHeight,
+    rotation: parseInt(shape.dataset.rotate || 0),
+    zIndex: shape.style.zIndex || 1
   }));
+
 }
 
 function renderLayoutShapes(layout){
 
   const map = document.getElementById("tableEditorMap");
+  if(!map) return;
 
-  layout.forEach(item=>{
+  layout.forEach(item => {
+
     const shape = document.createElement("div");
-    shape.className="layout-shape "+item.type;
-    shape.style.left=item.x+"px";
-    shape.style.top=item.y+"px";
+
+    shape.className = "layout-shape " + item.type;
+    shape.dataset.type = item.type;
+
+    shape.style.left = item.x + "px";
+    shape.style.top = item.y + "px";
+    shape.style.width = item.width + "px";
+    shape.style.height = item.height + "px";
+    shape.style.zIndex = item.zIndex || 1;
+
+    if(item.rotation){
+      shape.dataset.rotate = item.rotation;
+      shape.style.transform = `rotate(${item.rotation}deg)`;
+    }
+
+    const resize = document.createElement("div");
+    resize.className = "resize-handle";
+
+    shape.appendChild(resize);
 
     enableShapeDrag(shape);
+    enableShapeResize(shape, resize);
+
+    shape.ondblclick = () => rotateShape(shape);
+
     map.appendChild(shape);
+
   });
+
 }
 
-/* ================================
-   SAVE LAYOUT
-================================ */
 async function saveLayout(){
 
   const session = await MENUVA_DB.getSession();
   const restoId = session?.restoId || "default";
 
   const layout = {
-    id:"layout_"+restoId,
+    id: "layout_" + restoId,
     restoId,
-    tables:CURRENT_LAYOUT.tables,
-    shapes:CURRENT_LAYOUT.shapes
+    tables: CURRENT_LAYOUT.tables,
+    shapes: CURRENT_LAYOUT.shapes,
+    updatedAt: Date.now()
   };
 
   await MENUVA_DB.add("restaurantLayouts", layout);
 
-  alert("Layout saved 🔥");
+  alert("Layout saved bro 🔥");
+
 }
 
-/* ================================
-   RENDER TABLE LIST
-================================ */
-async function renderTables(){
-
-  const session = await MENUVA_DB.getSession();
-  const restoId = session?.restoId || "default";
-
-  const tables = await MENUVA_DB.getAll("restaurantTables");
-
-  const grid = document.getElementById("tablePreviewGrid");
-  if(!grid) return;
-
-  const filtered = tables.filter(t => t.restoId === restoId);
-
-  let html = "";
-
-  filtered.forEach(table => {
-
-    html += `
-      <div class="terminal-card table-card">
-
-        <div class="terminal-card-header">
-          <span>${table.name}</span>
-        </div>
-
-        <div class="terminal-card-body">
-
-          <div>👥 ${table.capacity} Pax</div>
-          <div>📍 ${table.zone}</div>
-
-          <div style="margin-top:8px;">
-            <button onclick="editTable('${table.id}')">Edit</button>
-            <button onclick="deleteTable('${table.id}')">Delete</button>
-          </div>
-
-        </div>
-      </div>
-    `;
-
-  });
-
-  grid.innerHTML = html;
-}
-
-async function deleteTable(id){
-  if(!confirm("Delete this table?")) return;
-
-  await MENUVA_DB.delete("restaurantTables", id);
-
-  renderTables();
-  renderTableMap();
-}
-
-/* ================================
-   LOAD DEPOSIT SETTING (SAFE)
-================================ */
-async function loadDepositSetting(){
-
-  try{
-
-    const data = await MENUVA_DB.get(
-      "reservationSettings",
-      "reservation_settings"
-    );
-
-    if(!data) return;
-
-    const toggle = document.getElementById("depositToggle");
-    const bank = document.getElementById("depositBankName");
-    const accNum = document.getElementById("depositAccountNumber");
-    const accName = document.getElementById("depositAccountHolder");
-    const amount = document.getElementById("depositAmount");
-    const preview = document.getElementById("depositQRPreview");
-
-    if(toggle) toggle.checked = data.depositEnabled || false;
-    if(bank) bank.value = data.bankName || "";
-    if(accNum) accNum.value = data.accountNumber || "";
-    if(accName) accName.value = data.accountHolder || "";
-    if(amount) amount.value = data.depositAmount || "";
-
-    if(preview && data.qrImage){
-      preview.src = data.qrImage;
-      preview.style.display = "block";
-    }
-
-  }catch(err){
-    console.error("❌ loadDepositSetting error:", err);
-  }
-}
-
-/* ================================
-   SAVE DEPOSIT SETTING (SAFE)
-================================ */
-async function saveDepositSetting(){
-
-  const session = await MENUVA_DB.getSession();
-  const restoId = session?.restoId || "default";
-
-  const data = {
-    id: "reservation_settings",
-    restoId,
-    depositEnabled: document.getElementById("depositToggle")?.checked || false,
-    bankName: document.getElementById("depositBankName")?.value || "",
-    accountNumber: document.getElementById("depositAccountNumber")?.value || "",
-    accountHolder: document.getElementById("depositAccountHolder")?.value || "",
-    depositAmount: parseInt(document.getElementById("depositAmount")?.value) || 0,
-    qrImage: document.getElementById("depositQRPreview")?.src || "",
-    updatedAt: Date.now()
-  };
-
-  await MENUVA_DB.add("reservationSettings", data);
-
-  alert("Deposit setting saved bro 🔥");
-}
-
-/* ================================
-   AUTO GENERATE TABLE LAYOUT
-================================ */
 async function generateAutoLayout(){
 
   const session = await MENUVA_DB.getSession();
@@ -557,39 +661,98 @@ async function generateAutoLayout(){
   const tables = await MENUVA_DB.getAll("restaurantTables");
   const filtered = tables.filter(t => t.restoId === restoId);
 
-  if(!filtered.length) return;
-
   const map = document.getElementById("tableEditorMap");
-  if(!map) return;
 
-  const mapWidth = map.clientWidth;
-  const mapHeight = map.clientHeight;
+  const spacing = 120;
+  const cols = Math.floor(map.clientWidth / spacing) || 4;
 
-  const spacingX = 120;
-  const spacingY = 120;
+  for(let i=0;i<filtered.length;i++){
 
-  const cols = Math.floor(mapWidth / spacingX) || 4;
+    const t = filtered[i];
 
-  const totalWidth = cols * spacingX;
-  const rows = Math.ceil(filtered.length / cols);
-  const totalHeight = rows * spacingY;
+    t.x = (i % cols) * spacing + 40;
+    t.y = Math.floor(i / cols) * spacing + 40;
 
-  const offsetX = (mapWidth - totalWidth) / 2;
-  const offsetY = (mapHeight - totalHeight) / 2;
+    await MENUVA_DB.update("restaurantTables", t);
 
-  for(let i = 0; i < filtered.length; i++){
-
-    const table = filtered[i];
-
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-
-    table.x = offsetX + col * spacingX;
-    table.y = offsetY + row * spacingY;
-
-    await MENUVA_DB.update("restaurantTables", table);
   }
 
   renderTableMap();
 
 }
+
+function previewDepositQR(event){
+
+  const file = event.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e){
+    const preview = document.getElementById("depositQRPreview");
+    preview.src = e.target.result;
+    preview.style.display = "block";
+  };
+
+  reader.readAsDataURL(file);
+}
+
+async function saveDepositSetting(){
+
+  const session = await MENUVA_DB.getSession();
+  const restoId = session?.restoId || "default";
+
+  const data = {
+    id:"reservation_settings",
+    restoId,
+    depositEnabled: document.getElementById("depositToggle").checked,
+    bankName: document.getElementById("depositBankName").value,
+    accountNumber: document.getElementById("depositAccountNumber").value,
+    accountHolder: document.getElementById("depositAccountHolder").value,
+    depositAmount: parseInt(document.getElementById("depositAmount").value) || 0,
+    qrImage: document.getElementById("depositQRPreview").src || "",
+    updatedAt: Date.now()
+  };
+
+  await MENUVA_DB.add("reservationSettings", data);
+
+  alert("Deposit setting saved");
+
+}
+
+async function loadDepositSetting(){
+
+  const data = await MENUVA_DB.get(
+    "reservationSettings",
+    "reservation_settings"
+  );
+
+  if(!data) return;
+
+  document.getElementById("depositToggle").checked = data.depositEnabled;
+  document.getElementById("depositBankName").value = data.bankName || "";
+  document.getElementById("depositAccountNumber").value = data.accountNumber || "";
+  document.getElementById("depositAccountHolder").value = data.accountHolder || "";
+  document.getElementById("depositAmount").value = data.depositAmount || "";
+
+  if(data.qrImage){
+    const preview = document.getElementById("depositQRPreview");
+    preview.src = data.qrImage;
+    preview.style.display = "block";
+  }
+
+}
+
+/* =========================
+   INIT
+========================= */
+
+document.addEventListener("DOMContentLoaded", async function(){
+
+  await renderTables();
+  await renderTableMap();
+  await loadDepositSetting();
+
+  initLayoutEditor();
+
+});
