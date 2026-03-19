@@ -1388,6 +1388,36 @@ updateToggleUI();
 window.addEventListener("mouseup", () => activeDrag = null);
 window.addEventListener("touchend", () => activeDrag = null);
 
+function showEditor(mode){
+
+document.getElementById("tableEditorPanel").style.display =
+mode === "table" ? "block" : "none";
+
+document.getElementById("layoutEditorPanel").style.display =
+mode === "layout" ? "block" : "none";
+
+}
+
+function showEditor(mode){
+
+const tablePanel = document.getElementById("tableEditorPanel");
+const layoutPanel = document.getElementById("layoutEditorPanel");
+
+tablePanel.style.display = mode === "table" ? "block" : "none";
+layoutPanel.style.display = mode === "layout" ? "block" : "none";
+
+/* ACTIVE STYLE */
+document.querySelectorAll(".mode-switch button")
+.forEach(btn => btn.classList.remove("active"));
+
+if(mode === "table"){
+document.querySelector(".mode-switch button:nth-child(1)").classList.add("active");
+}else{
+document.querySelector(".mode-switch button:nth-child(2)").classList.add("active");
+}
+
+}
+
 /* ================================
    INIT
 ================================ */
