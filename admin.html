@@ -2832,6 +2832,32 @@ border-color:#555;
 .switch.active + .switch-label {
   color: #10b981;
 }
+
+.mode-switch {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.mode-switch button {
+  flex: 1;
+  padding: 6px;
+  font-size: 11px;
+  background: #111;
+  border: 1px solid #333;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.mode-switch button:hover {
+  color: #fff;
+  border-color: #666;
+}
+
+.mode-switch button.active {
+  color: #10b981;
+  border-color: #10b981;
+}
 </style>
 </head>
 <body>
@@ -3056,229 +3082,161 @@ border-color:#555;
 
 <h4 class="menu-categories-title">TABLE RESERVATION</h4>
 
-<div class="terminal-header">
-<span></span>
-</div>
-
 <div class="terminal-body">
 
-<!-- LEFT PANEL -->
+<!-- ================= LEFT PANEL ================= -->
 <div class="terminal-left">
 
-<!-- ADD TABLE CARD -->
+  <!-- 🔥 MODE SWITCH (TARUH DI SINI) -->
+<div class="mode-switch">
+  <button onclick="showEditor('table')">TABLE</button>
+  <button onclick="showEditor('layout')">LAYOUT</button>
+</div>
+
+<!-- ADD TABLE -->
 <div class="terminal-card add-category-card" onclick="openTableEditor()">
-<div class="terminal-card-header">
-<span class="terminal-title">TABLE SYSTEM</span>
+  <div class="terminal-card-header">
+    <span class="terminal-title">TABLE SYSTEM</span>
+  </div>
+  <div class="terminal-card-body">
+    <h3>+ ADD TABLE</h3>
+  </div>
 </div>
-
-<div class="terminal-card-body">
-<h3>+ ADD TABLE</h3>
-</div>
-</div>
-
 
 <!-- ================= TABLE EDITOR ================= -->
-
 <div id="tableEditorPanel" class="terminal-editor">
 
-<!-- EDITOR HEADER -->
 <div class="editor-header">
-<h3>TABLE EDITOR</h3>
-<span class="editor-hint">
-Create / Update Restaurant Tables
-</span>
+  <h3>TABLE EDITOR</h3>
+  <span class="editor-hint">
+    Create / Update Restaurant Tables
+  </span>
 </div>
 
-
-<input
-type="text"
-id="tableNameInput"
-placeholder="Table Name / Number"
-/>
-
-
-<input
-type="number"
-id="tableCapacityInput"
-placeholder="Capacity"
-/>
-
+<input id="tableNameInput" type="text" placeholder="Table Name / Number" />
+<input id="tableCapacityInput" type="number" placeholder="Capacity" />
 
 <select id="tableZoneInput">
-<option value="indoor">Indoor</option>
-<option value="outdoor">Outdoor</option>
-<option value="vip">VIP</option>
+  <option value="indoor">Indoor</option>
+  <option value="outdoor">Outdoor</option>
+  <option value="vip">VIP</option>
 </select>
 
-
-<!-- TABLE CATEGORY -->
 <select id="tableCategoryInput">
-<option value="dining">Dining Table</option>
-<option value="bar">Bar Table</option>
-<option value="lounge">Lounge Sofa</option>
-<option value="smoking">Smoking Area</option>
-<option value="private">Private Table</option>
+  <option value="dining">Dining Table</option>
+  <option value="bar">Bar Table</option>
+  <option value="lounge">Lounge Sofa</option>
+  <option value="smoking">Smoking Area</option>
+  <option value="private">Private Table</option>
 </select>
 
+<textarea id="tableNotesInput"
+placeholder="Table Notes"></textarea>
 
-<!-- TABLE NOTES -->
-<textarea
-id="tableNotesInput"
-placeholder="Table Notes (ex: Smoking Area / Near Window)"
-></textarea>
-
-
-<!-- IMAGE UPLOAD -->
+<!-- IMAGE -->
 <div class="table-image-upload">
+  <label>Table Image</label>
+  <input type="file" id="tableImageInput"
+  accept="image/*"
+  onchange="previewTableImage(event)" />
 
-<label>Table Image</label>
-
-<input
-type="file"
-id="tableImageInput"
-accept="image/*"
-onchange="previewTableImage(event)"
-/>
-
-<div class="table-image-preview-box">
-<img id="tableImagePreview" />
+  <div class="table-image-preview-box">
+    <img id="tableImagePreview" />
+  </div>
 </div>
 
-</div>
-
-<div class="layout-tools">
-
-<button onclick="addLayoutShape('wall')">Wall</button>
-
-<button onclick="addLayoutShape('partition')">Partition</button>
-
-<button onclick="addLayoutShape('bar')">Bar</button>
-
-<button onclick="addLayoutShape('vip-area')">VIP Area</button>
-
-<button onclick="addLayoutShape('door')">Door</button>
-
-<button onclick="addLayoutShape('window')">Window</button>
-
-<button onclick="addLayoutShape('floor')">Floor</button>
-
-</div>
-  
-<div class="terminal-card">
-
-<div class="zone-legend">
-
-<span class="zone indoor">INDOOR</span>
-
-<span class="zone outdoor">OUTDOOR</span>
-
-<span class="zone vip">VIP</span>
-
-<span class="zone bar">BAR</span>
-
-</div>
-
-<div class="terminal-title">
-TABLE LAYOUT MAP
-</div>
-
-<div class="terminal-note">
-Drag tables/Shape to arrange restaurant layout & Long Press to delete shape
-</div>
-
-  <div id="tableEditorMap" class="table-editor-map"></div>
-
-  <button id="deleteShapeBtn" class="delete-shape-btn" title="Delete Shape">
-    🗑
-  </button>
-
-</div>
-
+<!-- ACTIVE -->
 <label class="switch">
   <input type="checkbox" id="tableActiveToggle" checked>
   <span class="slider"></span>
 </label>
-
 <span class="switch-label" id="tableActiveText">ACTIVE</span>
 
-
-<!-- ACTION BUTTONS -->
+<!-- ACTION -->
 <div class="table-editor-actions">
+  <button onclick="saveTable()">SAVE TABLE</button>
+  <button onclick="clearTableForm()">CLEAR</button>
+</div>
 
-<button onclick="saveTable()">
-SAVE TABLE
-</button>
+</div>
 
-<button onclick="clearTableForm()">
-CLEAR
-</button>
+<!-- ================= LAYOUT EDITOR ================= -->
+<div id="layoutEditorPanel" class="terminal-editor layout-editor">
 
-<button onclick="generateAutoLayout()" class="terminal-btn">
-RESET LAYOUT
-</button>
+<div class="editor-header">
+  <h3>LAYOUT EDITOR</h3>
+  <span class="editor-hint">
+    Arrange Table Position & Floor Map
+  </span>
+</div>
 
+<!-- SHAPE TOOLS -->
+<div class="layout-tools">
+  <button onclick="addLayoutShape('wall')">Wall</button>
+  <button onclick="addLayoutShape('partition')">Partition</button>
+  <button onclick="addLayoutShape('bar')">Bar</button>
+  <button onclick="addLayoutShape('vip-area')">VIP Area</button>
+  <button onclick="addLayoutShape('door')">Door</button>
+  <button onclick="addLayoutShape('window')">Window</button>
+  <button onclick="addLayoutShape('floor')">Floor</button>
+</div>
+
+<!-- MAP -->
+<div class="terminal-card">
+
+<div class="zone-legend">
+  <span class="zone indoor">INDOOR</span>
+  <span class="zone outdoor">OUTDOOR</span>
+  <span class="zone vip">VIP</span>
+  <span class="zone bar">BAR</span>
+</div>
+
+<div class="terminal-title">TABLE LAYOUT MAP</div>
+
+<div class="terminal-note">
+Drag tables / shape • Long press delete
+</div>
+
+<div id="tableEditorMap" class="table-editor-map"></div>
+
+<button id="deleteShapeBtn" class="delete-shape-btn">🗑</button>
+
+</div>
+
+<!-- ACTION -->
+<div class="table-editor-actions">
+  <button onclick="saveLayout()">SAVE LAYOUT</button>
+  <button onclick="generateAutoLayout()">AUTO LAYOUT</button>
 </div>
 
 </div>
 
 </div>
-
 
 <!-- ================= RIGHT PANEL ================= -->
-
 <div class="terminal-right">
 
-
-<!-- TABLE SEARCH -->
 <div class="table-search-bar">
-
-<input
-type="text"
-id="tableSearchInput"
-placeholder="Search Table (ex: T01)"
-onkeyup="searchTables()"
-/>
-
+  <input id="tableSearchInput"
+  type="text"
+  placeholder="Search Table"
+  onkeyup="searchTables()" />
 </div>
 
-
-<!-- TABLE FILTER -->
 <div class="terminal-filter-bar">
-
-<button onclick="filterTables('all')">ALL</button>
-
-<button onclick="filterTables('indoor')">
-INDOOR
-</button>
-
-<button onclick="filterTables('outdoor')">
-OUTDOOR
-</button>
-
-<button onclick="filterTables('vip')">
-VIP
-</button>
-
+  <button onclick="filterTables('all')">ALL</button>
+  <button onclick="filterTables('indoor')">INDOOR</button>
+  <button onclick="filterTables('outdoor')">OUTDOOR</button>
+  <button onclick="filterTables('vip')">VIP</button>
 </div>
 
+<div id="tableStats" class="table-stats"></div>
 
-<!-- TABLE STATS -->
-<div id="tableStats" class="table-stats">
-
-Total Tables : 0 |
-Active : 0 |
-Available : 0
-
-</div>
-
-
-<!-- TABLE GRID -->
 <div id="tablePreviewGrid" class="terminal-grid"></div>
 
 </div>
 
 </div>
-
 </div>
 
   <div class="terminal-card">
