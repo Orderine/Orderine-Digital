@@ -26,6 +26,16 @@ const ZONE_COLORS = {
   bar: "rgba(249,115,22,0.25)"
 };
 
+let TABLE_CACHE = [];
+
+async function loadTablesOnce(){
+  const session = await MENUVA_DB.getSession();
+  const restoId = session?.restoId || "default";
+
+  const tables = await MENUVA_DB.getAll("restaurantTables");
+  TABLE_CACHE = tables.filter(t => t.restoId === restoId);
+}
+
 /* =========================
    INIT LAYOUT EDITOR
 ========================= */
@@ -46,7 +56,7 @@ function initLayoutEditor(){
 
     const shape = e.target.closest(".layout-shape");
 
-    document.querySelectorAll(".layout-shape")
+    map.querySelectorAll(".layout-shape")
       .forEach(el => el.classList.remove("selected"));
 
     if(shape){
@@ -83,15 +93,15 @@ function initLayoutEditor(){
         }
       }
 
-    }, 800);
+    }, 400);
 
   });
 
-  map.addEventListener("touchmove", () => {
-    isDragging = true;
-    clearTimeout(pressTimer);
-  });
-
+  map.addEventListener("touchmove", (e) => {
+  isDragging = true;
+  clearTimeout(pressTimer);
+});
+   
   map.addEventListener("touchend", () => {
     clearTimeout(pressTimer);
   });
@@ -142,7 +152,7 @@ async function renderTables(){
   const session = await MENUVA_DB.getSession();
   const restoId = session?.restoId || "default";
 
-  const tables = await MENUVA_DB.getAll("restaurantTables");
+ const tables = TABLE_CACHE;
 
   let filtered = tables.filter(t => t.restoId === restoId);
 
@@ -151,67 +161,73 @@ async function renderTables(){
   }
 
   if(currentSearch){
+    const keyword = currentSearch.toLowerCase();
     filtered = filtered.filter(t =>
-      t.name.toLowerCase().includes(currentSearch)
+      t.name.toLowerCase().includes(keyword)
     );
   }
 
   const grid = document.getElementById("tablePreviewGrid");
+  if(!grid) return;
 
-  let html = "";
+  // 🔥 pakai fragment biar gak berat
+  const fragment = document.createDocumentFragment();
 
   filtered.forEach(table => {
 
     const statusColor = getTableStatusColor(table.status);
     const opacity = table.active ? "1" : "0.4";
 
-    html += `
-      <div class="terminal-card table-card" style="opacity:${opacity}">
+    const card = document.createElement("div");
+    card.className = "terminal-card table-card";
+    card.style.opacity = opacity;
 
-        ${table.image ? `
-          <img src="${table.image}" class="table-card-image">
-        ` : ""}
+    card.innerHTML = `
+      ${table.image ? `<img src="${table.image}" class="table-card-image">` : ""}
 
-        <div class="terminal-card-header">
-          <span class="terminal-title">${table.name}</span>
+      <div class="terminal-card-header">
+        <span class="terminal-title">${table.name}</span>
+      </div>
+
+      <div class="terminal-card-body table-info">
+
+        <div class="table-meta">
+          <span>👥 ${table.capacity} Pax</span>
+          <span>📍 ${table.zone}</span>
         </div>
 
-        <div class="terminal-card-body table-info">
+        <div class="table-meta">
+          <span>🍽 ${table.category || "-"}</span>
+        </div>
 
-          <div class="table-meta">
-            <span>👥 ${table.capacity} Pax</span>
-            <span>📍 ${table.zone}</span>
-          </div>
+        <div class="table-notes">
+          ${table.notes || ""}
+        </div>
 
-          <div class="table-meta">
-            <span>🍽 ${table.category || "-"}</span>
-          </div>
+        <div class="table-status" style="background:${statusColor}">
+          ${table.status}
+        </div>
 
-          <div class="table-notes">
-            ${table.notes || ""}
-          </div>
-
-          <div class="table-status"
-            style="background:${statusColor}">
-            ${table.status}
-          </div>
-
-          <div class="table-actions">
-            <button onclick="editTable('${table.id}')">Edit</button>
-            <button onclick="deleteTable('${table.id}')">Delete</button>
-          </div>
-
+        <div class="table-actions">
+          <button data-edit="${table.id}">Edit</button>
+          <button data-delete="${table.id}">Delete</button>
         </div>
 
       </div>
     `;
 
+    // 🔥 event delegation ringan (no inline onclick)
+    card.querySelector("[data-edit]")?.addEventListener("click", () => editTable(table.id));
+    card.querySelector("[data-delete]")?.addEventListener("click", () => deleteTable(table.id));
+
+    fragment.appendChild(card);
   });
 
-  if(grid) grid.innerHTML = html;
+  // 🔥 clear sekali aja
+  grid.innerHTML = "";
+  grid.appendChild(fragment);
 
   updateTableStats(filtered);
-
 }
 /* =========================
    AUTO NAME
@@ -301,8 +317,7 @@ async function renderTableMap(){
   const session = await MENUVA_DB.getSession();
   const restoId = session?.restoId || "default";
 
-  const tables = await MENUVA_DB.getAll("restaurantTables");
-  const filtered = tables.filter(t => t.restoId === restoId);
+  const filtered = TABLE_CACHE; // 🔥 pakai cache langsung
 
   const layout = await MENUVA_DB.get("restaurantLayouts", "layout_" + restoId);
 
@@ -312,16 +327,20 @@ async function renderTableMap(){
   const map = document.getElementById("tableEditorMap");
   if(!map) return;
 
+  // 🔥 clear dulu
   map.innerHTML = "";
 
-  if(CURRENT_LAYOUT.shapes.length){
-    renderLayoutShapes(CURRENT_LAYOUT.shapes);
-  }
+  // 🔥 bikin hashmap sekali
+  const layoutMap = {};
+  CURRENT_LAYOUT.tables.forEach(t => {
+    layoutMap[t.tableId] = t;
+  });
+
+  const fragment = document.createDocumentFragment();
 
   filtered.forEach(table => {
 
-    const layoutTable =
-      CURRENT_LAYOUT.tables.find(t => t.tableId === table.id);
+    const layoutTable = layoutMap[table.id];
 
     const node = document.createElement("div");
 
@@ -331,7 +350,7 @@ async function renderTableMap(){
     node.innerHTML = `
       <div class="table-visual">
         ${table.image
-          ? `<img src="${table.image}" class="table-img">`
+          ? `<img src="${table.image}" class="table-img" loading="lazy">`
           : `<div class="table-fallback"></div>`}
         <div class="table-label">${table.name}</div>
       </div>
@@ -340,21 +359,18 @@ async function renderTableMap(){
     const x = layoutTable?.x ?? table.x ?? 100;
     const y = layoutTable?.y ?? table.y ?? 100;
 
-    node.style.left = x + "px";
-    node.style.top = y + "px";
-
     const rotation = layoutTable?.rotation ?? 0;
+    node.dataset.rotate = rotation;
 
-    if(rotation){
-      node.dataset.rotate = rotation;
-      node.style.transform = `rotate(${rotation}deg)`;
-    }
+    node.style.transform =
+      `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
 
     enableTableDrag(node);
-    map.appendChild(node);
 
+    fragment.appendChild(node);
   });
 
+  map.appendChild(fragment);
 }
 
 /* =========================
@@ -363,11 +379,16 @@ async function renderTableMap(){
 
 function enableTableDrag(node){
 
+  // 🔥 prevent double init
+  if(node.dataset.dragInit) return;
+  node.dataset.dragInit = "1";
+
   const map = document.getElementById("tableEditorMap");
 
   let offsetX = 0;
   let offsetY = 0;
   let lastTap = 0;
+  let mapRect = null;
 
   function move(x,y){
     x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
@@ -376,17 +397,18 @@ function enableTableDrag(node){
     x = snapToGrid(x);
     y = snapToGrid(y);
 
-    node.style.left = x + "px";
-    node.style.top = y + "px";
+    node.style.transform =
+      `translate(${x}px, ${y}px) rotate(${node.dataset.rotate || 0}deg)`;
   }
 
-  /* DESKTOP */
+  /* ================= DESKTOP ================= */
   node.addEventListener("mousedown", e => {
 
     if(activeDrag) return;
     activeDrag = node;
 
     const rect = node.getBoundingClientRect();
+    mapRect = map.getBoundingClientRect(); // 🔥 cache sekali
 
     offsetX = e.clientX - rect.left;
     offsetY = e.clientY - rect.top;
@@ -394,15 +416,21 @@ function enableTableDrag(node){
     node.classList.add("dragging");
 
     function onMove(e){
-      const rect = map.getBoundingClientRect();
-      move(e.clientX - rect.left - offsetX, e.clientY - rect.top - offsetY);
+      e.preventDefault();
+
+      move(
+        e.clientX - mapRect.left - offsetX,
+        e.clientY - mapRect.top - offsetY
+      );
     }
 
     function onUp(){
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
+
       activeDrag = null;
       node.classList.remove("dragging");
+
       updateMemory();
     }
 
@@ -411,8 +439,10 @@ function enableTableDrag(node){
 
   });
 
-  /* MOBILE */
+  /* ================= MOBILE ================= */
   node.addEventListener("touchstart", e => {
+
+    e.preventDefault();
 
     if(activeDrag) return;
     activeDrag = node;
@@ -421,6 +451,7 @@ function enableTableDrag(node){
 
     const touch = e.touches[0];
     const rect = node.getBoundingClientRect();
+    mapRect = map.getBoundingClientRect(); // 🔥 cache
 
     offsetX = touch.clientX - rect.left;
     offsetY = touch.clientY - rect.top;
@@ -428,13 +459,15 @@ function enableTableDrag(node){
     node.classList.add("dragging");
 
     function onMove(e){
+      e.preventDefault(); // 🔥 WAJIB
+
       touchMoved = true;
+
       const touch = e.touches[0];
-      const rect = map.getBoundingClientRect();
 
       move(
-        touch.clientX - rect.left - offsetX,
-        touch.clientY - rect.top - offsetY
+        touch.clientX - mapRect.left - offsetX,
+        touch.clientY - mapRect.top - offsetY
       );
     }
 
@@ -448,7 +481,7 @@ function enableTableDrag(node){
 
       updateMemory();
 
-      /* DOUBLE TAP ROTATE */
+      // 🔥 double tap rotate
       const now = Date.now();
       if(!touchMoved && now - lastTap < 250){
         rotateTable(node);
@@ -456,7 +489,6 @@ function enableTableDrag(node){
       } else {
         lastTap = now;
       }
-
     }
 
     document.addEventListener("touchmove", onMove, { passive:false });
@@ -464,8 +496,8 @@ function enableTableDrag(node){
 
   });
 
-  /* DESKTOP ROTATE */
-  node.addEventListener("dblclick", e => {
+  /* ================= ROTATE ================= */
+  node.addEventListener("dblclick", () => {
     if(node.classList.contains("dragging")) return;
     rotateTable(node);
   });
@@ -610,8 +642,7 @@ function enableShapeDrag(node){
       x = snapToGrid(x);
       y = snapToGrid(y);
 
-      node.style.left = x + "px";
-      node.style.top = y + "px";
+      node.style.transform = `translate(${x}px, ${y}px) rotate(${node.dataset.rotate || 0}deg)`;
     }
 
     function up(){
@@ -657,7 +688,7 @@ function enableShapeResize(node, handle){
 
 function getLayoutData(){
 
-  const shapes = document.querySelectorAll(".layout-shape");
+  const shapes = map.querySelectorAll(".layout-shape");
 
   return Array.from(shapes).map(shape => ({
     type: shape.dataset.type || "",
@@ -986,10 +1017,11 @@ document.addEventListener("DOMContentLoaded", async function(){
     return;
   }
 
-  await renderTables();
-  await renderTableMap();
-  await loadDepositSetting();
+ await loadTablesOnce();
 
-  initLayoutEditor();
-
+await Promise.all([
+  renderTables(),
+  renderTableMap(),
+  loadDepositSetting()
+]);
 });
