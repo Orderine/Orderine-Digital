@@ -282,11 +282,13 @@ async function renderTables(){
     `;
 
     // 🔥 event delegation ringan (no inline onclick)
-    card.querySelector("[data-edit]")?.addEventListener("click", () => editTable(table.id));
-    card.querySelector("[data-delete]")?.addEventListener("click", () => deleteTable(table.id));
+   grid.addEventListener("click", (e) => {
+  const editId = e.target.dataset.edit;
+  const deleteId = e.target.dataset.delete;
 
-    fragment.appendChild(card);
-  });
+  if (editId) editTable(editId);
+  if (deleteId) deleteTable(deleteId);
+});
 
   // 🔥 clear sekali aja
   grid.innerHTML = "";
@@ -377,34 +379,42 @@ async function saveTable(){
    TABLE MAP RENDER
 ========================= */
 
-async function renderTableMap(){
+let cachedLayout = null;
+let cachedRestoId = null;
 
+async function renderTableMap() {
+  const map = document.getElementById("tableEditorMap");
+  if (!map) return;
+
+  // 🔥 ambil session sekali
   const session = await MENUVA_DB.getSession();
   const restoId = session?.restoId || "default";
 
-  const filtered = TABLE_CACHE; // 🔥 pakai cache langsung
+  // 🔥 cache layout (biar gak hit DB terus)
+  if (!cachedLayout || cachedRestoId !== restoId) {
+    cachedLayout = await MENUVA_DB.get(
+      "restaurantLayouts",
+      "layout_" + restoId
+    );
+    cachedRestoId = restoId;
+  }
 
-  const layout = await MENUVA_DB.get("restaurantLayouts", "layout_" + restoId);
+  const tablesLayout = cachedLayout?.tables || [];
+  CURRENT_LAYOUT.tables = tablesLayout;
+  CURRENT_LAYOUT.shapes = cachedLayout?.shapes || [];
 
-  CURRENT_LAYOUT.tables = layout?.tables || [];
-  CURRENT_LAYOUT.shapes = layout?.shapes || [];
-
-  const map = document.getElementById("tableEditorMap");
-  if(!map) return;
-
-  // 🔥 clear dulu
-  map.innerHTML = "";
-
-  // 🔥 bikin hashmap sekali
-  const layoutMap = {};
-  CURRENT_LAYOUT.tables.forEach(t => {
+  // 🔥 hashmap super cepat
+  const layoutMap = Object.create(null);
+  for (const t of tablesLayout) {
     layoutMap[t.tableId] = t;
-  });
+  }
+
+  // 🔥 detach DOM (biar gak reflow berkali-kali)
+  map.innerHTML = "";
 
   const fragment = document.createDocumentFragment();
 
-  filtered.forEach(table => {
-
+  for (const table of TABLE_CACHE) {
     const layoutTable = layoutMap[table.id];
 
     const node = document.createElement("div");
@@ -412,163 +422,124 @@ async function renderTableMap(){
     node.className = `table-node ${table.shape || "circle"} ${table.zone}`;
     node.dataset.id = table.id;
 
-    node.innerHTML = `
-      <div class="table-visual">
-        ${table.image
-          ? `<img src="${table.image}" class="table-img" loading="lazy">`
-          : `<div class="table-fallback"></div>`}
-        <div class="table-label">${table.name}</div>
-      </div>
-    `;
+    // 🔥 innerHTML tetap tapi minimal
+    node.innerHTML = table.image
+      ? `<div class="table-visual">
+           <img src="${table.image}" class="table-img" loading="lazy">
+           <div class="table-label">${table.name}</div>
+         </div>`
+      : `<div class="table-visual">
+           <div class="table-fallback"></div>
+           <div class="table-label">${table.name}</div>
+         </div>`;
 
+    // 🔥 hitung posisi
     const x = layoutTable?.x ?? table.x ?? 100;
     const y = layoutTable?.y ?? table.y ?? 100;
-
     const rotation = layoutTable?.rotation ?? 0;
+
     node.dataset.rotate = rotation;
 
-    node.style.transform =
-      `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
-
-    enableTableDrag(node);
+    // 🔥 1x style apply (minimize reflow)
+    node.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rotation}deg)`;
 
     fragment.appendChild(node);
-  });
+  }
 
+  // 🔥 append sekali
   map.appendChild(fragment);
+
+  // 🔥 AKTIFKAN DRAG SEKALI SAJA (INI PENTING BANGET)
+  enableTableDragForContainer(map);
 }
 
 /* =========================
    DRAG TABLE (CLEAN)
 ========================= */
 
-function enableTableDrag(node){
+function enableTableDragForContainer(map){
 
-  // 🔥 prevent double init
-  if(node.dataset.dragInit) return;
-  node.dataset.dragInit = "1";
-
-  const map = document.getElementById("tableEditorMap");
-
+  let activeNode = null;
   let offsetX = 0;
   let offsetY = 0;
   let lastTap = 0;
-  let mapRect = null;
 
-  function move(x,y){
-    x = Math.max(0, Math.min(x, map.clientWidth - node.offsetWidth));
-    y = Math.max(0, Math.min(y, map.clientHeight - node.offsetHeight));
+  // 🔥 pakai pointer events (1 sistem semua device)
+  map.addEventListener("pointerdown", (e) => {
 
-    x = snapToGrid(x);
-    y = snapToGrid(y);
+    const node = e.target.closest(".table-node");
+    if (!node) return;
 
-    node.style.transform =
-      `translate(${x}px, ${y}px) rotate(${node.dataset.rotate || 0}deg)`;
-  }
-
-  /* ================= DESKTOP ================= */
-  node.addEventListener("mousedown", e => {
-
-    if(activeDrag) return;
-    activeDrag = node;
+    if (activeNode) return;
+    activeNode = node;
 
     const rect = node.getBoundingClientRect();
-    mapRect = map.getBoundingClientRect(); // 🔥 cache sekali
+    const mapRect = map.getBoundingClientRect();
 
     offsetX = e.clientX - rect.left;
     offsetY = e.clientY - rect.top;
 
     node.classList.add("dragging");
 
-    function onMove(e){
-      e.preventDefault();
-
-      move(
-        e.clientX - mapRect.left - offsetX,
-        e.clientY - mapRect.top - offsetY
-      );
-    }
-
-    function onUp(){
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-
-      activeDrag = null;
-      node.classList.remove("dragging");
-
-      updateMemory();
-    }
-
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    node.setPointerCapture(e.pointerId);
 
   });
 
-  /* ================= MOBILE ================= */
-  node.addEventListener("touchstart", e => {
+  map.addEventListener("pointermove", (e) => {
 
-    e.preventDefault();
+    if (!activeNode) return;
 
-    if(activeDrag) return;
-    activeDrag = node;
+    const mapRect = map.getBoundingClientRect();
 
-    touchMoved = false;
+    let x = e.clientX - mapRect.left - offsetX;
+    let y = e.clientY - mapRect.top - offsetY;
 
-    const touch = e.touches[0];
-    const rect = node.getBoundingClientRect();
-    mapRect = map.getBoundingClientRect(); // 🔥 cache
+    // 🔥 boundary
+    x = Math.max(0, Math.min(x, map.clientWidth - activeNode.offsetWidth));
+    y = Math.max(0, Math.min(y, map.clientHeight - activeNode.offsetHeight));
 
-    offsetX = touch.clientX - rect.left;
-    offsetY = touch.clientY - rect.top;
+    // 🔥 snap
+    x = snapToGrid(x);
+    y = snapToGrid(y);
 
-    node.classList.add("dragging");
-
-    function onMove(e){
-      e.preventDefault(); // 🔥 WAJIB
-
-      touchMoved = true;
-
-      const touch = e.touches[0];
-
-      move(
-        touch.clientX - mapRect.left - offsetX,
-        touch.clientY - mapRect.top - offsetY
-      );
-    }
-
-    function onEnd(){
-
-      document.removeEventListener("touchmove", onMove);
-      document.removeEventListener("touchend", onEnd);
-
-      activeDrag = null;
-      node.classList.remove("dragging");
-
-      updateMemory();
-
-      // 🔥 double tap rotate
-      const now = Date.now();
-      if(!touchMoved && now - lastTap < 250){
-        rotateTable(node);
-        lastTap = 0;
-      } else {
-        lastTap = now;
-      }
-    }
-
-    document.addEventListener("touchmove", onMove, { passive:false });
-    document.addEventListener("touchend", onEnd);
+    activeNode.style.transform =
+      `translate3d(${x}px, ${y}px, 0) rotate(${activeNode.dataset.rotate || 0}deg)`;
 
   });
 
-  /* ================= ROTATE ================= */
-  node.addEventListener("dblclick", () => {
-    if(node.classList.contains("dragging")) return;
+  map.addEventListener("pointerup", (e) => {
+
+    if (!activeNode) return;
+
+    activeNode.classList.remove("dragging");
+    activeNode.releasePointerCapture(e.pointerId);
+
+    updateMemory();
+
+    // 🔥 DOUBLE TAP (ANDROID FIX)
+    const now = Date.now();
+    if (now - lastTap < 250) {
+      rotateTable(activeNode);
+      lastTap = 0;
+    } else {
+      lastTap = now;
+    }
+
+    activeNode = null;
+
+  });
+
+  /* ================= ROTATE DESKTOP ================= */
+  map.addEventListener("dblclick", (e) => {
+    const node = e.target.closest(".table-node");
+    if (!node) return;
+    if (node.classList.contains("dragging")) return;
+
     rotateTable(node);
   });
 
 }
-
+   
 /* =========================
    ROTATE TABLE
 ========================= */
@@ -893,28 +864,35 @@ async function saveDepositSetting(){
 }
 
 async function loadDepositSetting(){
+let cachedDeposit = null;
 
-  const data = await MENUVA_DB.get(
-    "reservationSettings",
-    "reservation_settings"
-  );
+async function loadDepositSetting() {
+  if (!cachedDeposit) {
+    cachedDeposit = await MENUVA_DB.get(
+      "reservationSettings",
+      "reservation_settings"
+    );
+  }
 
-  if(!data) return;
+  const data = cachedDeposit;
+  if (!data) return;
 
-  document.getElementById("depositToggle").checked = data.depositEnabled;
-  document.getElementById("depositBankName").value = data.bankName || "";
-  document.getElementById("depositAccountNumber").value = data.accountNumber || "";
-  document.getElementById("depositAccountHolder").value = data.accountHolder || "";
-  document.getElementById("depositAmount").value = data.depositAmount || "";
+  // 🔥 cache DOM element sekali
+  const el = (id) => document.getElementById(id);
 
-  if(data.qrImage){
-    const preview = document.getElementById("depositQRPreview");
+  el("depositToggle").checked = data.depositEnabled;
+  el("depositBankName").value = data.bankName || "";
+  el("depositAccountNumber").value = data.accountNumber || "";
+  el("depositAccountHolder").value = data.accountHolder || "";
+  el("depositAmount").value = data.depositAmount || "";
+
+  if (data.qrImage) {
+    const preview = el("depositQRPreview");
     preview.src = data.qrImage;
     preview.style.display = "block";
   }
-
 }
-
+   
 function updateTableStats(tables){
 
   const total = tables.length;
