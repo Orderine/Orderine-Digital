@@ -1,72 +1,6 @@
 /* ================================
    TABLE ENGINE ORDERINE (FIXED)
 ================================ */
-
-(function () {
-  const originalFunctions = {};
-  const stats = {};
-
-  function wrapFunction(obj, key) {
-    const original = obj[key];
-    if (typeof original !== "function") return;
-
-    originalFunctions[key] = original;
-
-    obj[key] = async function (...args) {
-      const start = performance.now();
-
-      const result = await original.apply(this, args);
-
-      const duration = performance.now() - start;
-
-      if (!stats[key]) {
-        stats[key] = { count: 0, total: 0 };
-      }
-
-      stats[key].count++;
-      stats[key].total += duration;
-
-      return result;
-    };
-  }
-
-  // scan global functions
-  for (const key in window) {
-    try {
-      wrapFunction(window, key);
-    } catch (e) {}
-  }
-
-  // tampilkan hasil setelah load
-  window.addEventListener("load", () => {
-    setTimeout(() => {
-      console.table(
-        Object.entries(stats)
-          .map(([name, data]) => ({
-            function: name,
-            calls: data.count,
-            totalMs: data.total.toFixed(2),
-            avgMs: (data.total / data.count).toFixed(2),
-          }))
-          .sort((a, b) => b.totalMs - a.totalMs)
-      );
-    }, 2000);
-  });
-})();
-
-setInterval(() => {
-  console.log("🔥 Function call stats:", stats);
-}, 5000);
-
-const observer = new MutationObserver((mutations) => {
-  console.log("⚠️ DOM berubah:", mutations.length);
-});
-
-observer.observe(document.body, {
-  childList: true,
-  subtree: true,
-});
-
 let currentTableFilter = "all";
 let currentSearch = "";
 let editingTableId = null;
@@ -91,15 +25,33 @@ const ZONE_COLORS = {
   bar: "rgba(249,115,22,0.25)"
 };
 
+let SESSION_CACHE = null;
+
+async function getSessionCached(){
+  if(SESSION_CACHE) return SESSION_CACHE;
+
+  SESSION_CACHE = await MENUVA_DB.getSession();
+  return SESSION_CACHE;
+}
+
 let TABLE_CACHE = [];
 
 async function loadTablesOnce(){
-  const session = await MENUVA_DB.getSession();
+  const session = await getSessionCached();
   const restoId = session?.restoId || "default";
 
   const tables = await MENUVA_DB.getAll("restaurantTables");
+
   TABLE_CACHE = tables.filter(t => t.restoId === restoId);
+
+  // 🔥 bikin index biar super cepat
+  TABLE_INDEX = Object.create(null);
+  for(const t of TABLE_CACHE){
+    TABLE_INDEX[t.id] = t;
+  }
 }
+
+let TABLE_INDEX = {};
 
 /* =========================
    INIT LAYOUT EDITOR
@@ -204,22 +156,29 @@ function filterTables(zone){
   renderTables();
 }
 
-function searchTables(){
-  currentSearch = document
-    .getElementById("tableSearchInput")
-    .value.toLowerCase();
+let searchTimer = null;
 
-  renderTables();
+function searchTables(){
+
+  clearTimeout(searchTimer);
+
+  searchTimer = setTimeout(() => {
+
+    currentSearch = document
+      .getElementById("tableSearchInput")
+      .value.toLowerCase();
+
+    requestAnimationFrame(() => renderTables());
+
+  }, 250);
 }
 
 async function renderTables(){
 
-  const session = await MENUVA_DB.getSession();
+  const session = await getSessionCached();
   const restoId = session?.restoId || "default";
 
- const tables = TABLE_CACHE;
-
-  let filtered = tables.filter(t => t.restoId === restoId);
+  let filtered = TABLE_CACHE.filter(t => t.restoId === restoId);
 
   if(currentTableFilter !== "all"){
     filtered = filtered.filter(t => t.zone === currentTableFilter);
@@ -235,7 +194,6 @@ async function renderTables(){
   const grid = document.getElementById("tablePreviewGrid");
   if(!grid) return;
 
-  // 🔥 pakai fragment biar gak berat
   const fragment = document.createDocumentFragment();
 
   filtered.forEach(table => {
@@ -255,7 +213,6 @@ async function renderTables(){
       </div>
 
       <div class="terminal-card-body table-info">
-
         <div class="table-meta">
           <span>👥 ${table.capacity} Pax</span>
           <span>📍 ${table.zone}</span>
@@ -277,31 +234,24 @@ async function renderTables(){
           <button data-edit="${table.id}">Edit</button>
           <button data-delete="${table.id}">Delete</button>
         </div>
-
       </div>
     `;
 
-    // 🔥 event delegation ringan (no inline onclick)
-   grid.addEventListener("click", (e) => {
-  const editId = e.target.dataset.edit;
-  const deleteId = e.target.dataset.delete;
+    fragment.appendChild(card);
+  });
 
-  if (editId) editTable(editId);
-  if (deleteId) deleteTable(deleteId);
-});
-
-  // 🔥 clear sekali aja
+  // 🔥 hanya sekali
   grid.innerHTML = "";
   grid.appendChild(fragment);
 
   updateTableStats(filtered);
 }
+
 /* =========================
    AUTO NAME
 ========================= */
 
 async function generateTableName(){
-  const tables = await MENUVA_DB.getAll("restaurantTables");
   return "T" + String(tables.length + 1).padStart(2,"0");
 }
 
@@ -322,10 +272,10 @@ async function saveTable(){
 
   if(!name) name = await generateTableName();
 
-  const session = await MENUVA_DB.getSession();
+  const session = await getSessionCached();
   const restoId = session?.restoId || "default";
 
-  const tables = await MENUVA_DB.getAll("restaurantTables");
+  const table = TABLE_INDEX[id];
 
   let posX = 100;
   let posY = 100;
@@ -375,22 +325,20 @@ async function saveTable(){
 
 }
 
-/* =========================
-   TABLE MAP RENDER
-========================= */
-
 let cachedLayout = null;
 let cachedRestoId = null;
+let NODE_CACHE = {};
+let TABLE_NODE_LIST = [];
 
 async function renderTableMap() {
+
   const map = document.getElementById("tableEditorMap");
   if (!map) return;
 
-  // 🔥 ambil session sekali
-  const session = await MENUVA_DB.getSession();
+  const session = await getSessionCached();
   const restoId = session?.restoId || "default";
 
-  // 🔥 cache layout (biar gak hit DB terus)
+  // 🔥 cache layout
   if (!cachedLayout || cachedRestoId !== restoId) {
     cachedLayout = await MENUVA_DB.get(
       "restaurantLayouts",
@@ -403,53 +351,60 @@ async function renderTableMap() {
   CURRENT_LAYOUT.tables = tablesLayout;
   CURRENT_LAYOUT.shapes = cachedLayout?.shapes || [];
 
-  // 🔥 hashmap super cepat
+  // 🔥 hashmap cepat
   const layoutMap = Object.create(null);
   for (const t of tablesLayout) {
     layoutMap[t.tableId] = t;
   }
 
-  // 🔥 detach DOM (biar gak reflow berkali-kali)
-  map.innerHTML = "";
-
   const fragment = document.createDocumentFragment();
 
+  // 🔥 reset list reference
+  TABLE_NODE_LIST = [];
+
   for (const table of TABLE_CACHE) {
+
+    let node = NODE_CACHE[table.id];
+
+    // ✅ CREATE ONCE ONLY
+    if (!node) {
+      node = document.createElement("div");
+
+      node.className = `table-node ${table.shape || "circle"} ${table.zone}`;
+      node.dataset.id = table.id;
+
+      node.innerHTML = table.image
+        ? `<div class="table-visual">
+             <img src="${table.image}" class="table-img" loading="lazy">
+             <div class="table-label">${table.name}</div>
+           </div>`
+        : `<div class="table-visual">
+             <div class="table-fallback"></div>
+             <div class="table-label">${table.name}</div>
+           </div>`;
+
+      NODE_CACHE[table.id] = node;
+    }
+
     const layoutTable = layoutMap[table.id];
 
-    const node = document.createElement("div");
-
-    node.className = `table-node ${table.shape || "circle"} ${table.zone}`;
-    node.dataset.id = table.id;
-
-    // 🔥 innerHTML tetap tapi minimal
-    node.innerHTML = table.image
-      ? `<div class="table-visual">
-           <img src="${table.image}" class="table-img" loading="lazy">
-           <div class="table-label">${table.name}</div>
-         </div>`
-      : `<div class="table-visual">
-           <div class="table-fallback"></div>
-           <div class="table-label">${table.name}</div>
-         </div>`;
-
-    // 🔥 hitung posisi
     const x = layoutTable?.x ?? table.x ?? 100;
     const y = layoutTable?.y ?? table.y ?? 100;
     const rotation = layoutTable?.rotation ?? 0;
 
     node.dataset.rotate = rotation;
 
-    // 🔥 1x style apply (minimize reflow)
-    node.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${rotation}deg)`;
+    node.style.transform =
+      `translate3d(${x}px, ${y}px, 0) rotate(${rotation}deg)`;
 
     fragment.appendChild(node);
+    TABLE_NODE_LIST.push(node);
   }
 
-  // 🔥 append sekali
-  map.appendChild(fragment);
+  // 🔥 SUPER FAST DOM SWAP
+  map.replaceChildren(fragment);
 
-  // 🔥 AKTIFKAN DRAG SEKALI SAJA (INI PENTING BANGET)
+  // 🔥 init drag sekali
   enableTableDragForContainer(map);
 }
 
@@ -458,6 +413,8 @@ async function renderTableMap() {
 ========================= */
 
 function enableTableDragForContainer(map){
+   if(map._dragInitialized) return; // 🔥 penting
+  map._dragInitialized = true;
 
   let activeNode = null;
   let offsetX = 0;
@@ -569,17 +526,23 @@ function rotateTable(node){
 
 function updateMemory(){
 
-  const tableNodes = document.querySelectorAll(".table-node");
+  CURRENT_LAYOUT.tables = TABLE_NODE_LIST.map(node => {
 
-  CURRENT_LAYOUT.tables = Array.from(tableNodes).map(node => ({
-    tableId: node.dataset.id,
-    x: parseInt(node.style.left) || 0,
-    y: parseInt(node.style.top) || 0,
-    rotation: parseInt(node.dataset.rotate) || 0
-  }));
+    const transform = node.style.transform;
+    const match = transform.match(/translate3d\(([^,]+),([^,]+)/);
+
+    const x = match ? parseInt(match[1]) : 0;
+    const y = match ? parseInt(match[2]) : 0;
+
+    return {
+      tableId: node.dataset.id,
+      x,
+      y,
+      rotation: parseInt(node.dataset.rotate) || 0
+    };
+  });
 
   CURRENT_LAYOUT.shapes = getLayoutData();
-
 }
 
 /* =========================
@@ -779,7 +742,7 @@ function renderLayoutShapes(layout){
 
 async function saveLayout(){
 
-  const session = await MENUVA_DB.getSession();
+  const session = await getSessionCached();
   const restoId = session?.restoId || "default";
 
   const layout = {
@@ -798,7 +761,7 @@ async function saveLayout(){
 
 async function generateAutoLayout(){
 
-  const session = await MENUVA_DB.getSession();
+  const session = await getSessionCached();
   const restoId = session?.restoId || "default";
 
   const tables = await MENUVA_DB.getAll("restaurantTables");
@@ -809,19 +772,15 @@ async function generateAutoLayout(){
   const spacing = 120;
   const cols = Math.floor(map.clientWidth / spacing) || 4;
 
-  for(let i=0;i<filtered.length;i++){
-
-    const t = filtered[i];
-
+  const updates = filtered.map((t, i) => {
     t.x = (i % cols) * spacing + 40;
     t.y = Math.floor(i / cols) * spacing + 40;
+    return MENUVA_DB.update("restaurantTables", t);
+  });
 
-    await MENUVA_DB.update("restaurantTables", t);
-
-  }
+  await Promise.all(updates); // 🔥 GAS POL
 
   renderTableMap();
-
 }
 
 function previewDepositQR(event){
@@ -842,7 +801,7 @@ function previewDepositQR(event){
 
 async function saveDepositSetting(){
 
-  const session = await MENUVA_DB.getSession();
+  const session = await getSessionCached();
   const restoId = session?.restoId || "default";
 
   const data = {
@@ -863,7 +822,6 @@ async function saveDepositSetting(){
 
 }
 
-async function loadDepositSetting(){
 let cachedDeposit = null;
 
 async function loadDepositSetting() {
@@ -877,7 +835,6 @@ async function loadDepositSetting() {
   const data = cachedDeposit;
   if (!data) return;
 
-  // 🔥 cache DOM element sekali
   const el = (id) => document.getElementById(id);
 
   el("depositToggle").checked = data.depositEnabled;
@@ -998,9 +955,12 @@ async function deleteTable(id){
 
   await MENUVA_DB.delete("restaurantTables", id);
 
+  // 🔥 update cache
+  TABLE_CACHE = TABLE_CACHE.filter(t => t.id !== id);
+  delete TABLE_INDEX[id];
+
   renderTables();
   renderTableMap();
-
 }
 
 const depositToggle = document.getElementById("depositToggle");
@@ -1052,7 +1012,7 @@ async function clearDepositSetting(){
 /* =========================
    INIT
 ========================= */
-
+console.time("⚡ TOTAL INIT");
 document.addEventListener("DOMContentLoaded", async function(){
 
   if(typeof renderTables !== "function"){
@@ -1067,4 +1027,5 @@ await Promise.all([
   renderTableMap(),
   loadDepositSetting()
 ]);
+   console.timeEnd("⚡ TOTAL INIT");
 });
