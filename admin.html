@@ -4832,7 +4832,7 @@ function renderRoomsFromDB(rooms = []) {
   console.log("✅ Rooms rendered:", rooms.length);
 }
 
-  function createRoomElementSafe(room) {
+function createRoomElementSafe(room) {
 
   try {
     const wrapper = document.createElement("div");
@@ -4875,7 +4875,7 @@ function renderRoomsFromDB(rooms = []) {
         .setAttribute("data-image", room.image);
     }
 
-    // event binding (lebih cepat dari inline onclick)
+    // event
     wrapper.querySelector(".hapus-room").onclick = () => {
       wrapper.remove();
     };
@@ -4892,29 +4892,8 @@ function renderRoomsFromDB(rooms = []) {
 
   } catch (err) {
     console.error("❌ createRoomElementSafe error:", err);
-    return null; // ⛔ ini yang bikin appendChild aman
+    return null;
   }
-}
-
-  // isi data langsung (biar gak query ulang di luar)
-  wrapper.querySelector(".room-nama").value = room.nama || "";
-  wrapper.querySelector(".room-harga").value = room.harga || "";
-  wrapper.querySelector(".room-kapasitas").value = room.kapasitas || "";
-  wrapper.querySelector(".room-luas").value = room.luas || "";
-  wrapper.querySelector(".room-deskripsi").value = room.deskripsi || "";
-
-  if (room.image) {
-    const preview = wrapper.querySelector(".gambar-preview");
-    const hapus = wrapper.querySelector(".hapus-gambar");
-    const upload = wrapper.querySelector(".room-image-upload");
-
-    preview.src = room.image;
-    preview.style.display = "block";
-    hapus.style.display = "inline-flex";
-    upload.setAttribute("data-image", room.image);
-  }
-
-  return wrapper;
 }
 
 /* ============================================================
