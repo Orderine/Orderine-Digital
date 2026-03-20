@@ -2,6 +2,71 @@
    TABLE ENGINE ORDERINE (FIXED)
 ================================ */
 
+(function () {
+  const originalFunctions = {};
+  const stats = {};
+
+  function wrapFunction(obj, key) {
+    const original = obj[key];
+    if (typeof original !== "function") return;
+
+    originalFunctions[key] = original;
+
+    obj[key] = async function (...args) {
+      const start = performance.now();
+
+      const result = await original.apply(this, args);
+
+      const duration = performance.now() - start;
+
+      if (!stats[key]) {
+        stats[key] = { count: 0, total: 0 };
+      }
+
+      stats[key].count++;
+      stats[key].total += duration;
+
+      return result;
+    };
+  }
+
+  // scan global functions
+  for (const key in window) {
+    try {
+      wrapFunction(window, key);
+    } catch (e) {}
+  }
+
+  // tampilkan hasil setelah load
+  window.addEventListener("load", () => {
+    setTimeout(() => {
+      console.table(
+        Object.entries(stats)
+          .map(([name, data]) => ({
+            function: name,
+            calls: data.count,
+            totalMs: data.total.toFixed(2),
+            avgMs: (data.total / data.count).toFixed(2),
+          }))
+          .sort((a, b) => b.totalMs - a.totalMs)
+      );
+    }, 2000);
+  });
+})();
+
+setInterval(() => {
+  console.log("🔥 Function call stats:", stats);
+}, 5000);
+
+const observer = new MutationObserver((mutations) => {
+  console.log("⚠️ DOM berubah:", mutations.length);
+});
+
+observer.observe(document.body, {
+  childList: true,
+  subtree: true,
+});
+
 let currentTableFilter = "all";
 let currentSearch = "";
 let editingTableId = null;
