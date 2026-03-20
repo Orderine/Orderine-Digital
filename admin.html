@@ -4286,27 +4286,24 @@ function flashTerminalMessage(text) {
 /* ================= CATEGORY LOAD ================= */
 
 async function loadCategories() {
-
   const restoId = window.activeUser?.restoID;
   if (!restoId) return;
 
   const menus = await MENUVA_DB.getAll("menuData");
 
-  const filteredMenus = menus.filter(m => m.restoId === restoId);
+  const unique = new Map();
 
-  const unique = {};
-
-  filteredMenus.forEach(m => {
-    if (m.category?.name) {
-      unique[m.category.name] = m.category;
+  for (const m of menus) {
+    if (m.restoId === restoId && m.category?.name) {
+      unique.set(m.category.name, m.category);
     }
-  });
+  }
 
-  window.menuCategories = Object.values(unique);
+  window.menuCategories = Array.from(unique.values());
 
- if (!window.activeCategoryName && window.menuCategories.length) {
-  window.activeCategoryName = window.menuCategories[0].name;
-}
+  if (!window.activeCategoryName && window.menuCategories.length) {
+    window.activeCategoryName = window.menuCategories[0].name;
+  }
 
   renderCategoryFilter();
 }
@@ -4568,30 +4565,90 @@ function tambahRoom(kategori) {
     meeting: "meetingRoomContainer",
     package: "packageContainer"
   }[kategori];
+
   if (!containerId) return;
 
   const container = document.getElementById(containerId);
-  const uid = `${kategori}_${Date.now()}`;
+  if (!container) return;
 
   const wrapper = document.createElement("div");
   wrapper.className = "room-form";
-  wrapper.innerHTML = `
-    <input class="room-nama" placeholder="Name">
-    <input class="room-harga" type="number" placeholder="Price">
-    <input class="room-kapasitas" type="number" placeholder="Capacity">
-    <input class="room-luas" type="number" placeholder="Size (m²)">
-    <textarea class="room-deskripsi" placeholder="Notes"></textarea>
 
-    <div>
-      <img class="gambar-preview" style="display:none; max-width:120px">
-      <button type="button" class="hapus-gambar" onclick="hapusGambarRoom(this)" style="display:none">×</button>
-    </div>
+  // ⚡ pakai element builder (lebih ringan dari innerHTML besar)
+  const inputNama = document.createElement("input");
+  inputNama.className = "room-nama";
+  inputNama.placeholder = "Name";
 
-    <button type="button" class="room-image-upload" onclick="uploadGambarRoom(this)">🖼 Upload Image</button>
-    <button type="button" onclick="hapusFormRoom(this)">🗑 Delete</button>
-    <hr>
-  `;
+  const inputHarga = document.createElement("input");
+  inputHarga.className = "room-harga";
+  inputHarga.type = "number";
+  inputHarga.placeholder = "Price";
+
+  const inputKapasitas = document.createElement("input");
+  inputKapasitas.className = "room-kapasitas";
+  inputKapasitas.type = "number";
+  inputKapasitas.placeholder = "Capacity";
+
+  const inputLuas = document.createElement("input");
+  inputLuas.className = "room-luas";
+  inputLuas.type = "number";
+  inputLuas.placeholder = "Size (m²)";
+
+  const textarea = document.createElement("textarea");
+  textarea.className = "room-deskripsi";
+  textarea.placeholder = "Notes";
+
+  const imgWrap = document.createElement("div");
+
+  const img = document.createElement("img");
+  img.className = "gambar-preview";
+  img.style.display = "none";
+  img.style.maxWidth = "120px";
+
+  const btnHapus = document.createElement("button");
+  btnHapus.type = "button";
+  btnHapus.className = "hapus-gambar";
+  btnHapus.textContent = "×";
+  btnHapus.style.display = "none";
+  btnHapus.onclick = function () {
+    hapusGambarRoom(this);
+  };
+
+  imgWrap.appendChild(img);
+  imgWrap.appendChild(btnHapus);
+
+  const btnUpload = document.createElement("button");
+  btnUpload.type = "button";
+  btnUpload.className = "room-image-upload";
+  btnUpload.textContent = "🖼 Upload Image";
+  btnUpload.onclick = function () {
+    uploadGambarRoom(this);
+  };
+
+  const btnDelete = document.createElement("button");
+  btnDelete.type = "button";
+  btnDelete.textContent = "🗑 Delete";
+  btnDelete.onclick = function () {
+    hapusFormRoom(this);
+  };
+
+  const hr = document.createElement("hr");
+
+  wrapper.append(
+    inputNama,
+    inputHarga,
+    inputKapasitas,
+    inputLuas,
+    textarea,
+    imgWrap,
+    btnUpload,
+    btnDelete,
+    hr
+  );
+
   container.appendChild(wrapper);
+
+  return wrapper; // 🔥 penting buat performance chain
 }
 
 function ambilSemuaRoom() {
@@ -4634,30 +4691,51 @@ function ambilSemuaRoom() {
 }
 
 function restoreRoomFromData(rooms = []) {
+  if (!Array.isArray(rooms)) return;
+
+  const containerMap = {
+    hotel: document.getElementById("roomHotelContainer"),
+    meeting: document.getElementById("meetingRoomContainer"),
+    package: document.getElementById("packageContainer")
+  };
+
   rooms.forEach(room => {
-    tambahRoom(room.kategori);
-    const containerId = {
-      hotel: "roomHotelContainer",
-      meeting: "meetingRoomContainer",
-      package: "packageContainer"
-    }[room.kategori];
+    if (!room) return;
 
-    const container = document.getElementById(containerId);
-    const form = container.lastElementChild;
+    const form = tambahRoom(room.kategori); // 🔥 langsung dapet element
 
-    form.querySelector(".room-nama").value = room.nama || "";
-    form.querySelector(".room-harga").value = room.harga || "";
-    form.querySelector(".room-kapasitas").value = room.kapasitas || "";
-    form.querySelector(".room-luas").value = room.luas || "";
-    form.querySelector(".room-deskripsi").value = room.deskripsi || "";
+    if (!form) return;
+
+    // ⚡ cache selector (1x aja)
+    const nama = form.querySelector(".room-nama");
+    const harga = form.querySelector(".room-harga");
+    const kapasitas = form.querySelector(".room-kapasitas");
+    const luas = form.querySelector(".room-luas");
+    const deskripsi = form.querySelector(".room-deskripsi");
+
+    if (nama) nama.value = room.nama || "";
+    if (harga) harga.value = room.harga || "";
+    if (kapasitas) kapasitas.value = room.kapasitas || "";
+    if (luas) luas.value = room.luas || "";
+    if (deskripsi) deskripsi.value = room.deskripsi || "";
 
     if (room.image) {
       const preview = form.querySelector(".gambar-preview");
       const hapus = form.querySelector(".hapus-gambar");
-      preview.src = room.image;
-      preview.style.display = "block";
-      hapus.style.display = "inline-flex";
-      form.querySelector(".room-image-upload").setAttribute("data-image", room.image);
+      const upload = form.querySelector(".room-image-upload");
+
+      if (preview) {
+        preview.src = room.image;
+        preview.style.display = "block";
+      }
+
+      if (hapus) {
+        hapus.style.display = "inline-flex";
+      }
+
+      if (upload) {
+        upload.setAttribute("data-image", room.image);
+      }
     }
   });
 }
@@ -4696,43 +4774,39 @@ function hapusGambarRoom(btn) {
 function hapusFormRoom(btn) {
   btn.closest(".room-form")?.remove();
 }
+
 function renderRoomsFromDB(rooms = []) {
-  // 🛡️ safety guard
-  if (!Array.isArray(rooms)) {
-    console.warn("⚠️ renderRoomsFromDB: rooms bukan array", rooms);
-    return;
-  }
+  if (!Array.isArray(rooms)) return;
 
-  // 🧹 clear container (anti duplikat saat reload)
-  ["roomHotelContainer", "meetingRoomContainer", "packageContainer"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = "";
-  });
+  const map = {
+    hotel: document.getElementById("roomHotelContainer"),
+    meeting: document.getElementById("meetingRoomContainer"),
+    package: document.getElementById("packageContainer")
+  };
 
-  // 🚫 tidak ada data
-  if (!rooms.length) {
-    console.log("ℹ️ renderRoomsFromDB: tidak ada room");
-    return;
-  }
+  Object.values(map).forEach(el => el && (el.innerHTML = ""));
 
-  // 🔁 restore satu per satu
+  const fragments = {
+    hotel: document.createDocumentFragment(),
+    meeting: document.createDocumentFragment(),
+    package: document.createDocumentFragment()
+  };
+
   rooms.forEach(room => {
-    if (!room) return;
-
     const kategori =
       room.type === "meeting"
         ? "meeting"
         : room.type === "package"
-          ? "package"
-          : "hotel";
+        ? "package"
+        : "hotel";
 
-    restoreRoomFromData([{
-      ...room,
-      kategori
-    }]);
+    const el = createRoomElement({ ...room, kategori });
+    fragments[kategori].appendChild(el);
   });
 
-  console.log("✅ Rooms rendered from DB:", rooms.length);
+  Object.keys(fragments).forEach(k => {
+    map[k]?.appendChild(fragments[k]);
+  });
 }
 
 /* ============================================================
@@ -4858,19 +4932,16 @@ function renderImagePreview(tipe, url) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  // 🧱 WRAPPER (ikut CSS grid)
   const wrapper = document.createElement("div");
   wrapper.className = "flipbook-preview-item";
 
-  // 🖼️ IMAGE (ukuran diatur CSS)
   const img = document.createElement("img");
   img.src = url;
   img.loading = "lazy";
 
-  // ❌ BUTTON
   const btnHapus = document.createElement("button");
   btnHapus.className = "btn-hapus-gambar";
-  btnHapus.innerHTML = "×";
+  btnHapus.textContent = "×";
 
   btnHapus.onclick = () => {
     wrapper.remove();
@@ -4884,8 +4955,9 @@ function renderImagePreview(tipe, url) {
     }
   };
 
-  wrapper.appendChild(img);
-  wrapper.appendChild(btnHapus);
+  wrapper.append(img, btnHapus);
+
+  // ⚡ micro-optimization: hindari reflow berulang
   container.appendChild(wrapper);
 }
 
@@ -5142,7 +5214,7 @@ function createWaInput(value = "") {
 
 /** RENDER (IDEMPOTENT) */
 function renderWaAdmin() {
-  const box = waContainer();
+  const box = document.querySelector("#waContainer");
   if (!box) return;
 
   // remove only inputs, keep label
@@ -5162,7 +5234,7 @@ function renderWaAdmin() {
 
 /** READ FROM UI */
 function collectWaFromUI() {
-  const box = waContainer();
+  const box = document.querySelector("#waContainer");
   if (!box) return [];
 
   return Array.from(box.querySelectorAll("input.nomor-wa"))
