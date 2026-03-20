@@ -3726,56 +3726,7 @@ window.renderSubscriptionPanel = function () {
 
 </script>
 <script>
-(function(){
 
-  const SLOW_LOG = [];
-
-  function wrapFunction(obj, key){
-    const original = obj[key];
-
-    if(typeof original !== "function") return;
-
-    obj[key] = async function(...args){
-
-      const start = performance.now();
-
-      try{
-        const result = await original.apply(this, args);
-        return result;
-      }finally{
-        const duration = performance.now() - start;
-
-        SLOW_LOG.push({
-          name: key,
-          duration
-        });
-
-        if(duration > 100){ // 🔥 threshold (100ms)
-          console.warn(`🐢 SLOW FUNC: ${key} → ${duration.toFixed(2)} ms`);
-        }
-      }
-    };
-  }
-
-  // 🔥 wrap semua function di window
-  Object.keys(window).forEach(key => {
-    try{
-      wrapFunction(window, key);
-    }catch(e){}
-  });
-
-  // 🔥 helper untuk lihat ranking
-  window.showSlowFunctions = function(){
-    const sorted = [...SLOW_LOG]
-      .sort((a,b) => b.duration - a.duration)
-      .slice(0, 20);
-
-    console.table(sorted);
-  };
-
-  console.log("🚀 Profiler aktif! jalankan: showSlowFunctions()");
-
-})();
   /* ============================================================
    ADMIN DB BRIDGE (NO MODULE – FINAL STABLE)
 ============================================================ */
@@ -4706,8 +4657,10 @@ function restoreRoomFromData(rooms = []) {
     package: document.getElementById("packageContainer")
   };
 
-  rooms.forEach(room => {
-    if (!room) return;
+  if (!window.rooms) return;
+
+  window.rooms.forEach(room => {
+    
 
     const form = tambahRoom(room.kategori); // 🔥 langsung dapet element
 
@@ -4782,7 +4735,8 @@ function hapusFormRoom(btn) {
   btn.closest(".room-form")?.remove();
 }
 
-rooms.forEach(room => {
+if (!window.rooms) return;
+window.rooms.forEach(room => {
 
   const kategori =
     room.type === "meeting"
@@ -4867,6 +4821,57 @@ function createRoomElementSafe(room) {
     console.error("❌ createRoomElementSafe error:", err);
     return null;
   }
+}
+
+  function renderRoomsFromDB(rooms = []) {
+
+  if (!Array.isArray(rooms)) {
+    console.warn("⚠️ rooms bukan array");
+    return;
+  }
+
+  const map = {
+    hotel: "roomHotelContainer",
+    meeting: "meetingRoomContainer",
+    package: "packageContainer"
+  };
+
+  // clear container
+  Object.values(map).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = "";
+  });
+
+  if (!rooms.length) return;
+
+  rooms.forEach(room => {
+
+    if (!room) return;
+
+    const kategori =
+      room.type === "meeting"
+        ? "meeting"
+        : room.type === "package"
+          ? "package"
+          : "hotel";
+
+    const containerId = map[kategori];
+    const container = document.getElementById(containerId);
+
+    if (!container) return;
+
+    const el = createRoomElementSafe(room);
+
+    // 💥 INI YANG FIX ERROR appendChild
+    if (el instanceof Node) {
+      container.appendChild(el);
+    } else {
+      console.warn("❌ room element invalid:", room);
+    }
+
+  });
+
+  console.log("✅ Rooms rendered:", rooms.length);
 }
 
 /* ============================================================
@@ -4981,7 +4986,7 @@ document.getElementById("logoInput")?.addEventListener("change", async e => {
   }
 }
 
-function renderImagePreviewBatch(tipe, list = []) {
+function renderImagePreviewBatch(tipe, urls = []) {
 
   const containerId =
     tipe === "ruangan"
@@ -4993,26 +4998,23 @@ function renderImagePreviewBatch(tipe, list = []) {
 
   const fragment = document.createDocumentFragment();
 
-  list.forEach(url => {
+  urls.forEach(url => {
+    if (!url) return;
 
     const wrapper = document.createElement("div");
     wrapper.className = "flipbook-preview-item";
 
-    const img = document.createElement("img");
+    const img = new Image();
     img.src = url;
     img.loading = "lazy";
 
     const btn = document.createElement("button");
     btn.className = "btn-hapus-gambar";
-    btn.innerHTML = "×";
+    btn.textContent = "×";
 
-    btn.onclick = () => {
-      wrapper.remove();
-    };
+    btn.onclick = () => wrapper.remove();
 
-    wrapper.appendChild(img);
-    wrapper.appendChild(btn);
-
+    wrapper.append(img, btn);
     fragment.appendChild(wrapper);
   });
 
