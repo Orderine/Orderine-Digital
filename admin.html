@@ -4776,59 +4776,125 @@ function hapusFormRoom(btn) {
 }
 
 function renderRoomsFromDB(rooms = []) {
-  if (!Array.isArray(rooms)) return;
+
+  if (!Array.isArray(rooms)) {
+    console.warn("⚠️ rooms bukan array", rooms);
+    return;
+  }
 
   const map = {
-    hotel: document.getElementById("roomHotelContainer"),
-    meeting: document.getElementById("meetingRoomContainer"),
-    package: document.getElementById("packageContainer")
+    hotel: "roomHotelContainer",
+    meeting: "meetingRoomContainer",
+    package: "packageContainer"
   };
 
-  Object.values(map).forEach(el => el && (el.innerHTML = ""));
+  // clear dulu
+  Object.values(map).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = "";
+  });
 
-  const fragments = {
+  if (!rooms.length) return;
+
+  const fragmentMap = {
     hotel: document.createDocumentFragment(),
     meeting: document.createDocumentFragment(),
     package: document.createDocumentFragment()
   };
 
   rooms.forEach(room => {
+
     const kategori =
       room.type === "meeting"
         ? "meeting"
         : room.type === "package"
-        ? "package"
-        : "hotel";
+          ? "package"
+          : "hotel";
 
-    const el = createRoomElement({ ...room, kategori });
-    fragments[kategori].appendChild(el);
+    // ⚠️ FIX: pastikan element valid
+    const el = createRoomElementSafe({
+      ...room,
+      kategori
+    });
+
+    if (el) {
+      fragmentMap[kategori].appendChild(el);
+    }
+
   });
 
-  Object.keys(fragments).forEach(k => {
-    map[k]?.appendChild(fragments[k]);
+  // append sekali (super cepat)
+  Object.entries(fragmentMap).forEach(([kategori, frag]) => {
+    const container = document.getElementById(map[kategori]);
+    if (container) container.appendChild(frag);
   });
+
+  console.log("✅ Rooms rendered:", rooms.length);
 }
 
-  function createRoomElement(room) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "room-form";
+  function createRoomElementSafe(room) {
 
-  wrapper.innerHTML = `
-    <input class="room-nama" placeholder="Name">
-    <input class="room-harga" type="number" placeholder="Price">
-    <input class="room-kapasitas" type="number" placeholder="Capacity">
-    <input class="room-luas" type="number" placeholder="Size (m²)">
-    <textarea class="room-deskripsi" placeholder="Notes"></textarea>
+  try {
+    const wrapper = document.createElement("div");
+    wrapper.className = "room-form";
 
-    <div>
-      <img class="gambar-preview" style="display:none; max-width:120px">
-      <button type="button" class="hapus-gambar" onclick="hapusGambarRoom(this)" style="display:none">×</button>
-    </div>
+    wrapper.innerHTML = `
+      <input class="room-nama" placeholder="Name">
+      <input class="room-harga" type="number" placeholder="Price">
+      <input class="room-kapasitas" type="number" placeholder="Capacity">
+      <input class="room-luas" type="number" placeholder="Size (m²)">
+      <textarea class="room-deskripsi" placeholder="Notes"></textarea>
 
-    <button type="button" class="room-image-upload" onclick="uploadGambarRoom(this)">🖼 Upload Image</button>
-    <button type="button" onclick="hapusFormRoom(this)">🗑 Delete</button>
-    <hr>
-  `;
+      <div>
+        <img class="gambar-preview" style="display:none; max-width:120px">
+        <button type="button" class="hapus-gambar" style="display:none">×</button>
+      </div>
+
+      <button type="button" class="room-image-upload">🖼 Upload Image</button>
+      <button type="button" class="hapus-room">🗑 Delete</button>
+      <hr>
+    `;
+
+    // isi data
+    wrapper.querySelector(".room-nama").value = room.nama || "";
+    wrapper.querySelector(".room-harga").value = room.harga || "";
+    wrapper.querySelector(".room-kapasitas").value = room.kapasitas || "";
+    wrapper.querySelector(".room-luas").value = room.luas || "";
+    wrapper.querySelector(".room-deskripsi").value = room.deskripsi || "";
+
+    // image
+    if (room.image) {
+      const preview = wrapper.querySelector(".gambar-preview");
+      const hapus = wrapper.querySelector(".hapus-gambar");
+
+      preview.src = room.image;
+      preview.style.display = "block";
+      hapus.style.display = "inline-flex";
+
+      wrapper.querySelector(".room-image-upload")
+        .setAttribute("data-image", room.image);
+    }
+
+    // event binding (lebih cepat dari inline onclick)
+    wrapper.querySelector(".hapus-room").onclick = () => {
+      wrapper.remove();
+    };
+
+    wrapper.querySelector(".room-image-upload").onclick = (e) => {
+      uploadGambarRoom?.(e.currentTarget);
+    };
+
+    wrapper.querySelector(".hapus-gambar").onclick = (e) => {
+      hapusGambarRoom?.(e.currentTarget);
+    };
+
+    return wrapper;
+
+  } catch (err) {
+    console.error("❌ createRoomElementSafe error:", err);
+    return null; // ⛔ ini yang bikin appendChild aman
+  }
+}
 
   // isi data langsung (biar gak query ulang di luar)
   wrapper.querySelector(".room-nama").value = room.nama || "";
@@ -4963,8 +5029,7 @@ document.getElementById("logoInput")?.addEventListener("change", async e => {
   }
 }
 
-function renderImagePreview(tipe, url) {
-  if (!url) return;
+function renderImagePreviewBatch(tipe, list = []) {
 
   const containerId =
     tipe === "ruangan"
@@ -4974,35 +5039,33 @@ function renderImagePreview(tipe, url) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "flipbook-preview-item";
+  const fragment = document.createDocumentFragment();
 
-  const img = document.createElement("img");
-  img.src = url;
-  img.loading = "lazy";
+  list.forEach(url => {
 
-  const btnHapus = document.createElement("button");
-  btnHapus.className = "btn-hapus-gambar";
-  btnHapus.textContent = "×";
+    const wrapper = document.createElement("div");
+    wrapper.className = "flipbook-preview-item";
 
-  btnHapus.onclick = () => {
-    wrapper.remove();
+    const img = document.createElement("img");
+    img.src = url;
+    img.loading = "lazy";
 
-    if (tipe === "ruangan") {
-      window.flipbookRuanganImages =
-        window.flipbookRuanganImages.filter(src => src !== url);
-    } else {
-      window.flipbookMenuImages =
-        window.flipbookMenuImages.filter(src => src !== url);
-    }
-  };
+    const btn = document.createElement("button");
+    btn.className = "btn-hapus-gambar";
+    btn.innerHTML = "×";
 
-  wrapper.append(img, btnHapus);
+    btn.onclick = () => {
+      wrapper.remove();
+    };
 
-  // ⚡ micro-optimization: hindari reflow berulang
-  container.appendChild(wrapper);
+    wrapper.appendChild(img);
+    wrapper.appendChild(btn);
+
+    fragment.appendChild(wrapper);
+  });
+
+  container.appendChild(fragment);
 }
-
 
 function tambahGambar(type) {
   const inputId =
@@ -5428,15 +5491,8 @@ async function loadData() {
       renderAllImagePreview("menu", window.flipbookMenuImages);
     } else {
       // fallback (logic lama tetap aman)
-      window.flipbookRuanganImages.forEach(src => {
-        try { renderImagePreview?.("ruangan", src); }
-        catch (e) { console.warn(e); }
-      });
-
-      window.flipbookMenuImages.forEach(src => {
-        try { renderImagePreview?.("menu", src); }
-        catch (e) { console.warn(e); }
-      });
+    renderImagePreviewBatch("ruangan", window.flipbookRuanganImages);
+    renderImagePreviewBatch("menu", window.flipbookMenuImages);
     }
 
     try { renderFlipbookUI?.(); }
