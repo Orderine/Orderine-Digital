@@ -6183,13 +6183,18 @@ function updateReceiveBadge(count) {
 let lastOrderCount = 0;
 let checkingOrder = false;
 
+let cachedOrders = null;
+
 async function cekOrderBaru() {
   if (checkingOrder) return;
   checkingOrder = true;
 
   try {
-    const orders = await MENUVA_DB.getAll("ordersData");
-    const newCount = orders.filter(o => o.status === "new").length;
+    if (!cachedOrders) {
+      cachedOrders = await MENUVA_DB.getAll("ordersData");
+    }
+
+    const newCount = await MENUVA_DB.countByIndex("ordersData", "status", "new");
 
     updateReceiveBadge(newCount);
 
@@ -6199,8 +6204,6 @@ async function cekOrderBaru() {
 
     lastOrderCount = newCount;
 
-  } catch (err) {
-    console.error("❌ cekOrderBaru error:", err);
   } finally {
     checkingOrder = false;
   }
