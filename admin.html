@@ -10,9 +10,13 @@
 <!-- AUTH GUARD (NON MODULE) -->
 <script src="./auth-guard.js"></script>
 
-<!-- IONICONS -->
-<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+<!-- ⚡ PRECONNECT biar DNS + TLS cepat -->
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+
+<!-- ⚡ LOAD ICON (pakai defer biar gak block render) -->
+<script type="module" defer src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule defer src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
 <link rel="icon" href="data:,">
 
 <!-- CDN BIASA -->
@@ -4289,7 +4293,8 @@ async function loadCategories() {
   const restoId = window.activeUser?.restoID;
   if (!restoId) return;
 
-  const menus = await MENUVA_DB.getAll("menuData");
+  const menus = await MENUVA_DB.getByIndex?.("menuData", "restoId", restoId)
+  || (await MENUVA_DB.getAll("menuData")).filter(m => m.restoId === restoId);
 
   const unique = new Map();
 
@@ -4383,7 +4388,8 @@ async function renderMenuPreview(categoryName) {
   const restoId = window.activeUser?.restoID;
   if (!restoId) return;
 
-  const menus = await MENUVA_DB.getAll("menuData");
+  const menus = await MENUVA_DB.getByIndex?.("menuData", "restoId", restoId)
+  || (await MENUVA_DB.getAll("menuData")).filter(m => m.restoId === restoId);
 
   const filtered = menus.filter(m =>
     m.restoId === restoId &&
@@ -4424,7 +4430,8 @@ async function generateMenuCode(categoryName) {
   const location =
     window.systemSettings?.locationCode || "LOC";
 
-  const menus = await MENUVA_DB.getAll("menuData");
+  const menus = await MENUVA_DB.getByIndex?.("menuData", "restoId", restoId)
+  || (await MENUVA_DB.getAll("menuData")).filter(m => m.restoId === restoId);
 
   const sameCategoryMenus = menus.filter(
     m => m.category?.name === categoryName
@@ -4775,62 +4782,28 @@ function hapusFormRoom(btn) {
   btn.closest(".room-form")?.remove();
 }
 
-function renderRoomsFromDB(rooms = []) {
+rooms.forEach(room => {
 
-  if (!Array.isArray(rooms)) {
-    console.warn("⚠️ rooms bukan array", rooms);
-    return;
+  const kategori =
+    room.type === "meeting"
+      ? "meeting"
+      : room.type === "package"
+        ? "package"
+        : "hotel";
+
+  const el = createRoomElementSafe({
+    ...room,
+    kategori
+  });
+
+  // 🛡️ GUARD SUPER KETAT
+  if (el instanceof Node) {
+    fragmentMap[kategori].appendChild(el);
+  } else {
+    console.warn("❌ Bukan Node:", el, room);
   }
 
-  const map = {
-    hotel: "roomHotelContainer",
-    meeting: "meetingRoomContainer",
-    package: "packageContainer"
-  };
-
-  // clear dulu
-  Object.values(map).forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = "";
-  });
-
-  if (!rooms.length) return;
-
-  const fragmentMap = {
-    hotel: document.createDocumentFragment(),
-    meeting: document.createDocumentFragment(),
-    package: document.createDocumentFragment()
-  };
-
-  rooms.forEach(room => {
-
-    const kategori =
-      room.type === "meeting"
-        ? "meeting"
-        : room.type === "package"
-          ? "package"
-          : "hotel";
-
-    // ⚠️ FIX: pastikan element valid
-    const el = createRoomElementSafe({
-      ...room,
-      kategori
-    });
-
-    if (el) {
-      fragmentMap[kategori].appendChild(el);
-    }
-
-  });
-
-  // append sekali (super cepat)
-  Object.entries(fragmentMap).forEach(([kategori, frag]) => {
-    const container = document.getElementById(map[kategori]);
-    if (container) container.appendChild(frag);
-  });
-
-  console.log("✅ Rooms rendered:", rooms.length);
-}
+});
 
 function createRoomElementSafe(room) {
 
@@ -5066,10 +5039,10 @@ function tambahGambar(type) {
 
         if (type === "ruangan") {
           window.flipbookRuanganImages.push(resized);
-          renderImagePreview("ruangan", resized);
+          renderImagePreviewBatch("ruangan", resized);
         } else {
           window.flipbookMenuImages.push(resized);
-          renderImagePreview("menu", resized);
+          renderImagePreviewBatch("menu", resized);
         }
       } catch (err) {
         console.error("❌ resize image gagal:", err);
@@ -5097,7 +5070,6 @@ function slugify(text = "") {
    EXPOSE TO WINDOW (MODULE ↔ INLINE BRIDGE)
 ============================================================ */
 window.resizeIfNeeded = resizeIfNeeded;
-window.renderImagePreview = renderImagePreview;
 window.tambahGambar = tambahGambar;
 window.slugify = slugify;
 
