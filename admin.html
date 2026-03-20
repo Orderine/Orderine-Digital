@@ -4809,6 +4809,48 @@ function renderRoomsFromDB(rooms = []) {
   });
 }
 
+  function createRoomElement(room) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "room-form";
+
+  wrapper.innerHTML = `
+    <input class="room-nama" placeholder="Name">
+    <input class="room-harga" type="number" placeholder="Price">
+    <input class="room-kapasitas" type="number" placeholder="Capacity">
+    <input class="room-luas" type="number" placeholder="Size (m²)">
+    <textarea class="room-deskripsi" placeholder="Notes"></textarea>
+
+    <div>
+      <img class="gambar-preview" style="display:none; max-width:120px">
+      <button type="button" class="hapus-gambar" onclick="hapusGambarRoom(this)" style="display:none">×</button>
+    </div>
+
+    <button type="button" class="room-image-upload" onclick="uploadGambarRoom(this)">🖼 Upload Image</button>
+    <button type="button" onclick="hapusFormRoom(this)">🗑 Delete</button>
+    <hr>
+  `;
+
+  // isi data langsung (biar gak query ulang di luar)
+  wrapper.querySelector(".room-nama").value = room.nama || "";
+  wrapper.querySelector(".room-harga").value = room.harga || "";
+  wrapper.querySelector(".room-kapasitas").value = room.kapasitas || "";
+  wrapper.querySelector(".room-luas").value = room.luas || "";
+  wrapper.querySelector(".room-deskripsi").value = room.deskripsi || "";
+
+  if (room.image) {
+    const preview = wrapper.querySelector(".gambar-preview");
+    const hapus = wrapper.querySelector(".hapus-gambar");
+    const upload = wrapper.querySelector(".room-image-upload");
+
+    preview.src = room.image;
+    preview.style.display = "block";
+    hapus.style.display = "inline-flex";
+    upload.setAttribute("data-image", room.image);
+  }
+
+  return wrapper;
+}
+
 /* ============================================================
    EXPOSE TO WINDOW (WAJIB UNTUK MODULE)
 ============================================================ */
@@ -5273,7 +5315,7 @@ function loadWaAdminFromData(list) {
   });
 }
 
-  window.__LOAD_DATA_RUNNING__ = false;
+window.__LOAD_DATA_RUNNING__ = false;
 
 async function loadData() {
   if (window.__LOAD_DATA_RUNNING__) return;
@@ -5310,15 +5352,15 @@ async function loadData() {
 
     // ================= SYSTEM SETTINGS =================
     window.systemSettings = {
-    locationCode: resto.locationCode || "LOC"
+      locationCode: resto.locationCode || "LOC"
     };
 
     const locationInput = document.getElementById("locationCodeInput");
     if (locationInput) {
-     locationInput.value = window.systemSettings.locationCode;
-     }
+      locationInput.value = window.systemSettings.locationCode;
+    }
 
-     console.log("🏷️ Location Code loaded:", window.systemSettings.locationCode);
+    console.log("🏷️ Location Code loaded:", window.systemSettings.locationCode);
 
     // ================= WA ADMIN =================
     try {
@@ -5334,31 +5376,37 @@ async function loadData() {
       if (img) img.src = resto.logo;
     }
 
-   // ================= MENU SYSTEM =================
-await loadCategories();
+    // ================= PARALLEL DATA FETCH =================
+    const [
+      _cat,
+      _menuPreview,
+      allPromo,
+      allVoucher
+    ] = await Promise.all([
+      loadCategories(),
+      window.activeCategoryName
+        ? renderMenuPreview(window.activeCategoryName)
+        : Promise.resolve(),
+      MENUVA_DB.getAll("menuPromo"),
+      MENUVA_DB.getAll("menuVoucher")
+    ]);
 
-if (window.activeCategoryName) {
-  await renderMenuPreview(window.activeCategoryName);
-}
+    console.log("🍽️ Menu system loaded");
 
-console.log("🍽️ Menu system loaded");
+    // ================= PROMO =================
+    window.menuPromo = allPromo.filter(p => p.restoId === restoId);
 
-// ================= PROMO =================
-const allPromo = await MENUVA_DB.getAll("menuPromo");
-window.menuPromo = allPromo.filter(p => p.restoId === restoId);
+    renderPromoFilterBar();
+    renderPromoUI();
 
-renderPromoFilterBar();
-renderPromoUI();
+    console.log("🎯 Promo system loaded");
 
-console.log("🎯 Promo system loaded");
+    // ================= VOUCHER =================
+    window.menuVoucher = allVoucher.filter(v => v.restoId === restoId);
 
-// ================= VOUCHER =================
-const allVoucher = await MENUVA_DB.getAll("menuVoucher");
-window.menuVoucher = allVoucher.filter(v => v.restoId === restoId);
+    renderVoucher(window.menuVoucher);
 
-renderVoucher(window.menuVoucher);
-
-console.log("🎟️ Voucher system loaded");
+    console.log("🎟️ Voucher system loaded");
 
     // ================= FLIPBOOK =================
     window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages)
@@ -5374,15 +5422,22 @@ console.log("🎟️ Voucher system loaded");
       ...window.flipbookMenuImages
     ];
 
-    window.flipbookRuanganImages.forEach(src => {
-      try { renderImagePreview?.("ruangan", src); }
-      catch (e) { console.warn(e); }
-    });
+    // 🔥 BATCH RENDER (kalau ada functionnya)
+    if (typeof renderAllImagePreview === "function") {
+      renderAllImagePreview("ruangan", window.flipbookRuanganImages);
+      renderAllImagePreview("menu", window.flipbookMenuImages);
+    } else {
+      // fallback (logic lama tetap aman)
+      window.flipbookRuanganImages.forEach(src => {
+        try { renderImagePreview?.("ruangan", src); }
+        catch (e) { console.warn(e); }
+      });
 
-    window.flipbookMenuImages.forEach(src => {
-      try { renderImagePreview?.("menu", src); }
-      catch (e) { console.warn(e); }
-    });
+      window.flipbookMenuImages.forEach(src => {
+        try { renderImagePreview?.("menu", src); }
+        catch (e) { console.warn(e); }
+      });
+    }
 
     try { renderFlipbookUI?.(); }
     catch (e) { console.warn("⚠️ renderFlipbookUI error:", e); }
