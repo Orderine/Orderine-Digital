@@ -6180,21 +6180,22 @@ function updateReceiveBadge(count) {
 /* ============================================================
    4. REALTIME ORDER CHECKER (ANTI RACE)
 ============================================================ */
+let cachedOrders = null;
+
 let lastOrderCount = 0;
 let checkingOrder = false;
-
-let cachedOrders = null;
 
 async function cekOrderBaru() {
   if (checkingOrder) return;
   checkingOrder = true;
 
   try {
-    if (!cachedOrders) {
-      cachedOrders = await MENUVA_DB.getAll("ordersData");
-    }
+    // ✅ fallback karena countByIndex tidak ada
+    const orders = await MENUVA_DB.getAll("ordersData") || [];
 
-    const newCount = await MENUVA_DB.countByIndex("ordersData", "status", "new");
+    const newCount = orders.reduce((acc, o) => {
+      return acc + (o.status === "new" ? 1 : 0);
+    }, 0);
 
     updateReceiveBadge(newCount);
 
@@ -6204,22 +6205,33 @@ async function cekOrderBaru() {
 
     lastOrderCount = newCount;
 
+  } catch (err) {
+    console.error("❌ cekOrderBaru error:", err);
+
+    // 🔥 STOP INTERVAL kalau error terus
+    stopRealtimeOrderChecker();
+
   } finally {
     checkingOrder = false;
   }
 }
 
-
 /* ============================================================
    5. REALTIME LOOP (SINGLE INSTANCE)
 ============================================================ */
-let realtimeInterval = null;
+let orderInterval = null;
 
 function startRealtimeOrderChecker() {
-  if (realtimeInterval) return;
+  if (orderInterval) return; // 🔥 prevent double
 
-  cekOrderBaru();
-  realtimeInterval = setInterval(cekOrderBaru, 1000);
+  orderInterval = setInterval(cekOrderBaru, 5000); // 🔥 5 detik
+}
+
+function stopRealtimeOrderChecker() {
+  if (orderInterval) {
+    clearInterval(orderInterval);
+    orderInterval = null;
+  }
 }
 
 /* ============================================================
