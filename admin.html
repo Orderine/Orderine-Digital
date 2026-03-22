@@ -4730,34 +4730,35 @@ function hapusGambarRoom(btn) {
   btn.style.display = "none";
   form.querySelector(".room-image-upload").removeAttribute("data-image");
 }
+function initRooms() {
 
-function hapusFormRoom(btn) {
-  btn.closest(".room-form")?.remove();
-}
+  if (!window.rooms) return;
 
-if (!window.rooms) return;
-window.rooms.forEach(room => {
+  window.rooms.forEach(room => {
 
-  const kategori =
-    room.type === "meeting"
-      ? "meeting"
-      : room.type === "package"
-        ? "package"
-        : "hotel";
+    const kategori =
+      room.type === "meeting"
+        ? "meeting"
+        : room.type === "package"
+          ? "package"
+          : "hotel";
 
-  const el = createRoomElementSafe({
-    ...room,
-    kategori
+    const el = createRoomElementSafe({
+      ...room,
+      kategori
+    });
+
+    if (el instanceof Node) {
+      fragmentMap[kategori].appendChild(el);
+    } else {
+      console.warn("❌ Bukan Node:", el, room);
+    }
+
   });
 
-  // 🛡️ GUARD SUPER KETAT
-  if (el instanceof Node) {
-    fragmentMap[kategori].appendChild(el);
-  } else {
-    console.warn("❌ Bukan Node:", el, room);
-  }
+}
 
-});
+initRooms();
 
 function createRoomElementSafe(room) {
   try {
