@@ -11,6 +11,14 @@ let pressTimer = null;
 let activeDrag = null;
 let touchMoved = false;
 
+const ROW_HEIGHT = 120;
+const VISIBLE_COUNT = 20;
+
+let TABLE_VIEW = {
+  data: [],
+  start: 0
+};
+
 let CURRENT_LAYOUT = {
   tables: [],
   shapes: []
@@ -173,6 +181,45 @@ function searchTables(){
   }, 250);
 }
 
+function createTableCard(table){
+
+  const statusColor = getTableStatusColor(table.status);
+  const opacity = table.active ? "1" : "0.4";
+
+  const card = document.createElement("div");
+  card.className = "terminal-card table-card";
+  card.style.opacity = opacity;
+
+  card.innerHTML = `
+    ${table.image ? `<img src="${table.image}" class="table-card-image">` : ""}
+
+    <div class="terminal-card-header">
+      <span class="terminal-title">${table.name}</span>
+    </div>
+
+    <div class="terminal-card-body table-info">
+      <div class="table-meta">
+        <span>👥 ${table.capacity} Pax</span>
+        <span>📍 ${table.zone}</span>
+      </div>
+
+      <div class="table-meta">
+        <span>🍽 ${table.category || "-"}</span>
+      </div>
+
+      <div class="table-notes">
+        ${table.notes || ""}
+      </div>
+
+      <div class="table-status" style="background:${statusColor}">
+        ${table.status}
+      </div>
+    </div>
+  `;
+
+  return card;
+}
+
 async function renderTables(){
 
   const session = await getSessionCached();
@@ -191,60 +238,54 @@ async function renderTables(){
     );
   }
 
+  // 🔥 SIMPAN KE VIEW (bukan langsung render semua)
+  TABLE_VIEW.data = filtered;
+
+  updateVisibleTables(); // render sebagian
+  updateTableStats(filtered);
+}
+
+function initVirtualScroll(){
   const grid = document.getElementById("tablePreviewGrid");
   if(!grid) return;
 
+  grid.addEventListener("scroll", () => {
+    requestAnimationFrame(updateVisibleTables);
+  });
+}
+
+function updateVisibleTables(){
+
+  const grid = document.getElementById("tablePreviewGrid");
+  if(!grid) return;
+
+  const scrollTop = grid.scrollTop;
+
+  const start = Math.floor(scrollTop / ROW_HEIGHT);
+  TABLE_VIEW.start = start;
+
+  renderVisibleTables();
+}
+
+function renderVisibleTables(){
+
+  const grid = document.getElementById("tablePreviewGrid");
+  if(!grid) return;
+
+  const data = TABLE_VIEW.data;
+  const start = TABLE_VIEW.start;
+  const end = start + VISIBLE_COUNT;
+
+  const visible = data.slice(start, end);
+
   const fragment = document.createDocumentFragment();
 
-  filtered.forEach(table => {
-
-    const statusColor = getTableStatusColor(table.status);
-    const opacity = table.active ? "1" : "0.4";
-
-    const card = document.createElement("div");
-    card.className = "terminal-card table-card";
-    card.style.opacity = opacity;
-
-    card.innerHTML = `
-      ${table.image ? `<img src="${table.image}" class="table-card-image">` : ""}
-
-      <div class="terminal-card-header">
-        <span class="terminal-title">${table.name}</span>
-      </div>
-
-      <div class="terminal-card-body table-info">
-        <div class="table-meta">
-          <span>👥 ${table.capacity} Pax</span>
-          <span>📍 ${table.zone}</span>
-        </div>
-
-        <div class="table-meta">
-          <span>🍽 ${table.category || "-"}</span>
-        </div>
-
-        <div class="table-notes">
-          ${table.notes || ""}
-        </div>
-
-        <div class="table-status" style="background:${statusColor}">
-          ${table.status}
-        </div>
-
-        <div class="table-actions">
-          <button data-edit="${table.id}">Edit</button>
-          <button data-delete="${table.id}">Delete</button>
-        </div>
-      </div>
-    `;
-
-    fragment.appendChild(card);
+  visible.forEach(table => {
+    fragment.appendChild(createTableCard(table));
   });
 
-  // 🔥 hanya sekali
   grid.innerHTML = "";
   grid.appendChild(fragment);
-
-  updateTableStats(filtered);
 }
 
 /* =========================
@@ -275,13 +316,11 @@ async function saveTable(){
   const session = await getSessionCached();
   const restoId = session?.restoId || "default";
 
-  const table = TABLE_INDEX[id];
-
   let posX = 100;
   let posY = 100;
 
   if(editingTableId){
-    const existing = tables.find(t => t.id === editingTableId);
+    const existing = TABLE_CACHE.find(t => t.id === editingTableId);
     if(existing){
       posX = existing.x || 100;
       posY = existing.y || 100;
@@ -686,6 +725,8 @@ function enableShapeResize(node, handle){
 }
 
 function getLayoutData(){
+  const map = document.getElementById("tableEditorMap");
+  if(!map) return [];
 
   const shapes = map.querySelectorAll(".layout-shape");
 
@@ -1022,10 +1063,13 @@ document.addEventListener("DOMContentLoaded", async function(){
 
  await loadTablesOnce();
 
+initVirtualScroll();
+
 await Promise.all([
   renderTables(),
   renderTableMap(),
   loadDepositSetting()
+   
 ]);
    console.timeEnd("⚡ TOTAL INIT");
 });
