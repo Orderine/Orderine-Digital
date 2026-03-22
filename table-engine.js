@@ -320,7 +320,7 @@ function renderVisibleTables(){
 ========================= */
 
 async function generateTableName(){
-  return "T" + String(tables.length + 1).padStart(2,"0");
+  return "T" + String(TABLE_CACHE.length + 1).padStart(2,"0");
 }
 
 /* =========================
@@ -485,7 +485,7 @@ function enableTableDragForContainer(map){
   let activeNode = null;
   let offsetX = 0;
   let offsetY = 0;
-  let lastTap = 0;
+  let lastTapTable = 0;
 
   // 🔥 pakai pointer events (1 sistem semua device)
   map.addEventListener("pointerdown", (e) => {
@@ -712,7 +712,7 @@ function addLayoutShape(type){
 
 }
 
-let lastTap = 0;
+let lastTapShape = 0;
 function enableShapeDrag(node){
 
   const map = document.getElementById("tableEditorMap");
@@ -871,10 +871,10 @@ function renderLayoutShapes(layout){
     shape.style.height = item.height + "px";
     shape.style.zIndex = item.zIndex || 1;
 
-    if(item.rotation){
-      shape.dataset.rotate = item.rotation;
-      shape.style.transform = `rotate(${item.rotation}deg)`;
-    }
+   shape.dataset.rotate = item.rotation || 0;
+
+   shape.style.transform =
+  `translate(${item.x}px, ${item.y}px) rotate(${item.rotation || 0}deg)`;
 
     const resize = document.createElement("div");
     resize.className = "resize-handle";
@@ -905,7 +905,7 @@ async function saveLayout(){
     updatedAt: Date.now()
   };
 
-  await MENUVA_DB.add("restaurantLayouts", layout);
+  await MENUVA_DB.update("restaurantLayouts", layout);
 
   alert("Layout saved bro 🔥");
 
