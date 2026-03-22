@@ -344,7 +344,7 @@ async function saveTable(){
       posY = existing.y || 100;
     }
   } else {
-    const count = tables.length;
+    const count = TABLE_CACHE.length;
     const cols = 5;
 
     posX = 80 + (count % cols) * 90;
@@ -731,19 +731,6 @@ function enableShapeDrag(node){
 
     updateMemory();
   });
-}
-
-    function up(){
-      document.removeEventListener("mousemove", move);
-      document.removeEventListener("mouseup", up);
-      updateMemory();
-    }
-
-    document.addEventListener("mousemove", move);
-    document.addEventListener("mouseup", up);
-
-  });
-
 }
 
 function enableShapeResize(node, handle){
