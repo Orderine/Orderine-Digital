@@ -10,15 +10,6 @@
 <!-- AUTH GUARD (NON MODULE) -->
 <script src="./auth-guard.js"></script>
 
-<!-- ⚡ PRECONNECT biar DNS + TLS cepat -->
-<link rel="preconnect" href="https://unpkg.com" crossorigin>
-
-<!-- ⚡ LOAD ICON (pakai defer biar gak block render) -->
-<script type="module" defer src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-<script nomodule defer src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
-
-<link rel="icon" href="data:,">
-
 <!-- CDN BIASA -->
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   
@@ -4034,6 +4025,9 @@ function renderPromoUI() {
     return true;
   });
 
+  // 🔥 TAMBAHAN: fragment
+  const fragment = document.createDocumentFragment();
+
   promos.forEach(promo => {
 
     const div = document.createElement("div");
@@ -4062,7 +4056,7 @@ function renderPromoUI() {
         </p>
 
         <div class="promo-img-wrap" style="display:${promo.image?"block":"none"}">
-          <img src="${promo.image}" class="promo-img">
+          <img src="${promo.image}" class="promo-img" loading="lazy" decoding="async">
         </div>
 
         <p id="countdown-${promo.id}" class="promo-countdown"></p>
@@ -4075,8 +4069,12 @@ function renderPromoUI() {
       </div>
     `;
 
-    grid.appendChild(div);
+    // 🔥 pindahin ke fragment dulu
+    fragment.appendChild(div);
   });
+
+  // 🔥 append SEKALI
+  grid.appendChild(fragment);
 }
 
 /* ======================= TOGGLE ACTIVE ========================= */
@@ -4295,14 +4293,27 @@ async function loadCategories() {
   const restoId = window.activeUser?.restoID;
   if (!restoId) return;
 
-  const menus = await MENUVA_DB.getByIndex?.("menuData", "restoId", restoId)
-  || (await MENUVA_DB.getAll("menuData")).filter(m => m.restoId === restoId);
+  let menus;
+
+  // 🔥 PRIORITAS FAST QUERY
+  if (MENUVA_DB.getByIndex) {
+    menus = await MENUVA_DB.getByIndex("menuData", "restoId", restoId);
+  } else {
+    // fallback (tetap ada, tapi dioptimasi)
+    const all = await MENUVA_DB.getAll("menuData");
+    menus = all.filter(m => m.restoId === restoId);
+  }
 
   const unique = new Map();
 
-  for (const m of menus) {
-    if (m.restoId === restoId && m.category?.name) {
-      unique.set(m.category.name, m.category);
+  for (let i = 0; i < menus.length; i++) {
+    const m = menus[i];
+
+    // 🔥 cache property (lebih cepat)
+    const category = m.category;
+
+    if (category && category.name) {
+      unique.set(category.name, category);
     }
   }
 
@@ -4314,6 +4325,7 @@ async function loadCategories() {
 
   renderCategoryFilter();
 }
+  
 /* ================= CATEGORY FILTER RENDER ================= */
 
 function renderCategoryFilter() {
@@ -4812,6 +4824,7 @@ if (!window.rooms || !Array.isArray(window.rooms)) {
 
   });
 }
+
 function createRoomElementSafe(room) {
   try {
     const wrapper = document.createElement("div");
@@ -4834,34 +4847,48 @@ function createRoomElementSafe(room) {
       <hr>
     `;
 
+    // 🔥 CACHE SEMUA ELEMENT SEKALI
+    const nama = wrapper.querySelector(".room-nama");
+    const harga = wrapper.querySelector(".room-harga");
+    const kapasitas = wrapper.querySelector(".room-kapasitas");
+    const luas = wrapper.querySelector(".room-luas");
+    const deskripsi = wrapper.querySelector(".room-deskripsi");
+
+    const preview = wrapper.querySelector(".gambar-preview");
+    const hapusGambarBtn = wrapper.querySelector(".hapus-gambar");
+    const uploadBtn = wrapper.querySelector(".room-image-upload");
+    const hapusRoomBtn = wrapper.querySelector(".hapus-room");
+
     // isi data
-    wrapper.querySelector(".room-nama").value = room?.nama || "";
-    wrapper.querySelector(".room-harga").value = room?.harga || "";
-    wrapper.querySelector(".room-kapasitas").value = room?.kapasitas || "";
-    wrapper.querySelector(".room-luas").value = room?.luas || "";
-    wrapper.querySelector(".room-deskripsi").value = room?.deskripsi || "";
+    if (nama) nama.value = room?.nama || "";
+    if (harga) harga.value = room?.harga || "";
+    if (kapasitas) kapasitas.value = room?.kapasitas || "";
+    if (luas) luas.value = room?.luas || "";
+    if (deskripsi) deskripsi.value = room?.deskripsi || "";
 
-    if (room?.image) {
-      const preview = wrapper.querySelector(".gambar-preview");
-      const hapus = wrapper.querySelector(".hapus-gambar");
-      const upload = wrapper.querySelector(".room-image-upload");
-
+    if (room?.image && preview && hapusGambarBtn && uploadBtn) {
       preview.src = room.image;
       preview.style.display = "block";
-      hapus.style.display = "inline-flex";
-      upload.setAttribute("data-image", room.image);
+      hapusGambarBtn.style.display = "inline-flex";
+      uploadBtn.setAttribute("data-image", room.image);
     }
 
-    // events
-    wrapper.querySelector(".hapus-room").onclick = () => wrapper.remove();
+    // 🔥 EVENT (pakai cached element)
+    if (hapusRoomBtn) {
+      hapusRoomBtn.onclick = () => wrapper.remove();
+    }
 
-    wrapper.querySelector(".room-image-upload").onclick = (e) => {
-      uploadGambarRoom?.(e.currentTarget);
-    };
+    if (uploadBtn) {
+      uploadBtn.onclick = (e) => {
+        uploadGambarRoom?.(e.currentTarget);
+      };
+    }
 
-    wrapper.querySelector(".hapus-gambar").onclick = (e) => {
-      hapusGambarRoom?.(e.currentTarget);
-    };
+    if (hapusGambarBtn) {
+      hapusGambarBtn.onclick = (e) => {
+        hapusGambarRoom?.(e.currentTarget);
+      };
+    }
 
     return wrapper;
 
@@ -4871,12 +4898,9 @@ function createRoomElementSafe(room) {
   }
 }
   
-  function renderRoomsFromDB(rooms = []) {
+function renderRoomsFromDB(rooms = []) {
 
-  if (!Array.isArray(rooms)) {
-    console.warn("⚠️ rooms bukan array");
-    return;
-  }
+  if (!Array.isArray(rooms)) return;
 
   const map = {
     hotel: "roomHotelContainer",
@@ -4884,17 +4908,29 @@ function createRoomElementSafe(room) {
     package: "packageContainer"
   };
 
-  // clear container
-  Object.values(map).forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = "";
-  });
+  // 🔥 CACHE CONTAINER (hindari query berulang)
+  const containers = {};
+  for (const key in map) {
+    const el = document.getElementById(map[key]);
+    if (el) {
+      el.innerHTML = "";
+      containers[key] = el;
+    }
+  }
 
   if (!rooms.length) return;
 
-  rooms.forEach(room => {
+  const fragments = {
+    hotel: document.createDocumentFragment(),
+    meeting: document.createDocumentFragment(),
+    package: document.createDocumentFragment()
+  };
 
-    if (!room) return;
+  // 🔥 LOOP LEBIH CEPAT
+  for (let i = 0; i < rooms.length; i++) {
+
+    const room = rooms[i];
+    if (!room || !room.nama) continue;
 
     const kategori =
       room.type === "meeting"
@@ -4903,25 +4939,21 @@ function createRoomElementSafe(room) {
           ? "package"
           : "hotel";
 
-    const containerId = map[kategori];
-    const container = document.getElementById(containerId);
-
-    if (!container) return;
-
     const el = createRoomElementSafe(room);
 
-    // 💥 INI YANG FIX ERROR appendChild
-    if (el instanceof Node) {
-      container.appendChild(el);
-    } else {
-      console.warn("❌ room element invalid:", room);
+    if (el instanceof Node && fragments[kategori]) {
+      fragments[kategori].appendChild(el);
     }
+  }
 
-  });
+  // 🔥 APPEND SEKALI
+  for (const key in containers) {
+    containers[key].appendChild(fragments[key]);
+  }
 
   console.log("✅ Rooms rendered:", rooms.length);
 }
-
+  
 /* ============================================================
    EXPOSE TO WINDOW (WAJIB UNTUK MODULE)
 ============================================================ */
@@ -5046,7 +5078,10 @@ function renderImagePreviewBatch(tipe, urls = []) {
 
   const fragment = document.createDocumentFragment();
 
-  urls.forEach(url => {
+  // 🔥 LIMIT AWAL (biar cepat tampil)
+  const INITIAL_RENDER = 10;
+
+  urls.slice(0, INITIAL_RENDER).forEach(url => {
     if (!url) return;
 
     const wrapper = document.createElement("div");
@@ -5055,6 +5090,7 @@ function renderImagePreviewBatch(tipe, urls = []) {
     const img = new Image();
     img.src = url;
     img.loading = "lazy";
+    img.decoding = "async";
 
     const btn = document.createElement("button");
     btn.className = "btn-hapus-gambar";
@@ -5067,6 +5103,39 @@ function renderImagePreviewBatch(tipe, urls = []) {
   });
 
   container.appendChild(fragment);
+
+  // 🔥 RENDER SISANYA DI BELAKANG (tidak blocking UI)
+  if (urls.length > INITIAL_RENDER) {
+    setTimeout(() => {
+
+      const fragment2 = document.createDocumentFragment();
+
+      for (let i = INITIAL_RENDER; i < urls.length; i++) {
+        const url = urls[i];
+        if (!url) continue;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "flipbook-preview-item";
+
+        const img = new Image();
+        img.src = url;
+        img.loading = "lazy";
+        img.decoding = "async";
+
+        const btn = document.createElement("button");
+        btn.className = "btn-hapus-gambar";
+        btn.textContent = "×";
+
+        btn.onclick = () => wrapper.remove();
+
+        wrapper.append(img, btn);
+        fragment2.appendChild(wrapper);
+      }
+
+      container.appendChild(fragment2);
+
+    }, 0); // 🔥 non-blocking
+  }
 }
 
 function tambahGambar(type) {
@@ -5404,24 +5473,25 @@ async function loadData() {
       return;
     }
 
-    // ================= RESTO PROFILE =================
-    const safeSetVal = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.value = val ?? "";
-    };
+    // 🔥 CACHE DOM
+    const elNama = document.getElementById("namaRestoran");
+    const elAddr = document.getElementById("restoAddress");
+    const elPhone = document.getElementById("restoPhone");
+    const elLoc = document.getElementById("locationCodeInput");
+    const elLogo = document.getElementById("previewLogo");
 
-    safeSetVal("namaRestoran", resto.namaRestoran);
-    safeSetVal("restoAddress", resto.restoAddress);
-    safeSetVal("restoPhone", resto.restoPhone);
+    // ================= RESTO PROFILE =================
+    if (elNama) elNama.value = resto.namaRestoran ?? "";
+    if (elAddr) elAddr.value = resto.restoAddress ?? "";
+    if (elPhone) elPhone.value = resto.restoPhone ?? "";
 
     // ================= SYSTEM SETTINGS =================
     window.systemSettings = {
       locationCode: resto.locationCode || "LOC"
     };
 
-    const locationInput = document.getElementById("locationCodeInput");
-    if (locationInput) {
-      locationInput.value = window.systemSettings.locationCode;
+    if (elLoc) {
+      elLoc.value = window.systemSettings.locationCode;
     }
 
     console.log("🏷️ Location Code loaded:", window.systemSettings.locationCode);
@@ -5434,10 +5504,9 @@ async function loadData() {
     }
 
     // ================= LOGO =================
-    if (resto.logo) {
+    if (resto.logo && elLogo) {
       window.__LOGO_BASE64__ = resto.logo;
-      const img = document.getElementById("previewLogo");
-      if (img) img.src = resto.logo;
+      elLogo.src = resto.logo;
     }
 
     // ================= PARALLEL DATA FETCH =================
@@ -5486,15 +5555,16 @@ async function loadData() {
       ...window.flipbookMenuImages
     ];
 
-    // 🔥 BATCH RENDER (kalau ada functionnya)
-    if (typeof renderAllImagePreview === "function") {
-      renderAllImagePreview("ruangan", window.flipbookRuanganImages);
-      renderAllImagePreview("menu", window.flipbookMenuImages);
-    } else {
-      // fallback (logic lama tetap aman)
-    renderImagePreviewBatch("ruangan", window.flipbookRuanganImages);
-    renderImagePreviewBatch("menu", window.flipbookMenuImages);
-    }
+    // 🔥 DELAY HEAVY IMAGE RENDER
+    setTimeout(() => {
+      if (typeof renderAllImagePreview === "function") {
+        renderAllImagePreview("ruangan", window.flipbookRuanganImages);
+        renderAllImagePreview("menu", window.flipbookMenuImages);
+      } else {
+        renderImagePreviewBatch("ruangan", window.flipbookRuanganImages);
+        renderImagePreviewBatch("menu", window.flipbookMenuImages);
+      }
+    }, 0);
 
     try { renderFlipbookUI?.(); }
     catch (e) { console.warn("⚠️ renderFlipbookUI error:", e); }
@@ -5504,11 +5574,14 @@ async function loadData() {
       ? resto.rooms
       : [];
 
-    try {
-      renderRoomsFromDB?.(window.rooms);
-    } catch (e) {
-      console.warn("⚠️ renderRoomsFromDB error:", e);
-    }
+    // 🔥 DELAY HEAVIEST FUNCTION
+    setTimeout(() => {
+      try {
+        renderRoomsFromDB?.(window.rooms);
+      } catch (e) {
+        console.warn("⚠️ renderRoomsFromDB error:", e);
+      }
+    }, 0);
 
     console.log("✅ loadData FINISHED (CLEAN MODE)");
 
