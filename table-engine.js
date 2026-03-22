@@ -664,8 +664,10 @@ function addLayoutShape(type){
   shape.className = "layout-shape " + type;
   shape.dataset.type = type;
 
-  shape.style.left = "120px";
-  shape.style.top = "120px";
+ shape.dataset.rotate = 0;
+  shape.style.transform =
+  `translate(120px,120px) rotate(0deg)`;
+   
   shape.style.width = "100px";
   shape.style.height = "60px";
   shape.style.zIndex = 1;
@@ -684,6 +686,7 @@ function addLayoutShape(type){
 
 }
 
+let lastTap = 0;
 function enableShapeDrag(node){
 
   const map = document.getElementById("tableEditorMap");
@@ -724,13 +727,22 @@ function enableShapeDrag(node){
 
   });
 
-  node.addEventListener("pointerup", (e) => {
+ node.addEventListener("pointerup", (e) => {
 
-    active = false;
-    node.releasePointerCapture(e.pointerId);
+  active = false;
+  node.releasePointerCapture(e.pointerId);
 
-    updateMemory();
-  });
+  const now = Date.now();
+
+  if(now - lastTap < 250){
+    rotateShape(node);
+    lastTap = 0;
+  }else{
+    lastTap = now;
+  }
+
+  updateMemory();
+});
 }
 
 function enableShapeResize(node, handle){
@@ -762,21 +774,32 @@ function enableShapeResize(node, handle){
 }
 
 function getLayoutData(){
+
   const map = document.getElementById("tableEditorMap");
   if(!map) return [];
 
   const shapes = map.querySelectorAll(".layout-shape");
 
-  return Array.from(shapes).map(shape => ({
-    type: shape.dataset.type || "",
-    x: parseInt(shape.style.left) || 0,
-    y: parseInt(shape.style.top) || 0,
-    width: shape.offsetWidth,
-    height: shape.offsetHeight,
-    rotation: parseInt(shape.dataset.rotate || 0),
-    zIndex: shape.style.zIndex || 1
-  }));
+  return Array.from(shapes).map(shape => {
 
+    const transform = shape.style.transform;
+
+    const match = transform.match(/translate\(([^,]+),([^,]+)/);
+
+    const x = match ? parseInt(match[1]) : 0;
+    const y = match ? parseInt(match[2]) : 0;
+
+    return {
+      type: shape.dataset.type || "",
+      x,
+      y,
+      width: shape.offsetWidth,
+      height: shape.offsetHeight,
+      rotation: parseInt(shape.dataset.rotate || 0),
+      zIndex: shape.style.zIndex || 1
+    };
+
+  });
 }
 
 function renderLayoutShapes(layout){
@@ -791,8 +814,10 @@ function renderLayoutShapes(layout){
     shape.className = "layout-shape " + item.type;
     shape.dataset.type = item.type;
 
-    shape.style.left = item.x + "px";
-    shape.style.top = item.y + "px";
+    shape.dataset.rotate = item.rotation || 0;
+    shape.style.transform =
+    `translate(${item.x}px, ${item.y}px) rotate(${item.rotation || 0}deg)`;
+     
     shape.style.width = item.width + "px";
     shape.style.height = item.height + "px";
     shape.style.zIndex = item.zIndex || 1;
@@ -991,7 +1016,8 @@ function rotateShape(node){
   node.dataset.rotate = angle;
 
   const transform = node.style.transform;
-  const match = transform.match(/translate\(([^,]+),([^,]+)/);
+
+  const match = transform.match(/translate\(([^,]+),([^,]+)\)/);
 
   const x = match ? match[1] : "0px";
   const y = match ? match[2] : "0px";
