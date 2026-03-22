@@ -4289,41 +4289,48 @@ function flashTerminalMessage(text) {
 
 /* ================= CATEGORY LOAD ================= */
 
+let __LOADING_CATEGORIES__ = false;
+
 async function loadCategories() {
-  const restoId = window.activeUser?.restoID;
-  if (!restoId) return;
 
-  let menus;
+  if (__LOADING_CATEGORIES__) return;
+  __LOADING_CATEGORIES__ = true;
 
-  // 🔥 PRIORITAS FAST QUERY
-  if (MENUVA_DB.getByIndex) {
-    menus = await MENUVA_DB.getByIndex("menuData", "restoId", restoId);
-  } else {
-    // fallback (tetap ada, tapi dioptimasi)
-    const all = await MENUVA_DB.getAll("menuData");
-    menus = all.filter(m => m.restoId === restoId);
-  }
+  try {
+    const restoId = window.activeUser?.restoID;
+    if (!restoId) return;
 
-  const unique = new Map();
+    let menus;
 
-  for (let i = 0; i < menus.length; i++) {
-    const m = menus[i];
-
-    // 🔥 cache property (lebih cepat)
-    const category = m.category;
-
-    if (category && category.name) {
-      unique.set(category.name, category);
+    if (MENUVA_DB.getByIndex) {
+      menus = await MENUVA_DB.getByIndex("menuData", "restoId", restoId);
+    } else {
+      const all = await MENUVA_DB.getAll("menuData");
+      menus = all.filter(m => m.restoId === restoId);
     }
+
+    const unique = new Map();
+
+    for (let i = 0; i < menus.length; i++) {
+      const m = menus[i];
+      const category = m.category;
+
+      if (category && category.name) {
+        unique.set(category.name, category);
+      }
+    }
+
+    window.menuCategories = Array.from(unique.values());
+
+    if (!window.activeCategoryName && window.menuCategories.length) {
+      window.activeCategoryName = window.menuCategories[0].name;
+    }
+
+    renderCategoryFilter();
+
+  } finally {
+    __LOADING_CATEGORIES__ = false;
   }
-
-  window.menuCategories = Array.from(unique.values());
-
-  if (!window.activeCategoryName && window.menuCategories.length) {
-    window.activeCategoryName = window.menuCategories[0].name;
-  }
-
-  renderCategoryFilter();
 }
   
 /* ================= CATEGORY FILTER RENDER ================= */
@@ -4830,70 +4837,80 @@ function createRoomElementSafe(room) {
     const wrapper = document.createElement("div");
     wrapper.className = "room-form";
 
-    wrapper.innerHTML = `
-      <input class="room-nama" placeholder="Name">
-      <input class="room-harga" type="number" placeholder="Price">
-      <input class="room-kapasitas" type="number" placeholder="Capacity">
-      <input class="room-luas" type="number" placeholder="Size (m²)">
-      <textarea class="room-deskripsi" placeholder="Notes"></textarea>
+    const nama = document.createElement("input");
+    nama.className = "room-nama";
+    nama.placeholder = "Name";
+    nama.value = room?.nama || "";
 
-      <div>
-        <img class="gambar-preview" style="display:none; max-width:120px">
-        <button type="button" class="hapus-gambar" style="display:none">×</button>
-      </div>
+    const harga = document.createElement("input");
+    harga.className = "room-harga";
+    harga.type = "number";
+    harga.placeholder = "Price";
+    harga.value = room?.harga || "";
 
-      <button type="button" class="room-image-upload">🖼 Upload Image</button>
-      <button type="button" class="hapus-room">🗑 Delete</button>
-      <hr>
-    `;
+    const kapasitas = document.createElement("input");
+    kapasitas.className = "room-kapasitas";
+    kapasitas.type = "number";
+    kapasitas.placeholder = "Capacity";
+    kapasitas.value = room?.kapasitas || "";
 
-    // 🔥 CACHE SEMUA ELEMENT SEKALI
-    const nama = wrapper.querySelector(".room-nama");
-    const harga = wrapper.querySelector(".room-harga");
-    const kapasitas = wrapper.querySelector(".room-kapasitas");
-    const luas = wrapper.querySelector(".room-luas");
-    const deskripsi = wrapper.querySelector(".room-deskripsi");
+    const luas = document.createElement("input");
+    luas.className = "room-luas";
+    luas.type = "number";
+    luas.placeholder = "Size (m²)";
+    luas.value = room?.luas || "";
 
-    const preview = wrapper.querySelector(".gambar-preview");
-    const hapusGambarBtn = wrapper.querySelector(".hapus-gambar");
-    const uploadBtn = wrapper.querySelector(".room-image-upload");
-    const hapusRoomBtn = wrapper.querySelector(".hapus-room");
+    const deskripsi = document.createElement("textarea");
+    deskripsi.className = "room-deskripsi";
+    deskripsi.placeholder = "Notes";
+    deskripsi.value = room?.deskripsi || "";
 
-    // isi data
-    if (nama) nama.value = room?.nama || "";
-    if (harga) harga.value = room?.harga || "";
-    if (kapasitas) kapasitas.value = room?.kapasitas || "";
-    if (luas) luas.value = room?.luas || "";
-    if (deskripsi) deskripsi.value = room?.deskripsi || "";
+    const img = document.createElement("img");
+    img.className = "gambar-preview";
+    img.style.display = "none";
+    img.style.maxWidth = "120px";
 
-    if (room?.image && preview && hapusGambarBtn && uploadBtn) {
-      preview.src = room.image;
-      preview.style.display = "block";
-      hapusGambarBtn.style.display = "inline-flex";
-      uploadBtn.setAttribute("data-image", room.image);
+    const hapusGambar = document.createElement("button");
+    hapusGambar.className = "hapus-gambar";
+    hapusGambar.textContent = "×";
+    hapusGambar.style.display = "none";
+
+    const upload = document.createElement("button");
+    upload.className = "room-image-upload";
+    upload.textContent = "🖼 Upload Image";
+
+    const hapusRoom = document.createElement("button");
+    hapusRoom.className = "hapus-room";
+    hapusRoom.textContent = "🗑 Delete";
+
+    if (room?.image) {
+      img.src = room.image;
+      img.style.display = "block";
+      hapusGambar.style.display = "inline-flex";
+      upload.dataset.image = room.image;
     }
 
-    // 🔥 EVENT (pakai cached element)
-    if (hapusRoomBtn) {
-      hapusRoomBtn.onclick = () => wrapper.remove();
-    }
+    hapusRoom.onclick = () => wrapper.remove();
+    upload.onclick = (e) => uploadGambarRoom?.(e.currentTarget);
+    hapusGambar.onclick = (e) => hapusGambarRoom?.(e.currentTarget);
 
-    if (uploadBtn) {
-      uploadBtn.onclick = (e) => {
-        uploadGambarRoom?.(e.currentTarget);
-      };
-    }
-
-    if (hapusGambarBtn) {
-      hapusGambarBtn.onclick = (e) => {
-        hapusGambarRoom?.(e.currentTarget);
-      };
-    }
+    wrapper.append(
+      nama,
+      harga,
+      kapasitas,
+      luas,
+      deskripsi,
+      img,
+      hapusGambar,
+      upload,
+      hapusRoom,
+      document.createElement("hr")
+    );
 
     return wrapper;
 
   } catch (err) {
-    console.error("❌ createRoomElementSafe error:", err);
+    console.error(err);
     return null;
   }
 }
@@ -6118,7 +6135,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     await waitForDB();
     console.log("✅ MENUVA_DB ready");
-    await loadCategories();
 
     /* ================= ADMIN UI INIT ================= */
 
@@ -6155,7 +6171,6 @@ document.addEventListener("DOMContentLoaded", async () => {
    /* ================= LOAD DATA ================= */
 
 await safeAwait("loadData", window.loadData);
-await loadCategories();
 
 safeCall("initPromoSystem", window.initPromoSystem);
 
