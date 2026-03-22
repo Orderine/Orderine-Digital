@@ -95,6 +95,24 @@ function initLayoutEditor(){
 
   });
 
+   map.addEventListener("pointerdown", function(e){
+
+  const shape = e.target.closest(".layout-shape");
+
+  if(shape){
+    selectedShape = shape;
+
+    map.querySelectorAll(".layout-shape")
+      .forEach(el => el.classList.remove("selected"));
+
+    shape.classList.add("selected");
+
+    const deleteBtn = document.getElementById("deleteShapeBtn");
+    if(deleteBtn) deleteBtn.style.display = "flex";
+  }
+
+});
+
   /* LONG PRESS DELETE */
   map.addEventListener("touchstart", function(e){
 
@@ -551,12 +569,21 @@ function rotateTable(node){
   angle += 90;
 
   node.dataset.rotate = angle;
-  node.style.transform = `rotate(${angle}deg)`;
+
+  // 🔥 AMBIL POSISI LAMA
+  const transform = node.style.transform;
+  const match = transform.match(/translate3d\(([^,]+),([^,]+)/);
+
+  const x = match ? match[1] : "0px";
+  const y = match ? match[2] : "0px";
+
+  // 🔥 GABUNG translate + rotate
+  node.style.transform =
+    `translate3d(${x}, ${y}, 0) rotate(${angle}deg)`;
 
   updateMemory();
 
   setTimeout(() => isRotating = false, 200);
-
 }
 
 /* =========================
@@ -661,27 +688,50 @@ function enableShapeDrag(node){
 
   const map = document.getElementById("tableEditorMap");
 
+  let active = false;
   let offsetX = 0;
   let offsetY = 0;
 
-  node.addEventListener("mousedown", e => {
+  node.addEventListener("pointerdown", (e) => {
+
+    active = true;
 
     const rect = node.getBoundingClientRect();
+    const mapRect = map.getBoundingClientRect();
 
     offsetX = e.clientX - rect.left;
     offsetY = e.clientY - rect.top;
 
-    function move(e){
-      const rect = map.getBoundingClientRect();
+    node.setPointerCapture(e.pointerId);
 
-      let x = e.clientX - rect.left - offsetX;
-      let y = e.clientY - rect.top - offsetY;
+  });
 
-      x = snapToGrid(x);
-      y = snapToGrid(y);
+  node.addEventListener("pointermove", (e) => {
 
-      node.style.transform = `translate(${x}px, ${y}px) rotate(${node.dataset.rotate || 0}deg)`;
-    }
+    if(!active) return;
+
+    const mapRect = map.getBoundingClientRect();
+
+    let x = e.clientX - mapRect.left - offsetX;
+    let y = e.clientY - mapRect.top - offsetY;
+
+    x = snapToGrid(x);
+    y = snapToGrid(y);
+
+    // 🔥 PAKAI TRANSFORM SAJA (jangan left/top)
+    node.style.transform =
+      `translate(${x}px, ${y}px) rotate(${node.dataset.rotate || 0}deg)`;
+
+  });
+
+  node.addEventListener("pointerup", (e) => {
+
+    active = false;
+    node.releasePointerCapture(e.pointerId);
+
+    updateMemory();
+  });
+}
 
     function up(){
       document.removeEventListener("mousemove", move);
@@ -952,10 +1002,17 @@ function rotateShape(node){
   angle += 90;
 
   node.dataset.rotate = angle;
-  node.style.transform = `rotate(${angle}deg)`;
+
+  const transform = node.style.transform;
+  const match = transform.match(/translate\(([^,]+),([^,]+)/);
+
+  const x = match ? match[1] : "0px";
+  const y = match ? match[2] : "0px";
+
+  node.style.transform =
+    `translate(${x}, ${y}) rotate(${angle}deg)`;
 
   updateMemory();
-
 }
 
 async function editTable(id){
