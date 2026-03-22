@@ -4730,10 +4730,15 @@ function hapusGambarRoom(btn) {
   btn.style.display = "none";
   form.querySelector(".room-image-upload").removeAttribute("data-image");
 }
-function initRooms() {
 
-  if (!window.rooms) return;
+function hapusFormRoom(btn) {
+  btn.closest(".room-form")?.remove();
+}
 
+// render rooms (tanpa return ilegal)
+if (!window.rooms || !Array.isArray(window.rooms)) {
+  console.warn("rooms belum ada atau bukan array");
+} else {
   window.rooms.forEach(room => {
 
     const kategori =
@@ -4748,18 +4753,14 @@ function initRooms() {
       kategori
     });
 
-    if (el instanceof Node) {
+    if (el instanceof Node && fragmentMap[kategori]) {
       fragmentMap[kategori].appendChild(el);
     } else {
-      console.warn("❌ Bukan Node:", el, room);
+      console.warn("❌ Bukan Node / kategori tidak ada:", el, room);
     }
 
   });
-
 }
-
-initRooms();
-
 function createRoomElementSafe(room) {
   try {
     const wrapper = document.createElement("div");
