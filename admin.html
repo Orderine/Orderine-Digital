@@ -3727,6 +3727,30 @@ window.renderSubscriptionPanel = function () {
 </script>
 <script>
 
+  const SLOW_LOG = [];
+
+function trackFunction(obj, key) {
+  const original = obj[key];
+  if (typeof original !== "function") return;
+
+  obj[key] = function (...args) {
+    const start = performance.now();
+
+    const result = original.apply(this, args);
+
+    const duration = performance.now() - start;
+
+    if (duration > 10) { // threshold 10ms (bisa lo ubah)
+      SLOW_LOG.push({
+        name: key,
+        duration: duration.toFixed(2)
+      });
+    }
+
+    return result;
+  };
+}
+
   /* ============================================================
    ADMIN DB BRIDGE (NO MODULE – FINAL STABLE)
 ============================================================ */
