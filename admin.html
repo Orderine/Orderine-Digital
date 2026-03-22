@@ -3727,29 +3727,56 @@ window.renderSubscriptionPanel = function () {
 </script>
 <script>
 
+ (function(){
+
   const SLOW_LOG = [];
 
-function trackFunction(obj, key) {
-  const original = obj[key];
-  if (typeof original !== "function") return;
+  function wrapFunction(obj, key){
+    const original = obj[key];
 
-  obj[key] = function (...args) {
-    const start = performance.now();
+    if(typeof original !== "function") return;
 
-    const result = original.apply(this, args);
+    obj[key] = async function(...args){
 
-    const duration = performance.now() - start;
+      const start = performance.now();
 
-    if (duration > 10) { // threshold 10ms (bisa lo ubah)
-      SLOW_LOG.push({
-        name: key,
-        duration: duration.toFixed(2)
-      });
-    }
+      try{
+        const result = await original.apply(this, args);
+        return result;
+      }finally{
+        const duration = performance.now() - start;
 
-    return result;
+        SLOW_LOG.push({
+          name: key,
+          duration
+        });
+
+        if(duration > 100){ // 🔥 threshold (100ms)
+          console.warn(`🐢 SLOW FUNC: ${key} → ${duration.toFixed(2)} ms`);
+        }
+      }
+    };
+  }
+
+  // 🔥 wrap semua function di window
+  Object.keys(window).forEach(key => {
+    try{
+      wrapFunction(window, key);
+    }catch(e){}
+  });
+
+  // 🔥 helper untuk lihat ranking
+  window.showSlowFunctions = function(){
+    const sorted = [...SLOW_LOG]
+      .sort((a,b) => b.duration - a.duration)
+      .slice(0, 20);
+
+    console.table(sorted);
   };
-}
+
+  console.log("🚀 Profiler aktif! jalankan: showSlowFunctions()");
+
+})();
 
   /* ============================================================
    ADMIN DB BRIDGE (NO MODULE – FINAL STABLE)
