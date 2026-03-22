@@ -95,22 +95,31 @@ function initLayoutEditor(){
 
   });
 
-   map.addEventListener("pointerdown", function(e){
+map.addEventListener("pointerdown", function(e){
 
   const shape = e.target.closest(".layout-shape");
+  if(!shape) return;
 
-  if(shape){
-    selectedShape = shape;
+  selectedShape = shape;
 
-    map.querySelectorAll(".layout-shape")
-      .forEach(el => el.classList.remove("selected"));
+  pressTimer = setTimeout(()=>{
+
+    const deleteBtn = document.getElementById("deleteShapeBtn");
 
     shape.classList.add("selected");
 
-    const deleteBtn = document.getElementById("deleteShapeBtn");
     if(deleteBtn) deleteBtn.style.display = "flex";
-  }
 
+  },400);
+
+});
+
+map.addEventListener("pointermove", ()=>{
+  clearTimeout(pressTimer);
+});
+
+map.addEventListener("pointerup", ()=>{
+  clearTimeout(pressTimer);
 });
 
   /* LONG PRESS DELETE */
@@ -468,7 +477,7 @@ async function renderTableMap() {
 /* =========================
    DRAG TABLE (CLEAN)
 ========================= */
-
+let moved = false;
 function enableTableDragForContainer(map){
    if(map._dragInitialized) return; // 🔥 penting
   map._dragInitialized = true;
@@ -497,6 +506,8 @@ function enableTableDragForContainer(map){
 
     node.setPointerCapture(e.pointerId);
 
+     moved = false;
+
   });
 
   map.addEventListener("pointermove", (e) => {
@@ -519,6 +530,8 @@ function enableTableDragForContainer(map){
     activeNode.style.transform =
       `translate3d(${x}px, ${y}px, 0) rotate(${activeNode.dataset.rotate || 0}deg)`;
 
+       moved = true;
+
   });
 
   map.addEventListener("pointerup", (e) => {
@@ -538,6 +551,19 @@ function enableTableDragForContainer(map){
     } else {
       lastTap = now;
     }
+
+    if(!moved){
+
+  const now = Date.now();
+
+  if(now - lastTap < 250){
+    rotateTable(activeNode);
+    lastTap = 0;
+  }else{
+    lastTap = now;
+  }
+
+}
 
     activeNode = null;
 
@@ -721,10 +747,11 @@ function enableShapeDrag(node){
     x = snapToGrid(x);
     y = snapToGrid(y);
 
-    // 🔥 PAKAI TRANSFORM SAJA (jangan left/top)
-    node.style.transform =
-      `translate(${x}px, ${y}px) rotate(${node.dataset.rotate || 0}deg)`;
+   node.dataset.x = x;
+   node.dataset.y = y;
 
+node.style.transform =
+`translate(${x}px,${y}px) rotate(${node.dataset.rotate || 0}deg)`;
   });
 
  node.addEventListener("pointerup", (e) => {
@@ -747,29 +774,51 @@ function enableShapeDrag(node){
 
 function enableShapeResize(node, handle){
 
-  handle.onmousedown = function(e){
+  const map = document.getElementById("tableEditorMap");
+
+  let resizing = false;
+  let startX = 0;
+  let startY = 0;
+  let startW = 0;
+  let startH = 0;
+
+  handle.addEventListener("pointerdown", (e)=>{
 
     e.stopPropagation();
 
-    const startX = e.clientX;
-    const startY = e.clientY;
+    resizing = true;
 
-    const startWidth = node.offsetWidth;
-    const startHeight = node.offsetHeight;
+    startX = e.clientX;
+    startY = e.clientY;
 
-    document.onmousemove = function(e){
+    startW = node.offsetWidth;
+    startH = node.offsetHeight;
 
-      node.style.width = startWidth + (e.clientX - startX) + "px";
-      node.style.height = startHeight + (e.clientY - startY) + "px";
+    handle.setPointerCapture(e.pointerId);
 
-    };
+  });
 
-    document.onmouseup = function(){
-      document.onmousemove = null;
-      updateMemory();
-    };
+  handle.addEventListener("pointermove", (e)=>{
 
-  };
+    if(!resizing) return;
+
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    node.style.width = startW + dx + "px";
+    node.style.height = startH + dy + "px";
+
+  });
+
+  handle.addEventListener("pointerup",(e)=>{
+
+    resizing = false;
+
+    handle.releasePointerCapture(e.pointerId);
+
+    updateMemory();
+
+  });
 
 }
 
@@ -1015,15 +1064,11 @@ function rotateShape(node){
 
   node.dataset.rotate = angle;
 
-  const transform = node.style.transform;
-
-  const match = transform.match(/translate\(([^,]+),([^,]+)\)/);
-
-  const x = match ? match[1] : "0px";
-  const y = match ? match[2] : "0px";
+  const x = node.dataset.x || 0;
+  const y = node.dataset.y || 0;
 
   node.style.transform =
-    `translate(${x}, ${y}) rotate(${angle}deg)`;
+  `translate(${x}px,${y}px) rotate(${angle}deg)`;
 
   updateMemory();
 }
