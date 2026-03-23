@@ -4488,6 +4488,10 @@ document.getElementById("logoInput")?.addEventListener("change", async e => {
   }
 }
 
+function renderAllImagePreview(tipe, urls = []) {
+return renderImagePreviewBatch(tipe, urls);
+}
+
 function renderImagePreviewBatch(tipe, urls = []) {
 
   const containerId =
@@ -4498,9 +4502,10 @@ function renderImagePreviewBatch(tipe, urls = []) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
+  container.innerHTML = ""; // 🔥 reset biar gak numpuk
+
   const fragment = document.createDocumentFragment();
 
-  // 🔥 LIMIT AWAL (biar cepat tampil)
   const INITIAL_RENDER = 10;
 
   urls.slice(0, INITIAL_RENDER).forEach(url => {
@@ -4526,7 +4531,7 @@ function renderImagePreviewBatch(tipe, urls = []) {
 
   container.appendChild(fragment);
 
-  // 🔥 RENDER SISANYA DI BELAKANG (tidak blocking UI)
+  // 🔥 render sisanya non-blocking
   if (urls.length > INITIAL_RENDER) {
     setTimeout(() => {
 
@@ -4556,7 +4561,7 @@ function renderImagePreviewBatch(tipe, urls = []) {
 
       container.appendChild(fragment2);
 
-    }, 0); // 🔥 non-blocking
+    }, 0);
   }
 }
 
