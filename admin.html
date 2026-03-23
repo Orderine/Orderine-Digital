@@ -3671,8 +3671,6 @@ function flashTerminalMessage(text) {
 /* ================= CATEGORY LOAD ================= */
 
 let __LOADING_CATEGORIES__ = false;
-
-let __LOADING_CATEGORIES__ = false;
 let __CATEGORIES_CACHE__ = {};
 
 async function loadCategories() {
@@ -4874,7 +4872,7 @@ function loadWaAdminFromData(list) {
 
 window.__LOAD_DATA_RUNNING__ = false;
 
-async function loadData() {
+window.loadData = async function() {
   if (window.__LOAD_DATA_RUNNING__) return;
   window.__LOAD_DATA_RUNNING__ = true;
 
