@@ -17,6 +17,10 @@ async function getSessionCached(){
 
 let TABLE_CACHE = [];
 
+if (!TABLE_VIEW) {
+  window.TABLE_VIEW = { data: [], start: 0 };
+}
+
 async function loadTablesOnce(){
   const session = await getSessionCached();
   const restoId = session?.restoId || "default";
@@ -25,7 +29,7 @@ async function loadTablesOnce(){
 
   TABLE_CACHE = tables.filter(t => t.restoId === restoId);
 
-  // 🔥 bikin index biar super cepat
+  // ✅ FIX: pakai global, bukan local
   TABLE_INDEX = Object.create(null);
   for(const t of TABLE_CACHE){
     TABLE_INDEX[t.id] = t;
@@ -118,10 +122,18 @@ async function renderTables(){
     );
   }
 
-  // 🔥 SIMPAN KE VIEW (bukan langsung render semua)
-  TABLE_VIEW.data = filtered;
+  const grid = document.getElementById("tablePreviewGrid");
+  if(!grid) return;
 
-  updateVisibleTables(); // render sebagian
+  const fragment = document.createDocumentFragment();
+
+  filtered.forEach(table => {
+    fragment.appendChild(createTableCard(table));
+  });
+
+  grid.innerHTML = "";
+  grid.appendChild(fragment);
+
   updateTableStats(filtered);
 }
 
@@ -196,45 +208,21 @@ async function saveTable(){
   const session = await getSessionCached();
   const restoId = session?.restoId || "default";
 
-  let posX = 100;
-  let posY = 100;
-
-  if(editingTableId){
-    const existing = TABLE_CACHE.find(t => t.id === editingTableId);
-    if(existing){
-     posX = existing.position?.x || 100;
-     posY = existing.position?.y || 100;
-    }
-  } else {
-    const count = TABLE_CACHE.length;
-    const cols = 5;
-
-    posX = 80 + (count % cols) * 90;
-    posY = 80 + Math.floor(count / cols) * 90;
-  }
-
- const tableData = {
-  id: editingTableId || "TB_" + Date.now(),
-  restoId,
-  name,
-  capacity,
-  zone,
-  category,
-  notes,
-  image,
-  shape: getTableShape(capacity),
-  status: "available",
-  currentGuest: null,
-  active,
-  createdAt: Date.now,
-
-  position:{
-    x: posX,
-    y: posY
-  },
-  rotation:0,
-  scale:1
-};
+  const tableData = {
+    id: editingTableId || "TB_" + Date.now(),
+    restoId,
+    name,
+    capacity,
+    zone,
+    category,
+    notes,
+    image,
+    shape: getTableShape(capacity), // ⬅ tetap (biar editor aman)
+    status: "available",
+    currentGuest: null,
+    active,
+    createdAt: Date.now()
+  };
 
   if(editingTableId){
     await MENUVA_DB.update("restaurantTables", tableData);
@@ -244,8 +232,8 @@ async function saveTable(){
   }
 
   clearTableForm();
+  await loadTablesOnce(); // 🔥 refresh cache biar konsisten
   renderTables();
-
 }
 
 
@@ -436,10 +424,7 @@ async function deleteTable(id){
 
   await MENUVA_DB.delete("restaurantTables", id);
 
-  // 🔥 update cache
-  TABLE_CACHE = TABLE_CACHE.filter(t => t.id !== id);
-  delete TABLE_INDEX[id];
-
+  await loadTablesOnce(); // 🔥 biar index & cache sync
   renderTables();
 }
 
@@ -500,9 +485,7 @@ document.addEventListener("DOMContentLoaded", async function(){
     return;
   }
 
- await loadTablesOnce();
-
-initVirtualScroll();
+await loadTablesOnce();
 
 await Promise.all([
   renderTables(),
