@@ -17,10 +17,6 @@ async function getSessionCached(){
 
 let TABLE_CACHE = [];
 
-if (!TABLE_VIEW) {
-  window.TABLE_VIEW = { data: [], start: 0 };
-}
-
 async function loadTablesOnce(){
   const session = await getSessionCached();
   const restoId = session?.restoId || "default";
