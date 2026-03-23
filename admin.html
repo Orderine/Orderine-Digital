@@ -3672,6 +3672,9 @@ function flashTerminalMessage(text) {
 
 let __LOADING_CATEGORIES__ = false;
 
+let __LOADING_CATEGORIES__ = false;
+let __CATEGORIES_CACHE__ = {};
+
 async function loadCategories() {
 
   if (__LOADING_CATEGORIES__) return;
@@ -3681,8 +3684,21 @@ async function loadCategories() {
     const restoId = window.activeUser?.restoID;
     if (!restoId) return;
 
+    // 🚀 CACHE HIT (SUPER CEPAT)
+    if (__CATEGORIES_CACHE__[restoId]) {
+      window.menuCategories = __CATEGORIES_CACHE__[restoId];
+
+      if (!window.activeCategoryName && window.menuCategories.length) {
+        window.activeCategoryName = window.menuCategories[0].name;
+      }
+
+      requestAnimationFrame(renderCategoryFilter);
+      return;
+    }
+
     let menus;
 
+    // 🚀 PRIORITAS INDEX (WAJIB)
     if (MENUVA_DB.getByIndex) {
       menus = await MENUVA_DB.getByIndex("menuData", "restoId", restoId);
     } else {
@@ -3690,25 +3706,35 @@ async function loadCategories() {
       menus = all.filter(m => m.restoId === restoId);
     }
 
-    const unique = new Map();
+    // 🚀 OPTIMASI LOOP (LEBIH CEPAT DARI MAP)
+    const unique = Object.create(null);
+    const result = [];
 
     for (let i = 0; i < menus.length; i++) {
-      const m = menus[i];
-      const category = m.category;
+      const cat = menus[i].category;
 
-      if (category && category.name) {
-        unique.set(category.name, category);
+      if (cat && cat.name && !unique[cat.name]) {
+        unique[cat.name] = true;
+        result.push(cat);
       }
     }
 
-    window.menuCategories = Array.from(unique.values());
+    window.menuCategories = result;
 
-    if (!window.activeCategoryName && window.menuCategories.length) {
-      window.activeCategoryName = window.menuCategories[0].name;
+    // 🚀 SIMPAN CACHE
+    __CATEGORIES_CACHE__[restoId] = result;
+
+    if (!window.activeCategoryName && result.length) {
+      window.activeCategoryName = result[0].name;
     }
 
-    renderCategoryFilter();
+    // 🚀 NON-BLOCKING RENDER
+    requestAnimationFrame(() => {
+      renderCategoryFilter();
+    });
 
+  } catch (err) {
+    console.error("❌ loadCategories error:", err);
   } finally {
     __LOADING_CATEGORIES__ = false;
   }
@@ -4858,130 +4884,116 @@ async function loadData() {
     const restoId = window.activeUser?.restoID;
     console.log("📦 loadData start → resto:", restoId);
 
-    if (!restoId) {
-      console.warn("⚠️ restoId tidak ditemukan");
-      return;
-    }
+    if (!restoId) return;
 
-    // ================= AMBIL RESTO =================
+    // ================= 🔥 CRITICAL FETCH =================
     const resto = await MENUVA_DB.get("restos", restoId);
+    if (!resto) return;
 
-    if (!resto) {
-      console.warn("⚠️ Resto not found in DB");
-      return;
-    }
-
-    // 🔥 CACHE DOM
+    // ================= 🔥 FAST DOM CACHE =================
     const elNama = document.getElementById("namaRestoran");
     const elAddr = document.getElementById("restoAddress");
     const elPhone = document.getElementById("restoPhone");
     const elLoc = document.getElementById("locationCodeInput");
     const elLogo = document.getElementById("previewLogo");
 
-    // ================= RESTO PROFILE =================
-    if (elNama) elNama.value = resto.namaRestoran ?? "";
-    if (elAddr) elAddr.value = resto.restoAddress ?? "";
-    if (elPhone) elPhone.value = resto.restoPhone ?? "";
+    // ================= ⚡ INSTANT UI =================
+    elNama && (elNama.value = resto.namaRestoran ?? "");
+    elAddr && (elAddr.value = resto.restoAddress ?? "");
+    elPhone && (elPhone.value = resto.restoPhone ?? "");
 
-    // ================= SYSTEM SETTINGS =================
     window.systemSettings = {
       locationCode: resto.locationCode || "LOC"
     };
 
-    if (elLoc) {
-      elLoc.value = window.systemSettings.locationCode;
-    }
+    elLoc && (elLoc.value = window.systemSettings.locationCode);
 
-    console.log("🏷️ Location Code loaded:", window.systemSettings.locationCode);
-
-    // ================= WA ADMIN =================
-    try {
-      loadWaAdminFromData?.(resto.nomorWaAdmin || []);
-    } catch (e) {
-      console.warn("⚠️ loadWaAdminFromData error:", e);
-    }
-
-    // ================= LOGO =================
     if (resto.logo && elLogo) {
-      window.__LOGO_BASE64__ = resto.logo;
       elLogo.src = resto.logo;
+      window.__LOGO_BASE64__ = resto.logo;
     }
 
-    // ================= PARALLEL DATA FETCH =================
-    const [
-      _cat,
-      _menuPreview,
-      allPromo,
-      allVoucher
-    ] = await Promise.all([
-      loadCategories(),
-      window.activeCategoryName
-        ? renderMenuPreview(window.activeCategoryName)
-        : Promise.resolve(),
-      MENUVA_DB.getAll("menuPromo"),
-      MENUVA_DB.getAll("menuVoucher")
-    ]);
-
-    console.log("🍽️ Menu system loaded");
-
-    // ================= PROMO =================
-    window.menuPromo = allPromo.filter(p => p.restoId === restoId);
-
-    renderPromoFilterBar();
-    renderPromoUI();
-
-    console.log("🎯 Promo system loaded");
-
-    // ================= VOUCHER =================
-    window.menuVoucher = allVoucher.filter(v => v.restoId === restoId);
-
-    renderVoucher(window.menuVoucher);
-
-    console.log("🎟️ Voucher system loaded");
-
-    // ================= FLIPBOOK =================
-    window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages)
-      ? resto.flipbookRuanganImages
-      : [];
-
-    window.flipbookMenuImages = Array.isArray(resto.flipbookMenuImages)
-      ? resto.flipbookMenuImages
-      : [];
-
-    window.flipbookList = [
-      ...window.flipbookRuanganImages,
-      ...window.flipbookMenuImages
-    ];
-
-    // 🔥 DELAY HEAVY IMAGE RENDER
-    setTimeout(() => {
-      if (typeof renderAllImagePreview === "function") {
-        renderAllImagePreview("ruangan", window.flipbookRuanganImages);
-        renderAllImagePreview("menu", window.flipbookMenuImages);
-      } else {
-        renderImagePreviewBatch("ruangan", window.flipbookRuanganImages);
-        renderImagePreviewBatch("menu", window.flipbookMenuImages);
-      }
-    }, 0);
-
-    try { renderFlipbookUI?.(); }
-    catch (e) { console.warn("⚠️ renderFlipbookUI error:", e); }
-
-    // ================= ROOMS =================
-    window.rooms = Array.isArray(resto.rooms)
-      ? resto.rooms
-      : [];
-
-    // 🔥 DELAY HEAVIEST FUNCTION
+    // ================= ⚡ WA (NON BLOCKING) =================
     setTimeout(() => {
       try {
-        renderRoomsFromDB?.(window.rooms);
+        loadWaAdminFromData?.(resto.nomorWaAdmin || []);
+      } catch {}
+    }, 0);
+
+    // ================= 🚀 PARALLEL CORE =================
+    const [categories] = await Promise.all([
+      loadCategories()
+    ]);
+
+    console.log("🍽️ Categories loaded");
+
+    // ================= 🟡 BACKGROUND DATA =================
+    setTimeout(async () => {
+      try {
+        const [allPromo, allVoucher] = await Promise.all([
+          MENUVA_DB.getAll("menuPromo"),
+          MENUVA_DB.getAll("menuVoucher")
+        ]);
+
+        // PROMO
+        window.menuPromo = allPromo.filter(p => p.restoId === restoId);
+        renderPromoFilterBar();
+        renderPromoUI();
+
+        // VOUCHER
+        window.menuVoucher = allVoucher.filter(v => v.restoId === restoId);
+        renderVoucher(window.menuVoucher);
+
+        console.log("🎯 Promo & Voucher ready");
+
       } catch (e) {
-        console.warn("⚠️ renderRoomsFromDB error:", e);
+        console.warn("Promo/Voucher error:", e);
       }
     }, 0);
 
-    console.log("✅ loadData FINISHED (CLEAN MODE)");
+    // ================= 🔴 HEAVY TASK =================
+    setTimeout(() => {
+      try {
+        // FLIPBOOK
+        window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages)
+          ? resto.flipbookRuanganImages
+          : [];
+
+        window.flipbookMenuImages = Array.isArray(resto.flipbookMenuImages)
+          ? resto.flipbookMenuImages
+          : [];
+
+        window.flipbookList = [
+          ...window.flipbookRuanganImages,
+          ...window.flipbookMenuImages
+        ];
+
+        renderFlipbookUI?.();
+
+        // IMAGE LAZY
+        requestIdleCallback?.(() => {
+          renderAllImagePreview?.("ruangan", window.flipbookRuanganImages);
+          renderAllImagePreview?.("menu", window.flipbookMenuImages);
+        });
+
+      } catch (e) {}
+    }, 0);
+
+    // ================= 🔴 ROOMS (PALING BERAT) =================
+    setTimeout(() => {
+      try {
+        window.rooms = Array.isArray(resto.rooms)
+          ? resto.rooms
+          : [];
+
+        requestIdleCallback?.(() => {
+          renderRoomsFromDB?.(window.rooms);
+        });
+
+      } catch (e) {}
+    }, 0);
+
+    console.log("🚀 UI READY (FAST MODE)");
 
   } catch (err) {
     console.error("❌ loadData fatal:", err);
