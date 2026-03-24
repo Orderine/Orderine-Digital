@@ -4840,25 +4840,25 @@ function initWaAdminUI() {
   };
 }
 
-  async function saveWaAdminToDB() {
+async function saveWaAdminToDB() {
   try {
     const restoId = window.activeUser?.restoID;
     if (!restoId) return;
 
-    const resto = await MENUVA_DB.get("restoData", restoId);
+    const resto = await MENUVA_DB.get("restos", restoId); // ✅ FIX
     if (!resto) return;
 
     resto.nomorWaAdmin = collectWaFromUI();
 
-    await MENUVA_DB.put("restoData", resto);
+    await MENUVA_DB.put("restos", resto); // ✅ FIX
 
-    console.log("💾 WA Admin saved:", resto.nomorWaAdmin);
+    console.log("💾 WA saved:", resto.nomorWaAdmin);
 
   } catch (err) {
     console.error("❌ save WA error:", err);
   }
 }
-
+  
 /** LOAD FROM DATA (CALL THIS!) */
 function loadWaAdminFromData(list) {
   window.WA_ADMIN = Array.isArray(list) ? [...list] : [];
