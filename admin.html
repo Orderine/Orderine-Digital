@@ -2750,7 +2750,7 @@ placeholder="Table Notes"></textarea>
     <label for="waNumber1" class="sr-only">WhatsApp Number</label>
     <input type="text" id="waNumber1" name="waNumber[]" class="nomor-wa" placeholder="Example: 6281234567890">
   </div>
-  <button onclick="tambahNomorWa()">+ Add WA Number</button>
+ <button id="btnAddWa">Add Wa Amin</button>
 </div>
 
 <div class="section">
@@ -4831,11 +4831,32 @@ function initWaAdminUI() {
   const btn = document.getElementById("btnAddWa");
   if (!btn) return;
 
-  btn.onclick = () => {
+  btn.onclick = async () => {
     window.WA_ADMIN = collectWaFromUI();
     window.WA_ADMIN.push("");
+
+    await saveWaAdminToDB(); // 🔥 TAMBAH INI
     renderWaAdmin();
   };
+}
+
+  async function saveWaAdminToDB() {
+  try {
+    const restoId = window.activeUser?.restoID;
+    if (!restoId) return;
+
+    const resto = await MENUVA_DB.get("restoData", restoId);
+    if (!resto) return;
+
+    resto.nomorWaAdmin = collectWaFromUI();
+
+    await MENUVA_DB.put("restoData", resto);
+
+    console.log("💾 WA Admin saved:", resto.nomorWaAdmin);
+
+  } catch (err) {
+    console.error("❌ save WA error:", err);
+  }
 }
 
 /** LOAD FROM DATA (CALL THIS!) */
