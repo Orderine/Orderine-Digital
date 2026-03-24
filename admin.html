@@ -4123,39 +4123,31 @@ function uploadGambarRoom(btn) {
   const input = document.createElement("input");
   input.type = "file";
   input.accept = "image/*";
-  input.onchange = async e => {
+
+  input.onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = ev => {
+    try {
+      const webp = await processImage(file, {
+        maxWidth: 800,
+        quality: 0.7
+      });
+
       const form = btn.closest(".room-form");
       const preview = form.querySelector(".gambar-preview");
       const hapus = form.querySelector(".hapus-gambar");
 
-      preview.src = ev.target.result;
+      preview.src = webp;
       preview.style.display = "block";
       hapus.style.display = "inline-flex";
-      btn.setAttribute("data-image", ev.target.result);
-    };
-    
-   input.onchange = async e => {
-  const file = e.target.files[0];
-  if (!file) return;
+      btn.setAttribute("data-image", webp);
 
-  const webp = await processImage(file, {
-    maxWidth: 800
-  });
+    } catch (err) {
+      console.error("❌ upload room error:", err);
+    }
+  };
 
-  const form = btn.closest(".room-form");
-  const preview = form.querySelector(".gambar-preview");
-  const hapus = form.querySelector(".hapus-gambar");
-
-  preview.src = webp;
-  preview.style.display = "block";
-  hapus.style.display = "inline-flex";
-  btn.setAttribute("data-image", webp);
-};
   input.click();
 }
 
@@ -4560,36 +4552,36 @@ function tambahGambar(type) {
   const input = document.getElementById(inputId);
   if (!input) return;
 
-  // reset value supaya bisa upload file yg sama lagi
   input.value = "";
 
   input.onchange = async (event) => {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
 
-   for (const file of files) {
-  try {
-    const webp = await processImage(file, {
-      maxWidth: 1200,
-      quality: 0.65
-    });
+    for (const file of files) {
+      try {
+        const webp = await processImage(file, {
+          maxWidth: 1200,
+          quality: 0.65
+        });
 
-    if (type === "ruangan") {
-      window.flipbookRuanganImages.push(webp);
-      renderImagePreviewBatch("ruangan", [webp]);
-    } else {
-      window.flipbookMenuImages.push(webp);
-      renderImagePreviewBatch("menu", [webp]);
+        if (type === "ruangan") {
+          window.flipbookRuanganImages = window.flipbookRuanganImages || [];
+          renderImagePreviewBatch("ruangan", [webp]);
+        } else {
+          window.flipbookMenuImages = window.flipbookMenuImages || [];
+          renderImagePreviewBatch("menu", [webp]);
+        }
+
+      } catch (err) {
+        console.error("❌ process image gagal:", err);
+      }
     }
-
-  } catch (err) {
-    console.error("❌ process image gagal:", err);
-  }
-}
+  };
 
   input.click();
 }
-
+  
 /* ============================================================
    STRING HELPER
 ============================================================ */
