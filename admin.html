@@ -3510,31 +3510,26 @@ function initPromoSystem(){
   renderPromoUI();
 }
 
-function uploadPromoImage(event) {
-
+async function uploadPromoImage(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  const reader = new FileReader();
+  const base64 = await processImage(file, {
+    maxWidth: 1000,
+    quality: 0.7
+  });
 
-  reader.onload = function(e) {
+  const preview = document.getElementById("promoImagePreview");
+  const inputEl = document.getElementById("promoImageInput");
 
-    const base64 = e.target.result;
+  if (preview) {
+    preview.src = base64;
+    preview.style.display = "block";
+  }
 
-    const preview = document.getElementById("promoImagePreview");
-    const inputEl = document.getElementById("promoImageInput");
-
-    if (preview) {
-      preview.src = base64;
-      preview.style.display = "block";
-    }
-
-    if (inputEl) {
-      inputEl.dataset.image = base64;
-    }
-  };
-
-  reader.readAsDataURL(file);
+  if (inputEl) {
+    inputEl.dataset.image = base64;
+  }
 }
 
 /* ================= MENU CATEGORY SYSTEM CLEAN ================= */
@@ -3825,21 +3820,21 @@ async function generateMenuCode(categoryName) {
 
 document
   .getElementById("menuImageInput")
-  .addEventListener("change", function (e) {
+  .addEventListener("change", async function (e) {
 
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
+    const webp = await processImage(file, {
+      maxWidth: 800,
+      quality: 0.7
+    });
 
-    reader.onload = function (event) {
-      uploadedImageBase64 = event.target.result;
-      const preview = document.getElementById("imagePreview");
-      preview.src = uploadedImageBase64;
-      preview.style.display = "block";
-    };
+    window.uploadedImageBase64 = webp;
 
-    reader.readAsDataURL(file);
+    const preview = document.getElementById("imagePreview");
+    preview.src = webp;
+    preview.style.display = "block";
   });
 
  
@@ -4143,8 +4138,24 @@ function uploadGambarRoom(btn) {
       hapus.style.display = "inline-flex";
       btn.setAttribute("data-image", ev.target.result);
     };
-    reader.readAsDataURL(file);
-  };
+    
+   input.onchange = async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const webp = await processImage(file, {
+    maxWidth: 800
+  });
+
+  const form = btn.closest(".room-form");
+  const preview = form.querySelector(".gambar-preview");
+  const hapus = form.querySelector(".hapus-gambar");
+
+  preview.src = webp;
+  preview.style.display = "block";
+  hapus.style.display = "inline-flex";
+  btn.setAttribute("data-image", webp);
+};
   input.click();
 }
 
@@ -4380,10 +4391,68 @@ async function resizeIfNeeded(file, targetSizeKB = 100, maxWidth = 1280) {
     };
 
     reader.onerror = reject;
-    reader.readAsDataURL(file);
+    await processImage(file);
+  });
+}
+  
+/* ============================================================
+   WEBP FORMAT IMAGE
+============================================================ */
+  async function processImage(file, options = {}) {
+  const {
+    maxWidth = 800,
+    quality = 0.7
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = e => img.src = e.target.result;
+
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      // 🔥 resize
+      if (width > maxWidth) {
+        height *= maxWidth / width;
+        width = maxWidth;
+      }
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = width;
+      canvas.height = height;
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // 🔥 convert ke webp
+      const webp = canvas.toDataURL("image/webp", quality);
+
+      resolve(webp);
+    };
+
+    img.onerror = reject;
+    reader.onerror = reject;
+
+    await processImage(file);
   });
 }
 
+  async function processMultipleImages(files, options = {}) {
+  const results = [];
+
+  for (const file of files) {
+    const img = await processImage(file, options);
+    results.push(img);
+  }
+
+  return results;
+}
+
+  
 /* ============================================================
    LOGO UPLOAD
 ============================================================ */
@@ -4392,7 +4461,10 @@ document.getElementById("logoInput")?.addEventListener("change", async e => {
   if (!file) return;
 
   try {
-    const logoUrl = await resizeIfNeeded(file, 100);
+    const logoUrl = await processImage(file, {
+  maxWidth: 500,
+  quality: 0.7
+    });
     const preview = document.getElementById("previewLogo");
     if (preview) preview.src = logoUrl;
   } catch (err) {
@@ -4528,22 +4600,25 @@ function tambahGambar(type) {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
 
-    for (const file of files) {
-      try {
-        const resized = await resizeIfNeeded(file);
+   for (const file of files) {
+  try {
+    const webp = await processImage(file, {
+      maxWidth: 1200,
+      quality: 0.65
+    });
 
-        if (type === "ruangan") {
-          window.flipbookRuanganImages.push(resized);
-          renderImagePreviewBatch("ruangan", resized);
-        } else {
-          window.flipbookMenuImages.push(resized);
-          renderImagePreviewBatch("menu", resized);
-        }
-      } catch (err) {
-        console.error("❌ resize image gagal:", err);
-      }
+    if (type === "ruangan") {
+      window.flipbookRuanganImages.push(webp);
+      renderImagePreviewBatch("ruangan", [webp]);
+    } else {
+      window.flipbookMenuImages.push(webp);
+      renderImagePreviewBatch("menu", [webp]);
     }
-  };
+
+  } catch (err) {
+    console.error("❌ process image gagal:", err);
+  }
+}
 
   input.click();
 }
