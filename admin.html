@@ -4825,14 +4825,13 @@ function renderWaAdmin() {
   console.log("📱 WA rendered:", window.WA_ADMIN);
 }
 
-/** READ FROM UI */
 function collectWaFromUI() {
-  const box = document.querySelector("#waContainer");
+  const box = document.querySelector("#nomorWaContainer"); // ✅ FIX
   if (!box) return [];
 
   return Array.from(box.querySelectorAll("input.nomor-wa"))
     .map(i => i.value.trim())
-    .filter(Boolean);
+    .filter(v => v !== ""); // 🔥 lebih eksplisit
 }
 
 /** ADD BUTTON */
@@ -4840,34 +4839,16 @@ function initWaAdminUI() {
   const btn = document.getElementById("btnAddWa");
   if (!btn) return;
 
-  btn.onclick = async () => {
+  btn.onclick = () => {
     window.WA_ADMIN = collectWaFromUI();
+
+    // tambah field kosong
     window.WA_ADMIN.push("");
 
-    await saveWaAdminToDB(); // 🔥 TAMBAH INI
-    renderWaAdmin();
+    renderWaAdmin(); // ✅ hanya render
   };
 }
 
-async function saveWaAdminToDB() {
-  try {
-    const restoId = window.activeUser?.restoID;
-    if (!restoId) return;
-
-    const resto = await MENUVA_DB.get("restos", restoId); // ✅ FIX
-    if (!resto) return;
-
-    resto.nomorWaAdmin = collectWaFromUI();
-
-    await MENUVA_DB.update("restos", resto);
-
-    console.log("💾 WA saved:", resto.nomorWaAdmin);
-
-  } catch (err) {
-    console.error("❌ save WA error:", err);
-  }
-}
-  
 /** LOAD FROM DATA (CALL THIS!) */
 async function loadWaAdmin(sourceData = null) {
 
