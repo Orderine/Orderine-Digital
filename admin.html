@@ -4807,7 +4807,7 @@ function createWaInput(value = "") {
 
 /** RENDER (IDEMPOTENT) */
 function renderWaAdmin() {
-  const box = document.querySelector("#waContainer");
+  const box = document.querySelector("#nomorWaContainer");
   if (!box) return;
 
   // remove only inputs, keep label
@@ -4859,7 +4859,7 @@ async function saveWaAdminToDB() {
 
     resto.nomorWaAdmin = collectWaFromUI();
 
-    await MENUVA_DB.put("restos", resto); // ✅ FIX
+    await MENUVA_DB.update("restos", resto);
 
     console.log("💾 WA saved:", resto.nomorWaAdmin);
 
@@ -4869,22 +4869,21 @@ async function saveWaAdminToDB() {
 }
   
 /** LOAD FROM DATA (CALL THIS!) */
-function loadWaAdminFromData(list) {
-  window.WA_ADMIN = Array.isArray(list) ? [...list] : [];
-  renderWaAdmin();
-}
+async function loadWaAdmin(sourceData = null) {
 
-  function waitForActiveUser() {
-  return new Promise(resolve => {
-    const check = () => {
-      if (window.activeUser?.email && window.activeUser?.restoID) {
-        resolve(window.activeUser);
-      } else {
-        setTimeout(check, 100);
-      }
-    };
-    check();
-  });
+  if (sourceData) {
+    window.WA_ADMIN = Array.isArray(sourceData) ? [...sourceData] : [];
+  } else {
+    const restoId = window.activeUser?.restoID;
+    if (!restoId) return;
+
+    const resto = await MENUVA_DB.get("restos", restoId);
+    if (!resto) return;
+
+    window.WA_ADMIN = resto.nomorWaAdmin || [];
+  }
+
+  renderWaAdmin();
 }
 
 window.__LOAD_DATA_RUNNING__ = false;
