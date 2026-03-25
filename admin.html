@@ -3795,13 +3795,22 @@ async function renderMenuPreview(categoryName) {
 
 /* ================= MENU CODE GENERATOR ================= */
 
-async function generateMenuCode(categoryName) {
+async function generateMenuCode(categoryName, restoId) {
 
   const location =
     window.systemSettings?.locationCode || "LOC";
 
-  const menus = await MENUVA_DB.getByIndex?.("menuData", "restoId", restoId)
-  || (await MENUVA_DB.getAll("menuData")).filter(m => m.restoId === restoId);
+  let menus = [];
+
+  if (MENUVA_DB.getByIndex) {
+    menus = await MENUVA_DB.getByIndex("menuData", "restoId", restoId) || [];
+  }
+
+  // ❗ hanya fallback kalau benar-benar undefined/null
+  if (!menus) {
+    menus = (await MENUVA_DB.getAll("menuData"))
+      .filter(m => m.restoId === restoId);
+  }
 
   const sameCategoryMenus = menus.filter(
     m => m.category?.name === categoryName
@@ -3860,7 +3869,7 @@ async function saveMenuItem() {
   const restoId = window.activeUser.restoID;
   const categoryName = window.activeCategoryName; // ❌ TANPA fallback
 
-  const menuCode = await generateMenuCode(categoryName);
+  const menuCode = await generateMenuCode(categoryName, restoId);
 
   const newMenu = {
     id: crypto.randomUUID(),
