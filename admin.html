@@ -2348,7 +2348,25 @@ background:#020617;
 display:none;
 
 }
+html {
+  scroll-behavior: smooth;
+}
 
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* boost rendering */
+* {
+  box-sizing: border-box;
+}
+.heavy-section {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
 </style>
 </head>
 <body>
@@ -2924,6 +2942,9 @@ placeholder="Table Notes"></textarea>
   </div>
 
 </div>
+
+<div class="heavy-section" id="roomSection">...</div>
+<div class="heavy-section" id="packageSection">...</div>
 
 <script>
 /* ================= SUBSCRIPTION COUNTDOWN ================= */
@@ -5463,6 +5484,44 @@ window.initPageToggles = async function () {
   console.log("✅ Page Toggles Ready");
 };
 
+  function initLazyRender() {
+  const sections = document.querySelectorAll(".heavy-section");
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+
+        // jalankan render hanya sekali
+        if (!el.dataset.rendered) {
+          el.dataset.rendered = "true";
+
+          console.log("🚀 render section:", el.id);
+
+          // panggil render sesuai section
+          if (el.id === "roomSection") renderRoom();
+          if (el.id === "packageSection") renderPackage();
+        }
+      }
+    });
+  }, { threshold: 0.1 });
+
+  sections.forEach(sec => observer.observe(sec));
+}
+
+(function smoothEngine() {
+  let ticking = false;
+
+  window.addEventListener("scroll", () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive: true });
+})();
+  
  // ==================== DOM ====================
 document.addEventListener("DOMContentLoaded", async () => {
   console.group("🚀 ADMIN ENTERPRISE INIT");
@@ -5576,6 +5635,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.error("💥 ADMIN INIT FATAL:", err);
     alert("Terjadi error saat init. Silakan refresh halaman.");
   }
+
+  initLazyRender();
 
   console.groupEnd();
 });
