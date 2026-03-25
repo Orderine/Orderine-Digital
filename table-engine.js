@@ -133,6 +133,48 @@ async function renderTables(){
   updateTableStats(filtered);
 }
 
+window.previewTableImage = function(event){
+
+  const file = event.target.files[0];
+  if(!file) return;
+
+  const preview = document.getElementById("tableImagePreview");
+  if(!preview) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e){
+
+    const img = new Image();
+    img.onload = function(){
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      // 🔥 resize (biar gak kegedean)
+      const MAX_WIDTH = 800;
+      const scale = Math.min(1, MAX_WIDTH / img.width);
+
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // 🔥 convert ke WEBP + compress
+      const webpData = canvas.toDataURL("image/webp", 0.7); // 0.7 = quality
+
+      preview.src = webpData;
+      preview.style.display = "block";
+
+      console.log("✅ Image uploaded");
+    };
+
+    img.src = e.target.result;
+  };
+
+  reader.readAsDataURL(file);
+};
+
 function initVirtualScroll(){
   const grid = document.getElementById("tablePreviewGrid");
   if(!grid) return;
