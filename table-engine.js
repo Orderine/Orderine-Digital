@@ -458,7 +458,7 @@ async function clearDepositSetting(){
   // hapus dari DB (optional tapi recommended)
   await MENUVA_DB.delete("reservationSettings", "reservation_settings");
 
-  alert("Deposit setting cleared bro 🧹");
+  alert("Deposit setting cleared 🧹");
 
 }
 
