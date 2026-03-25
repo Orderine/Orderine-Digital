@@ -4908,12 +4908,14 @@ window.loadData = async function() {
       window.__LOGO_BASE64__ = resto.logo;
     }
 
-    // ================= ⚡ WA (NON BLOCKING) =================
-    setTimeout(() => {
-      try {
-        loadWaAdminFromData?.(resto.nomorWaAdmin || []);
-      } catch {}
-    }, 0);
+    // ================= ⚡ WA (SYNC & STABLE) =================
+window.WA_ADMIN = Array.isArray(resto.nomorWaAdmin)
+  ? [...resto.nomorWaAdmin]
+  : [];
+
+renderWaAdmin?.();
+
+console.log("📥 WA loaded:", window.WA_ADMIN);
 
     // ================= 🚀 PARALLEL CORE =================
     const [categories] = await Promise.all([
@@ -5461,61 +5463,51 @@ window.initPageToggles = async function () {
   console.log("✅ Page Toggles Ready");
 };
 
-   // ==================== DOM ====================
+ // ==================== DOM ====================
 document.addEventListener("DOMContentLoaded", async () => {
   console.group("🚀 ADMIN ENTERPRISE INIT");
 
+  // ================= SAFE HELPERS =================
+  const safeCall = (fnName, fn, ...args) => {
+    try {
+      if (typeof fn === "function") {
+        return fn(...args);
+      } else {
+        console.warn(`⚠️ ${fnName} not available`);
+      }
+    } catch (err) {
+      console.error(`❌ ${fnName} failed:`, err);
+    }
+  };
+
+  const safeAwait = async (fnName, fn, ...args) => {
+    try {
+      if (typeof fn === "function") {
+        return await fn(...args);
+      } else {
+        console.warn(`⚠️ ${fnName} not available`);
+      }
+    } catch (err) {
+      console.error(`❌ ${fnName} failed:`, err);
+    }
+  };
+
   try {
 
-    /* ================= SAFE CALL HELPER ================= */
-    const safeCall = (fnName, fn, ...args) => {
-      try {
-        if (typeof fn === "function") {
-          return fn(...args);
-        } else {
-          console.warn(`⚠️ ${fnName} not available`);
-        }
-      } catch (err) {
-        console.error(`❌ ${fnName} failed:`, err);
-      }
-    };
-
-    const safeAwait = async (fnName, fn, ...args) => {
-      try {
-        if (typeof fn === "function") {
-          return await fn(...args);
-        } else {
-          console.warn(`⚠️ ${fnName} not available`);
-        }
-      } catch (err) {
-        console.error(`❌ ${fnName} failed:`, err);
-      }
-    };
-
-    /* ================= BASIC UI INIT ================= */
-
-    safeCall("initWaAdminUI", window.initWaAdminUI);
-    safeCall("bindCustomerButtons", window.bindCustomerButtons);
-    safeCall("startRealtimeOrderChecker", window.startRealtimeOrderChecker);
-    
-
-    console.log("🔎 Checking MENUVA_DB...");
-
-    /* ================= WAIT FOR DB ================= */
-
+    // ================= WAIT FOR DB =================
     const waitForDB = () =>
       new Promise((resolve, reject) => {
         let timeout = 0;
 
         const check = () => {
-          if (window.MENUVA_DB) {
-            resolve(true);
-          } else if (timeout > 5000) {
-            reject(new Error("MENUVA_DB timeout"));
-          } else {
-            timeout += 100;
-            setTimeout(check, 100);
+          if (window.MENUVA_DB) return resolve(true);
+
+          if (timeout > 5000) {
+            return reject(new Error("MENUVA_DB timeout"));
           }
+
+          timeout += 100;
+          setTimeout(check, 100);
         };
 
         check();
@@ -5524,26 +5516,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     await waitForDB();
     console.log("✅ MENUVA_DB ready");
 
-    /* ================= ADMIN UI INIT ================= */
 
-    safeCall("initAdminUI", window.initAdminUI);
-    safeCall("bindAdminEvents", window.bindAdminEvents);
-
-    /* ================= WAIT FOR activeUser ================= */
-
+    // ================= WAIT FOR SESSION =================
     const waitForActiveUser = () =>
       new Promise((resolve, reject) => {
         let timeout = 0;
 
         const check = () => {
           if (window.activeUser?.email && window.activeUser?.restoID) {
-            resolve(window.activeUser);
-          } else if (timeout > 7000) {
-            reject(new Error("activeUser timeout"));
-          } else {
-            timeout += 100;
-            setTimeout(check, 100);
+            return resolve(window.activeUser);
           }
+
+          if (timeout > 7000) {
+            return reject(new Error("activeUser timeout"));
+          }
+
+          timeout += 100;
+          setTimeout(check, 100);
         };
 
         check();
@@ -5552,20 +5541,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     const user = await waitForActiveUser();
     console.log("✅ activeUser ready:", user.email);
 
+
+    // ================= LOAD CORE DATA (CRITICAL) =================
+    await safeAwait("loadData", window.loadData);
+
+
+    // ================= INIT CORE UI (AFTER DATA) =================
+    safeCall("initAdminUI", window.initAdminUI);
+    safeCall("bindAdminEvents", window.bindAdminEvents);
+    safeCall("initWaAdminUI", window.initWaAdminUI);
+
     await safeAwait("initPageToggles", window.initPageToggles);
 
     safeCall("renderSubscriptionPanel", window.renderSubscriptionPanel);
-    
-   /* ================= LOAD DATA ================= */
 
-await safeAwait("loadData", window.loadData);
 
-safeCall("initPromoSystem", window.initPromoSystem);
+    // ================= NON-CRITICAL SYSTEM (ASYNC) =================
+    setTimeout(() => {
+      safeCall("initPromoSystem", window.initPromoSystem);
+      safeCall("updateResetButtonState", window.updateResetButtonState);
+    }, 0);
 
-safeCall("updateResetButtonState", window.updateResetButtonState);
 
-console.log("🎉 ADMIN INIT SUCCESS");
-    
+    // ================= BACKGROUND SERVICES =================
+    setTimeout(() => {
+      safeCall("bindCustomerButtons", window.bindCustomerButtons);
+      safeCall("startRealtimeOrderChecker", window.startRealtimeOrderChecker);
+    }, 0);
+
+
+    console.log("🎉 ADMIN INIT SUCCESS");
+
   } catch (err) {
     console.error("💥 ADMIN INIT FATAL:", err);
     alert("Terjadi error saat init. Silakan refresh halaman.");
