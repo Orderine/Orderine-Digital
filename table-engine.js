@@ -34,11 +34,6 @@ async function loadTablesOnce(){
 
 let TABLE_INDEX = {};
 
-/* =========================
-   INIT LAYOUT EDITOR
-========================= */
-
-
 function filterTables(zone){
   currentTableFilter = zone;
   renderTables();
@@ -175,49 +170,6 @@ window.previewTableImage = function(event){
   reader.readAsDataURL(file);
 };
 
-function initVirtualScroll(){
-  const grid = document.getElementById("tablePreviewGrid");
-  if(!grid) return;
-
-  grid.addEventListener("scroll", () => {
-    requestAnimationFrame(updateVisibleTables);
-  });
-}
-
-function updateVisibleTables(){
-
-  const grid = document.getElementById("tablePreviewGrid");
-  if(!grid) return;
-
-  const scrollTop = grid.scrollTop;
-
-  const start = Math.floor(scrollTop / ROW_HEIGHT);
-  TABLE_VIEW.start = start;
-
-  renderVisibleTables();
-}
-
-function renderVisibleTables(){
-
-  const grid = document.getElementById("tablePreviewGrid");
-  if(!grid) return;
-
-  const data = TABLE_VIEW.data;
-  const start = TABLE_VIEW.start;
-  const end = start + VISIBLE_COUNT;
-
-  const visible = data.slice(start, end);
-
-  const fragment = document.createDocumentFragment();
-
-  visible.forEach(table => {
-    fragment.appendChild(createTableCard(table));
-  });
-
-  grid.innerHTML = "";
-  grid.appendChild(fragment);
-}
-
 /* =========================
    AUTO NAME
 ========================= */
@@ -255,7 +207,6 @@ async function saveTable(){
     category,
     notes,
     image,
-    shape: getTableShape(capacity), // ⬅ tetap (biar editor aman)
     status: "available",
     currentGuest: null,
     active,
@@ -287,7 +238,6 @@ function openTableEditor(){
 function showEditor(mode){
 
   const tablePanel = document.getElementById("tableEditorPanel");
-  const layoutPanel = document.getElementById("layoutEditorPanel");
 
   if(tablePanel) tablePanel.style.display = mode === "table" ? "block" : "none";
   if(layoutPanel) layoutPanel.style.display = mode === "layout" ? "block" : "none";
