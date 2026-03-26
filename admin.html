@@ -2375,6 +2375,13 @@ body {
   cursor:pointer;
   background:#fff;
 }
+.room-thumb{
+  width:80px;
+  height:80px;
+  object-fit:cover;
+  border-radius:8px;
+  background:#eee;
+}
 </style>
 </head>
 <body>
@@ -3139,6 +3146,27 @@ console.log("🚀 Admin DB Bridge – FINAL NO MODULE");
 const DB_NAME = window.MENUVA_DB.NAME;
 const STORE_NAME = window.MENUVA_DB.STORE;
 const DB_VERSION = window.MENUVA_DB.VERSION;
+
+  const imageObserver = new IntersectionObserver((entries) => {
+
+  for(const entry of entries){
+
+    if(entry.isIntersecting){
+
+      const img = entry.target;
+
+      if(img.dataset.src){
+        img.src = img.dataset.src;
+        img.removeAttribute("data-src");
+      }
+
+      imageObserver.unobserve(img);
+    }
+  }
+
+}, {
+  rootMargin: "100px"
+});
 
 
   /* ====================== MENUVA DATA DB HELPERS ====================== */
@@ -4305,10 +4333,31 @@ function createRoomElementSafe(room) {
   }
 }
 
-  function createRoomCard(room){
+ function createRoomCard(room){
 
   const card = document.createElement("div");
   card.className = "room-card";
+
+  // ✅ WAJIB: create image dulu
+  const img = document.createElement("img");
+  img.className = "room-thumb";
+
+  // placeholder ringan
+  img.src = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'></svg>";
+
+  // simpan real image
+  img.dataset.src = room.imageThumb || room.image || "";
+
+  // performance
+  img.loading = "lazy";
+  img.decoding = "async";
+
+  // observe
+  imageObserver.observe(img);
+
+  // ================= TEXT =================
+  const info = document.createElement("div");
+  info.className = "room-info";
 
   const title = document.createElement("div");
   const price = document.createElement("div");
@@ -4318,9 +4367,12 @@ function createRoomElementSafe(room) {
   price.textContent = "Rp " + (room.harga || 0);
   cap.textContent = (room.kapasitas || 0) + " pax";
 
-  card.append(title, price, cap);
+  info.append(title, price, cap);
 
-  // 🔥 klik untuk edit
+  // ================= APPEND =================
+  card.append(img, info);
+
+  // klik edit
   card.onclick = () => openRoomEditor(room);
 
   return card;
