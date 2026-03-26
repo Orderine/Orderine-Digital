@@ -101,81 +101,63 @@ function createTableCard(table){
 let TABLE_DOM_CACHE = new Map();
 
 async function renderTables(){
-   const grid = document.getElementById("tablePreviewGrid");
-if(!grid) return;
-
-// 🔥 RESET kalau mismatch (anti bug DOM nyangkut)
-if(TABLE_DOM_CACHE.size > TABLE_CACHE.length){
-  grid.innerHTML = "";
-  TABLE_DOM_CACHE.clear();
-}
-
-  const session = await getSessionCached();
-  const restoId = session?.restoId || "default";
-
-  // ================= FILTER =================
-  let filtered = TABLE_CACHE;
-
-  if (restoId) {
-    filtered = filtered.filter(t => t.restoId === restoId);
-  }
-
-  if(currentTableFilter !== "all"){
-    filtered = filtered.filter(t => t.zone === currentTableFilter);
-  }
-
-  if(currentSearch){
-    const keyword = currentSearch.toLowerCase();
-    filtered = filtered.filter(t =>
-      (t.name || "").toLowerCase().includes(keyword)
-    );
-  }
 
   const grid = document.getElementById("tablePreviewGrid");
   if(!grid) return;
 
-  // ================= OPTIMIZE START =================
-  // 🔥 pakai requestAnimationFrame biar gak ganggu scroll
-  requestAnimationFrame(() => {
+  const session = await getSessionCached();
+  const restoId = session?.restoId || "default";
 
-    const existingIds = new Set();
-
-    // ================= ADD / UPDATE =================
-    for (const table of filtered) {
-      existingIds.add(table.id);
-
-      let card = TABLE_DOM_CACHE.get(table.id);
-
-      // 🆕 create kalau belum ada
-      if (!card) {
-        card = createTableCardOptimized(table);
-        TABLE_DOM_CACHE.set(table.id, card);
-        grid.appendChild(card);
-      } else {
-        // 🔄 update ringan (tanpa re-create DOM)
-        updateTableCard(card, table);
-      }
-    }
-
-    // ================= REMOVE UNUSED =================
-  const filtered = [];
-
-for(const t of TABLE_CACHE){
-
-  if(t.restoId !== restoId) continue;
-
-  if(currentTableFilter !== "all" && t.zone !== currentTableFilter) continue;
-
-  if(currentSearch){
-    if(!(t.name || "").toLowerCase().includes(currentSearch)) continue;
+  // 🔥 RESET kalau mismatch (anti DOM nyangkut / memory leak)
+  if(TABLE_DOM_CACHE.size > TABLE_CACHE.length){
+    grid.innerHTML = "";
+    TABLE_DOM_CACHE.clear();
   }
 
-  filtered.push(t);
-}
+  // 🔥 SINGLE LOOP FILTER (SUPER OPTIMAL)
+  const filtered = [];
 
-    updateTableStats(filtered);
+  for(const t of TABLE_CACHE){
 
+    if(t.restoId !== restoId) continue;
+
+    if(currentTableFilter !== "all" && t.zone !== currentTableFilter) continue;
+
+    if(currentSearch){
+      if(!(t.name || "").toLowerCase().includes(currentSearch)) continue;
+    }
+
+    filtered.push(t);
+  }
+
+  const existingIds = new Set();
+
+  // ================= ADD / UPDATE =================
+  for (const table of filtered) {
+
+    existingIds.add(table.id);
+
+    let card = TABLE_DOM_CACHE.get(table.id);
+
+    if (!card) {
+      card = createTableCardOptimized(table);
+      TABLE_DOM_CACHE.set(table.id, card);
+      grid.appendChild(card);
+    } else {
+      updateTableCard(card, table);
+    }
+  }
+
+  // ================= REMOVE UNUSED =================
+  TABLE_DOM_CACHE.forEach((el, id) => {
+    if (!existingIds.has(id)) {
+      el.remove();
+      TABLE_DOM_CACHE.delete(id);
+    }
   });
+
+  // 🔥 UPDATE STATS
+  updateTableStats(filtered);
 }
 
 let renderScheduled = false;
