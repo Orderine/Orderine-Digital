@@ -36,7 +36,7 @@ let TABLE_INDEX = {};
 
 function filterTables(zone){
   currentTableFilter = zone;
-  renderTables();
+  scheduleRender();
 }
 
 let searchTimer = null;
@@ -51,7 +51,7 @@ function searchTables(){
       .getElementById("tableSearchInput")
       .value.toLowerCase();
 
-    requestAnimationFrame(() => renderTables());
+    scheduleRender();
 
   }, 250);
 }
@@ -66,7 +66,10 @@ function createTableCard(table){
   card.style.opacity = opacity;
 
   card.innerHTML = `
-    ${table.image ? `<img src="${table.image}" class="table-card-image">` : ""}
+    ${table.image ? `<img src="${table.image}" 
+     class="table-card-image"
+     loading="lazy"
+     decoding="async">` : ""}
 
     <div class="terminal-card-header">
       <span class="terminal-title">${table.name}</span>
@@ -95,12 +98,27 @@ function createTableCard(table){
   return card;
 }
 
+let TABLE_DOM_CACHE = new Map();
+
 async function renderTables(){
+   const grid = document.getElementById("tablePreviewGrid");
+if(!grid) return;
+
+// 🔥 RESET kalau mismatch (anti bug DOM nyangkut)
+if(TABLE_DOM_CACHE.size > TABLE_CACHE.length){
+  grid.innerHTML = "";
+  TABLE_DOM_CACHE.clear();
+}
 
   const session = await getSessionCached();
   const restoId = session?.restoId || "default";
 
-  let filtered = TABLE_CACHE.filter(t => t.restoId === restoId);
+  // ================= FILTER =================
+  let filtered = TABLE_CACHE;
+
+  if (restoId) {
+    filtered = filtered.filter(t => t.restoId === restoId);
+  }
 
   if(currentTableFilter !== "all"){
     filtered = filtered.filter(t => t.zone === currentTableFilter);
@@ -109,26 +127,113 @@ async function renderTables(){
   if(currentSearch){
     const keyword = currentSearch.toLowerCase();
     filtered = filtered.filter(t =>
-      t.name.toLowerCase().includes(keyword)
+      (t.name || "").toLowerCase().includes(keyword)
     );
   }
 
   const grid = document.getElementById("tablePreviewGrid");
   if(!grid) return;
 
-  const fragment = document.createDocumentFragment();
+  // ================= OPTIMIZE START =================
+  // 🔥 pakai requestAnimationFrame biar gak ganggu scroll
+  requestAnimationFrame(() => {
 
-  filtered.forEach(table => {
-    fragment.appendChild(createTableCard(table));
-  });
+    const existingIds = new Set();
 
-  grid.innerHTML = "";
-  grid.appendChild(fragment);
+    // ================= ADD / UPDATE =================
+    for (const table of filtered) {
+      existingIds.add(table.id);
 
-  updateTableStats(filtered);
+      let card = TABLE_DOM_CACHE.get(table.id);
+
+      // 🆕 create kalau belum ada
+      if (!card) {
+        card = createTableCardOptimized(table);
+        TABLE_DOM_CACHE.set(table.id, card);
+        grid.appendChild(card);
+      } else {
+        // 🔄 update ringan (tanpa re-create DOM)
+        updateTableCard(card, table);
+      }
+    }
+
+    // ================= REMOVE UNUSED =================
+  const filtered = [];
+
+for(const t of TABLE_CACHE){
+
+  if(t.restoId !== restoId) continue;
+
+  if(currentTableFilter !== "all" && t.zone !== currentTableFilter) continue;
+
+  if(currentSearch){
+    if(!(t.name || "").toLowerCase().includes(currentSearch)) continue;
+  }
+
+  filtered.push(t);
 }
 
-window.previewTableImage = function(event){
+    updateTableStats(filtered);
+
+  });
+}
+
+let renderScheduled = false;
+
+function scheduleRender(){
+  if(renderScheduled) return;
+
+  renderScheduled = true;
+
+  requestAnimationFrame(() => {
+    renderScheduled = false;
+    renderTables();
+  });
+}
+
+function createTableCardOptimized(table){
+
+  const card = document.createElement("div");
+  card.className = "terminal-card table-card";
+
+  const title = document.createElement("span");
+  const meta1 = document.createElement("div");
+  const meta2 = document.createElement("div");
+  const notes = document.createElement("div");
+  const status = document.createElement("div");
+
+  title.className = "terminal-title";
+  meta1.className = "table-meta";
+  meta2.className = "table-meta";
+  notes.className = "table-notes";
+  status.className = "table-status";
+
+  card.append(title, meta1, meta2, notes, status);
+
+  // 🔥 simpan reference (NO querySelector lagi)
+  card._refs = { title, meta1, meta2, notes, status };
+
+  updateTableCard(card, table);
+
+  return card;
+}
+
+function updateTableCard(card, table){
+
+  const r = card._refs;
+
+  r.title.textContent = table.name;
+  r.meta1.textContent = `👥 ${table.capacity} Pax • 📍 ${table.zone}`;
+  r.meta2.textContent = `🍽 ${table.category || "-"}`;
+  r.notes.textContent = table.notes || "";
+
+  r.status.textContent = table.status;
+  r.status.style.background = getTableStatusColor(table.status);
+
+  card.style.opacity = table.active ? "1" : "0.4";
+}
+
+window.previewTableImage = async function(event){
 
   const file = event.target.files[0];
   if(!file) return;
@@ -136,46 +241,39 @@ window.previewTableImage = function(event){
   const preview = document.getElementById("tableImagePreview");
   if(!preview) return;
 
-  const reader = new FileReader();
+  const bitmap = await createImageBitmap(file); // 🔥 lebih cepat
 
-  reader.onload = function(e){
+  requestAnimationFrame(() => {
 
-    const img = new Image();
-    img.onload = function(){
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
 
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
+    const MAX_WIDTH = 800;
+    const scale = Math.min(1, MAX_WIDTH / bitmap.width);
 
-      // 🔥 resize (biar gak kegedean)
-      const MAX_WIDTH = 800;
-      const scale = Math.min(1, MAX_WIDTH / img.width);
+    canvas.width = bitmap.width * scale;
+    canvas.height = bitmap.height * scale;
 
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      // 🔥 convert ke WEBP + compress
-      const webpData = canvas.toDataURL("image/webp", 0.7); // 0.7 = quality
-
-      preview.src = webpData;
-      preview.style.display = "block";
-
-      console.log("✅ Image uploaded");
-    };
-
-    img.src = e.target.result;
-  };
-
-  reader.readAsDataURL(file);
+    preview.src = canvas.toDataURL("image/webp", 0.7);
+    preview.style.display = "block";
+  });
 };
-
 /* =========================
    AUTO NAME
 ========================= */
 
-async function generateTableName(){
-  return "T" + String(TABLE_CACHE.length + 1).padStart(2,"0");
+function generateTableName(){
+
+  let max = 0;
+
+  for(const t of TABLE_CACHE){
+    const num = parseInt((t.name || "").replace("T","")) || 0;
+    if(num > max) max = num;
+  }
+
+  return "T" + String(max + 1).padStart(2,"0");
 }
 
 /* =========================
@@ -193,7 +291,7 @@ async function saveTable(){
   const active = document.getElementById("tableActiveToggle").checked;
   const image = document.getElementById("tableImagePreview")?.src || "";
 
-  if(!name) name = await generateTableName();
+  if(!name) name = generateTableName(); // 🔥 sekarang sync function
 
   const session = await getSessionCached();
   const restoId = session?.restoId || "default";
@@ -214,17 +312,30 @@ async function saveTable(){
   };
 
   if(editingTableId){
+
     await MENUVA_DB.update("restaurantTables", tableData);
+
+    // 🔥 update cache langsung
+    const index = TABLE_CACHE.findIndex(t => t.id === editingTableId);
+    if(index !== -1) TABLE_CACHE[index] = tableData;
+
+    TABLE_INDEX[tableData.id] = tableData;
+
     editingTableId = null;
+
   }else{
+
     await MENUVA_DB.add("restaurantTables", tableData);
+
+    // 🔥 push ke cache
+    TABLE_CACHE.push(tableData);
+    TABLE_INDEX[tableData.id] = tableData;
   }
 
   clearTableForm();
-  await loadTablesOnce(); // 🔥 refresh cache biar konsisten
-  renderTables();
-}
 
+  scheduleRender(); // 🔥 TANPA reload DB
+}
 
 function openTableEditor(){
   showEditor("table");
@@ -240,7 +351,6 @@ function showEditor(mode){
   const tablePanel = document.getElementById("tableEditorPanel");
 
   if(tablePanel) tablePanel.style.display = mode === "table" ? "block" : "none";
-  if(layoutPanel) layoutPanel.style.display = mode === "layout" ? "block" : "none";
 
   document.querySelectorAll(".mode-switch button")
     .forEach(btn => btn.classList.remove("active"));
@@ -412,8 +522,18 @@ async function deleteTable(id){
 
   await MENUVA_DB.delete("restaurantTables", id);
 
-  await loadTablesOnce(); // 🔥 biar index & cache sync
-  renderTables();
+  // 🔥 hapus dari cache
+  TABLE_CACHE = TABLE_CACHE.filter(t => t.id !== id);
+  delete TABLE_INDEX[id];
+
+  // 🔥 hapus DOM cache juga
+  const el = TABLE_DOM_CACHE.get(id);
+  if(el){
+    el.remove();
+    TABLE_DOM_CACHE.delete(id);
+  }
+
+  scheduleRender();
 }
 
 const depositToggle = document.getElementById("depositToggle");
