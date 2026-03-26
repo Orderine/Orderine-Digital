@@ -2367,6 +2367,14 @@ body {
   transform: translateZ(0);
   backface-visibility: hidden;
 }
+
+.room-card{
+  padding:12px;
+  border:1px solid #ddd;
+  margin-bottom:10px;
+  cursor:pointer;
+  background:#fff;
+}
 </style>
 </head>
 <body>
@@ -4205,11 +4213,6 @@ if (!window.rooms || !Array.isArray(window.rooms)) {
           ? "package"
           : "hotel";
 
-    const el = createRoomElementSafe({
-      ...room,
-      kategori
-    });
-
     if (el instanceof Node && fragmentMap[kategori]) {
       fragmentMap[kategori].appendChild(el);
     } else {
@@ -4301,6 +4304,83 @@ function createRoomElementSafe(room) {
     return null;
   }
 }
+
+  function createRoomCard(room){
+
+  const card = document.createElement("div");
+  card.className = "room-card";
+
+  const title = document.createElement("div");
+  const price = document.createElement("div");
+  const cap = document.createElement("div");
+
+  title.textContent = room.nama || "-";
+  price.textContent = "Rp " + (room.harga || 0);
+  cap.textContent = (room.kapasitas || 0) + " pax";
+
+  card.append(title, price, cap);
+
+  // 🔥 klik untuk edit
+  card.onclick = () => openRoomEditor(room);
+
+  return card;
+}
+
+  function openRoomEditor(room){
+
+  const form = tambahRoom(room.type || "hotel");
+  if(!form) return;
+
+  form.querySelector(".room-nama").value = room.nama || "";
+  form.querySelector(".room-harga").value = room.harga || "";
+  form.querySelector(".room-kapasitas").value = room.kapasitas || "";
+  form.querySelector(".room-luas").value = room.luas || "";
+  form.querySelector(".room-deskripsi").value = room.deskripsi || "";
+
+  if(room.image){
+    const preview = form.querySelector(".gambar-preview");
+    const hapus = form.querySelector(".hapus-gambar");
+    const upload = form.querySelector(".room-image-upload");
+
+    if(preview){
+      preview.src = room.image;
+      preview.style.display = "block";
+    }
+    if(hapus) hapus.style.display = "inline-flex";
+    if(upload) upload.setAttribute("data-image", room.image);
+  }
+
+  form.scrollIntoView({ behavior:"smooth" });
+}
+
+  function renderRoomsLight(rooms = []){
+
+  const map = {
+    hotel: "roomHotelContainer",
+    meeting: "meetingRoomContainer",
+    package: "packageContainer"
+  };
+
+  for (const key in map) {
+    const el = document.getElementById(map[key]);
+    if (el) el.innerHTML = "";
+  }
+
+  for (const room of rooms){
+
+    const kategori =
+      room.type === "meeting"
+        ? "meeting"
+        : room.type === "package"
+          ? "package"
+          : "hotel";
+
+    const container = document.getElementById(map[kategori]);
+    if (!container) continue;
+
+    container.appendChild(createRoomCard(room)); // 🔥 ringan
+  }
+}
   
 function renderRoomsFromDB(rooms = []) {
 
@@ -4342,8 +4422,6 @@ function renderRoomsFromDB(rooms = []) {
         : room.type === "package"
           ? "package"
           : "hotel";
-
-    const el = createRoomElementSafe(room);
 
     if (el instanceof Node && fragments[kategori]) {
       fragments[kategori].appendChild(el);
@@ -4989,10 +5067,7 @@ console.log("📥 WA loaded:", window.WA_ADMIN);
         renderFlipbookUI?.();
 
         // IMAGE LAZY
-        requestIdleCallback?.(() => {
-          renderAllImagePreview?.("ruangan", window.flipbookRuanganImages);
-          renderAllImagePreview?.("menu", window.flipbookMenuImages);
-        });
+       renderRoomsLight(window.rooms);
 
       } catch (e) {}
     }, 0);
@@ -5004,9 +5079,7 @@ console.log("📥 WA loaded:", window.WA_ADMIN);
           ? resto.rooms
           : [];
 
-        requestIdleCallback?.(() => {
-          renderRoomsFromDB?.(window.rooms);
-        });
+        renderRoomsLight(window.rooms);
 
       } catch (e) {}
     }, 0);
