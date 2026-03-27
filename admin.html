@@ -4381,72 +4381,37 @@ function createRoomElementSafe(room) {
   return card;
 }
 
-  function openRoomEditor(room) {
-  if (!room || typeof room !== "object") {
-    console.warn("⚠️ room tidak valid:", room);
+ function openRoomEditor(room) {
+  if (!room) return;
+
+  const kategori = normalizeCategory(room.type);
+  const config = ROOM_CATEGORY[kategori];
+
+  if (!config) {
+    console.warn("Kategori tidak valid:", room.type);
     return;
   }
 
-  // =========================================
-  // 🔥 NORMALIZE TYPE (biar selalu match container)
-  // =========================================
-  let kategori;
-
-  if (room.type === "meeting") {
-    kategori = "meeting";
-  } else if (room.type === "package") {
-    kategori = "package";
-  } else {
-    kategori = "hotel"; // default fallback
-  }
-
-  // =========================================
-  // 🔥 MAP CONTAINER
-  // =========================================
-  const containerMap = {
-    hotel: "roomHotelContainer",
-    meeting: "meetingRoomContainer",
-    package: "packageContainer"
-  };
-
-  const container = document.getElementById(containerMap[kategori]);
-
+  const container = document.getElementById(config.container);
   if (!container) {
-    console.error("❌ Container tidak ditemukan:", kategori);
+    console.warn("Container tidak ditemukan:", config.container);
     return;
   }
 
-  // =========================================
-  // 🔥 CLEAR EXISTING FORM (biar gak numpuk)
-  // =========================================
+  // 🔥 clear dulu biar gak numpuk
   container.innerHTML = "";
 
-  // =========================================
-  // 🔥 CREATE FORM
-  // =========================================
   const form = tambahRoom(kategori);
-  if (!form) {
-    console.error("❌ Gagal membuat form");
-    return;
-  }
+  if (!form) return;
 
-  // =========================================
-  // 🔥 FILL DATA
-  // =========================================
-  const setVal = (selector, value) => {
-    const el = form.querySelector(selector);
-    if (el) el.value = value || "";
-  };
+  // 🔥 isi data
+  form.querySelector(".room-nama").value = room.nama || "";
+  form.querySelector(".room-harga").value = room.harga || "";
+  form.querySelector(".room-kapasitas").value = room.kapasitas || "";
+  form.querySelector(".room-luas").value = room.luas || "";
+  form.querySelector(".room-deskripsi").value = room.deskripsi || "";
 
-  setVal(".room-nama", room.nama);
-  setVal(".room-harga", room.harga);
-  setVal(".room-kapasitas", room.kapasitas);
-  setVal(".room-luas", room.luas);
-  setVal(".room-deskripsi", room.deskripsi);
-
-  // =========================================
-  // 🔥 HANDLE IMAGE
-  // =========================================
+  // 🔥 image
   if (room.image) {
     const preview = form.querySelector(".gambar-preview");
     const hapus = form.querySelector(".hapus-gambar");
@@ -4456,30 +4421,13 @@ function createRoomElementSafe(room) {
       preview.src = room.image;
       preview.style.display = "block";
     }
-
-    if (hapus) {
-      hapus.style.display = "inline-flex";
-    }
-
-    if (upload) {
-      upload.setAttribute("data-image", room.image);
-    }
+    if (hapus) hapus.style.display = "inline-flex";
+    if (upload) upload.setAttribute("data-image", room.image);
   }
 
-  // =========================================
-  // 🔥 UX: SCROLL + HIGHLIGHT
-  // =========================================
-  form.scrollIntoView({
-    behavior: "smooth",
-    block: "center"
-  });
+  form.scrollIntoView({ behavior: "smooth", block: "center" });
 
-  form.style.outline = "2px solid #00c3ff";
-  setTimeout(() => {
-    form.style.outline = "";
-  }, 1200);
-
-  console.log("✅ Editor terbuka untuk:", room.nama);
+  console.log("✅ buka editor:", room.nama, "| kategori:", kategori);
 }
 
   function renderRoomsLight(rooms = []){
