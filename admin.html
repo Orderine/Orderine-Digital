@@ -4241,9 +4241,12 @@ if (!window.rooms || !Array.isArray(window.rooms)) {
           ? "package"
           : "hotel";
 
-    if (el instanceof Node && fragmentMap[kategori]) {
-      fragmentMap[kategori].appendChild(el);
-    } else {
+   const el = createRoomCard(room);
+
+if (el instanceof Node && fragments[kategori]) {
+  fragments[kategori].appendChild(el);
+}
+    else {
       console.warn("❌ Bukan Node / kategori tidak ada:", el, room);
     }
 
@@ -4475,9 +4478,11 @@ function renderRoomsFromDB(rooms = []) {
           ? "package"
           : "hotel";
 
-    if (el instanceof Node && fragments[kategori]) {
-      fragments[kategori].appendChild(el);
-    }
+   const el = createRoomCard(room);
+
+if (el instanceof Node && fragments[kategori]) {
+  fragments[kategori].appendChild(el);
+}
   }
 
   // 🔥 APPEND SEKALI
@@ -5609,31 +5614,123 @@ window.initPageToggles = async function () {
   console.log("✅ Page Toggles Ready");
 };
 
-  function initLazyRender() {
+ function initLazyRender() {
   const sections = document.querySelectorAll(".heavy-section");
 
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const el = entry.target;
+  if (!sections || sections.length === 0) {
+    console.warn("⚠️ Tidak ada .heavy-section ditemukan");
+    return;
+  }
 
-        // jalankan render hanya sekali
-        if (!el.dataset.rendered) {
-          el.dataset.rendered = "true";
+  // =========================================
+  // 🔥 RENDER REGISTRY (scalable & clean)
+  // =========================================
+  const renderRegistry = {
+    roomSection: {
+      render: () => renderRoomsFromDB(window.rooms),
+      guard: () => Array.isArray(window.rooms) && window.rooms.length >= 0
+    },
+    packageSection: {
+      render: () => renderPackage(),
+      guard: () => true
+    }
+  };
 
-          console.log("🚀 render section:", el.id);
+  // =========================================
+  // 🔥 INTERSECTION OBSERVER CONFIG
+  // =========================================
+  const observer = new IntersectionObserver(handleIntersect, {
+    root: null,
+    rootMargin: "120px", // pre-load sebelum masuk viewport
+    threshold: 0.05
+  });
 
-          // panggil render sesuai section
-          if (el.id === "roomSection") renderRoom();
-          if (el.id === "packageSection") renderPackage();
-        }
+  // observe semua section
+  for (let i = 0; i < sections.length; i++) {
+    observer.observe(sections[i]);
+  }
+
+  // =========================================
+  // 🔥 MAIN HANDLER
+  // =========================================
+  function handleIntersect(entries, obs) {
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+
+      if (!entry.isIntersecting) continue;
+
+      const el = entry.target;
+      const id = el.id;
+
+      // sudah pernah render → skip + cleanup
+      if (el.dataset.rendered === "true") {
+        obs.unobserve(el);
+        continue;
       }
-    });
-  }, { threshold: 0.1 });
 
-  sections.forEach(sec => observer.observe(sec));
+      const config = renderRegistry[id];
+
+      // tidak ada renderer
+      if (!config) {
+        console.warn("⚠️ Tidak ada renderer untuk:", id);
+        obs.unobserve(el);
+        continue;
+      }
+
+      // cek data siap atau belum
+      if (!config.guard()) {
+        retryRender(el, config, obs, 0);
+        continue;
+      }
+
+      // render aman
+      safeRender(el, config.render, obs);
+    }
+  }
+
+  // =========================================
+  // 🔥 SAFE RENDER (isolated)
+  // =========================================
+  function safeRender(el, renderFn, obs) {
+    try {
+      console.log("🚀 render section:", el.id);
+
+      // optional: idle render biar ultra smooth
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(() => renderFn(), { timeout: 500 });
+      } else {
+        renderFn();
+      }
+
+      el.dataset.rendered = "true";
+      obs.unobserve(el);
+
+    } catch (err) {
+      console.error(`❌ Render error (${el.id}):`, err);
+    }
+  }
+
+  // =========================================
+  // 🔥 RETRY SYSTEM (anti race condition)
+  // =========================================
+  function retryRender(el, config, obs, attempt) {
+    const MAX_RETRY = 10;
+    const DELAY = 300;
+
+    if (attempt >= MAX_RETRY) {
+      console.error(`❌ Gagal render ${el.id} setelah ${MAX_RETRY}x retry`);
+      return;
+    }
+
+    setTimeout(() => {
+      if (config.guard()) {
+        safeRender(el, config.render, obs);
+      } else {
+        retryRender(el, config, obs, attempt + 1);
+      }
+    }, DELAY);
+  }
 }
-
 (function smoothEngine() {
   let ticking = false;
 
