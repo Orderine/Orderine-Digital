@@ -25,6 +25,51 @@ function el(tag,cls){
   return e;
 }
 
+async function resizeImage(file,maxSize){
+
+  return new Promise(resolve=>{
+
+    const img=new Image();
+    const reader=new FileReader();
+
+    reader.onload=e=>{
+
+      img.src=e.target.result;
+
+      img.onload=()=>{
+
+        const canvas=document.createElement("canvas");
+        const ctx=canvas.getContext("2d");
+
+        let w=img.width;
+        let h=img.height;
+
+        if(w>maxSize){
+          h=h*(maxSize/w);
+          w=maxSize;
+        }
+
+        canvas.width=w;
+        canvas.height=h;
+
+        ctx.drawImage(img,0,0,w,h);
+
+        const data=canvas.toDataURL("image/jpeg",0.82);
+
+        console.log("📦 image converted");
+
+        resolve(data);
+
+      };
+
+    };
+
+    reader.readAsDataURL(file);
+
+  });
+
+}
+
 /* ======================================================
    FLIPBOOK ENGINE
 ====================================================== */
@@ -251,10 +296,9 @@ async function renderRooms(){
 /* ======================================================
    DRAW ROOMS
 ====================================================== */
-
 function drawRooms(containerId,list){
 
-  const box = document.getElementById(containerId);
+  const box=document.getElementById(containerId);
   if(!box) return;
 
   box.innerHTML="";
@@ -265,48 +309,37 @@ function drawRooms(containerId,list){
 
     const card=el("div","room-card");
 
-    /* =====================
-       IMAGE
-    ===================== */
+    /* IMAGE */
 
-    const img=el("img","room-img");
+    const img=document.createElement("img");
+    img.className="room-img";
+    img.src=room.image||"";
 
-    if(room.image){
-      img.src = URL.createObjectURL(room.image);
-    }
-
-    img.loading="lazy";
-
-    const upload=el("input");
+    const upload=document.createElement("input");
     upload.type="file";
     upload.accept="image/*";
 
     upload.onchange=async()=>{
 
-      const f=upload.files[0];
-      if(!f) return;
+      const file=upload.files[0];
+      if(!file) return;
 
-      if(f.size>10*1024*1024){
-        alert("Image max 10MB");
-        return;
-      }
+      console.log("📥 image selected");
 
-      const optimized=await optimizeImage(f,1200,0.75);
+      const resized=await resizeImage(file,900);
 
-      room.image=optimized;
+      console.log("✅ image resized");
+
+      room.image=resized;
+      img.src=resized;
 
       await MENUVA_DB.update(STORE,room);
 
-      img.src=URL.createObjectURL(optimized);
-
     };
 
-    /* =====================
-       NAME
-    ===================== */
+    /* NAME */
 
     const name=el("input");
-    name.placeholder="Room name";
     name.value=room.name||"";
 
     name.onchange=async()=>{
@@ -314,13 +347,10 @@ function drawRooms(containerId,list){
       await MENUVA_DB.update(STORE,room);
     };
 
-    /* =====================
-       PRICE
-    ===================== */
+    /* PRICE */
 
     const price=el("input");
     price.type="number";
-    price.placeholder="Price";
     price.value=room.price||0;
 
     price.onchange=async()=>{
@@ -328,53 +358,33 @@ function drawRooms(containerId,list){
       await MENUVA_DB.update(STORE,room);
     };
 
-    /* =====================
-       DESCRIPTION
-    ===================== */
+    /* TYPE */
 
-    const desc=el("textarea");
-    desc.placeholder="Room description";
-    desc.value=room.description||"";
+    const type=document.createElement("select");
 
-    desc.onchange=async()=>{
-      room.description=desc.value;
+    ["Non Smoking","Smoking"].forEach(v=>{
+      const o=document.createElement("option");
+      o.value=v;
+      o.textContent=v;
+      if(room.roomType===v) o.selected=true;
+      type.appendChild(o);
+    });
+
+    type.onchange=async()=>{
+      room.roomType=type.value;
       await MENUVA_DB.update(STORE,room);
     };
 
-    /* =====================
-       NOTES
-    ===================== */
+    /* BED */
 
-    const note=el("input");
-    note.placeholder="Notes (example: sea view, balcony)";
-    note.value=room.note||"";
+    const bed=document.createElement("select");
 
-    note.onchange=async()=>{
-      room.note=note.value;
-      await MENUVA_DB.update(STORE,room);
-    };
-
-    /* =====================
-       BED TYPE
-    ===================== */
-
-    const bed=el("select");
-
-    [
-      "Single Bed",
-      "Double Bed",
-      "Twin Bed",
-      "King Bed"
-    ].forEach(v=>{
-
-      const opt=el("option");
-      opt.value=v;
-      opt.textContent=v;
-
-      if(room.bed===v) opt.selected=true;
-
-      bed.appendChild(opt);
-
+    ["Single Bed","Twin Bed","King Bed"].forEach(v=>{
+      const o=document.createElement("option");
+      o.value=v;
+      o.textContent=v;
+      if(room.bed===v) o.selected=true;
+      bed.appendChild(o);
     });
 
     bed.onchange=async()=>{
@@ -382,61 +392,49 @@ function drawRooms(containerId,list){
       await MENUVA_DB.update(STORE,room);
     };
 
-    /* =====================
-       SMOKING
-    ===================== */
+    /* CAPACITY */
 
-    const smoke=el("select");
+    const cap=el("input");
+    cap.type="number";
+    cap.value=room.capacity||2;
 
-    [
-      "Non Smoking",
-      "Smoking Room"
-    ].forEach(v=>{
-
-      const opt=el("option");
-      opt.value=v;
-      opt.textContent=v;
-
-      if(room.smoking===v) opt.selected=true;
-
-      smoke.appendChild(opt);
-
-    });
-
-    smoke.onchange=async()=>{
-      room.smoking=smoke.value;
+    cap.onchange=async()=>{
+      room.capacity=parseInt(cap.value||1);
       await MENUVA_DB.update(STORE,room);
     };
 
-    /* =====================
-       DELETE
-    ===================== */
+    /* NOTE */
+
+    const note=document.createElement("textarea");
+    note.placeholder="Room note...";
+    note.value=room.note||"";
+
+    note.onchange=async()=>{
+      room.note=note.value;
+      await MENUVA_DB.update(STORE,room);
+    };
+
+    /* DELETE */
 
     const del=el("button","room-del");
     del.textContent="Delete";
 
     del.onclick=async()=>{
-
-      if(!confirm("Delete room?")) return;
-
       await MENUVA_DB.delete(STORE,room.id);
       card.remove();
-
     };
 
-    /* =====================
-       APPEND
-    ===================== */
-
-    card.appendChild(img);
-    card.appendChild(upload);
-    card.appendChild(name);
-    card.appendChild(price);
-    card.appendChild(desc);
-    card.appendChild(note);
-    card.appendChild(bed);
-    card.appendChild(smoke);
-    card.appendChild(del);
+    card.append(
+      img,
+      upload,
+      name,
+      price,
+      type,
+      bed,
+      cap,
+      note,
+      del
+    );
 
     frag.appendChild(card);
 
@@ -445,7 +443,6 @@ function drawRooms(containerId,list){
   box.appendChild(frag);
 
 }
-
 /* ======================================================
    ADD ROOM
 ====================================================== */
