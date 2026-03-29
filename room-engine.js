@@ -231,16 +231,16 @@ async function uploadFlipbook(type,input){
 }
 
 /* ======================================================
-   ROOM ENGINE
+   ROOM ENGINE (OPTIMIZED)
 ====================================================== */
 
 async function renderRooms(){
 
-  const data=await MENUVA_DB.getAll(STORE);
+  const data = await MENUVA_DB.getAll(STORE);
 
-  const hotel=data.filter(x=>x.type==="hotel");
-  const meeting=data.filter(x=>x.type==="meeting");
-  const pack=data.filter(x=>x.type==="package");
+  const hotel   = data.filter(x=>x.type==="hotel");
+  const meeting = data.filter(x=>x.type==="meeting");
+  const pack    = data.filter(x=>x.type==="package");
 
   drawRooms("roomHotelContainer",hotel);
   drawRooms("meetingRoomContainer",meeting);
@@ -248,10 +248,13 @@ async function renderRooms(){
 
 }
 
+/* ======================================================
+   DRAW ROOMS
+====================================================== */
+
 function drawRooms(containerId,list){
 
-  const box=document.getElementById(containerId);
-
+  const box = document.getElementById(containerId);
   if(!box) return;
 
   box.innerHTML="";
@@ -262,39 +265,177 @@ function drawRooms(containerId,list){
 
     const card=el("div","room-card");
 
+    /* =====================
+       IMAGE
+    ===================== */
+
+    const img=el("img","room-img");
+
+    if(room.image){
+      img.src = URL.createObjectURL(room.image);
+    }
+
+    img.loading="lazy";
+
+    const upload=el("input");
+    upload.type="file";
+    upload.accept="image/*";
+
+    upload.onchange=async()=>{
+
+      const f=upload.files[0];
+      if(!f) return;
+
+      if(f.size>10*1024*1024){
+        alert("Image max 10MB");
+        return;
+      }
+
+      const optimized=await optimizeImage(f,1200,0.75);
+
+      room.image=optimized;
+
+      await MENUVA_DB.update(STORE,room);
+
+      img.src=URL.createObjectURL(optimized);
+
+    };
+
+    /* =====================
+       NAME
+    ===================== */
+
     const name=el("input");
+    name.placeholder="Room name";
     name.value=room.name||"";
+
+    name.onchange=async()=>{
+      room.name=name.value;
+      await MENUVA_DB.update(STORE,room);
+    };
+
+    /* =====================
+       PRICE
+    ===================== */
 
     const price=el("input");
     price.type="number";
+    price.placeholder="Price";
     price.value=room.price||0;
+
+    price.onchange=async()=>{
+      room.price=parseInt(price.value||0);
+      await MENUVA_DB.update(STORE,room);
+    };
+
+    /* =====================
+       DESCRIPTION
+    ===================== */
+
+    const desc=el("textarea");
+    desc.placeholder="Room description";
+    desc.value=room.description||"";
+
+    desc.onchange=async()=>{
+      room.description=desc.value;
+      await MENUVA_DB.update(STORE,room);
+    };
+
+    /* =====================
+       NOTES
+    ===================== */
+
+    const note=el("input");
+    note.placeholder="Notes (example: sea view, balcony)";
+    note.value=room.note||"";
+
+    note.onchange=async()=>{
+      room.note=note.value;
+      await MENUVA_DB.update(STORE,room);
+    };
+
+    /* =====================
+       BED TYPE
+    ===================== */
+
+    const bed=el("select");
+
+    [
+      "Single Bed",
+      "Double Bed",
+      "Twin Bed",
+      "King Bed"
+    ].forEach(v=>{
+
+      const opt=el("option");
+      opt.value=v;
+      opt.textContent=v;
+
+      if(room.bed===v) opt.selected=true;
+
+      bed.appendChild(opt);
+
+    });
+
+    bed.onchange=async()=>{
+      room.bed=bed.value;
+      await MENUVA_DB.update(STORE,room);
+    };
+
+    /* =====================
+       SMOKING
+    ===================== */
+
+    const smoke=el("select");
+
+    [
+      "Non Smoking",
+      "Smoking Room"
+    ].forEach(v=>{
+
+      const opt=el("option");
+      opt.value=v;
+      opt.textContent=v;
+
+      if(room.smoking===v) opt.selected=true;
+
+      smoke.appendChild(opt);
+
+    });
+
+    smoke.onchange=async()=>{
+      room.smoking=smoke.value;
+      await MENUVA_DB.update(STORE,room);
+    };
+
+    /* =====================
+       DELETE
+    ===================== */
 
     const del=el("button","room-del");
     del.textContent="Delete";
 
     del.onclick=async()=>{
 
+      if(!confirm("Delete room?")) return;
+
       await MENUVA_DB.delete(STORE,room.id);
       card.remove();
 
     };
 
-    name.onchange=async()=>{
+    /* =====================
+       APPEND
+    ===================== */
 
-      room.name=name.value;
-      await MENUVA_DB.update(STORE,room);
-
-    };
-
-    price.onchange=async()=>{
-
-      room.price=parseInt(price.value||0);
-      await MENUVA_DB.update(STORE,room);
-
-    };
-
+    card.appendChild(img);
+    card.appendChild(upload);
     card.appendChild(name);
     card.appendChild(price);
+    card.appendChild(desc);
+    card.appendChild(note);
+    card.appendChild(bed);
+    card.appendChild(smoke);
     card.appendChild(del);
 
     frag.appendChild(card);
@@ -316,6 +457,10 @@ async function addRoom(type){
     type:type,
     name:"New "+type,
     price:0,
+    description:"",
+    note:"",
+    bed:"Single Bed",
+    smoking:"Non Smoking",
     createdAt:Date.now()
   };
 
@@ -332,7 +477,6 @@ async function addRoom(type){
 async function loadSettings(){
 
   const data=await MENUVA_DB.get("promoData","system_settings");
-
   if(!data) return;
 
   const order=document.getElementById("toggleOrderPage");
@@ -425,10 +569,8 @@ async function boot(){
 document.addEventListener("DOMContentLoaded",boot);
 
 window.ROOM_ENGINE={
-
   renderRooms,
   addRoom
-
 };
 
 })();
