@@ -309,31 +309,64 @@ function drawRooms(containerId,list){
 
     const card=el("div","room-card");
 
-    /* IMAGE */
+    /* ===============================
+       NORMALIZE DATA (anti bug lama)
+    =============================== */
 
-    const img=document.createElement("img");
-    img.className="room-img";
-    img.src=room.image||"";
+    room.images = Array.isArray(room.images) ? room.images : [];
+    room.amenities = Array.isArray(room.amenities) ? room.amenities : [];
+
+    /* ===============================
+       GALLERY
+    =============================== */
+
+    const gallery=el("div","room-gallery");
+
+    const imgs = room.images.length
+      ? room.images
+      : (room.image ? [room.image] : []);
+
+    imgs.forEach(src=>{
+
+      const gimg=document.createElement("img");
+      gimg.className="room-img";
+      gimg.src=src;
+
+      gallery.appendChild(gimg);
+
+    });
+
+    /* ===============================
+       IMAGE UPLOAD
+    =============================== */
 
     const upload=document.createElement("input");
     upload.type="file";
     upload.accept="image/*";
+    upload.multiple=true;
 
     upload.onchange=async()=>{
 
-      const file=upload.files[0];
-      if(!file) return;
+      const files=[...upload.files];
+      if(!files.length) return;
 
-      const resized=await resizeImage(file,900);
+      for(const file of files){
 
-      room.image=resized;
-      img.src=resized;
+        const resized=await resizeImage(file,900);
+
+        room.images.push(resized);
+
+      }
 
       await MENUVA_DB.update(STORE,room);
 
+      renderRooms();
+
     };
 
-    /* NAME */
+    /* ===============================
+       NAME
+    =============================== */
 
     const name=el("input");
     name.value=room.name||"";
@@ -344,51 +377,52 @@ function drawRooms(containerId,list){
       await MENUVA_DB.update(STORE,room);
     };
 
-    /* PRICE */
+    /* ===============================
+       PRICE
+    =============================== */
 
-   const price=el("input");
-price.type="text";
+    const price=el("input");
+    price.type="text";
 
-price.value=formatRupiah(room.price);
+    price.value=formatRupiah(room.price);
+    price.placeholder="Rp 1.200.000";
 
-price.placeholder="Rp 1.200.000";
+    price.onfocus=()=>{
+      price.value=room.price || "";
+    };
 
-/* ketika user fokus → kembali ke angka */
+    price.onblur=async()=>{
 
-price.onfocus=()=>{
+      const val=parseRupiah(price.value);
 
-  price.value=room.price || "";
+      room.price=val;
 
-};
+      price.value=formatRupiah(val);
 
-/* ketika selesai edit → format rupiah */
+      await MENUVA_DB.update(STORE,room);
 
-price.onblur=async()=>{
+    };
 
-  const val=parseRupiah(price.value);
+    card.append(gallery,upload,name,price);
 
-  room.price=val;
-
-  price.value=formatRupiah(val);
-
-  await MENUVA_DB.update(STORE,room);
-
-};
-
-    card.append(img,upload,name,price);
-
-    /* HOTEL ROOM ONLY */
+    /* ===============================
+       HOTEL OPTIONS
+    =============================== */
 
     if(room.type==="hotel"){
 
       const type=document.createElement("select");
 
       ["Non Smoking","Smoking"].forEach(v=>{
+
         const o=document.createElement("option");
         o.value=v;
         o.textContent=v;
+
         if(room.roomType===v) o.selected=true;
+
         type.appendChild(o);
+
       });
 
       type.onchange=async()=>{
@@ -398,12 +432,16 @@ price.onblur=async()=>{
 
       const bed=document.createElement("select");
 
-      ["Single Bed","Twin Bed","Quen Bed","King Bed"].forEach(v=>{
+      ["Single Bed","Twin Bed","Queen Bed","King Bed"].forEach(v=>{
+
         const o=document.createElement("option");
         o.value=v;
         o.textContent=v;
+
         if(room.bed===v) o.selected=true;
+
         bed.appendChild(o);
+
       });
 
       bed.onchange=async()=>{
@@ -415,7 +453,9 @@ price.onblur=async()=>{
 
     }
 
-    /* HOTEL + MEETING CAPACITY */
+    /* ===============================
+       CAPACITY
+    =============================== */
 
     if(room.type==="hotel" || room.type==="meeting"){
 
@@ -425,19 +465,24 @@ price.onblur=async()=>{
       cap.placeholder="2";
 
       cap.onchange=async()=>{
+
         room.capacity=parseInt(cap.value||1);
+
         await MENUVA_DB.update(STORE,room);
+
       };
 
       card.append(cap);
 
     }
 
-    /* NOTE */
+    /* ===============================
+       NOTE
+    =============================== */
 
     const note=document.createElement("textarea");
     note.value=room.note||"";
-    note.placeholder="Free breakfast, ETC";
+    note.placeholder="Free breakfast, etc";
 
     note.onchange=async()=>{
       room.note=note.value;
@@ -446,14 +491,71 @@ price.onblur=async()=>{
 
     card.append(note);
 
-    /* DELETE */
+    /* ===============================
+       AMENITIES
+    =============================== */
+
+    const amenBox=el("div","room-amenities");
+
+    const amenList=[
+      "wifi",
+      "tv",
+      "ac",
+      "bathtub",
+      "minibar",
+      "breakfast"
+    ];
+
+    amenList.forEach(a=>{
+
+      const label=document.createElement("label");
+
+      const cb=document.createElement("input");
+      cb.type="checkbox";
+      cb.value=a;
+
+      if(room.amenities.includes(a))
+        cb.checked=true;
+
+      cb.onchange=async()=>{
+
+        if(cb.checked){
+
+          if(!room.amenities.includes(a)){
+            room.amenities.push(a);
+          }
+
+        }else{
+
+          room.amenities = room.amenities.filter(x=>x!==a);
+
+        }
+
+        await MENUVA_DB.update(STORE,room);
+
+      };
+
+      label.append(cb," "+a);
+
+      amenBox.appendChild(label);
+
+    });
+
+    card.append(amenBox);
+
+    /* ===============================
+       DELETE
+    =============================== */
 
     const del=el("button","room-del");
     del.textContent="Delete";
 
     del.onclick=async()=>{
+
       await MENUVA_DB.delete(STORE,room.id);
+
       card.remove();
+
     };
 
     card.append(del);
@@ -492,18 +594,27 @@ function parseRupiah(str){
 
 async function addRoom(type){
 
-  const data={
-    id:uid("room"),
-    type:type,
-    name:"New "+type,
-    price:0,
-    description:"",
-    note:"",
-    bed:"Single Bed",
-    smoking:"Non Smoking",
-    createdAt:Date.now()
-  };
+ const data={
+  id:uid("room"),
+  type:type,
 
+  name:"New "+type,
+  price:0,
+
+  image:"",        // tetap biarkan (backward compatible)
+  images:[],       // MULTI IMAGE
+  amenities:[],    // CHECKLIST
+
+  description:"",
+  note:"",
+
+  bed:"Single Bed",
+  smoking:"Non Smoking",
+  capacity:2,
+
+  createdAt:Date.now()
+};
+   
   await MENUVA_DB.add(STORE,data);
 
   renderRooms();
