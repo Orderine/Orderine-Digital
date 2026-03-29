@@ -4925,6 +4925,9 @@ window.initPageToggles = async function () {
   console.log("✅ Page Toggles Ready");
 };
 
+window.renderRoomsFromDB = () => window.ROOM_ENGINE?.renderRooms?.();
+window.renderPackage     = () => window.ROOM_ENGINE?.renderRooms?.();
+
  function initLazyRender() {
   const sections = document.querySelectorAll(".heavy-section");
 
@@ -4937,16 +4940,17 @@ window.initPageToggles = async function () {
   // 🔥 RENDER REGISTRY (scalable & clean)
   // =========================================
   const renderRegistry = {
-    roomSection: {
-      render: () => renderRoomsFromDB(window.rooms),
-      guard: () => Array.isArray(window.rooms) && window.rooms.length >= 0
-    },
-    packageSection: {
-      render: () => renderPackage(),
-      guard: () => true
-    }
-  };
+  roomSection: {
+    render: () => window.ROOM_ENGINE?.renderRooms?.(),
+    guard: () => true
+  },
 
+  packageSection: {
+    render: () => window.ROOM_ENGINE?.renderRooms?.(),
+    guard: () => true
+  }
+};
+   
   // =========================================
   // 🔥 INTERSECTION OBSERVER CONFIG
   // =========================================
