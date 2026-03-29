@@ -119,7 +119,7 @@ async function uploadFlipbook(type,input){
   const progressBar = document.getElementById("flipUploadBar");
   const progressText = document.getElementById("flipUploadText");
 
-  progressBox.style.display = "block";
+  if(progressBox) progressBox.style.display = "block";
 
   const total = files.length;
   let done = 0;
@@ -127,6 +127,20 @@ async function uploadFlipbook(type,input){
   console.log("🚀 Upload started:", total,"files");
 
   for(const f of files){
+
+    /* =========================
+       FILE SIZE GUARD (10MB)
+    ========================= */
+
+    if(f.size > 10 * 1024 * 1024){
+
+      console.warn("⚠️ File to large (max 10MB):", f.name);
+
+      alert("File "+f.name+" File size is too large. 10MB MAX.");
+
+      continue;
+
+    }
 
     console.log("📦 Processing:", f.name);
 
@@ -143,8 +157,8 @@ async function uploadFlipbook(type,input){
 
     const percent = Math.round((done/total)*100);
 
-    progressBar.style.width = percent + "%";
-    progressText.textContent = "Uploading " + done + " / " + total;
+    if(progressBar) progressBar.style.width = percent + "%";
+    if(progressText) progressText.textContent = "Uploading " + done + " / " + total;
 
     console.log("⬆️ Saved to DB:", f.name);
 
@@ -152,22 +166,24 @@ async function uploadFlipbook(type,input){
 
   console.log("🎉 Upload finished");
 
-  progressText.textContent = "Upload complete";
-  progressBar.style.width = "100%";
+  if(progressText) progressText.textContent = "Upload complete";
+  if(progressBar) progressBar.style.width = "100%";
 
   setTimeout(()=>{
-    progressBox.style.display="none";
-    progressBar.style.width="0%";
+
+    if(progressBox) progressBox.style.display="none";
+    if(progressBar) progressBar.style.width="0%";
+
   },1200);
 
-  loadFlipbook(type,
+  loadFlipbook(
+    type,
     type==="ruangan"
       ? document.getElementById("flipbookRuanganPreview")
       : document.getElementById("flipbookMenuPreview")
   );
 
 }
-
   async function optimizeImage(file, maxWidth = 1200, quality = 0.7){
 
   console.log("🖼️ Start processing:", file.name);
