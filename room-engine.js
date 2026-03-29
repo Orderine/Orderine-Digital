@@ -112,13 +112,25 @@ async function loadFlipbook(type, container){
 
 async function uploadFlipbook(type,input){
 
-  const files=[...input.files];
-
+  const files = [...input.files];
   if(!files.length) return;
+
+  const progressBox = document.getElementById("flipUploadProgress");
+  const progressBar = document.getElementById("flipUploadBar");
+  const progressText = document.getElementById("flipUploadText");
+
+  progressBox.style.display = "block";
+
+  const total = files.length;
+  let done = 0;
+
+  console.log("🚀 Upload started:", total,"files");
 
   for(const f of files){
 
-    const optimized = await optimizeImage(f,1000,0.6);
+    console.log("📦 Processing:", f.name);
+
+    const optimized = await optimizeImage(f,1200,0.7);
 
     await MENUVA_DB.add("flipbookData",{
       id: uid("flip"),
@@ -127,19 +139,40 @@ async function uploadFlipbook(type,input){
       createdAt: Date.now()
     });
 
+    done++;
+
+    const percent = Math.round((done/total)*100);
+
+    progressBar.style.width = percent + "%";
+    progressText.textContent = "Uploading " + done + " / " + total;
+
+    console.log("⬆️ Saved to DB:", f.name);
+
   }
+
+  console.log("🎉 Upload finished");
+
+  progressText.textContent = "Upload complete";
+  progressBar.style.width = "100%";
+
+  setTimeout(()=>{
+    progressBox.style.display="none";
+    progressBar.style.width="0%";
+  },1200);
 
   loadFlipbook(type,
     type==="ruangan"
-    ? document.getElementById("flipbookRuanganPreview")
-    : document.getElementById("flipbookMenuPreview")
+      ? document.getElementById("flipbookRuanganPreview")
+      : document.getElementById("flipbookMenuPreview")
   );
 
 }
 
-   async function optimizeImage(file, maxWidth = 1200, quality = 0.75){
+  async function optimizeImage(file, maxWidth = 1200, quality = 0.7){
 
-  return new Promise((resolve)=>{
+  console.log("🖼️ Start processing:", file.name);
+
+  return new Promise(resolve => {
 
     const img = new Image();
     const reader = new FileReader();
@@ -151,7 +184,7 @@ async function uploadFlipbook(type,input){
       let w = img.width;
       let h = img.height;
 
-      if (w > maxWidth) {
+      if(w > maxWidth){
         h = Math.round(h * (maxWidth / w));
         w = maxWidth;
       }
@@ -165,6 +198,9 @@ async function uploadFlipbook(type,input){
       ctx.drawImage(img,0,0,w,h);
 
       canvas.toBlob(blob => {
+
+        console.log("✅ Converted to WebP:", file.name,
+          "| size:", Math.round(blob.size/1024),"KB");
 
         resolve(blob);
 
