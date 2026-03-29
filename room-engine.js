@@ -29,31 +29,73 @@ function el(tag,cls){
    FLIPBOOK ENGINE
 ====================================================== */
 
-async function loadFlipbook(type,container){
+async function loadFlipbook(type, container){
+
+  if(!container) return;
 
   const data = await MENUVA_DB.getAll(FLIP);
 
-  const list = data.filter(x=>x.type===type);
+  if(!Array.isArray(data)) return;
 
-  container.innerHTML="";
+  const list = data.filter(x => x.type === type);
 
-  const frag=document.createDocumentFragment();
+  container.innerHTML = "";
 
-  list.forEach(img=>{
+  const frag = document.createDocumentFragment();
 
-    const card=el("div","flip-card");
+  const MAX_RENDER = 30; // batasi render agar tidak berat
+  const slice = list.slice(0, MAX_RENDER);
 
-    const image=el("img");
-    image.src = URL.createObjectURL(img.file);
-    image.loading="lazy";
+  slice.forEach(img => {
 
-    const del=el("button","flip-del");
-    del.textContent="✕";
+    const card = el("div","flip-card");
 
-    del.onclick=async()=>{
+    const image = el("img");
+    image.loading = "lazy";
+    image.decoding = "async";
 
-      await MENUVA_DB.delete(FLIP,img.id);
-      card.remove();
+    // ==============================
+    // SOURCE IMAGE (safe fallback)
+    // ==============================
+    if(img.file instanceof Blob){
+
+      const url = URL.createObjectURL(img.file);
+      image.src = url;
+
+      image.onload = () => {
+        URL.revokeObjectURL(url); // cegah memory leak
+      };
+
+    }
+    else if(typeof img.url === "string"){
+
+      image.src = img.url; // fallback base64 lama
+
+    }
+    else{
+
+      image.src = ""; // fallback terakhir
+
+    }
+
+    // ==============================
+    // DELETE BUTTON
+    // ==============================
+    const del = el("button","flip-del");
+    del.textContent = "✕";
+
+    del.onclick = async () => {
+
+      try{
+
+        await MENUVA_DB.delete(FLIP, img.id);
+        card.remove();
+
+      }catch(err){
+
+        console.error("❌ gagal hapus flipbook:", err);
+
+      }
 
     };
 
