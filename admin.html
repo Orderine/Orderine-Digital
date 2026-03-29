@@ -2805,7 +2805,16 @@ placeholder="Table Notes"></textarea>
   <input type="file" id="flipbookMenuUpload" name="flipbookMenuUpload" accept="image/*" multiple style="display:none;" />
   <div id="flipbookMenuPreview"></div>
 </div>
+  
+<div id="flipUploadProgress" style="margin-top:8px;display:none;">
+  <div style="background:#222;height:8px;border-radius:6px;overflow:hidden;">
+    <div id="flipUploadBar"
+         style="height:8px;width:0%;background:#4caf50;transition:width .2s"></div>
+  </div>
+  <small id="flipUploadText">Preparing upload...</small>
+</div>
 
+  
 <div class="setting-card" id="orderToggleBox">
   <h2>⚙️ Reservation & Delivery Setting</h2>
   <label class="switch">
