@@ -324,11 +324,7 @@ function drawRooms(containerId,list){
       const file=upload.files[0];
       if(!file) return;
 
-      console.log("📥 image selected");
-
       const resized=await resizeImage(file,900);
-
-      console.log("✅ image resized");
 
       room.image=resized;
       img.src=resized;
@@ -341,6 +337,7 @@ function drawRooms(containerId,list){
 
     const name=el("input");
     name.value=room.name||"";
+    name.placeholder="Room name";
 
     name.onchange=async()=>{
       room.name=name.value;
@@ -349,70 +346,105 @@ function drawRooms(containerId,list){
 
     /* PRICE */
 
-    const price=el("input");
-    price.type="number";
-    price.value=room.price||0;
+   const price=el("input");
+price.type="text";
 
-    price.onchange=async()=>{
-      room.price=parseInt(price.value||0);
-      await MENUVA_DB.update(STORE,room);
-    };
+price.value=formatRupiah(room.price);
 
-    /* TYPE */
+price.placeholder="Rp 1.200.000";
 
-    const type=document.createElement("select");
+/* ketika user fokus → kembali ke angka */
 
-    ["Non Smoking","Smoking"].forEach(v=>{
-      const o=document.createElement("option");
-      o.value=v;
-      o.textContent=v;
-      if(room.roomType===v) o.selected=true;
-      type.appendChild(o);
-    });
+price.onfocus=()=>{
 
-    type.onchange=async()=>{
-      room.roomType=type.value;
-      await MENUVA_DB.update(STORE,room);
-    };
+  price.value=room.price || "";
 
-    /* BED */
+};
 
-    const bed=document.createElement("select");
+/* ketika selesai edit → format rupiah */
 
-    ["Single Bed","Twin Bed","King Bed"].forEach(v=>{
-      const o=document.createElement("option");
-      o.value=v;
-      o.textContent=v;
-      if(room.bed===v) o.selected=true;
-      bed.appendChild(o);
-    });
+price.onblur=async()=>{
 
-    bed.onchange=async()=>{
-      room.bed=bed.value;
-      await MENUVA_DB.update(STORE,room);
-    };
+  const val=parseRupiah(price.value);
 
-    /* CAPACITY */
+  room.price=val;
 
-    const cap=el("input");
-    cap.type="number";
-    cap.value=room.capacity||2;
+  price.value=formatRupiah(val);
 
-    cap.onchange=async()=>{
-      room.capacity=parseInt(cap.value||1);
-      await MENUVA_DB.update(STORE,room);
-    };
+  await MENUVA_DB.update(STORE,room);
+
+};
+
+    card.append(img,upload,name,price);
+
+    /* HOTEL ROOM ONLY */
+
+    if(room.type==="hotel"){
+
+      const type=document.createElement("select");
+
+      ["Non Smoking","Smoking"].forEach(v=>{
+        const o=document.createElement("option");
+        o.value=v;
+        o.textContent=v;
+        if(room.roomType===v) o.selected=true;
+        type.appendChild(o);
+      });
+
+      type.onchange=async()=>{
+        room.roomType=type.value;
+        await MENUVA_DB.update(STORE,room);
+      };
+
+      const bed=document.createElement("select");
+
+      ["Single Bed","Twin Bed","Quen Bed","King Bed"].forEach(v=>{
+        const o=document.createElement("option");
+        o.value=v;
+        o.textContent=v;
+        if(room.bed===v) o.selected=true;
+        bed.appendChild(o);
+      });
+
+      bed.onchange=async()=>{
+        room.bed=bed.value;
+        await MENUVA_DB.update(STORE,room);
+      };
+
+      card.append(type,bed);
+
+    }
+
+    /* HOTEL + MEETING CAPACITY */
+
+    if(room.type==="hotel" || room.type==="meeting"){
+
+      const cap=el("input");
+      cap.type="number";
+      cap.value=room.capacity||"";
+      cap.placeholder="2";
+
+      cap.onchange=async()=>{
+        room.capacity=parseInt(cap.value||1);
+        await MENUVA_DB.update(STORE,room);
+      };
+
+      card.append(cap);
+
+    }
 
     /* NOTE */
 
     const note=document.createElement("textarea");
-    note.placeholder="Room note...";
     note.value=room.note||"";
+    note.placeholder="Free breakfast, ETC";
 
     note.onchange=async()=>{
       room.note=note.value;
       await MENUVA_DB.update(STORE,room);
     };
+
+    card.append(note);
 
     /* DELETE */
 
@@ -424,17 +456,7 @@ function drawRooms(containerId,list){
       card.remove();
     };
 
-    card.append(
-      img,
-      upload,
-      name,
-      price,
-      type,
-      bed,
-      cap,
-      note,
-      del
-    );
+    card.append(del);
 
     frag.appendChild(card);
 
@@ -443,6 +465,27 @@ function drawRooms(containerId,list){
   box.appendChild(frag);
 
 }
+
+function formatRupiah(num){
+
+  if(!num) return "";
+
+  return new Intl.NumberFormat("id-ID",{
+    style:"currency",
+    currency:"IDR",
+    maximumFractionDigits:0
+  }).format(num);
+
+}
+
+function parseRupiah(str){
+
+  if(!str) return 0;
+
+  return parseInt(str.replace(/[^\d]/g,"")) || 0;
+
+}
+   
 /* ======================================================
    ADD ROOM
 ====================================================== */
