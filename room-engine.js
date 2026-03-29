@@ -44,7 +44,7 @@ async function loadFlipbook(type,container){
     const card=el("div","flip-card");
 
     const image=el("img");
-    image.src=img.url;
+    image.src = URL.createObjectURL(img.file);
     image.loading="lazy";
 
     const del=el("button","flip-del");
@@ -76,24 +76,63 @@ async function uploadFlipbook(type,input){
 
   for(const f of files){
 
-    const reader=new FileReader();
+    const optimized = await optimizeImage(f,1000,0.6);
 
-    reader.onload=async(e)=>{
-
-      await MENUVA_DB.add(FLIP,{
-        id:uid("flip"),
-        type:type,
-        url:e.target.result,
-        createdAt:Date.now()
-      });
-
-    };
-
-    reader.readAsDataURL(f);
+    await MENUVA_DB.add("flipbookData",{
+      id: uid("flip"),
+      type: type,
+      file: optimized,
+      createdAt: Date.now()
+    });
 
   }
 
-  setTimeout(initFlipbooks,300);
+  loadFlipbook(type,
+    type==="ruangan"
+    ? document.getElementById("flipbookRuanganPreview")
+    : document.getElementById("flipbookMenuPreview")
+  );
+
+}
+
+   async function optimizeImage(file, maxWidth = 1200, quality = 0.75){
+
+  return new Promise((resolve)=>{
+
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = e => img.src = e.target.result;
+
+    img.onload = () => {
+
+      let w = img.width;
+      let h = img.height;
+
+      if (w > maxWidth) {
+        h = Math.round(h * (maxWidth / w));
+        w = maxWidth;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+
+      const ctx = canvas.getContext("2d");
+
+      ctx.drawImage(img,0,0,w,h);
+
+      canvas.toBlob(blob => {
+
+        resolve(blob);
+
+      },"image/webp",quality);
+
+    };
+
+    reader.readAsDataURL(file);
+
+  });
 
 }
 
