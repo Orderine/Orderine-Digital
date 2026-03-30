@@ -520,50 +520,93 @@ function drawRooms(containerId,list){
 
     card.append(note);
 
-    /* ===============================
-       AMENITIES
-    =============================== */
+  /* ===============================
+   AMENITIES
+================================ */
 
-    const amenBox=el("div","room-amenities");
+const amenBox = el("div","room-amenities");
 
-   const amenList = AMENITIES_BY_TYPE[room.type] || [];
-     
-    amenList.forEach(a=>{
+room.amenities.forEach(a=>{
 
-      const label=document.createElement("label");
+  const label=document.createElement("label");
 
-      const cb=document.createElement("input");
-      cb.type="checkbox";
-      cb.value=a;
+  const cb=document.createElement("input");
+  cb.type="checkbox";
+  cb.checked=true;
 
-      if(room.amenities.includes(a))
-        cb.checked=true;
+  cb.onchange=async()=>{
 
-      cb.onchange=async()=>{
+    if(!cb.checked){
 
-        if(cb.checked){
+      room.amenities = room.amenities.filter(x=>x!==a);
 
-          if(!room.amenities.includes(a)){
-            room.amenities.push(a);
-          }
+      await MENUVA_DB.update(STORE,room);
 
-        }else{
+      renderRooms();
 
-          room.amenities = room.amenities.filter(x=>x!==a);
+    }
 
-        }
+  };
 
-        await MENUVA_DB.update(STORE,room);
+  const del=document.createElement("span");
+  del.textContent=" ✕";
+  del.style.cursor="pointer";
 
-      };
+  del.onclick=async()=>{
 
-      label.append(cb," "+a);
+    room.amenities = room.amenities.filter(x=>x!==a);
 
-      amenBox.appendChild(label);
+    await MENUVA_DB.update(STORE,room);
 
-    });
+    renderRooms();
 
-    card.append(amenBox);
+  };
+
+  label.append(cb," "+a,del);
+
+  amenBox.appendChild(label);
+
+});
+
+card.append(amenBox);
+
+
+/* ===============================
+   ADD AMENITY
+================================ */
+
+const addBox = document.createElement("div");
+addBox.className="amenity-add-box";
+
+const addInput = document.createElement("input");
+addInput.placeholder="new amenity";
+
+const addBtn = document.createElement("button");
+addBtn.textContent="Add";
+
+addBtn.onclick = async()=>{
+
+  const val = addInput.value.trim().toLowerCase();
+
+  if(!val) return;
+
+  if(!room.amenities.includes(val)){
+
+    room.amenities.push(val);
+
+    await MENUVA_DB.update(STORE,room);
+
+    renderRooms();
+
+  }
+
+  addInput.value="";
+
+};
+
+addBox.append(addInput,addBtn);
+
+card.append(addBox);
 
     /* ===============================
        DELETE
