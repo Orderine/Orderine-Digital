@@ -579,7 +579,7 @@ const addBox = document.createElement("div");
 addBox.className="amenity-add-box";
 
 const addInput = document.createElement("input");
-addInput.placeholder="new amenity";
+addInput.placeholder="Ac,Tv,Etc.";
 
 const addBtn = document.createElement("button");
 addBtn.textContent="Add";
