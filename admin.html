@@ -2400,22 +2400,23 @@ body {
 }
 
 .room-amenities{
-display:flex;
-flex-wrap:wrap;
-gap:10px;
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:6px;
 margin-top:6px;
 }
 
 .room-amenities label{
 display:flex;
 align-items:center;
-gap:6px;
+gap:4px;
 font-size:13px;
-cursor:pointer;
 }
 
-.room-amenities input{
-margin:0;
+.amenity-add-box{
+display:flex;
+gap:6px;
+margin-top:6px;
 }
 </style>
 </head>
