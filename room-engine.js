@@ -296,6 +296,35 @@ async function renderRooms(){
 /* ======================================================
    DRAW ROOMS
 ====================================================== */
+const AMENITIES_BY_TYPE = {
+
+  hotel:[
+    "wifi",
+    "tv",
+    "ac",
+    "bathtub",
+    "minibar",
+    "breakfast"
+  ],
+
+  meeting:[
+    "wifi",
+    "projector",
+    "whiteboard",
+    "sound_system",
+    "coffee_break"
+  ],
+
+  package:[
+    "guide",
+    "transport",
+    "meal",
+    "ticket",
+    "insurance"
+  ]
+
+};
+   
 function drawRooms(containerId,list){
 
   const box=document.getElementById(containerId);
@@ -497,15 +526,8 @@ function drawRooms(containerId,list){
 
     const amenBox=el("div","room-amenities");
 
-    const amenList=[
-      "wifi",
-      "tv",
-      "ac",
-      "bathtub",
-      "minibar",
-      "breakfast"
-    ];
-
+   const amenList = AMENITIES_BY_TYPE[room.type] || [];
+     
     amenList.forEach(a=>{
 
       const label=document.createElement("label");
