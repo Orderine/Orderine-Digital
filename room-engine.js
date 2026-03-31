@@ -324,6 +324,8 @@ const AMENITIES_BY_TYPE = {
   ]
 
 };
+
+
    
 function drawRooms(containerId,list){
 
@@ -335,6 +337,9 @@ function drawRooms(containerId,list){
   const frag=document.createDocumentFragment();
 
   list.forEach(room=>{
+     const isHotel = room.type==="hotel";
+     const isMeeting = room.type==="meeting";
+     const isPackage = room.type==="package";
 
     const card=el("div","room-card");
 
@@ -438,7 +443,7 @@ function drawRooms(containerId,list){
        HOTEL OPTIONS
     =============================== */
 
-    if(room.type==="hotel"){
+    if(isHotel){
 
       const type=document.createElement("select");
 
@@ -486,7 +491,7 @@ function drawRooms(containerId,list){
        CAPACITY
     =============================== */
 
-    if(room.type==="hotel" || room.type==="meeting"){
+    if(isHotel || isMeeting){
 
       const cap=el("input");
       cap.type="number";
@@ -506,96 +511,106 @@ function drawRooms(containerId,list){
     }
 
      /* ===============================
-   ROOM SIZE
+   HOTEL EXTRA OPTIONS
 ================================ */
 
-const size=el("input");
-size.type="number";
-size.placeholder="Room size (m²)";
-size.value=room.size||"";
+if(isHotel){
 
-size.onchange=async()=>{
+  /* ROOM SIZE */
 
-  room.size=parseInt(size.value||0);
+  const size=el("input");
+  size.type="number";
+  size.placeholder="Room size (m²)";
+  size.value=room.size||"";
 
-  await MENUVA_DB.update(STORE,room);
+  size.onchange=async()=>{
 
-};
+    room.size=parseInt(size.value||0);
 
-card.append(size);
+    await MENUVA_DB.update(STORE,room);
 
+  };
 
-/* ===============================
-   ROOM VIEW
-================================ */
-
-const view=document.createElement("select");
-
-["","Garden View","Pool View","City View","Ocean View","Mountain View"]
-.forEach(v=>{
-
-  const o=document.createElement("option");
-  o.value=v;
-  o.textContent=v || "Room view";
-
-  if(room.view===v) o.selected=true;
-
-  view.appendChild(o);
-
-});
-
-view.onchange=async()=>{
-
-  room.view=view.value;
-
-  await MENUVA_DB.update(STORE,room);
-
-};
-
-card.append(view);
+  card.append(size);
 
 
-/* ===============================
-   EXTRA BED
-================================ */
+  /* ROOM VIEW */
 
-const extra=document.createElement("select");
+  const view=document.createElement("select");
 
-["No Extra Bed","Extra Bed Available"].forEach(v=>{
+  ["","Garden View","Pool View","City View","Ocean View","Mountain View"]
+  .forEach(v=>{
 
-  const o=document.createElement("option");
-  o.value=v;
-  o.textContent=v;
+    const o=document.createElement("option");
+    o.value=v;
+    o.textContent=v || "Room view";
 
-  if(room.extraBed===v) o.selected=true;
+    if(room.view===v) o.selected=true;
 
-  extra.appendChild(o);
+    view.appendChild(o);
 
-});
+  });
 
-extra.onchange=async()=>{
+  view.onchange=async()=>{
 
-  room.extraBed=extra.value;
+    room.view=view.value;
 
-  await MENUVA_DB.update(STORE,room);
+    await MENUVA_DB.update(STORE,room);
 
-};
+  };
 
-card.append(extra);
+  card.append(view);
 
 
-/* ===============================
-   INVENTORY
-================================ */
+  /* EXTRA BED */
 
-const inv=el("input");
-inv.type="number";
-inv.placeholder="Total rooms";
-inv.value=room.inventory||"";
+  const extra=document.createElement("select");
 
-inv.onchange=async()=>{
+  ["No Extra Bed","Extra Bed Available"].forEach(v=>{
 
-  room.inventory=parseInt(inv.value||1);
+    const o=document.createElement("option");
+    o.value=v;
+    o.textContent=v;
+
+    if(room.extraBed===v) o.selected=true;
+
+    extra.appendChild(o);
+
+  });
+
+  extra.onchange=async()=>{
+
+    room.extraBed=extra.value;
+
+    await MENUVA_DB.update(STORE,room);
+
+  };
+
+  card.append(extra);
+
+
+ /* INVENTORY */
+
+const inv = el("input");
+inv.type = "number";
+inv.placeholder = "Total rooms";
+
+if(typeof room.inventory === "number"){
+  inv.value = room.inventory;
+}else{
+  inv.value = 1;
+  room.inventory = 1;
+}
+
+inv.onchange = async()=>{
+
+  let val = parseInt(inv.value);
+
+  if(isNaN(val) || val < 1){
+    val = 1;
+  }
+
+  room.inventory = val;
 
   await MENUVA_DB.update(STORE,room);
 
@@ -603,41 +618,40 @@ inv.onchange=async()=>{
 
 card.append(inv);
 
+  /* ROOM STATUS */
 
-/* ===============================
-   ROOM STATUS
-================================ */
+  const status=document.createElement("select");
 
-const status=document.createElement("select");
+  [
+    "available",
+    "occupied",
+    "dirty",
+    "cleaning",
+    "maintenance",
+    "blocked"
+  ].forEach(v=>{
 
-[
- "available",
- "occupied",
- "dirty",
- "cleaning",
- "maintenance",
- "blocked"
-].forEach(v=>{
+    const o=document.createElement("option");
+    o.value=v;
+    o.textContent=v;
 
-  const o=document.createElement("option");
-  o.value=v;
-  o.textContent=v;
+    if(room.status===v) o.selected=true;
 
-  if(room.status===v) o.selected=true;
+    status.appendChild(o);
 
-  status.appendChild(o);
+  });
 
-});
+  status.onchange=async()=>{
 
-status.onchange=async()=>{
+    room.status=status.value;
 
-  room.status=status.value;
+    await MENUVA_DB.update(STORE,room);
 
-  await MENUVA_DB.update(STORE,room);
+  };
 
-};
+  card.append(status);
 
-card.append(status);
+}
 
     /* ===============================
        NOTE
