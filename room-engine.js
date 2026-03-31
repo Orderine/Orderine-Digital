@@ -505,6 +505,140 @@ function drawRooms(containerId,list){
 
     }
 
+     /* ===============================
+   ROOM SIZE
+================================ */
+
+const size=el("input");
+size.type="number";
+size.placeholder="Room size (m²)";
+size.value=room.size||"";
+
+size.onchange=async()=>{
+
+  room.size=parseInt(size.value||0);
+
+  await MENUVA_DB.update(STORE,room);
+
+};
+
+card.append(size);
+
+
+/* ===============================
+   ROOM VIEW
+================================ */
+
+const view=document.createElement("select");
+
+["","Garden View","Pool View","City View","Ocean View","Mountain View"]
+.forEach(v=>{
+
+  const o=document.createElement("option");
+  o.value=v;
+  o.textContent=v || "Room view";
+
+  if(room.view===v) o.selected=true;
+
+  view.appendChild(o);
+
+});
+
+view.onchange=async()=>{
+
+  room.view=view.value;
+
+  await MENUVA_DB.update(STORE,room);
+
+};
+
+card.append(view);
+
+
+/* ===============================
+   EXTRA BED
+================================ */
+
+const extra=document.createElement("select");
+
+["No Extra Bed","Extra Bed Available"].forEach(v=>{
+
+  const o=document.createElement("option");
+  o.value=v;
+  o.textContent=v;
+
+  if(room.extraBed===v) o.selected=true;
+
+  extra.appendChild(o);
+
+});
+
+extra.onchange=async()=>{
+
+  room.extraBed=extra.value;
+
+  await MENUVA_DB.update(STORE,room);
+
+};
+
+card.append(extra);
+
+
+/* ===============================
+   INVENTORY
+================================ */
+
+const inv=el("input");
+inv.type="number";
+inv.placeholder="Total rooms";
+inv.value=room.inventory||"";
+
+inv.onchange=async()=>{
+
+  room.inventory=parseInt(inv.value||1);
+
+  await MENUVA_DB.update(STORE,room);
+
+};
+
+card.append(inv);
+
+
+/* ===============================
+   ROOM STATUS
+================================ */
+
+const status=document.createElement("select");
+
+[
+ "available",
+ "occupied",
+ "dirty",
+ "cleaning",
+ "maintenance",
+ "blocked"
+].forEach(v=>{
+
+  const o=document.createElement("option");
+  o.value=v;
+  o.textContent=v;
+
+  if(room.status===v) o.selected=true;
+
+  status.appendChild(o);
+
+});
+
+status.onchange=async()=>{
+
+  room.status=status.value;
+
+  await MENUVA_DB.update(STORE,room);
+
+};
+
+card.append(status);
+
     /* ===============================
        NOTE
     =============================== */
