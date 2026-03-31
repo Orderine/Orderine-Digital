@@ -350,16 +350,25 @@ function drawRooms(containerId,list){
     room.images = Array.isArray(room.images) ? room.images : [];
     room.amenities = Array.isArray(room.amenities) ? room.amenities : [];
 
+     if(typeof room.status !== "string" || room.status === ""){
+  room.status = "available";
+   }
+
     /* ===============================
        GALLERY
     =============================== */
 
     const gallery=el("div","room-gallery");
 
-    const imgs = room.images.length
-      ? room.images
-      : (room.image ? [room.image] : []);
+    let imgs = [];
 
+if(room.images.length > 0){
+  imgs = room.images;
+}
+else if(room.image){
+  imgs = [room.image];
+}
+     
     imgs.forEach(src=>{
 
       const gimg=document.createElement("img");
@@ -587,6 +596,23 @@ if(isHotel){
   };
 
   card.append(extra);
+
+   /* ROOM NUMBER */
+
+const roomNumber = el("input");
+roomNumber.type = "text";
+roomNumber.placeholder = "Room number (ex: 101)";
+roomNumber.value = room.roomNumber || "";
+
+roomNumber.onchange = async()=>{
+
+  room.roomNumber = roomNumber.value.trim();
+
+  await MENUVA_DB.update(STORE,room);
+
+};
+
+card.append(roomNumber);
 
 
  /* INVENTORY */
