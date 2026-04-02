@@ -360,24 +360,50 @@ function drawRooms(containerId,list){
 
     const gallery=el("div","room-gallery");
 
-    let imgs = [];
+let imgs=[];
 
-if(room.images.length > 0){
-  imgs = room.images;
+if(room.images.length>0){
+  imgs=room.images;
 }
 else if(room.image){
-  imgs = [room.image];
+  imgs=[room.image];
 }
-     
-    imgs.forEach(src=>{
 
-      const gimg=document.createElement("img");
-      gimg.className="room-img";
-      gimg.src=src;
+let index=0;
 
-      gallery.appendChild(gimg);
+const img=document.createElement("img");
+img.className="room-img";
+img.src=imgs[0] || "";
 
-    });
+gallery.appendChild(img);
+
+/* ARROWS */
+
+if(imgs.length>1){
+
+  const prev=document.createElement("button");
+  prev.className="gallery-prev";
+  prev.textContent="‹";
+
+  const next=document.createElement("button");
+  next.className="gallery-next";
+  next.textContent="›";
+
+  prev.onclick=()=>{
+    index--;
+    if(index<0) index=imgs.length-1;
+    img.src=imgs[index];
+  };
+
+  next.onclick=()=>{
+    index++;
+    if(index>=imgs.length) index=0;
+    img.src=imgs[index];
+  };
+
+  gallery.append(prev,next);
+
+}
 
     /* ===============================
        IMAGE UPLOAD
@@ -388,24 +414,29 @@ else if(room.image){
     upload.accept="image/*";
     upload.multiple=true;
 
-    upload.onchange=async()=>{
+   upload.onchange=async()=>{
 
-      const files=[...upload.files];
-      if(!files.length) return;
+  const files=[...upload.files];
+  if(!files.length) return;
 
-      for(const file of files){
+  for(const file of files){
 
-        const resized=await resizeImage(file,900);
+    if(room.images.length >= 5){
+      alert("Max 5 images per room");
+      break;
+    }
 
-        room.images.push(resized);
+    const resized=await resizeImage(file,900);
 
-      }
+    room.images.push(resized);
 
-      await MENUVA_DB.update(STORE,room);
+  }
 
-      renderRooms();
+  await MENUVA_DB.update(STORE,room);
 
-    };
+  renderRooms();
+
+};
 
     /* ===============================
        NAME
