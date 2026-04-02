@@ -442,9 +442,18 @@ if(imgs.length>1){
        NAME
     =============================== */
 
-    const name=el("input");
-    name.value=room.name||"";
-    name.placeholder="Room name";
+const name=el("input");
+name.value=room.name||"";
+
+if(isHotel){
+  name.placeholder="New Room Hotel Name";
+}
+else if(isMeeting){
+  name.placeholder="New Meeting Room Name";
+}
+else if(isPackage){
+  name.placeholder="Weeding package,Package Buffet ETC.";
+}
 
     name.onchange=async()=>{
       room.name=name.value;
