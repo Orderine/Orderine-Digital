@@ -1035,6 +1035,8 @@ async function loadSettings(){
   if(order) order.checked=data.orderEnabled;
   if(room) room.checked=data.roomEnabled;
 
+   applyRoomVisibility(data.roomEnabled ?? false);
+
 }
 
 async function saveSettings(){
@@ -1047,6 +1049,25 @@ async function saveSettings(){
     orderEnabled:order,
     roomEnabled:room
   });
+
+}
+
+function applyRoomVisibility(enabled){
+
+  // ===== ADMIN PAGE =====
+  const roomBox = document.getElementById("roomContainerBox");
+  if(roomBox){
+    roomBox.style.display = enabled ? "block" : "none";
+  }
+
+  // ===== MENU PAGE =====
+  const roomNavBtn = document.querySelector(
+    ".nav-btn[onclick*='room.html']"
+  );
+
+  if(roomNavBtn){
+    roomNavBtn.style.display = enabled ? "flex" : "none";
+  }
 
 }
 
@@ -1080,8 +1101,16 @@ function initToggle(){
   const room=document.getElementById("toggleRoomPage");
 
   order?.addEventListener("change",saveSettings);
-  room?.addEventListener("change",saveSettings);
 
+   room?.addEventListener("change", async (e)=>{
+
+  const enabled = e.target.checked;
+
+  applyRoomVisibility(enabled); // 🔥 langsung hide/show
+
+  await saveSettings(); // 🔥 simpan ke DB
+
+});
 }
 
 /* ======================================================
