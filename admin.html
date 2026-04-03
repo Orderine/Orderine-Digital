@@ -2541,12 +2541,27 @@ background:rgba(0,0,0,0.45);
   color:#000;
 }
 
-  .icon{
-  font-size:18px;
-  line-height:1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+ .icon{
+  width:18px;
+  height:18px;
+  fill:#9ca3af; /* abu-abu dingin */
+  transition:all .15s ease;
+}
+
+.nav-item:hover .icon{
+  fill:#ffffff;
+  transform:scale(1.1);
+}
+
+.nav-item{
+  color:#9ca3af;
+}
+
+.nav-item:hover{
+  color:#ffffff;
+}
+.nav-item.active .icon{
+  fill:#4ade80; /* neon green ala terminal */
 }
 </style>
 </head>
@@ -3106,7 +3121,9 @@ placeholder="Table Notes"></textarea>
 
   <div class="nav-item" onclick="markViewedAndGo()">
     <div class="icon-wrapper">
-      <span class="icon">📦</span>
+      <svg class="icon" viewBox="0 0 24 24">
+        <path d="M3 3h18v4H3V3m2 6h14v12H5V9z"/>
+      </svg>
       <span id="receiveBadge" class="badge">0</span>
     </div>
     <div class="label">Receives</div>
@@ -3118,14 +3135,18 @@ placeholder="Table Notes"></textarea>
     onclick="openInviteAdmin()"
   >
     <div class="icon-wrapper">
-      <span class="icon">👤➕</span>
+      <svg class="icon" viewBox="0 0 24 24">
+        <path d="M15 14c2.7 0 5 1.3 5 3v2H4v-2c0-1.7 2.3-3 5-3m6-6a3 3 0 1 1-6 0 3 3 0 0 1 6 0M19 8v2h3v2h-3v2h-2v-2h-3v-2h3V8h2z"/>
+      </svg>
     </div>
     <div class="label">Invite Admin</div>
   </div>
 
   <div class="nav-item" onclick="window.location.href='index.html'">
     <div class="icon-wrapper">
-      <span class="icon">🚪</span>
+      <svg class="icon" viewBox="0 0 24 24">
+        <path d="M10 17l5-5-5-5v10M19 3H5a2 2 0 0 0-2 2v4h2V5h14v14H5v-4H3v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+      </svg>
     </div>
     <div class="label">Logout</div>
   </div>
