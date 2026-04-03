@@ -335,15 +335,8 @@ function drawRooms(containerId,list){
   box.innerHTML="";
 
   const frag=document.createDocumentFragment();
-
-  list.forEach(room=>{
-     const isHotel = room.type==="hotel";
-     const isMeeting = room.type==="meeting";
-     const isPackage = room.type==="package";
-
-    const card=el("div","room-card");
-
-     /* ===============================
+   
+/* ===============================
    COLLECT USED ROOM NUMBERS
 ================================ */
 
@@ -354,6 +347,13 @@ list.forEach(r=>{
     r.roomNumbers.forEach(n=>usedNumbers.add(n));
   }
 });
+
+  list.forEach(room=>{
+     const isHotel = room.type==="hotel";
+     const isMeeting = room.type==="meeting";
+     const isPackage = room.type==="package";
+
+    const card=el("div","room-card");
 
     /* ===============================
        NORMALIZE DATA (anti bug lama)
@@ -836,6 +836,7 @@ if(Array.isArray(room.roomNumbers) && room.roomNumbers.length){
 
   card.append(list);
 
+}
 }
 
     /* ===============================
