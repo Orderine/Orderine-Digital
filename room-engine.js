@@ -343,12 +343,28 @@ function drawRooms(containerId,list){
 
     const card=el("div","room-card");
 
+     /* ===============================
+   COLLECT USED ROOM NUMBERS
+================================ */
+
+const usedNumbers = new Set();
+
+list.forEach(r=>{
+  if(Array.isArray(r.roomNumbers)){
+    r.roomNumbers.forEach(n=>usedNumbers.add(n));
+  }
+});
+
     /* ===============================
        NORMALIZE DATA (anti bug lama)
     =============================== */
 
     room.images = Array.isArray(room.images) ? room.images : [];
     room.amenities = Array.isArray(room.amenities) ? room.amenities : [];
+
+     if(room.name === "New hotel" || room.name === "New meeting" || room.name === "New package"){
+  room.name = "";
+}
 
      if(typeof room.status !== "string" || room.status === ""){
   room.status = "available";
@@ -446,13 +462,13 @@ const name=el("input");
 name.value=room.name||"";
 
 if(isHotel){
-  name.placeholder="New Room Hotel Name";
+  name.placeholder="Room Name";
 }
 else if(isMeeting){
-  name.placeholder="New Meeting Room Name";
+  name.placeholder="Meeting Room Name";
 }
 else if(isPackage){
-  name.placeholder="Weeding package,Package Buffet ETC.";
+  name.placeholder="Wedding package, buffet name, etc.";
 }
 
     name.onchange=async()=>{
@@ -488,54 +504,102 @@ else if(isPackage){
 
     card.append(gallery,upload,name,price);
 
-    /* ===============================
-       HOTEL OPTIONS
-    =============================== */
+ /* ===============================
+   HOTEL OPTIONS
+================================ */
 
-    if(isHotel){
+if(isHotel){
 
-      const type=document.createElement("select");
+  /* ROOM TYPE */
 
-      ["Non Smoking","Smoking"].forEach(v=>{
+  const roomType=document.createElement("select");
 
-        const o=document.createElement("option");
-        o.value=v;
-        o.textContent=v;
+  [
+    "",
+    "Standard",
+    "Deluxe",
+    "Suite",
+    "Family",
+    "Presidential"
+  ].forEach(v=>{
 
-        if(room.roomType===v) o.selected=true;
+    const o=document.createElement("option");
+    o.value=v;
+    o.textContent=v || "Room Type";
 
-        type.appendChild(o);
+    if(room.roomType===v) o.selected=true;
 
-      });
+    roomType.appendChild(o);
 
-      type.onchange=async()=>{
-        room.roomType=type.value;
-        await MENUVA_DB.update(STORE,room);
-      };
+  });
 
-      const bed=document.createElement("select");
+  roomType.onchange=async()=>{
 
-      ["Single Bed","Twin Bed","Queen Bed","King Bed"].forEach(v=>{
+    room.roomType = roomType.value;
 
-        const o=document.createElement("option");
-        o.value=v;
-        o.textContent=v;
+    await MENUVA_DB.update(STORE,room);
 
-        if(room.bed===v) o.selected=true;
+  };
 
-        bed.appendChild(o);
 
-      });
+  /* SMOKING OPTION */
 
-      bed.onchange=async()=>{
-        room.bed=bed.value;
-        await MENUVA_DB.update(STORE,room);
-      };
+  const smoking=document.createElement("select");
 
-      card.append(type,bed);
+  ["Non Smoking","Smoking"].forEach(v=>{
 
-    }
+    const o=document.createElement("option");
+    o.value=v;
+    o.textContent=v;
 
+    if(room.smoking===v) o.selected=true;
+
+    smoking.appendChild(o);
+
+  });
+
+  smoking.onchange=async()=>{
+
+    room.smoking = smoking.value;
+
+    await MENUVA_DB.update(STORE,room);
+
+  };
+
+
+  /* BED TYPE */
+
+  const bed=document.createElement("select");
+
+  [
+    "",
+    "Single Bed",
+    "Twin Bed",
+    "Queen Bed",
+    "King Bed"
+  ].forEach(v=>{
+
+    const o=document.createElement("option");
+    o.value=v;
+    o.textContent=v || "Bed Type";
+
+    if(room.bed===v) o.selected=true;
+
+    bed.appendChild(o);
+
+  });
+
+  bed.onchange=async()=>{
+
+    room.bed = bed.value;
+
+    await MENUVA_DB.update(STORE,room);
+
+  };
+
+  card.append(roomType,smoking,bed);
+
+}
     /* ===============================
        CAPACITY
     =============================== */
@@ -637,25 +701,23 @@ if(isHotel){
 
   card.append(extra);
 
-   /* ROOM NUMBER */
+     /* FLOOR */
 
-const roomNumber = el("input");
-roomNumber.type = "text";
-roomNumber.placeholder = "Room number (ex: 101)";
-roomNumber.value = room.roomNumber || "";
+const floor = el("input");
+floor.type = "number";
+floor.placeholder = "Floor";
+floor.value = room.floor || 1;
 
-roomNumber.onchange = async()=>{
-
-  room.roomNumber = roomNumber.value.trim();
-
+floor.onchange = async()=>{
+  room.floor = parseInt(floor.value || 1);
   await MENUVA_DB.update(STORE,room);
-
 };
 
-card.append(roomNumber);
+card.append(floor);
 
-
- /* INVENTORY */
+/* ===============================
+   INVENTORY + SMART GENERATOR
+================================ */
 
 const inv = el("input");
 inv.type = "number";
@@ -678,44 +740,101 @@ inv.onchange = async()=>{
 
   room.inventory = val;
 
+  if(!Array.isArray(room.roomNumbers)){
+    room.roomNumbers = [];
+  }
+
+  const floorNum = room.floor || 1;
+
+  /* REMOVE OLD NUMBERS FROM USED SET */
+  room.roomNumbers.forEach(n=>usedNumbers.delete(n));
+
+  const numbers = [];
+
+  let index = 1;
+
+  while(numbers.length < val){
+
+    const candidate = (floorNum * 100 + index).toString();
+
+    if(!usedNumbers.has(candidate)){
+      numbers.push(candidate);
+      usedNumbers.add(candidate);
+    }
+
+    index++;
+
+    if(index > 99) break;
+  }
+
+  room.roomNumbers = numbers;
+
   await MENUVA_DB.update(STORE,room);
+
+  renderRooms();
 
 };
 
 card.append(inv);
 
-  /* ROOM STATUS */
+  /* ===============================
+   ROOM NUMBERS EDITABLE TAGS
+================================ */
 
-  const status=document.createElement("select");
+if(Array.isArray(room.roomNumbers) && room.roomNumbers.length){
 
-  [
-    "available",
-    "occupied",
-    "dirty",
-    "cleaning",
-    "maintenance",
-    "blocked"
-  ].forEach(v=>{
+  const list=document.createElement("div");
+  list.className="room-number-list";
 
-    const o=document.createElement("option");
-    o.value=v;
-    o.textContent=v;
+  room.roomNumbers.forEach((num,i)=>{
 
-    if(room.status===v) o.selected=true;
+    const tag=document.createElement("span");
+    tag.className="room-number-tag";
 
-    status.appendChild(o);
+    const txt=document.createElement("span");
+    txt.textContent=num;
+
+    const edit=document.createElement("button");
+    edit.textContent="✎";
+    edit.className="room-edit-btn";
+
+    edit.onclick=()=>{
+
+      const newNum=prompt("Edit Room Number",num);
+
+      if(!newNum) return;
+
+      const clean=newNum.trim();
+
+      if(!clean) return;
+
+      /* DUPLICATE CHECK */
+
+      const allNumbers=[];
+
+      document.querySelectorAll(".room-number-tag span")
+      .forEach(el=>allNumbers.push(el.textContent));
+
+      if(allNumbers.includes(clean)){
+        alert("Room number already exists");
+        return;
+      }
+
+      room.roomNumbers[i]=clean;
+
+      MENUVA_DB.update(STORE,room);
+
+      renderRooms();
+
+    };
+
+    tag.append(txt,edit);
+
+    list.appendChild(tag);
 
   });
 
-  status.onchange=async()=>{
-
-    room.status=status.value;
-
-    await MENUVA_DB.update(STORE,room);
-
-  };
-
-  card.append(status);
+  card.append(list);
 
 }
 
