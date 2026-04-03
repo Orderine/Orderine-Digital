@@ -795,7 +795,7 @@ if(Array.isArray(room.roomNumbers) && room.roomNumbers.length){
     txt.textContent=num;
 
     const edit=document.createElement("button");
-    edit.textContent="✎";
+    edit.textContent="🖉";
     edit.className="room-edit-btn";
 
     edit.onclick=()=>{
