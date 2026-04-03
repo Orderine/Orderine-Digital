@@ -1722,6 +1722,22 @@ box.classList.add("table-full");
 
 }
 
+ async function applyRoomMenuVisibility(){
+
+  const data = await MENUVA_DB.get("promoData","system_settings");
+
+  const enabled = data?.roomEnabled ?? false;
+
+  const roomNavBtn = document.querySelector(
+    ".nav-btn[onclick*='room.html']"
+  );
+
+  if(roomNavBtn){
+    roomNavBtn.style.display = enabled ? "flex" : "none";
+  }
+
+}
+
 /* =======================
    INIT
 ======================= */
@@ -1729,6 +1745,8 @@ box.classList.add("table-full");
 document.addEventListener("DOMContentLoaded",async()=>{
 
 await MENUVA_DB.openDB();
+
+ await applyRoomMenuVisibility();
 
 const restoId=await getRestoId();
 
