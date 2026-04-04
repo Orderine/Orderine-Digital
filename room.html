@@ -549,16 +549,24 @@ async function initRoomPage(sessionParam) {
   menuRooms = menuRooms.filter(r => r.active !== false);
 
   // ✅ Normalize
-  menuRooms = menuRooms.map(r => ({
-    ...r,
-    type: (r.type || "").toLowerCase(),
-    name: r.name || r.nama || "Unnamed",
-    price: r.price ?? r.harga ?? 0,
-    capacity: r.capacity ?? r.kapasitas ?? 0,
-    size: r.size ?? r.luas ?? 0,
-    description: r.description || r.deskripsi || "",
-    image: Array.isArray(r.images) ? r.images[0] : (r.image || "")
-  }));
+ menuRooms = menuRooms.map(r => ({
+  ...r,
+  type: (r.type || "").toLowerCase(),
+
+  name: r.name || r.nama || "Unnamed",
+  price: r.price ?? r.harga ?? 0,
+  capacity: r.capacity ?? r.kapasitas ?? 0,
+  size: r.size ?? r.luas ?? 0,
+  description: r.description || r.deskripsi || "",
+
+  // 🔥 WAJIB: simpan full images
+  images: Array.isArray(r.images) ? r.images : (r.image ? [r.image] : []),
+
+  // 🔥 tambahan field
+  amenities: Array.isArray(r.amenities) ? r.amenities : [],
+  roomType: r.roomType || "",
+  floor: r.floor || null
+}));
 
   console.table(menuRooms);
 
@@ -594,55 +602,152 @@ async function toggleDark(){
 
 /* ========= UI: ROOM CARD CREATION (safer) ========= */
 function createRoomCard(room){
+
   const card = document.createElement('div');
   card.className = 'room-card';
 
   const frag = document.createDocumentFragment();
 
-  const img = document.createElement('img');
-  img.alt = room.nama || room.name || '';
-  img.loading = "lazy"; // PATCH: lazy load biar ga berat
-  img.decoding = "async";
-  
-   const src =
-  (Array.isArray(room.images) && room.images[0]) ||
-  room.image ||
-  'https://via.placeholder.com/400x200?text=No+Image';
+  /* ===============================
+     MULTI IMAGE (SLIDER)
+  ============================== */
 
-  img.src = src;
-  
+  let imgs = room.images || [];
+  let index = 0;
+
+  const img = document.createElement('img');
+  img.className = "room-img";
+  img.loading = "lazy";
+  img.decoding = "async";
+  img.src = imgs[0] || 'https://via.placeholder.com/400x200?text=No+Image';
+
   frag.appendChild(img);
 
+  if (imgs.length > 1) {
+
+    const prev = document.createElement("button");
+    prev.textContent = "‹";
+
+    const next = document.createElement("button");
+    next.textContent = "›";
+
+    prev.onclick = () => {
+      index--;
+      if (index < 0) index = imgs.length - 1;
+      img.src = imgs[index];
+    };
+
+    next.onclick = () => {
+      index++;
+      if (index >= imgs.length) index = 0;
+      img.src = imgs[index];
+    };
+
+    frag.append(prev, next);
+  }
+
+  /* ===============================
+     TITLE
+  ============================== */
+
   const h3 = document.createElement('h3');
-  h3.textContent = room.nama || room.name || 'Unnamed';
+  h3.textContent = room.name;
   frag.appendChild(h3);
 
-  const pPrice = document.createElement('p');
-  pPrice.innerHTML = `<b>Price:</b> ${formatCurrency(room.harga || room.price || 0)}`;
-  frag.appendChild(pPrice);
+  /* ===============================
+     TYPE
+  ============================== */
 
-  const pCap = document.createElement('p');
-  pCap.innerHTML = `<b>Capacity:</b> ${room.kapasitas || room.capacity || 0} person`;
-  frag.appendChild(pCap);
+  if (room.roomType) {
+    const type = document.createElement("div");
+    type.className = "room-type";
+    type.textContent = room.roomType;
+    frag.appendChild(type);
+  }
 
-  const pLuas = document.createElement('p');
-  pLuas.innerHTML = `<b>Room size:</b> ${room.luas || room.size || 0} m²`;
-  frag.appendChild(pLuas);
+  /* ===============================
+     PRICE
+  ============================== */
 
-  const pDesc = document.createElement('p');
-  pDesc.textContent = room.deskripsi || room.description || '';
-  frag.appendChild(pDesc);
+  const price = document.createElement('p');
+  price.innerHTML = `<b>Price:</b> ${formatCurrency(room.price)}`;
+  frag.appendChild(price);
+
+  /* ===============================
+     CAPACITY
+  ============================== */
+
+  if (room.capacity) {
+    const cap = document.createElement('p');
+    cap.innerHTML = `<b>Capacity:</b> ${room.capacity} person`;
+    frag.appendChild(cap);
+  }
+
+  /* ===============================
+     SIZE
+  ============================== */
+
+  if (room.size) {
+    const size = document.createElement('p');
+    size.innerHTML = `<b>Room size:</b> ${room.size} m²`;
+    frag.appendChild(size);
+  }
+
+  /* ===============================
+     FLOOR
+  ============================== */
+
+  if (room.floor) {
+    const floor = document.createElement("p");
+    floor.innerHTML = `<b>Floor:</b> ${room.floor}`;
+    frag.appendChild(floor);
+  }
+
+  /* ===============================
+     DESCRIPTION
+  ============================== */
+
+  if (room.description) {
+    const desc = document.createElement('p');
+    desc.textContent = room.description;
+    frag.appendChild(desc);
+  }
+
+  /* ===============================
+     AMENITIES
+  ============================== */
+
+  if (room.amenities.length) {
+
+    const amenBox = document.createElement("div");
+    amenBox.className = "amenities";
+
+    room.amenities.forEach(a => {
+      const tag = document.createElement("span");
+      tag.className = "amenity-tag";
+      tag.textContent = a;
+      amenBox.appendChild(tag);
+    });
+
+    frag.appendChild(amenBox);
+  }
+
+  /* ===============================
+     BUTTON
+  ============================== */
 
   const btn = document.createElement('button');
   btn.textContent = 'Add To Cart';
-  btn.addEventListener('click', () => tambahKeCart({
-    nama: room.nama || room.name || 'Unnamed',
-    harga: Number(room.harga || room.price || 0),
-    kapasitas: room.kapasitas || room.capacity || 0,
-    luas: room.luas || room.size || 0,
-    deskripsi: room.deskripsi || room.description || '',
-    kategori: room.kategori || room.category || ''
-  }));
+
+  btn.onclick = () => tambahKeCart({
+    nama: room.name,
+    harga: room.price,
+    kapasitas: room.capacity,
+    luas: room.size,
+    deskripsi: room.description,
+    kategori: room.type
+  });
+
   frag.appendChild(btn);
 
   card.appendChild(frag);
