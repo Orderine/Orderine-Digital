@@ -288,12 +288,16 @@ async function uploadFlipbook(type,input){
 async function renderRooms(){
 
   const [hotel, meeting, pack] = await Promise.all([
-  MENUVA_DB.getAll("rooms"),
-  MENUVA_DB.getAll("meetingRooms"),
-  MENUVA_DB.getAll("roomPackages")
-]);
-}
+    MENUVA_DB.getAll("rooms"),
+    MENUVA_DB.getAll("meetingRooms"),
+    MENUVA_DB.getAll("roomPackages")
+  ]);
 
+  drawRooms("roomHotelContainer", hotel);
+  drawRooms("meetingRoomContainer", meeting);
+  drawRooms("packageContainer", pack);
+}
+   
 /* ======================================================
    DRAW ROOMS
 ====================================================== */
@@ -329,6 +333,7 @@ const AMENITIES_BY_TYPE = {
 
    
 function drawRooms(containerId,list){
+const STORE = getStoreByType(room.type);
 
   const box=document.getElementById(containerId);
   if(!box) return;
@@ -999,7 +1004,7 @@ async function addRoom(type){
 
   const data={
     id:uid("room"),
-    restoId: session?.restoID || null,
+    restoId: session?.restoId || null,
     type:type,
 
     name:"New "+type,
@@ -1023,6 +1028,8 @@ async function addRoom(type){
   await MENUVA_DB.add(store, data);
 
   renderRooms();
+
+   console.log("🔥 ADD ROOM CLICKED", type);
 }
    
 /* ======================================================
