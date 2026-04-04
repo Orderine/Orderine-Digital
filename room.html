@@ -482,12 +482,18 @@ body.dark .room-card {
     };
   }
 
-  // 🔥 wrap semua function di window
-  Object.keys(window).forEach(key => {
-    try{
-      wrapFunction(window, key);
-    }catch(e){}
-  });
+  const PROFILE_TARGET = [
+  "initRoomPage",
+  "tampilkanData",
+  "updateCartUI",
+  "autoApplyVoucher"
+];
+
+PROFILE_TARGET.forEach(fn => {
+  try {
+    wrapFunction(window, fn);
+  } catch(e){}
+});
 
   // 🔥 helper untuk lihat ranking
   window.showSlowFunctions = function(){
@@ -526,9 +532,17 @@ function formatCurrency(value) {
   return div.innerHTML;
 }
 
-async function initRoomPage() {
+  let CACHE_DB = {};
 
-  let session = await MENUVA_DB.getSession();
+async function cachedGetAll(table){
+  if(CACHE_DB[table]) return CACHE_DB[table];
+  const data = await MENUVA_DB.getAll(table);
+  CACHE_DB[table] = data;
+  return data;
+}
+
+async function initRoomPage(sessionParam) {
+  let session = sessionParam || await MENUVA_DB.getSession();
 
   if (!session) {
 
@@ -572,11 +586,11 @@ async function initRoomPage() {
     .filter(v => v.restoId === session.restoID);
 
   // ✅ Parallel load
-  const [rooms, meetings, packages] = await Promise.all([
-    MENUVA_DB.getAll("rooms"),
-    MENUVA_DB.getAll("meetingRooms"),
-    MENUVA_DB.getAll("roomPackages")
-  ]);
+ const [rooms, meetings, packages] = await Promise.all([
+  cachedGetAll("rooms"),
+  cachedGetAll("meetingRooms"),
+  cachedGetAll("roomPackages")
+]);
 
   const safeFilter = (list) =>
     list.filter(r => !r.restoId || r.restoId === session.restoID);
@@ -644,6 +658,7 @@ function createRoomCard(room){
   const img = document.createElement('img');
   img.alt = room.nama || room.name || '';
   img.loading = "lazy"; // PATCH: lazy load biar ga berat
+  img.decoding = "async";
   
    const src =
   (Array.isArray(room.images) && room.images[0]) ||
@@ -723,21 +738,23 @@ function tampilkanData() {
 
   [gridRooms, gridMeet, gridPack].forEach(g => g.innerHTML = "");
 
-  menuRooms.forEach(room => {
-    const card = createRoomCard(room);
+ const fragRooms = document.createDocumentFragment();
+const fragMeet = document.createDocumentFragment();
+const fragPack = document.createDocumentFragment();
 
-    if (room.type === "meeting") {
-      gridMeet.appendChild(card);
-    } 
-    else if (room.type === "package") {
-      gridPack.appendChild(card);
-    } 
-    else {
-      gridRooms.appendChild(card);
-    }
-  });
+menuRooms.forEach(room => {
+  const card = createRoomCard(room);
 
-  checkEmptyState();
+  if (room.type === "meeting") fragMeet.appendChild(card);
+  else if (room.type === "package") fragPack.appendChild(card);
+  else fragRooms.appendChild(card);
+});
+
+gridRooms.appendChild(fragRooms);
+gridMeet.appendChild(fragMeet);
+gridPack.appendChild(fragPack);
+
+checkEmptyState();
 }
 
   function checkEmptyState(){
@@ -749,8 +766,13 @@ function tampilkanData() {
   if (!hasData) empty.classList.remove("hidden");
   else empty.classList.add("hidden");
 }
+
+let CART_RAF = null;
   
 function updateCartUI() {
+  cancelAnimationFrame(CART_RAF);
+
+  CART_RAF = requestAnimationFrame(() => {
   const preview = getEl('cartPreview');
   const totalEl = getEl('totalPrice');
   const discountEl = getEl('voucherDiscount');
@@ -822,6 +844,8 @@ function updateCartUI() {
   grandEl.innerText = 'Grand Total = ' + formatCurrency(subtotal);
 
   autoApplyVoucher(); // tetap
+    
+});
 }
 
 // Helper aman parse angka
@@ -1076,13 +1100,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   showLoading();
 
   // 🔥 INIT CORE
-  await initRoomPage();
+  await initRoomPage(session);
   await applyTheme();
-
-  // === Lazy load images
-  document.querySelectorAll("img").forEach(img => {
-    img.loading = "lazy";
-  });
 
   // === Dark toggle wiring
   const darkBtn = getEl('darkToggle');
@@ -1114,15 +1133,3 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
