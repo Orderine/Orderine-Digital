@@ -15,7 +15,7 @@
   const DEBUG_DB = false;
 
   const DB_NAME = "MenuvaDB";
-  const DB_VERSION = 22;
+  const DB_VERSION = 23;
 
   let dbOpeningPromise = null;
   let dbInstance = null;
@@ -105,6 +105,38 @@
           promo.createIndex("isActive","isActive",{unique:false});
 
         }
+
+         /* ======================================================
+   ROOM SYSTEM (NEW 🔥)
+====================================================== */
+
+if (!db.objectStoreNames.contains("rooms")) {
+
+  const r = db.createObjectStore("rooms",{ keyPath:"id" });
+
+  r.createIndex("restoId","restoId",{unique:false});
+  r.createIndex("active","active",{unique:false});
+
+}
+
+if (!db.objectStoreNames.contains("meetingRooms")) {
+
+  const mr = db.createObjectStore("meetingRooms",{ keyPath:"id" });
+
+  mr.createIndex("restoId","restoId",{unique:false});
+  mr.createIndex("active","active",{unique:false});
+
+}
+
+if (!db.objectStoreNames.contains("roomPackages")) {
+
+  const rp = db.createObjectStore("roomPackages",{ keyPath:"id" });
+
+  rp.createIndex("restoId","restoId",{unique:false});
+  rp.createIndex("roomId","roomId",{unique:false});
+  rp.createIndex("active","active",{unique:false});
+
+}
 
 
         /* ======================================================
@@ -410,6 +442,10 @@ if (!db.objectStoreNames.contains("reservationSettings")) {
   "menuData",
   "menuPromo",
   "menuVoucher",
+
+   "rooms",
+   "meetingRooms",
+   "roomPackages",
 
   "restaurantTables",
   "tableStatus",
