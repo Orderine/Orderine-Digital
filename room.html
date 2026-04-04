@@ -606,22 +606,21 @@ function createRoomCard(room){
   const card = document.createElement('div');
   card.className = 'room-card';
 
-  const frag = document.createDocumentFragment();
-
   /* ===============================
-     MULTI IMAGE (SLIDER)
+     IMAGE WRAPPER
   ============================== */
 
   let imgs = room.images || [];
   let index = 0;
 
+  const imgWrap = document.createElement("div");
+  imgWrap.className = "room-img-wrap";
+
   const img = document.createElement('img');
   img.className = "room-img";
-  img.loading = "lazy";
-  img.decoding = "async";
   img.src = imgs[0] || 'https://via.placeholder.com/400x200?text=No+Image';
 
-  frag.appendChild(img);
+  imgWrap.appendChild(img);
 
   if (imgs.length > 1) {
 
@@ -643,82 +642,57 @@ function createRoomCard(room){
       img.src = imgs[index];
     };
 
-    frag.append(prev, next);
+    imgWrap.append(prev, next);
   }
 
   /* ===============================
-     TITLE
+     INFO
   ============================== */
 
-  const h3 = document.createElement('h3');
+  const info = document.createElement("div");
+  info.className = "room-info";
+
+  const titleRow = document.createElement("div");
+  titleRow.className = "room-title-row";
+
+  const h3 = document.createElement("h3");
   h3.textContent = room.name;
-  frag.appendChild(h3);
 
-  /* ===============================
-     TYPE
-  ============================== */
-
-  if (room.roomType) {
-    const type = document.createElement("div");
+  if(room.roomType){
+    const type = document.createElement("span");
     type.className = "room-type";
     type.textContent = room.roomType;
-    frag.appendChild(type);
+    titleRow.append(h3, type);
+  } else {
+    titleRow.appendChild(h3);
   }
 
-  /* ===============================
-     PRICE
-  ============================== */
+  info.appendChild(titleRow);
 
-  const price = document.createElement('p');
-  price.innerHTML = `<b>Price:</b> ${formatCurrency(room.price)}`;
-  frag.appendChild(price);
+  const price = document.createElement("div");
+  price.className = "room-price";
+  price.textContent = formatCurrency(room.price);
+  info.appendChild(price);
 
-  /* ===============================
-     CAPACITY
-  ============================== */
+  const meta = document.createElement("div");
+  meta.className = "room-meta";
 
-  if (room.capacity) {
-    const cap = document.createElement('p');
-    cap.innerHTML = `<b>Capacity:</b> ${room.capacity} person`;
-    frag.appendChild(cap);
-  }
+  meta.innerHTML = `
+    ${room.capacity ? `<span>👤 ${room.capacity}</span>` : ""}
+    ${room.size ? `<span>📐 ${room.size} m²</span>` : ""}
+    ${room.floor ? `<span>🏢 ${room.floor}</span>` : ""}
+  `;
 
-  /* ===============================
-     SIZE
-  ============================== */
-
-  if (room.size) {
-    const size = document.createElement('p');
-    size.innerHTML = `<b>Room size:</b> ${room.size} m²`;
-    frag.appendChild(size);
-  }
-
-  /* ===============================
-     FLOOR
-  ============================== */
-
-  if (room.floor) {
-    const floor = document.createElement("p");
-    floor.innerHTML = `<b>Floor:</b> ${room.floor}`;
-    frag.appendChild(floor);
-  }
-
-  /* ===============================
-     DESCRIPTION
-  ============================== */
+  info.appendChild(meta);
 
   if (room.description) {
-    const desc = document.createElement('p');
+    const desc = document.createElement("p");
+    desc.className = "room-desc";
     desc.textContent = room.description;
-    frag.appendChild(desc);
+    info.appendChild(desc);
   }
 
-  /* ===============================
-     AMENITIES
-  ============================== */
-
-  if (room.amenities.length) {
-
+  if (room.amenities?.length) {
     const amenBox = document.createElement("div");
     amenBox.className = "amenities";
 
@@ -729,14 +703,11 @@ function createRoomCard(room){
       amenBox.appendChild(tag);
     });
 
-    frag.appendChild(amenBox);
+    info.appendChild(amenBox);
   }
 
-  /* ===============================
-     BUTTON
-  ============================== */
-
   const btn = document.createElement('button');
+  btn.className = "btn-cart";
   btn.textContent = 'Add To Cart';
 
   btn.onclick = () => tambahKeCart({
@@ -748,12 +719,11 @@ function createRoomCard(room){
     kategori: room.type
   });
 
-  frag.appendChild(btn);
+  card.append(imgWrap, info, btn);
 
-  card.appendChild(frag);
   return card;
 }
-
+  
 /* ========= DISPLAY ========= */
 function tampilkanData() {
   if (!restoData) return;
@@ -839,7 +809,6 @@ function updateCartUI() {
     return;
   }
 
-  const frag = document.createDocumentFragment();
   let subtotal = 0;
 
   cart.forEach((item, idx) => {
