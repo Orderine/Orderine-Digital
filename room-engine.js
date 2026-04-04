@@ -995,35 +995,36 @@ function parseRupiah(str){
 
 async function addRoom(type){
 
- const data={
-  id:uid("room"),
-  restoId: session?.restoID,
-  type:type,
+  const session = await MENUVA_DB.getSession(); // 🔥 WAJIB ADA
 
-  name:"New "+type,
-  price:0,
+  const data={
+    id:uid("room"),
+    restoId: session?.restoID || null,
+    type:type,
 
-  image:"",        // tetap biarkan (backward compatible)
-  images:[],       // MULTI IMAGE
-  amenities:[],    // CHECKLIST
+    name:"New "+type,
+    price:0,
 
-  description:"",
-  note:"",
+    image:"",
+    images:[],
+    amenities:[],
 
-  bed:"Single Bed",
-  smoking:"Non Smoking",
-  capacity:2,
+    description:"",
+    note:"",
 
-  createdAt:Date.now()
-};
+    bed:"Single Bed",
+    smoking:"Non Smoking",
+    capacity:2,
+
+    createdAt:Date.now()
+  };
    
-const store = getStoreByType(type);
-await MENUVA_DB.add(store, data);
+  const store = getStoreByType(type);
+  await MENUVA_DB.add(store, data);
 
   renderRooms();
-
 }
-
+   
 /* ======================================================
    SETTINGS
 ====================================================== */
