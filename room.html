@@ -451,63 +451,7 @@ body.dark .room-card {
 
 <script src="db-core.js"></script>
 <script>
-  (function(){
-
-  const SLOW_LOG = [];
-
-  function wrapFunction(obj, key){
-    const original = obj[key];
-
-    if(typeof original !== "function") return;
-
-    obj[key] = async function(...args){
-
-      const start = performance.now();
-
-      try{
-        const result = await original.apply(this, args);
-        return result;
-      }finally{
-        const duration = performance.now() - start;
-
-        SLOW_LOG.push({
-          name: key,
-          duration
-        });
-
-        if(duration > 100){ // 🔥 threshold (100ms)
-          console.warn(`🐢 SLOW FUNC: ${key} → ${duration.toFixed(2)} ms`);
-        }
-      }
-    };
-  }
-
-  const PROFILE_TARGET = [
-  "initRoomPage",
-  "tampilkanData",
-  "updateCartUI",
-  "autoApplyVoucher"
-];
-
-PROFILE_TARGET.forEach(fn => {
-  try {
-    wrapFunction(window, fn);
-  } catch(e){}
-});
-
-  // 🔥 helper untuk lihat ranking
-  window.showSlowFunctions = function(){
-    const sorted = [...SLOW_LOG]
-      .sort((a,b) => b.duration - a.duration)
-      .slice(0, 20);
-
-    console.table(sorted);
-  };
-
-  console.log("🚀 Profiler aktif! jalankan: showSlowFunctions()");
-
-})();
-  
+ 
 let restoData = null;
 let menuRooms = [];
 let vouchers = [];
