@@ -480,7 +480,6 @@ async function initRoomPage() {
   let session = await MENUVA_DB.getSession();
 
   if (!session) {
-    console.warn("⚠️ No active session, rebuilding from resto param...");
 
     const urlParams = new URLSearchParams(window.location.search);
     const restoID = urlParams.get("resto");
@@ -510,10 +509,6 @@ async function initRoomPage() {
     return;
   }
 
-  // ===============================
-  // 🔥 INI YANG KURANG
-  // ===============================
-
   restoData = await MENUVA_DB.get("restos", session.restoID);
 
   if (!restoData) {
@@ -521,10 +516,42 @@ async function initRoomPage() {
     return;
   }
 
-  // rooms sekarang nested di resto
-  menuRooms = restoData.rooms || [];
+  // ✅ Voucher per resto
+  vouchers = (await MENUVA_DB.getAll("menuVoucher"))
+    .filter(v => v.restoId === session.restoID);
 
-  console.log("✅ Loaded Rooms:", menuRooms);
+  // ✅ Parallel load
+  const [rooms, meetings, packages] = await Promise.all([
+    MENUVA_DB.getAll("rooms"),
+    MENUVA_DB.getAll("meetingRooms"),
+    MENUVA_DB.getAll("roomPackages")
+  ]);
+
+  const safeFilter = (list) =>
+    list.filter(r => !r.restoId || r.restoId === session.restoID);
+
+  menuRooms = [
+    ...safeFilter(rooms),
+    ...safeFilter(meetings),
+    ...safeFilter(packages)
+  ];
+
+  // ✅ Active only
+  menuRooms = menuRooms.filter(r => r.active !== false);
+
+  // ✅ Normalize
+  menuRooms = menuRooms.map(r => ({
+    ...r,
+    type: (r.type || "").toLowerCase(),
+    name: r.name || r.nama || "Unnamed",
+    price: r.price ?? r.harga ?? 0,
+    capacity: r.capacity ?? r.kapasitas ?? 0,
+    size: r.size ?? r.luas ?? 0,
+    description: r.description || r.deskripsi || "",
+    image: Array.isArray(r.images) ? r.images[0] : (r.image || "")
+  }));
+
+  console.table(menuRooms);
 
   console.log("🏨 Room Page Access Granted");
 }
@@ -566,7 +593,14 @@ function createRoomCard(room){
   const img = document.createElement('img');
   img.alt = room.nama || room.name || '';
   img.loading = "lazy"; // PATCH: lazy load biar ga berat
-  img.src = (room.image && room.image.length) ? room.image : 'https://via.placeholder.com/400x200?text=No+Image';
+  
+   const src =
+  (Array.isArray(room.images) && room.images[0]) ||
+  room.image ||
+  'https://via.placeholder.com/400x200?text=No+Image';
+
+  img.src = src;
+  
   frag.appendChild(img);
 
   const h3 = document.createElement('h3');
@@ -860,9 +894,7 @@ function tambahKeCart(room) {
 
   updateCartUI();
 
-  if (voucher) {
-    requestAnimationFrame(autoApplyVoucher);
-  }
+ requestAnimationFrame(autoApplyVoucher);
 }
 
 
