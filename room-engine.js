@@ -8,8 +8,14 @@
 
 if(window.ROOM_ENGINE) return;
 
-const STORE = "promoData";
 const FLIP  = "flipbookData";
+
+function getStoreByType(type){
+  if(type === "hotel") return "rooms";
+  if(type === "meeting") return "meetingRooms";
+  if(type === "package") return "roomPackages";
+  return "rooms";
+}
 
 /* ======================================================
    UTIL
@@ -281,16 +287,11 @@ async function uploadFlipbook(type,input){
 
 async function renderRooms(){
 
-  const data = await MENUVA_DB.getAll(STORE);
-
-  const hotel   = data.filter(x=>x.type==="hotel");
-  const meeting = data.filter(x=>x.type==="meeting");
-  const pack    = data.filter(x=>x.type==="package");
-
-  drawRooms("roomHotelContainer",hotel);
-  drawRooms("meetingRoomContainer",meeting);
-  drawRooms("packageContainer",pack);
-
+  const [hotel, meeting, pack] = await Promise.all([
+  MENUVA_DB.getAll("rooms"),
+  MENUVA_DB.getAll("meetingRooms"),
+  MENUVA_DB.getAll("roomPackages")
+]);
 }
 
 /* ======================================================
@@ -951,7 +952,8 @@ card.append(addBox);
 
     del.onclick=async()=>{
 
-      await MENUVA_DB.delete(STORE,room.id);
+      const store = getStoreByType(room.type);
+      await MENUVA_DB.delete(store, room.id);
 
       card.remove();
 
@@ -995,6 +997,7 @@ async function addRoom(type){
 
  const data={
   id:uid("room"),
+  restoId: session?.restoID,
   type:type,
 
   name:"New "+type,
@@ -1014,7 +1017,8 @@ async function addRoom(type){
   createdAt:Date.now()
 };
    
-  await MENUVA_DB.add(STORE,data);
+const store = getStoreByType(type);
+await MENUVA_DB.add(store, data);
 
   renderRooms();
 
@@ -1129,6 +1133,23 @@ window.tambahGambar=function(type){
 
 };
 
+   async function migrateOldData(){
+
+  const old = await MENUVA_DB.getAll("promoData");
+  if(!old.length) return;
+
+  for(const item of old){
+
+    if(!item.type) continue;
+
+    const store = getStoreByType(item.type);
+
+    await MENUVA_DB.add(store, item);
+  }
+
+  console.log("✅ migration done");
+}
+
 /* ======================================================
    BOOT
 ====================================================== */
@@ -1140,6 +1161,7 @@ async function boot(){
   initToggle();
 
   await loadSettings();
+  await migrateOldData();
 
   renderRooms();
 
