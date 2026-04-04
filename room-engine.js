@@ -333,7 +333,6 @@ const AMENITIES_BY_TYPE = {
 
    
 function drawRooms(containerId,list){
-const STORE = getStoreByType(room.type);
 
   const box=document.getElementById(containerId);
   if(!box) return;
@@ -355,6 +354,8 @@ list.forEach(r=>{
 });
 
   list.forEach(room=>{
+     const STORE = getStoreByType(room.type);
+     
      const isHotel = room.type==="hotel";
      const isMeeting = room.type==="meeting";
      const isPackage = room.type==="package";
