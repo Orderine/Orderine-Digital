@@ -1146,10 +1146,12 @@ document.querySelectorAll(".tabs button").forEach(btn => {
   });
 });
 
-document.addEventListener("DOMContentLoaded", () => {
-  await initDarkMode();
-  await loadRestoIdentity();
-  loadAllData();
+document.addEventListener("DOMContentLoaded", async () => {
+
+  await initDarkMode();        // theme dulu biar gak flicker
+  await loadRestoIdentity();   // baru isi header resto
+  await loadAllData();         // terakhir render data room
+
 });
 
 </script>
