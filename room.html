@@ -1070,39 +1070,28 @@ function renderChunk(data, containerId, chunk = 6){
 
 async function loadRestoIdentity(){
 
-  const params = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(location.search);
   const restoId = params.get("resto");
 
   if(!restoId) return;
 
-  try{
+  const r = await MENUVA_DB.get("restos", restoId);
 
-    const resto = await MENUVA_DB.get("restos", restoId);
-
-    if(!resto) return;
-
-    // 🔥 SET UI
-    document.getElementById("restoName").textContent =
-      resto.name || "Resto Name";
-
-    document.getElementById("alamatRestoranDisplay").textContent =
-      resto.address || "";
-
-    document.getElementById("teleponRestoranDisplay").textContent =
-      resto.phone || "";
-
-    // 🔥 LOGO SAFE
-    const logo = document.getElementById("restoLogo");
-
-    if(resto.logo){
-      logo.src = resto.logo;
-    } else {
-      logo.style.display = "none";
-    }
-
-  }catch(err){
-    console.error("❌ gagal load resto:", err);
+  if(!r){
+    console.warn("❌ Resto not found");
+    return;
   }
+
+  document.getElementById("restoLogo").src = r.logo || "";
+
+  document.getElementById("restoName").textContent =
+    r.namaRestoran || "Resto Name";
+
+  document.getElementById("alamatRestoranDisplay").textContent =
+    r.restoAddress || "";
+
+  document.getElementById("teleponRestoranDisplay").textContent =
+    r.restoPhone || "";
 }
 
 async function initDarkMode(){
