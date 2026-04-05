@@ -441,45 +441,59 @@ body.dark .main-container {
   top: 50%;
   transform: translateY(-50%);
 
-  background: transparent;
+  width: 28px;
+  height: 28px;
+
+  border-radius: 50%;
   border: none;
 
-  /* 🔥 kecil & subtle */
-  font-size: 20px;
-  font-weight: 400;
-  color: rgba(255,255,255,0.5);
+  font-size: 16px;
+  font-weight: 600;
+
+  background: rgba(0,0,0,0.35);
+  color: rgba(255,255,255,0.8);
+
+  backdrop-filter: blur(4px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   cursor: pointer;
   z-index: 3;
 
-  padding: 2px 6px;
   transition: all 0.2s ease;
 }
 
-/* 🔥 lebih keluar dari image dikit */
-.img-prev { left: 2px; }
-.img-next { right: 2px; }
+/* posisi */
+.img-prev { left: 8px; }
+.img-next { right: 8px; }
 
+/* hover effect */
 .img-nav:hover {
-  color: #f59e0b;
-  transform: translateY(-50%) scale(1.15);
-}
-  .img-nav {
-  text-shadow: 0 0 6px rgba(0,0,0,0.8);
+  background: rgba(245,158,11,0.9);
+  color: #000;
+  transform: translateY(-50%) scale(1.1);
 }
   
-.room-img-wrap:hover .img-nav {
-  opacity: 1;
-}
-
-.img-nav {
+/* desktop: hide dulu */
+.room-img-wrap .img-nav {
   opacity: 0;
 }
 
+/* muncul saat hover */
+.room-card:hover .img-nav {
+  opacity: 1;
+}
+
+/* HP: tetap kelihatan */
 @media (hover: none) {
   .img-nav {
     opacity: 0.6;
   }
+}
+.img-nav {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 }
   
 .room-card {
