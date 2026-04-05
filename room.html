@@ -627,8 +627,7 @@ body.dark .main-container {
 
 <script src="db-core.js"></script>
 <script>
-let imgs = Array.isArray(room.images) ? room.images : [];
-  
+
 const FALLBACK_IMG = `
 data:image/svg+xml,
 <svg xmlns='http://www.w3.org/2000/svg' width='400' height='200'>
@@ -639,7 +638,7 @@ data:image/svg+xml,
 </svg>`;
 
 function setImageSafe(imgEl, src) {
-  imgEl.loading = "lazy";
+  img.decoding = "async";
 
   if (!src) {
     imgEl.src = FALLBACK_IMG;
@@ -928,6 +927,27 @@ setImageSafe(img, imgs?.[0]);
 
   return card;
 }
+
+  function renderBatch(list, container) {
+  let i = 0;
+  const chunk = 10;
+
+  function loop() {
+    const frag = document.createDocumentFragment();
+
+    for (let j = 0; j < chunk && i < list.length; j++, i++) {
+      frag.appendChild(createRoomCard(list[i]));
+    }
+
+    container.appendChild(frag);
+
+    if (i < list.length) {
+      requestAnimationFrame(loop);
+    }
+  }
+
+  loop();
+}
   
 /* ========= DISPLAY ========= */
 function tampilkanData() {
@@ -966,8 +986,9 @@ function tampilkanData() {
 const fragMeet = document.createDocumentFragment();
 const fragPack = document.createDocumentFragment();
 
-menuRooms.forEach(room => {
-  const card = createRoomCard(room);
+renderBatch(menuRooms.filter(r=>r.type!=="meeting" && r.type!=="package"), gridRooms);
+renderBatch(menuRooms.filter(r=>r.type==="meeting"), gridMeet);
+renderBatch(menuRooms.filter(r=>r.type==="package"), gridPack);
 
   if (room.type === "meeting") fragMeet.appendChild(card);
   else if (room.type === "package") fragPack.appendChild(card);
@@ -997,6 +1018,7 @@ function updateCartUI() {
   cancelAnimationFrame(CART_RAF);
 
   CART_RAF = requestAnimationFrame(() => {
+  const frag = document.createDocumentFragment();
   const preview = getEl('cartPreview');
   const totalEl = getEl('totalPrice');
   const discountEl = getEl('voucherDiscount');
@@ -1191,8 +1213,6 @@ function tambahKeCart(room) {
   }
 
   updateCartUI();
-
- requestAnimationFrame(autoApplyVoucher);
 }
 
 
