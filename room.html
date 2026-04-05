@@ -397,12 +397,16 @@ body.dark .main-container {
 .room-img-wrap {
   position: relative;
   width: 100%;
-  height: 180px;
+  height: 170px;
   background: #000;
   overflow: hidden;
 
-  /* 🔥 FRAME PREMIUM */
-  border-bottom: 1px solid #1f2430;   /* garis bawah */
+  /* 🔥 penting: kasih jarak dari card */
+  border-radius: 10px;
+  margin-bottom: 10px;
+
+  /* subtle frame */
+  border: 1px solid rgba(255,255,255,0.05);
 }
 
 /* 🔥 tambahan garis halus di dalam (biar kelihatan mahal) */
@@ -436,29 +440,34 @@ body.dark .main-container {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  
-  /* 🔥 jadi icon, bukan button */
+
   background: transparent;
   border: none;
-  
-  color: rgba(255,255,255,0.7);
-  font-size: 26px;
-  font-weight: 300;
-  
+
+  /* 🔥 kecil & subtle */
+  font-size: 20px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.5);
+
   cursor: pointer;
   z-index: 3;
 
-  padding: 4px 8px;
+  padding: 2px 6px;
   transition: all 0.2s ease;
 }
 
-.img-prev { left: 6px; }
-.img-next { right: 6px; }
+/* 🔥 lebih keluar dari image dikit */
+.img-prev { left: 2px; }
+.img-next { right: 2px; }
 
 .img-nav:hover {
   color: #f59e0b;
-  transform: translateY(-50%) scale(1.2);
+  transform: translateY(-50%) scale(1.15);
 }
+  .img-nav {
+  text-shadow: 0 0 6px rgba(0,0,0,0.8);
+}
+  
 .room-img-wrap:hover .img-nav {
   opacity: 1;
 }
@@ -503,6 +512,28 @@ body.dark .main-container {
   .room-card:hover .room-img {
   transform: scale(1.03);
   transition: 0.3s ease;
+}
+
+.room-card {
+  display: flex;
+  flex-direction: column;
+
+  background: #0f1115;
+
+  /* 🔥 BORDER FIX */
+  border: 1px solid #1f2430;
+  border-radius: 14px;
+
+  /* 🔥 kasih jarak dalam biar image gak nempel */
+  padding: 10px;
+
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+.room-card:hover {
+  border-color: #f59e0b;
+  transform: translateY(-3px);
 }
 </style>
 </head>
