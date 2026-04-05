@@ -627,6 +627,32 @@ body.dark .main-container {
 
 <script src="db-core.js"></script>
 <script>
+let imgs = Array.isArray(room.images) ? room.images : [];
+  
+const FALLBACK_IMG = `
+data:image/svg+xml,
+<svg xmlns='http://www.w3.org/2000/svg' width='400' height='200'>
+  <rect width='100%' height='100%' fill='#111'/>
+  <text x='50%' y='50%' fill='#888' font-size='16' text-anchor='middle' dominant-baseline='middle'>
+    No Image
+  </text>
+</svg>`;
+
+function setImageSafe(imgEl, src) {
+  imgEl.loading = "lazy";
+
+  if (!src) {
+    imgEl.src = FALLBACK_IMG;
+    return;
+  }
+
+  imgEl.src = src;
+
+  imgEl.onerror = () => {
+    imgEl.onerror = null; // cegah loop
+    imgEl.src = FALLBACK_IMG;
+  };
+}
  
 let restoData = null;
 let menuRooms = [];
@@ -792,9 +818,10 @@ function createRoomCard(room){
   const imgWrap = document.createElement("div");
   imgWrap.className = "room-img-wrap";
 
-  const img = document.createElement('img');
-  img.className = "room-img";
-  img.src = imgs[0] || 'https://via.placeholder.com/400x200?text=No+Image';
+const img = document.createElement('img');
+img.className = "room-img";
+
+setImageSafe(img, imgs?.[0]);
 
   imgWrap.appendChild(img);
 
@@ -811,13 +838,13 @@ function createRoomCard(room){
     prev.onclick = () => {
       index--;
       if (index < 0) index = imgs.length - 1;
-      img.src = imgs[index];
+      setImageSafe(img, imgs[index]);
     };
 
     next.onclick = () => {
       index++;
       if (index >= imgs.length) index = 0;
-      img.src = imgs[index];
+      setImageSafe(img, imgs[index]);
     };
 
     imgWrap.append(prev, next);
