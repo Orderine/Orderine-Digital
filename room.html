@@ -634,12 +634,11 @@ body.dark .main-container {
 
 async function getRooms(){
 
-  const restoId = getCurrentRestoId();
   const data = await MENUVA_DB.getAll("rooms");
 
   return data.filter(r =>
     r.type === "hotel" &&
-    (!restoId || r.restoId === restoId)
+    (r.active !== false)
   );
 }
 
