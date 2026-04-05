@@ -638,7 +638,9 @@ data:image/svg+xml,
 </svg>`;
 
 function setImageSafe(imgEl, src) {
-  img.decoding = "async";
+  if (!imgEl) return; // 🔥 guard biar gak crash
+
+  imgEl.loading = "lazy";
 
   if (!src) {
     imgEl.src = FALLBACK_IMG;
@@ -648,11 +650,11 @@ function setImageSafe(imgEl, src) {
   imgEl.src = src;
 
   imgEl.onerror = () => {
-    imgEl.onerror = null; // cegah loop
+    imgEl.onerror = null;
     imgEl.src = FALLBACK_IMG;
   };
 }
- 
+  
 let restoData = null;
 let menuRooms = [];
 let vouchers = [];
