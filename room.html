@@ -466,8 +466,12 @@ body.dark .main-container {
 }
 
 /* posisi */
-.img-prev { left: 8px; }
-.img-next { right: 8px; }
+.img-prev { left: -10px; }
+.img-next { right: -10px; }
+
+.room-img-wrap {
+  overflow: visible; /* penting bro */
+}
 
 /* hover effect */
 .img-nav:hover {
@@ -548,6 +552,12 @@ body.dark .main-container {
 .room-card:hover {
   border-color: #f59e0b;
   transform: translateY(-3px);
+}
+.room-img {
+  touch-action: pan-y;
+}
+.room-img {
+  transition: transform 0.2s ease;
 }
 </style>
 </head>
@@ -820,6 +830,38 @@ setImageSafe(img, imgs?.[0]);
 
     imgWrap.append(prev, next);
   }
+
+let startX = 0;
+let endX = 0;
+
+img.addEventListener("touchstart", (e) => {
+  startX = e.touches[0].clientX;
+}, { passive: true });
+
+img.addEventListener("touchmove", (e) => {
+  endX = e.touches[0].clientX;
+}, { passive: true });
+
+img.addEventListener("touchend", () => {
+
+  const diff = startX - endX;
+
+  // threshold biar gak terlalu sensitif
+  if (Math.abs(diff) < 40) return;
+
+  if (diff > 0) {
+    // swipe kiri → next
+    index++;
+    if (index >= imgs.length) index = 0;
+  } else {
+    // swipe kanan → prev
+    index--;
+    if (index < 0) index = imgs.length - 1;
+  }
+
+  setImageSafe(img, imgs[index]);
+
+});
 
   /* ===============================
      INFO
