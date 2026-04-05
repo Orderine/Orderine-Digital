@@ -203,29 +203,6 @@ body.dark .main-container {
   transform: translateY(-2px);
 }
 
-.room-img {
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-  background: #000;
-}
-
-/* tombol slider */
-.room-card button:nth-child(2),
-.room-card button:nth-child(3) {
-  position: absolute;
-  top: 80px;
-  background: rgba(0,0,0,0.6);
-  border: none;
-  color: #fff;
-  font-size: 18px;
-  padding: 6px 10px;
-  cursor: pointer;
-}
-
-.room-card button:nth-child(2) { left: 10px; }
-.room-card button:nth-child(3) { right: 10px; }
-
 .room-info {
   padding: 12px;
 }
@@ -430,7 +407,79 @@ body.dark .main-container {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+.room-img-wrap {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  background: #000;
+  overflow: hidden;
 
+  /* 🔥 Bloomberg vibes */
+  border-bottom: 1px solid #1f2430;
+}
+
+.room-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+
+  /* subtle premium feel */
+  filter: contrast(1.05) brightness(0.95);
+}
+
+.img-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 18px;
+  padding: 6px 10px;
+  cursor: pointer;
+  z-index: 2;
+  backdrop-filter: blur(4px);
+}
+
+.img-prev { left: 8px; }
+.img-next { right: 8px; }
+
+.img-nav:hover {
+  background: rgba(245,158,11,0.8);
+  color: #000;
+}
+.room-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.room-info {
+  padding: 12px;
+  flex: 1; /* 🔥 dorong tombol ke bawah */
+}
+
+.btn-cart {
+  width: 100%;
+  border: none;
+  padding: 12px;
+  background: #f59e0b;
+  color: #000;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+
+  /* 🔥 pembatas atas biar clean */
+  border-top: 1px solid #1f2430;
+}
+
+.btn-cart:hover {
+  background: #fbbf24;
+}
+  .room-card:hover .room-img {
+  transform: scale(1.03);
+  transition: 0.3s ease;
+}
 </style>
 </head>
 <body>
@@ -697,10 +746,12 @@ function createRoomCard(room){
   if (imgs.length > 1) {
 
     const prev = document.createElement("button");
-    prev.textContent = "‹";
+   prev.className = "img-nav img-prev";
+   prev.textContent = "‹";
 
-    const next = document.createElement("button");
-    next.textContent = "›";
+   const next = document.createElement("button");
+   next.className = "img-nav img-next";
+   next.textContent = "›";
 
     prev.onclick = () => {
       index--;
