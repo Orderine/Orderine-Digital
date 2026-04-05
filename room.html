@@ -949,7 +949,6 @@ setImageSafe(img, imgs?.[0]);
   loop();
 }
   
-/* ========= DISPLAY ========= */
 function tampilkanData() {
   if (!restoData) return;
 
@@ -962,44 +961,36 @@ function tampilkanData() {
   document.getElementById("teleponRestoranDisplay").innerText =
     restoData.restoPhone || "";
 
-  // ===============================
-  // 🔥 TAMBAHKAN BAGIAN INI (LOGO)
-  // ===============================
   const logoEl = document.getElementById("restoLogo");
   if (logoEl) {
     if (restoData.logo) {
       logoEl.src = restoData.logo;
       logoEl.style.display = "block";
     } else {
-      logoEl.style.display = "none"; // biar gak ada broken image
+      logoEl.style.display = "none";
     }
   }
-  // ===============================
 
   const gridRooms = document.getElementById("rooms");
   const gridMeet = document.getElementById("meetings");
   const gridPack = document.getElementById("packages");
 
-  [gridRooms, gridMeet, gridPack].forEach(g => g.innerHTML = "");
+  // 🔥 CLEAR GRID
+  gridRooms.innerHTML = "";
+  gridMeet.innerHTML = "";
+  gridPack.innerHTML = "";
 
- const fragRooms = document.createDocumentFragment();
-const fragMeet = document.createDocumentFragment();
-const fragPack = document.createDocumentFragment();
+  // 🔥 FILTER DATA
+  const rooms = menuRooms.filter(r => r.type !== "meeting" && r.type !== "package");
+  const meetings = menuRooms.filter(r => r.type === "meeting");
+  const packages = menuRooms.filter(r => r.type === "package");
 
-renderBatch(menuRooms.filter(r=>r.type!=="meeting" && r.type!=="package"), gridRooms);
-renderBatch(menuRooms.filter(r=>r.type==="meeting"), gridMeet);
-renderBatch(menuRooms.filter(r=>r.type==="package"), gridPack);
+  // 🔥 RENDER BATCH (BYD MODE ⚡)
+  renderBatch(rooms, gridRooms);
+  renderBatch(meetings, gridMeet);
+  renderBatch(packages, gridPack);
 
-  if (room.type === "meeting") fragMeet.appendChild(card);
-  else if (room.type === "package") fragPack.appendChild(card);
-  else fragRooms.appendChild(card);
-});
-
-gridRooms.appendChild(fragRooms);
-gridMeet.appendChild(fragMeet);
-gridPack.appendChild(fragPack);
-
-checkEmptyState();
+  checkEmptyState();
 }
 
   function checkEmptyState(){
