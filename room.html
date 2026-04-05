@@ -652,6 +652,29 @@ body.dark .main-container {
 <script src="db-core.js"></script>
 <script>
 
+ async function saveTheme(isDark){
+
+  const current = await MENUVA_DB.get("promoData","system_settings") || {};
+
+  await MENUVA_DB.update("promoData",{
+    ...current,
+    id:"system_settings",
+    darkMode:isDark
+  });
+
+}
+
+async function loadTheme(){
+
+  const data = await MENUVA_DB.get("promoData","system_settings");
+
+  if(data?.darkMode){
+    document.body.classList.add("dark");
+  }
+
+  return data?.darkMode || false;
+}
+
   function getCurrentRestoId(){
   return new URLSearchParams(location.search).get("resto");
 }
@@ -1045,6 +1068,66 @@ function renderChunk(data, containerId, chunk = 6){
   next();
 }
 
+async function loadRestoIdentity(){
+
+  const params = new URLSearchParams(window.location.search);
+  const restoId = params.get("resto");
+
+  if(!restoId) return;
+
+  try{
+
+    const resto = await MENUVA_DB.get("restos", restoId);
+
+    if(!resto) return;
+
+    // 🔥 SET UI
+    document.getElementById("restoName").textContent =
+      resto.name || "Resto Name";
+
+    document.getElementById("alamatRestoranDisplay").textContent =
+      resto.address || "";
+
+    document.getElementById("teleponRestoranDisplay").textContent =
+      resto.phone || "";
+
+    // 🔥 LOGO SAFE
+    const logo = document.getElementById("restoLogo");
+
+    if(resto.logo){
+      logo.src = resto.logo;
+    } else {
+      logo.style.display = "none";
+    }
+
+  }catch(err){
+    console.error("❌ gagal load resto:", err);
+  }
+}
+
+async function initDarkMode(){
+
+  const btn = document.getElementById("darkToggle");
+
+  const isDark = await loadTheme();
+
+  // set icon awal
+  btn.textContent = isDark ? "☀️" : "🌙";
+
+  btn.onclick = async () => {
+
+    document.body.classList.toggle("dark");
+
+    const state = document.body.classList.contains("dark");
+
+    btn.textContent = state ? "☀️" : "🌙";
+
+    await saveTheme(state);
+
+  };
+
+}
+
 document.querySelectorAll(".tabs button").forEach(btn => {
   btn.addEventListener("click", () => {
 
@@ -1064,6 +1147,8 @@ document.querySelectorAll(".tabs button").forEach(btn => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
+  await initDarkMode();
+  await loadRestoIdentity();
   loadAllData();
 });
 
