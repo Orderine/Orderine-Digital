@@ -643,6 +643,26 @@ async function getRooms(){
   );
 }
 
+  async function getMeetings(){
+
+  const data = await MENUVA_DB.getAll("meetingRooms");
+
+  return data.filter(r =>
+    r.type === "meeting" &&
+    (r.active !== false)
+  );
+}
+
+async function getPackages(){
+
+  const data = await MENUVA_DB.getAll("roomPackages");
+
+  return data.filter(r =>
+    r.type === "package" &&
+    (r.active !== false)
+  );
+}
+
   const state = {
   rooms: [],
   meetings: [],
