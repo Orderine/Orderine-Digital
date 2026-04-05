@@ -189,20 +189,6 @@ body.dark .main-container {
 }
 .hidden { display: none; }
 
-.room-card {
-  background: #0f1115;
-  border: 1px solid #1f2430;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: all 0.2s ease;
-  color: #e6e6e6;
-}
-
-.room-card:hover {
-  border-color: #f59e0b;
-  transform: translateY(-2px);
-}
-
 .room-info {
   padding: 12px;
 }
@@ -407,6 +393,7 @@ body.dark .main-container {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
 .room-img-wrap {
   position: relative;
   width: 100%;
@@ -414,8 +401,25 @@ body.dark .main-container {
   background: #000;
   overflow: hidden;
 
-  /* 🔥 Bloomberg vibes */
-  border-bottom: 1px solid #1f2430;
+  /* 🔥 FRAME PREMIUM */
+  border-bottom: 1px solid #1f2430;   /* garis bawah */
+}
+
+/* 🔥 tambahan garis halus di dalam (biar kelihatan mahal) */
+.room-img-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255,255,255,0.06);
+  pointer-events: none;
+}
+
+.room-img-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 -40px 60px rgba(0,0,0,0.4);
+  pointer-events: none;
 }
 
 .room-img {
@@ -432,23 +436,43 @@ body.dark .main-container {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0,0,0,0.55);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #fff;
-  font-size: 18px;
-  padding: 6px 10px;
+  
+  /* 🔥 jadi icon, bukan button */
+  background: transparent;
+  border: none;
+  
+  color: rgba(255,255,255,0.7);
+  font-size: 26px;
+  font-weight: 300;
+  
   cursor: pointer;
-  z-index: 2;
-  backdrop-filter: blur(4px);
+  z-index: 3;
+
+  padding: 4px 8px;
+  transition: all 0.2s ease;
 }
 
-.img-prev { left: 8px; }
-.img-next { right: 8px; }
+.img-prev { left: 6px; }
+.img-next { right: 6px; }
 
 .img-nav:hover {
-  background: rgba(245,158,11,0.8);
-  color: #000;
+  color: #f59e0b;
+  transform: translateY(-50%) scale(1.2);
 }
+.room-img-wrap:hover .img-nav {
+  opacity: 1;
+}
+
+.img-nav {
+  opacity: 0;
+}
+
+@media (hover: none) {
+  .img-nav {
+    opacity: 0.6;
+  }
+}
+  
 .room-card {
   display: flex;
   flex-direction: column;
