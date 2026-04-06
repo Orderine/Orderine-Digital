@@ -68,7 +68,7 @@ body.dark .locale-select {
 
 /* HEADER FIXED */
 header {
-  position: fixed;
+  position: relative;
   top: 0;
   left: 0;
   width: 100%;
@@ -139,10 +139,6 @@ header {
   border: none;
 }
 
-/* Supaya konten tidak ketiban */
-body {
-  padding-top: var(--header-height);
-}
 
 .dark-toggle {
   background: rgba(255,255,255,0.2);
@@ -188,11 +184,6 @@ body.dark .main-container {
   gap: 12px;
 }
 .hidden { display: none; }
-
-.room-info {
-  padding: 12px;
-}
-
 .room-title-row {
   display: flex;
   justify-content: space-between;
@@ -262,12 +253,9 @@ body.dark .main-container {
 }
 
 /* --- FIX untuk HP mode portrait --- */
-@media (max-width: 600px) and (orientation: portrait) {
+@media (max-width: 600px) {
   .grid {
-    grid-template-columns: repeat(2, 1fr); /* selalu 2 kolom */
-  }
-  .room-card img {
-    height: 140px; /* lebih tinggi biar keliatan square */
+    grid-template-columns: 1fr; /* 🔥 1 kolom di HP */
   }
 }
 
@@ -286,11 +274,82 @@ body.dark .main-container {
 .form-input textarea{min-height:60px;resize:vertical}
 
 /* fixed bar */
-.fixed-bar{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;gap:10px;padding:10px;background:linear-gradient(135deg,#1e3c72,#2a5298);z-index:2000}
-.fixed-bar button{flex:1;padding:12px 0;font-size:0.95rem;border-radius:8px;border:none;cursor:pointer;color:#fff}
-.btn-wa{background:var(--success)}
-.btn-back{background:#d8cd33;color:#000}
+.fixed-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
 
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+
+  background: #0a0a0a;
+  border-top: 1px solid #222;
+
+  z-index: 2000;
+}
+
+.fixed-bar button {
+  flex: 1;
+  padding: 12px 0;
+
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+
+  border-radius: 6px;
+  border: 1px solid #222;
+
+  background: #111;
+  color: #ddd;
+
+  cursor: pointer;
+
+  transition: all 0.15s ease;
+}
+  
+.btn-wa {
+  color: #00ff9c;
+  border: 1px solid #004d2e;
+  background: linear-gradient(180deg, #001f14, #00140d);
+}
+
+.btn-wa:hover {
+  background: #002d1c;
+  box-shadow: 0 0 8px rgba(0,255,156,0.4);
+  color: #00ffb3;
+}
+.btn-back {
+  color: #ffcc00;
+  border: 1px solid #4d3c00;
+  background: linear-gradient(180deg, #1a1400, #120d00);
+}
+
+.btn-back:hover {
+  background: #2a2100;
+  box-shadow: 0 0 8px rgba(255,204,0,0.4);
+  color: #ffd633;
+}
+.fixed-bar button:active {
+  transform: scale(0.97);
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.8);
+}
+.fixed-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255,204,0,0.4),
+    transparent
+  );
+}
 /* small screens */
 @media (max-width:500px){
   header .header-inner{flex-direction:column;align-items:flex-start;gap:6px}
@@ -397,15 +456,15 @@ body.dark .main-container {
 .room-img-wrap {
   position: relative;
   width: 100%;
-  height: 170px;
+
+  /* 🔥 ganti ini */
+  aspect-ratio: 4 / 3;
+
   background: #000;
   overflow: hidden;
 
-  /* 🔥 penting: kasih jarak dari card */
   border-radius: 10px;
   margin-bottom: 10px;
-
-  /* subtle frame */
   border: 1px solid rgba(255,255,255,0.05);
 }
 
@@ -507,7 +566,7 @@ body.dark .main-container {
 
 .room-info {
   padding: 12px;
-  flex: 1; /* 🔥 dorong tombol ke bawah */
+  flex: unset; /* 🔥 ini kunci */
 }
 
 .btn-cart {
