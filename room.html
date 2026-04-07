@@ -1148,14 +1148,16 @@ function renderCart(){
     const div = document.createElement("div");
     div.className = "cart-item";
 
-    div.innerHTML = `
-      <span>${item.nama} (${item.qty})</span>
-      <div class="qty-controls">
-        <button onclick="changeQty(${i}, -1)">-</button>
-        <button onclick="changeQty(${i}, 1)">+</button>
-        <button class="remove-btn" onclick="removeItem(${i})">x</button>
-      </div>
-    `;
+   div.innerHTML = `
+  <span>
+    ${item.nama} - Room ${item.roomNumber} (${item.qty})
+  </span>
+  <div class="qty-controls">
+    <button onclick="changeQty(${i}, -1)">-</button>
+    <button onclick="changeQty(${i}, 1)">+</button>
+    <button class="remove-btn" onclick="removeItem(${i})">x</button>
+  </div>
+`;
 
     fragment.appendChild(div);
   });
@@ -1184,7 +1186,10 @@ function removeItem(index){
 
 function tambahKeCart(item){
 
-  const existing = state.cart.find(i => i.nama === item.nama);
+  const existing = state.cart.find(i =>
+    i.nama === item.nama &&
+    i.roomNumber === item.roomNumber
+  );
 
   if(existing){
     existing.qty++;
