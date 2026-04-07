@@ -1099,7 +1099,15 @@ if(Array.isArray(room.roomNumbers) && room.roomNumbers.length){
   info.appendChild(numberBox);
 }
 
- btn.onclick = () => {
+/* ===============================
+   BUTTON CART
+============================== */
+
+const btn = document.createElement('button');
+btn.className = "btn-cart";
+btn.textContent = 'Add To Cart';
+
+btn.onclick = () => {
 
   if(room.roomNumbers?.length && !selectedRoomNumber){
     alert("Please select room number first");
@@ -1117,9 +1125,10 @@ if(Array.isArray(room.roomNumbers) && room.roomNumbers.length){
   });
 
 };
-  card.append(imgWrap, info, btn);
 
-  return card;
+card.append(imgWrap, info, btn);
+
+return card;
 }
 
 function renderCart(){
