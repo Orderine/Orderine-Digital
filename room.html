@@ -636,6 +636,36 @@ body.dark .main-container {
 .room-img {
   transition: transform 0.2s ease;
 }
+
+.guest-room-numbers{
+  margin-top:10px;
+}
+
+.room-number-title{
+  font-size:12px;
+  margin-bottom:6px;
+  opacity:0.7;
+}
+
+.guest-room-btn{
+  margin:3px;
+  padding:6px 10px;
+  border:none;
+  border-radius:6px;
+  background:#eee;
+  cursor:pointer;
+  font-size:12px;
+}
+
+.guest-room-btn.active{
+  background:#111;
+  color:#fff;
+}
+
+.guest-room-btn:hover{
+  background:#333;
+  color:#fff;
+}
 </style>
 </head>
 <body>
@@ -1024,19 +1054,69 @@ img.addEventListener("touchend", () => {
     info.appendChild(amenBox);
   }
 
-  const btn = document.createElement('button');
-  btn.className = "btn-cart";
-  btn.textContent = 'Add To Cart';
+  /* ===============================
+   ROOM NUMBER SELECTOR
+============================== */
 
-  btn.onclick = () => tambahKeCart({
+let selectedRoomNumber = null;
+
+if(Array.isArray(room.roomNumbers) && room.roomNumbers.length){
+
+  const numberBox = document.createElement("div");
+  numberBox.className = "guest-room-numbers";
+
+  const title = document.createElement("div");
+  title.className = "room-number-title";
+  title.textContent = "Select Room Number:";
+  numberBox.appendChild(title);
+
+  room.roomNumbers.forEach(num => {
+
+    const btnNum = document.createElement("button");
+    btnNum.className = "guest-room-btn";
+
+    btnNum.textContent = `${num} (Floor ${room.floor || Math.floor(num/100)})`;
+
+    btnNum.onclick = () => {
+
+      // reset semua tombol
+      numberBox.querySelectorAll("button").forEach(b=>{
+        b.classList.remove("active");
+      });
+
+      btnNum.classList.add("active");
+
+      selectedRoomNumber = num;
+
+      console.log("Selected room:", num);
+
+    };
+
+    numberBox.appendChild(btnNum);
+
+  });
+
+  info.appendChild(numberBox);
+}
+
+ btn.onclick = () => {
+
+  if(room.roomNumbers?.length && !selectedRoomNumber){
+    alert("Please select room number first");
+    return;
+  }
+
+  tambahKeCart({
     nama: room.name,
     harga: room.price,
     kapasitas: room.capacity,
     luas: room.size,
     deskripsi: room.description,
-    kategori: room.type
+    kategori: room.type,
+    roomNumber: selectedRoomNumber
   });
 
+};
   card.append(imgWrap, info, btn);
 
   return card;
