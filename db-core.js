@@ -15,7 +15,7 @@
   const DEBUG_DB = false;
 
   const DB_NAME = "MenuvaDB";
-  const DB_VERSION = 24;
+  const DB_VERSION = 25;
 
   let dbOpeningPromise = null;
   let dbInstance = null;
