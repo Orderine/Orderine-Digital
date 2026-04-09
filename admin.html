@@ -1,21 +1,27 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
- <!-- DB CORE (SINGLE SOURCE OF TRUTH) -->
-<script src="./db-core.js"></script>
+ <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  
-<!-- AUTH GUARD (NON MODULE) -->
+<!-- ================= CORE ================= -->
+<script src="./db-core.js"></script>
+<script src="./utils.js"></script> <!-- 🔥 WAJIB kalau ada uid() -->
+
+<!-- ================= AUTH ================= -->
 <script src="./auth-guard.js"></script>
 
-<!-- CDN BIASA -->
+<!-- ================= ENGINE ================= -->
+<script src="./branch-engine.js"></script> <!-- 🔥 HARUS PALING AWAL -->
+<script src="./room-engine.js"></script>
+<script src="./table-engine.js"></script>
+
+<!-- ================= CDN ================= -->
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  
+
+<!-- ================= AUDIO ================= -->
 <audio id="notifAudio" src="./beep.mp3" preload="auto"></audio>
 <audio id="clickAudio" src="./click.mp3" preload="auto"></audio>
-
   <title>Admin Orderine</title>
   <style>
     * { box-sizing: border-box; }
@@ -5420,8 +5426,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.log("✅ activeUser ready:", user.email);
 
 
-    // ================= LOAD CORE DATA (CRITICAL) =================
-    await safeAwait("loadData", window.loadData);
+   // ================= INIT BRANCH ENGINE (CRITICAL) =================
+await safeAwait("BranchEngine.init", window.BranchEngine?.init);
+
+console.log("🏢 ACTIVE BRANCH:", window.BranchEngine?.getActive());
+
+
+// ================= LOAD CORE DATA (CRITICAL) =================
+await safeAwait("loadData", window.loadData);
 
 
     // ================= INIT CORE UI (AFTER DATA) =================
@@ -5874,7 +5886,5 @@ function openInviteAdmin() {
   window.location.href = "invite-admin.html";
 }
 </script>
-<script src="table-engine.js"></script>
-<script src="room-engine.js"></script>
 </body>
 </html>
