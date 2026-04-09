@@ -21,7 +21,7 @@ async function initBrandAndBranch(){
     const defaultBranchId = uid("branch");
 
     // ✅ SAVE SESSION
-    await MENUVA_DB.saveSession({
+    MENUVA_DB.setSession({
       ...session,
       restoId,
       branchId: defaultBranchId,
@@ -111,7 +111,7 @@ async function setActiveBranch(branchId){
 
   const session = await MENUVA_DB.getSession();
 
-  await MENUVA_DB.saveSession({
+  await MENUVA_DB.setSession({
     ...session,
     branchId
   });
