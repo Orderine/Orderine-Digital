@@ -2563,6 +2563,75 @@ background:rgba(0,0,0,0.45);
 .nav-item.active .icon{
   fill:#4ade80; /* neon green ala terminal */
 }
+
+  .global-control-bar{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 20px;
+}
+
+/* ===================== */
+
+.branch-card{
+  min-width: 300px;
+  max-width: 400px;
+}
+
+/* ===================== */
+
+.branch-list{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ===================== */
+
+.branch-item{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 8px 10px;
+
+  border: 1px solid #1e293b;
+  background: #020617;
+
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+/* hover */
+.branch-item:hover{
+  border-color: #38bdf8;
+}
+
+/* ACTIVE */
+.branch-item.active{
+  border-color: #38bdf8;
+  background: rgba(56,189,248,0.08);
+}
+
+/* ===================== */
+
+.branch-name{
+  font-size: 12px;
+  color: #e2e8f0;
+}
+
+/* ===================== */
+
+.branch-status{
+  font-size: 10px;
+  color: #64748b;
+}
+
+/* ACTIVE TEXT */
+.branch-item.active .branch-status{
+  color: #38bdf8;
+}
 </style>
 </head>
 <body>
@@ -2571,7 +2640,25 @@ background:rgba(0,0,0,0.45);
   <br>
   <p style="color: white;">Digital Solution For Restaurant, Hotel, & Cafe's</p>
 </div>
+  
+<div class="terminal-card branch-card">
 
+  <div class="card-header">
+    <span class="terminal-title">BRANCH CONTROL</span>
+  </div>
+
+  <div class="card-body">
+
+    <div id="branchList" class="branch-list"></div>
+
+    <button class="terminal-btn add-branch-btn" onclick="openAddBranch()">
+      + ADD BRANCH
+    </button>
+
+  </div>
+
+</div>
+  
 <div class="terminal-panel business-wrapper">
 
   <h2 class="terminal-title">BUSINESS & SUBSCRIPTION</h2>
