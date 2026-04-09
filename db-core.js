@@ -15,7 +15,7 @@
   const DEBUG_DB = false;
 
   const DB_NAME = "MenuvaDB";
-  const DB_VERSION = 25;
+  const DB_VERSION = 26;
 
   let dbOpeningPromise = null;
   let dbInstance = null;
@@ -23,6 +23,24 @@
   /* ======================================================
      OPEN DATABASE
   ====================================================== */
+   function ensureStore(db, tx, name, options, indexes = []) {
+
+  let store;
+
+  if (!db.objectStoreNames.contains(name)) {
+    store = db.createObjectStore(name, options);
+  } else {
+    store = tx.objectStore(name);
+  }
+
+  indexes.forEach(idx => {
+    if (!store.indexNames.contains(idx.name)) {
+      store.createIndex(idx.name, idx.keyPath, idx.options || { unique:false });
+    }
+  });
+
+  return store;
+}
 
   function openDB() {
 
@@ -91,262 +109,237 @@
 
          }
 
-          /* ======================================================
-           MENU SYSTEM
-        ====================================================== */
+         const tx = e.target.transaction;
 
-        if (!db.objectStoreNames.contains("menuData")) {
-
-          const menu = db.createObjectStore("menuData",{ keyPath:"id" });
-
-          menu.createIndex("restoId","restoId",{unique:false});
-          menu.createIndex("branchId","branchId",{unique:false});
-          menu.createIndex("category","category",{unique:false});
-          menu.createIndex("active","active",{unique:false});
-
-        }
-
-
-        /* ======================================================
-           MENU PROMO
-        ====================================================== */
-
-        if (!db.objectStoreNames.contains("menuPromo")) {
-
-          const promo = db.createObjectStore("menuPromo",{keyPath:"id"});
-
-          promo.createIndex("restoId","restoId",{unique:false});
-          promo.createIndex("branchId","branchId",{unique:false});
-          promo.createIndex("isActive","isActive",{unique:false});
-
-        }
-
-         /* ======================================================
-   ROOM SYSTEM (NEW 🔥)
+/* ======================================================
+   MENU SYSTEM
 ====================================================== */
 
-if (!db.objectStoreNames.contains("rooms")) {
+ensureStore(db, tx, "menuData",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" },
+    { name:"category", keyPath:"category" },
+    { name:"active", keyPath:"active" }
+  ]
+);
 
-  const r = db.createObjectStore("rooms",{ keyPath:"id" });
-
-  r.createIndex("restoId","restoId",{unique:false});
-  r.createIndex("branchId","branchId",{unique:false});
-  r.createIndex("active","active",{unique:false});
-
-}
-
-if (!db.objectStoreNames.contains("meetingRooms")) {
-
-  const mr = db.createObjectStore("meetingRooms",{ keyPath:"id" });
-
-  mr.createIndex("restoId","restoId",{unique:false});
-  mr.createIndex("branchId","branchId",{unique:false});
-  mr.createIndex("active","active",{unique:false});
-
-}
-
-if (!db.objectStoreNames.contains("roomPackages")) {
-
-  const rp = db.createObjectStore("roomPackages",{ keyPath:"id" });
-
-  rp.createIndex("restoId","restoId",{unique:false});
-  rp.createIndex("branchId","branchId",{unique:false});
-  rp.createIndex("roomId","roomId",{unique:false});
-  rp.createIndex("active","active",{unique:false});
-
-}
-
-
-        /* ======================================================
-           MENU VOUCHER
-        ====================================================== */
-
-        if (!db.objectStoreNames.contains("menuVoucher")) {
-
-          const voucher = db.createObjectStore("menuVoucher",{keyPath:"id"});
-
-          voucher.createIndex("restoId","restoId",{unique:false});
-          voucher.createIndex("isActive","isActive",{unique:false});
-
-        }
-
-
-        /* ======================================================
-           TABLE SYSTEM
-        ====================================================== */
-
-        if (!db.objectStoreNames.contains("restaurantTables")) {
-
-          const tables = db.createObjectStore("restaurantTables",{keyPath:"id"});
-
-          tables.createIndex("restoId","restoId",{unique:false});
-          tables.createIndex("branchId","branchId",{unique:false});
-          tables.createIndex("zone","zone",{unique:false});
-          tables.createIndex("capacity","capacity",{unique:false});
-          tables.createIndex("active","active",{unique:false});
-
-        }
-
-        if (!db.objectStoreNames.contains("tableStatus")) {
-
-          const ts = db.createObjectStore("tableStatus",{keyPath:"id"});
-
-          ts.createIndex("restoId","restoId",{unique:false});
-          ts.createIndex("branchId","branchId",{unique:false});
-          ts.createIndex("tableId","tableId",{unique:false});
-          ts.createIndex("status","status",{unique:false});
-
-        }
-
-        if (!db.objectStoreNames.contains("tableWalkins")) {
-
-          const w = db.createObjectStore("tableWalkins",{keyPath:"id"});
-
-          w.createIndex("restoId","restoId",{unique:false});
-          w.createIndex("tableId","tableId",{unique:false});
-
-        }
-
-         /* ================================
-   TABLE LAYOUT (NEW)
-================================ */
-
-if (!db.objectStoreNames.contains("restaurantLayouts")) {
-
-  const layout = db.createObjectStore("restaurantLayouts",{keyPath:"id"});
-
-  layout.createIndex("restoId","restoId",{unique:false});
-
-}
-
-
-      /* ======================================================
-   RESERVATION SYSTEM
+/* ======================================================
+   MENU PROMO
 ====================================================== */
 
-if (!db.objectStoreNames.contains("reservations")) {
+ensureStore(db, tx, "menuPromo",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" },
+    { name:"isActive", keyPath:"isActive" }
+  ]
+);
 
-  const r = db.createObjectStore("reservations",{keyPath:"id"});
+/* ======================================================
+   ROOM SYSTEM
+====================================================== */
 
-  r.createIndex("restoId","restoId",{unique:false});
-  r.createIndex("branchId","branchId",{unique:false});
-  r.createIndex("date","date",{unique:false});
-  r.createIndex("status","status",{unique:false});
+ensureStore(db, tx, "rooms",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" },
+    { name:"active", keyPath:"active" }
+  ]
+);
 
-}
+ensureStore(db, tx, "meetingRooms",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" },
+    { name:"active", keyPath:"active" }
+  ]
+);
 
-if (!db.objectStoreNames.contains("reservationSlots")) {
+ensureStore(db, tx, "roomPackages",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" },
+    { name:"roomId", keyPath:"roomId" },
+    { name:"active", keyPath:"active" }
+  ]
+);
 
-  const rs = db.createObjectStore("reservationSlots",{keyPath:"id"});
+/* ======================================================
+   MENU VOUCHER
+====================================================== */
 
-  rs.createIndex("restoId","restoId",{unique:false});
-  rs.createIndex("slot","slot",{unique:false});
+ensureStore(db, tx, "menuVoucher",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" }, // 🔥 TAMBAH
+    { name:"isActive", keyPath:"isActive" }
+  ]
+);
 
-}
+/* ======================================================
+   TABLE SYSTEM
+====================================================== */
 
-/* ✅ TAMBAHKAN INI */
+ensureStore(db, tx, "restaurantTables",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" },
+    { name:"zone", keyPath:"zone" },
+    { name:"capacity", keyPath:"capacity" },
+    { name:"active", keyPath:"active" }
+  ]
+);
 
-if (!db.objectStoreNames.contains("reservationSettings")) {
+ensureStore(db, tx, "tableStatus",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" },
+    { name:"tableId", keyPath:"tableId" },
+    { name:"status", keyPath:"status" }
+  ]
+);
 
-  const set = db.createObjectStore("reservationSettings",{keyPath:"id"});
+ensureStore(db, tx, "tableWalkins",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" }, // 🔥 TAMBAH
+    { name:"tableId", keyPath:"tableId" }
+  ]
+);
 
-  set.createIndex("restoId","restoId",{unique:false});
+/* ======================================================
+   TABLE LAYOUT
+====================================================== */
 
-}
-         
+ensureStore(db, tx, "restaurantLayouts",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" } // 🔥 TAMBAH
+  ]
+);
 
-        /* ======================================================
-           ORDER SYSTEM
-        ====================================================== */
+/* ======================================================
+   RESERVATION
+====================================================== */
 
-        if (!db.objectStoreNames.contains("ordersData")) {
+ensureStore(db, tx, "reservations",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" },
+    { name:"date", keyPath:"date" },
+    { name:"status", keyPath:"status" }
+  ]
+);
 
-          const orders = db.createObjectStore("ordersData",{
-            keyPath:"id",
-            autoIncrement:true
-          });
+ensureStore(db, tx, "reservationSlots",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" }, // 🔥 TAMBAH
+    { name:"slot", keyPath:"slot" }
+  ]
+);
 
-          orders.createIndex("status","status",{unique:false});
-          orders.createIndex("branchId","branchId",{unique:false});
-          orders.createIndex("orderTime","orderTime",{unique:false});
+ensureStore(db, tx, "reservationSettings",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" } // 🔥 TAMBAH
+  ]
+);
 
-        }
+/* ======================================================
+   ORDER SYSTEM
+====================================================== */
 
-        if (!db.objectStoreNames.contains("orderItems")) {
+ensureStore(db, tx, "ordersData",
+  { keyPath:"id", autoIncrement:true },
+  [
+    { name:"status", keyPath:"status" },
+    { name:"branchId", keyPath:"branchId" },
+    { name:"orderTime", keyPath:"orderTime" }
+  ]
+);
 
-          const oi = db.createObjectStore("orderItems",{keyPath:"id"});
+ensureStore(db, tx, "orderItems",
+  { keyPath:"id" },
+  [
+    { name:"orderId", keyPath:"orderId" }
+  ]
+);
 
-          oi.createIndex("orderId","orderId",{unique:false});
+/* ======================================================
+   PAYMENT
+====================================================== */
 
-        }
+ensureStore(db, tx, "payments",
+  { keyPath:"id" },
+  [
+    { name:"orderId", keyPath:"orderId" },
+    { name:"method", keyPath:"method" }
+  ]
+);
 
+/* ======================================================
+   INVENTORY
+====================================================== */
 
-        /* ======================================================
-           PAYMENT SYSTEM
-        ====================================================== */
+ensureStore(db, tx, "inventoryItems",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" }
+  ]
+);
 
-        if (!db.objectStoreNames.contains("payments")) {
+ensureStore(db, tx, "inventoryLogs",
+  { keyPath:"id" },
+  [
+    { name:"itemId", keyPath:"itemId" }
+  ]
+);
 
-          const p = db.createObjectStore("payments",{keyPath:"id"});
+/* ======================================================
+   ANALYTICS
+====================================================== */
 
-          p.createIndex("orderId","orderId",{unique:false});
-          p.createIndex("method","method",{unique:false});
+ensureStore(db, tx, "dailyStats",
+  { keyPath:"id" },
+  [
+    { name:"restoId", keyPath:"restoId" },
+    { name:"branchId", keyPath:"branchId" },
+    { name:"date", keyPath:"date" }
+  ]
+);
 
-        }
+/* ======================================================
+   LEGACY
+====================================================== */
 
+ensureStore(db, tx, "promoData",
+  { keyPath:"id", autoIncrement:true },
+  []
+);
 
-        /* ======================================================
-           INVENTORY
-        ====================================================== */
-
-        if (!db.objectStoreNames.contains("inventoryItems")) {
-
-          const inv = db.createObjectStore("inventoryItems",{keyPath:"id"});
-
-          inv.createIndex("restoId","restoId",{unique:false});
-          inv.createIndex("branchId","branchId",{unique:false});
-
-        }
-
-        if (!db.objectStoreNames.contains("inventoryLogs")) {
-
-          const log = db.createObjectStore("inventoryLogs",{keyPath:"id"});
-
-          log.createIndex("itemId","itemId",{unique:false});
-
-        }
-
-
-        /* ======================================================
-           ANALYTICS
-        ====================================================== */
-
-        if (!db.objectStoreNames.contains("dailyStats")) {
-
-          const stats = db.createObjectStore("dailyStats",{keyPath:"id"});
-
-          stats.createIndex("restoId","restoId",{unique:false});
-          stats.createIndex("branchId","branchId",{unique:false});
-          stats.createIndex("date","date",{unique:false});
-
-        }
-
-
-        /* ======================================================
-           LEGACY SUPPORT
-        ====================================================== */
-
-        if (!db.objectStoreNames.contains("promoData"))
-          db.createObjectStore("promoData",{keyPath:"id",autoIncrement:true});
-
-        if (!db.objectStoreNames.contains("flipbookData")) {
-
-          const flip = db.createObjectStore("flipbookData",{keyPath:"id",autoIncrement:true});
-
-          flip.createIndex("type","type",{unique:false});
-          flip.createIndex("refId","refId",{unique:false});
-
-        }
+ensureStore(db, tx, "flipbookData",
+  { keyPath:"id", autoIncrement:true },
+  [
+    { name:"type", keyPath:"type" },
+    { name:"refId", keyPath:"refId" }
+  ]
+);
 
         console.log("✅ MenuvaDB schema ensured");
 
