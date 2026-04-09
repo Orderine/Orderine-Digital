@@ -100,6 +100,7 @@
           const menu = db.createObjectStore("menuData",{ keyPath:"id" });
 
           menu.createIndex("restoId","restoId",{unique:false});
+          menu.createIndex("branchId","branchId",{unique:false});
           menu.createIndex("category","category",{unique:false});
           menu.createIndex("active","active",{unique:false});
 
@@ -115,6 +116,7 @@
           const promo = db.createObjectStore("menuPromo",{keyPath:"id"});
 
           promo.createIndex("restoId","restoId",{unique:false});
+          promo.createIndex("branchId","branchId",{unique:false});
           promo.createIndex("isActive","isActive",{unique:false});
 
         }
@@ -128,6 +130,7 @@ if (!db.objectStoreNames.contains("rooms")) {
   const r = db.createObjectStore("rooms",{ keyPath:"id" });
 
   r.createIndex("restoId","restoId",{unique:false});
+  r.createIndex("branchId","branchId",{unique:false});
   r.createIndex("active","active",{unique:false});
 
 }
@@ -137,6 +140,7 @@ if (!db.objectStoreNames.contains("meetingRooms")) {
   const mr = db.createObjectStore("meetingRooms",{ keyPath:"id" });
 
   mr.createIndex("restoId","restoId",{unique:false});
+  mr.createIndex("branchId","branchId",{unique:false});
   mr.createIndex("active","active",{unique:false});
 
 }
@@ -146,6 +150,7 @@ if (!db.objectStoreNames.contains("roomPackages")) {
   const rp = db.createObjectStore("roomPackages",{ keyPath:"id" });
 
   rp.createIndex("restoId","restoId",{unique:false});
+  rp.createIndex("branchId","branchId",{unique:false});
   rp.createIndex("roomId","roomId",{unique:false});
   rp.createIndex("active","active",{unique:false});
 
@@ -175,6 +180,7 @@ if (!db.objectStoreNames.contains("roomPackages")) {
           const tables = db.createObjectStore("restaurantTables",{keyPath:"id"});
 
           tables.createIndex("restoId","restoId",{unique:false});
+          tables.createIndex("branchId","branchId",{unique:false});
           tables.createIndex("zone","zone",{unique:false});
           tables.createIndex("capacity","capacity",{unique:false});
           tables.createIndex("active","active",{unique:false});
@@ -186,6 +192,7 @@ if (!db.objectStoreNames.contains("roomPackages")) {
           const ts = db.createObjectStore("tableStatus",{keyPath:"id"});
 
           ts.createIndex("restoId","restoId",{unique:false});
+          ts.createIndex("branchId","branchId",{unique:false});
           ts.createIndex("tableId","tableId",{unique:false});
           ts.createIndex("status","status",{unique:false});
 
@@ -222,6 +229,7 @@ if (!db.objectStoreNames.contains("reservations")) {
   const r = db.createObjectStore("reservations",{keyPath:"id"});
 
   r.createIndex("restoId","restoId",{unique:false});
+  r.createIndex("branchId","branchId",{unique:false});
   r.createIndex("date","date",{unique:false});
   r.createIndex("status","status",{unique:false});
 
@@ -259,6 +267,7 @@ if (!db.objectStoreNames.contains("reservationSettings")) {
           });
 
           orders.createIndex("status","status",{unique:false});
+          orders.createIndex("branchId","branchId",{unique:false});
           orders.createIndex("orderTime","orderTime",{unique:false});
 
         }
@@ -295,6 +304,7 @@ if (!db.objectStoreNames.contains("reservationSettings")) {
           const inv = db.createObjectStore("inventoryItems",{keyPath:"id"});
 
           inv.createIndex("restoId","restoId",{unique:false});
+          inv.createIndex("branchId","branchId",{unique:false});
 
         }
 
@@ -316,6 +326,7 @@ if (!db.objectStoreNames.contains("reservationSettings")) {
           const stats = db.createObjectStore("dailyStats",{keyPath:"id"});
 
           stats.createIndex("restoId","restoId",{unique:false});
+          stats.createIndex("branchId","branchId",{unique:false});
           stats.createIndex("date","date",{unique:false});
 
         }
