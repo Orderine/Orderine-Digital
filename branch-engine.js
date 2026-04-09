@@ -1,32 +1,57 @@
 // ========================================
-// 🧠 O-ONE BRANCH ENGINE
+// 🧠 O-ONE BRANCH ENGINE (STABLE VERSION)
 // ========================================
 
 let ACTIVE_BRANCH_ID = null;
 
 // ========================================
+// 🔐 GET / ENSURE RESTO ID (SINGLE SOURCE)
+// ========================================
+
+async function getRestoId() {
+  const session = await MENUVA_DB.getSession();
+
+  if (session?.restoId) return session.restoId;
+
+  const email = session?.email || window.activeUser?.email;
+
+  if (!email) {
+    console.warn("⛔ Email not found, cannot generate restoId");
+    return null;
+  }
+
+  const restoId = generateRestoIdFromEmail(email);
+
+  await MENUVA_DB.setSession({
+    ...session,
+    email,
+    restoId
+  });
+
+  console.log("✅ restoId ensured:", restoId);
+
+  return restoId;
+}
+
+// ========================================
 // 🔥 INIT BRAND & DEFAULT BRANCH
 // ========================================
 
-async function initBrandAndBranch(){
+async function initBrandAndBranch() {
 
   const session = await MENUVA_DB.getSession();
+  const restoId = await getRestoId();
 
-  let restoId = session?.restoId;
+  if (!restoId) {
+    throw new Error("❌ Failed init: restoId not available");
+  }
 
-  // 🚨 FIRST LOGIN
-  if(!restoId){
+  const branches = await MENUVA_DB.getBranches();
 
-    restoId = uid("resto");
+  // 🚨 FIRST INIT (NO BRANCH YET)
+  if (!branches || branches.length === 0) {
+
     const defaultBranchId = uid("branch");
-
-    // ✅ SAVE SESSION
-    MENUVA_DB.setSession({
-      ...session,
-      restoId,
-      branchId: defaultBranchId,
-      role: "super_admin"
-    });
 
     // ✅ CREATE MAIN BRANCH
     await MENUVA_DB.addBranch({
@@ -35,6 +60,14 @@ async function initBrandAndBranch(){
       name: "Main Branch",
       isMain: true,
       createdAt: Date.now()
+    });
+
+    // ✅ SAVE SESSION
+    await MENUVA_DB.setSession({
+      ...session,
+      restoId,
+      branchId: defaultBranchId,
+      role: session?.role || "super_admin"
     });
 
     console.log("🔥 Brand & Main Branch Created");
@@ -47,7 +80,7 @@ async function initBrandAndBranch(){
 // 📦 LOAD ACTIVE BRANCH
 // ========================================
 
-async function loadActiveBranch(){
+async function loadActiveBranch() {
 
   const session = await MENUVA_DB.getSession();
   const branches = await MENUVA_DB.getBranches();
@@ -57,7 +90,7 @@ async function loadActiveBranch(){
     localStorage.getItem("active_branch");
 
   // 🚨 FALLBACK SAFETY
-  if(!ACTIVE_BRANCH_ID && branches.length){
+  if (!ACTIVE_BRANCH_ID && branches.length) {
     ACTIVE_BRANCH_ID = branches[0].id;
   }
 
@@ -65,27 +98,32 @@ async function loadActiveBranch(){
 }
 
 // ========================================
-// 🎨 RENDER BRANCH LIST (CARD STYLE)
+// 🎨 RENDER BRANCH LIST
 // ========================================
 
-async function renderBranchList(){
+async function renderBranchList() {
 
+  const restoId = await getRestoId();
   const branches = await MENUVA_DB.getBranches();
+
+  // ✅ FILTER BY RESTO (VERY IMPORTANT)
+  const filtered = branches.filter(b => b.restoId === restoId);
+
   const container = document.getElementById("branchList");
 
-  if(!container){
+  if (!container) {
     console.warn("⚠️ branchList container not found");
     return;
   }
 
-  if(!branches.length){
+  if (!filtered.length) {
     container.innerHTML = `<div class="branch-empty">No Branch Found</div>`;
     return;
   }
 
-  container.innerHTML = branches.map(b => `
+  container.innerHTML = filtered.map(b => `
     <div class="branch-item ${b.id === ACTIVE_BRANCH_ID ? "active" : ""}"
-         onclick="setActiveBranch('${b.id}')">
+         onclick="BranchEngine.setActive('${b.id}')">
 
       <div class="branch-name">
         ${b.isMain ? "🏢 " : ""}${b.name}
@@ -103,9 +141,9 @@ async function renderBranchList(){
 // 🔄 SET ACTIVE BRANCH
 // ========================================
 
-async function setActiveBranch(branchId){
+async function setActiveBranch(branchId) {
 
-  if(!branchId) return;
+  if (!branchId) return;
 
   ACTIVE_BRANCH_ID = branchId;
 
@@ -123,7 +161,7 @@ async function setActiveBranch(branchId){
   await renderBranchList();
 
   // 🔥 GLOBAL REFRESH
-  if(typeof reloadAllData === "function"){
+  if (typeof reloadAllData === "function") {
     reloadAllData();
   }
 }
@@ -132,18 +170,19 @@ async function setActiveBranch(branchId){
 // ➕ CREATE NEW BRANCH
 // ========================================
 
-async function createBranch(name){
+async function createBranch(name) {
 
-  if(!name){
+  if (!name) {
     alert("Branch name required");
     return;
   }
 
   const session = await MENUVA_DB.getSession();
+  const restoId = await getRestoId();
 
   const newBranch = {
     id: uid("branch"),
-    restoId: session.restoId,
+    restoId,
     name,
     isMain: false,
     createdAt: Date.now()
@@ -160,32 +199,39 @@ async function createBranch(name){
 // ❌ DELETE BRANCH
 // ========================================
 
-async function deleteBranch(branchId){
+async function deleteBranch(branchId) {
 
+  const restoId = await getRestoId();
   const branches = await MENUVA_DB.getBranches();
 
-  const branch = branches.find(b => b.id === branchId);
+  const branch = branches.find(
+    b => b.id === branchId && b.restoId === restoId
+  );
 
-  if(!branch) return;
+  if (!branch) return;
 
-  // 🚨 PROTECT MAIN BRANCH
-  if(branch.isMain){
+  // 🚨 PROTECT MAIN
+  if (branch.isMain) {
     alert("Main branch cannot be deleted");
     return;
   }
 
-  if(!confirm("Delete this branch?")) return;
+  if (!confirm("Delete this branch?")) return;
 
   await MENUVA_DB.deleteBranch(branchId);
 
   console.log("🗑 Branch Deleted:", branchId);
 
-  // 🚨 IF ACTIVE DELETED → SWITCH
-  if(branchId === ACTIVE_BRANCH_ID){
-    const remaining = await MENUVA_DB.getBranches();
+  // 🚨 SWITCH IF ACTIVE DELETED
+  if (branchId === ACTIVE_BRANCH_ID) {
+    const remaining = (await MENUVA_DB.getBranches())
+      .filter(b => b.restoId === restoId);
+
     ACTIVE_BRANCH_ID = remaining[0]?.id;
 
-    await setActiveBranch(ACTIVE_BRANCH_ID);
+    if (ACTIVE_BRANCH_ID) {
+      await setActiveBranch(ACTIVE_BRANCH_ID);
+    }
   }
 
   await renderBranchList();
@@ -195,14 +241,18 @@ async function deleteBranch(branchId){
 // ✏️ UPDATE BRANCH NAME
 // ========================================
 
-async function updateBranch(branchId, newName){
+async function updateBranch(branchId, newName) {
 
-  if(!newName) return;
+  if (!newName) return;
 
+  const restoId = await getRestoId();
   const branches = await MENUVA_DB.getBranches();
-  const branch = branches.find(b => b.id === branchId);
 
-  if(!branch) return;
+  const branch = branches.find(
+    b => b.id === branchId && b.restoId === restoId
+  );
+
+  if (!branch) return;
 
   branch.name = newName;
 
@@ -214,12 +264,12 @@ async function updateBranch(branchId, newName){
 }
 
 // ========================================
-// 🧰 HELPER FILTER (WAJIB PAKAI DI ENGINE LAIN)
+// 🧰 HELPER FILTER (GLOBAL)
 // ========================================
 
-function withBranch(data){
+function withBranch(data) {
 
-  if(!ACTIVE_BRANCH_ID) return data;
+  if (!ACTIVE_BRANCH_ID) return data;
 
   return data.filter(d => d.branchId === ACTIVE_BRANCH_ID);
 }
@@ -228,7 +278,7 @@ function withBranch(data){
 // 🚀 INIT ENGINE
 // ========================================
 
-async function initBranchEngine(){
+async function initBranchEngine() {
 
   await initBrandAndBranch();
   await loadActiveBranch();
@@ -238,7 +288,7 @@ async function initBranchEngine(){
 }
 
 // ========================================
-// GLOBAL EXPORT (OPTIONAL)
+// 🌍 GLOBAL EXPORT
 // ========================================
 
 window.BranchEngine = {
@@ -248,5 +298,6 @@ window.BranchEngine = {
   update: updateBranch,
   setActive: setActiveBranch,
   getActive: () => ACTIVE_BRANCH_ID,
+  getRestoId,
   filter: withBranch
 };
