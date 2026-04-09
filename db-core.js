@@ -15,7 +15,7 @@
   const DEBUG_DB = false;
 
   const DB_NAME = "MenuvaDB";
-  const DB_VERSION = 23;
+  const DB_VERSION = 24;
 
   let dbOpeningPromise = null;
   let dbInstance = null;
@@ -79,6 +79,19 @@
 
 
         /* ======================================================
+           MULTI BRANCH
+        ====================================================== */
+
+         if (!db.objectStoreNames.contains("branches")) {
+
+         const b = db.createObjectStore("branches",{ keyPath:"id" });
+
+         b.createIndex("restoId","restoId",{unique:false});
+         b.createIndex("isMain","isMain",{unique:false});
+
+         }
+
+          /* ======================================================
            MENU SYSTEM
         ====================================================== */
 
@@ -436,6 +449,8 @@ if (!db.objectStoreNames.contains("reservationSettings")) {
   "restos",
   "admin_invites",
   "admins",
+
+  "branches",
 
   "void_logs",
 
