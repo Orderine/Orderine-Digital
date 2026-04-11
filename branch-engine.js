@@ -165,7 +165,10 @@ async function loadActiveBranch() {
   ACTIVE_BRANCH_ID = active;
 
   // 🔐 sync biar gak mismatch
- await MENUVA_DB.setSession({
+const session = await MENUVA_DB.getSession();
+
+await MENUVA_DB.setSession({
+  ...session,
   branchId: active
 });
 
@@ -253,9 +256,12 @@ try {
 
   ACTIVE_BRANCH_ID = branchId;
 
-  await MENUVA_DB.setSession({
-    branchId
-  });
+ const session = await MENUVA_DB.getSession();
+
+await MENUVA_DB.setSession({
+  ...session,
+  branchId
+});
 
   localStorage.setItem("active_branch", branchId);
 
@@ -327,7 +333,9 @@ async function deleteBranch(branchId) {
   const remaining = await getBranchesSafe(restoId);
    
  const session = await MENUVA_DB.getSession();
- await MENUVA_DB.setSession({
+
+await MENUVA_DB.setSession({
+  ...session,
   branchId: ACTIVE_BRANCH_ID
 });
 
