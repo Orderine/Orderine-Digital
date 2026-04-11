@@ -28,7 +28,6 @@ async function getBranchesSafe(restoId) {
 // ========================================
 // 🔐 GET / ENSURE RESTO + MAIN BRANCH (FINAL)
 // ========================================
-
 async function getRestoId() {
 
   if (CACHED_RESTO_ID) return CACHED_RESTO_ID;
@@ -92,22 +91,6 @@ async function getRestoId() {
   CACHED_RESTO_ID = restoId;
   return restoId;
 }
-
-  // ========================================
-  // 🔐 SYNC SESSION (PENTING BANGET)
-  // ========================================
-
-  await MENUVA_DB.setSession({
-    ...session,
-    email,
-    restoId,
-    branchId: mainBranch.id,
-    role: session?.role || "super_admin"
-  });
-
-  return restoId;
-}
-
 // ========================================
 // 📦 LOAD ACTIVE BRANCH
 // ========================================
