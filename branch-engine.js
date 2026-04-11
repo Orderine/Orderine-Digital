@@ -208,6 +208,25 @@ async function renderBranchList() {
 }
 
 // ========================================
+// 🏷️ SHOW ACTIVE BRANCH NAME
+// ========================================
+
+async function renderActiveBranchLabel() {
+  const restoId = await getRestoId();
+  const branches = await getBranchesSafe(restoId);
+
+  const active = branches.find(b => b.id === ACTIVE_BRANCH_ID);
+
+  const el = document.getElementById("activeBranchLabel");
+
+  if (!el) return;
+
+  el.innerText = active
+    ? `🏢 ${active.name}`
+    : "No Active Branch";
+}
+
+// ========================================
 // 🔄 SET ACTIVE
 // ========================================
 
@@ -235,6 +254,7 @@ async function setActiveBranch(branchId) {
   localStorage.setItem("active_branch", branchId);
 
   await renderBranchList();
+  await renderActiveBranchLabel();
 
   if (typeof reloadAllData === "function") {
     reloadAllData();
@@ -303,6 +323,7 @@ async function deleteBranch(branchId) {
   });
 
   await renderBranchList();
+  await renderActiveBranchLabel();
 }
 
 // ========================================
@@ -349,6 +370,7 @@ async function initBranchEngine() {
   await getRestoId();
   await loadActiveBranch();
   await renderBranchList();
+  await renderActiveBranchLabel();
   console.log("🚀 Branch Engine Ready");
 }
 
