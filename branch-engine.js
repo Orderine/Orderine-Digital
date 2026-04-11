@@ -91,6 +91,11 @@ async function getRestoId() {
   CACHED_RESTO_ID = restoId;
   return restoId;
 }
+
+function openAddBranch() {
+  document.getElementById("addBranchModal").style.display = "block";
+}
+
 // ========================================
 // 📦 LOAD ACTIVE BRANCH
 // ========================================
