@@ -10,25 +10,13 @@ let ACTIVE_BRANCH_ID = null;
 
 async function getBranchesSafe(restoId) {
   try {
-    let data = [];
-
-    if (MENUVA_DB.getByIndex) {
-      data = await MENUVA_DB.getByIndex("branchData", "restoId", restoId);
-    }
-
-    if (!data || data.length === 0) {
-      const all = await MENUVA_DB.getAll("branchData");
-      data = all.filter(b => b.restoId === restoId);
-    }
-
-    return data;
-
+    const all = await MENUVA_DB.getAll("branches");
+    return all.filter(b => b.restoId === restoId);
   } catch (err) {
     console.error("❌ getBranchesSafe error:", err);
     return [];
   }
 }
-
 // ========================================
 // 🔐 GET / ENSURE RESTO ID
 // ========================================
@@ -77,7 +65,7 @@ async function initBrandAndBranch() {
 
     const defaultBranchId = uid("branch");
 
-    await MENUVA_DB.addBranch({
+    await MENUVA_DB.add("branches", {
       id: defaultBranchId,
       restoId,
       name: "Main Branch",
@@ -190,7 +178,7 @@ async function createBranch(name) {
 
   const restoId = await getRestoId();
 
-  await MENUVA_DB.addBranch({
+  await MENUVA_DB.add("branches", {
     id: uid("branch"),
     restoId,
     name,
@@ -222,7 +210,7 @@ async function deleteBranch(branchId) {
 
   if (!confirm("Delete this branch?")) return;
 
-  await MENUVA_DB.deleteBranch(branchId);
+  await MENUVA_DB.delete("branches", branchId);
 
   if (branchId === ACTIVE_BRANCH_ID) {
     const remaining = await getBranchesSafe(restoId);
@@ -251,7 +239,7 @@ async function updateBranch(branchId, newName) {
 
   branch.name = newName;
 
-  await MENUVA_DB.updateBranch(branch);
+  await MENUVA_DB.update("branches", branch);
 
   await renderBranchList();
 }
