@@ -4,7 +4,7 @@
 
 let ACTIVE_BRANCH_ID = null;
 let CACHED_RESTO_ID = null;
-let SWITCHING_BRANCH = false;
+
 // ========================================
 // 🔐 SAFE GET BRANCHES
 // ========================================
@@ -187,33 +187,63 @@ async function renderBranchList() {
   const restoId = await getRestoId();
   const branches = await getBranchesSafe(restoId);
 
-  const filtered = branches;
-
   const container = document.getElementById("branchList");
-
   if (!container) return;
 
-  if (!filtered.length) {
-    container.innerHTML = `<div>No Branch Found</div>`;
+  container.innerHTML = "";
+
+  if (!branches.length) {
+    container.innerHTML = `<div class="empty-branch">No Branch Found</div>`;
     return;
   }
 
- container.innerHTML = filtered.map(b => `
-  <div class="branch-item ${b.id === ACTIVE_BRANCH_ID ? "active" : ""}">
+  branches.forEach(b => {
 
-    <div onclick="BranchEngine.setActive('${b.id}')">
-      ${b.isMain ? "🏢 " : ""}${b.name}
-    </div>
+    // 🔳 MAIN WRAPPER
+    const item = document.createElement("div");
+    item.className = `branch-item ${b.id === ACTIVE_BRANCH_ID ? "active" : ""}`;
 
-    <div>
-      ${b.id === ACTIVE_BRANCH_ID ? "ACTIVE" : "IDLE"}
-      ${!b.isMain ? `<button title="Delete Branch" onclick="BranchEngine.delete('${b.id}')">
-🗑
-</button>` : ""}
-    </div>
+    // 🧠 LEFT SIDE (NAME)
+    const left = document.createElement("div");
+    left.className = "branch-left";
+    left.innerHTML = `${b.isMain ? "🏢 " : ""}${b.name}`;
 
-  </div>
-`).join("");
+    // 🔥 CLICK SWITCH (NO INLINE)
+    left.onclick = (e) => {
+      e.stopPropagation();
+      BranchEngine.setActive(b.id);
+    };
+
+    // 📊 RIGHT SIDE (STATUS + ACTION)
+    const right = document.createElement("div");
+    right.className = "branch-right";
+
+    const status = document.createElement("span");
+    status.className = `branch-status ${b.id === ACTIVE_BRANCH_ID ? "active" : "idle"}`;
+    status.innerText = b.id === ACTIVE_BRANCH_ID ? "ACTIVE" : "IDLE";
+
+    right.appendChild(status);
+
+    // ❌ DELETE BUTTON
+    if (!b.isMain) {
+      const delBtn = document.createElement("button");
+      delBtn.className = "branch-delete";
+      delBtn.innerText = "🗑";
+
+      delBtn.onclick = (e) => {
+        e.stopPropagation(); // 🔥 penting banget
+        BranchEngine.delete(b.id);
+      };
+
+      right.appendChild(delBtn);
+    }
+
+    // 🔗 APPEND
+    item.appendChild(left);
+    item.appendChild(right);
+
+    container.appendChild(item);
+  });
 }
 
 // ========================================
@@ -243,18 +273,12 @@ async function setActiveBranch(branchId) {
 
   if (!branchId) return;
 
-  if (SWITCHING_BRANCH) {
-    console.warn("⏳ Masih switching...");
-    return;
-  }
-
-  SWITCHING_BRANCH = true;
+  console.log("🔥 SWITCH:", branchId);
 
   try {
 
     const restoId = await getRestoId();
 
-    // 🔥 RESET CACHE DI SINI (PINDAH KE ATAS)
     BRANCH_CACHE = null;
 
     const branches = await getBranchesSafe(restoId);
@@ -284,8 +308,6 @@ async function setActiveBranch(branchId) {
 
   } catch (err) {
     console.error("❌ switch error:", err);
-  } finally {
-    SWITCHING_BRANCH = false;
   }
 }
 
