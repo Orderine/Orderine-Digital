@@ -3338,42 +3338,6 @@ window.handleSubscriptionExpired = async function () {
 
 </script>
 <script>
-/* ================= RESTO ID CORE ================= */
-
-window.hashEmail = function (email) {
-  let hash = 0;
-  for (let i = 0; i < email.length; i++) {
-    hash = (hash << 5) - hash + email.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash);
-};
-
-window.generateRestoIdFromEmail = function (email) {
-  if (!email) throw new Error("Email owner wajib ada");
-  return "RESTO_" + hashEmail(email.toLowerCase());
-};
-
-window.ensureRestoId = async function () {
-  let restoId = await MENUVA_DB.get("appMeta", "restoId");
-  if (restoId) return restoId;
-
-  const email = window.activeUser?.email;
-  if (!email) {
-    console.warn("⛔ activeUser belum siap, restoId belum bisa dibuat");
-    return null;
-  }
-
-  restoId = generateRestoIdFromEmail(email);
-
-  await MENUVA_DB.set("appMeta", {
-    id: "restoId",
-    value: restoId
-  });
-
-  console.log("✅ restoId generated:", restoId);
-  return restoId;
-};
 
   /* ================= RENDER SUBSCRIPTION PANEL ================= */
 
