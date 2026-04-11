@@ -5459,7 +5459,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         let timeout = 0;
 
         const check = () => {
-          if (window.activeUser?.email && window.activeUser?.restoID) {
+          if (
+          window.activeUser?.email &&
+          (window.activeUser?.restoId || window.activeUser?.restoID)
+           ) {
             return resolve(window.activeUser);
           }
 
