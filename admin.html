@@ -2638,6 +2638,76 @@ background:rgba(0,0,0,0.45);
 .branch-item.active .branch-status{
   color: #38bdf8;
 }
+
+  .branch-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  background: #0d0d0d;
+  border: 1px solid #222;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.branch-item:hover {
+  background: #161616;
+  border-color: #333;
+}
+
+.branch-item.active {
+  background: #111;
+  border-color: #00ff9c;
+  box-shadow: 0 0 6px rgba(0,255,156,0.3);
+}
+
+.branch-left {
+  font-weight: 500;
+  color: #eaeaea;
+}
+
+.branch-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.branch-status {
+  font-size: 11px;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.branch-status.active {
+  background: #00ff9c;
+  color: #000;
+}
+
+.branch-status.idle {
+  background: #333;
+  color: #aaa;
+}
+
+.branch-delete {
+  background: transparent;
+  border: none;
+  color: #ff4d4d;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.branch-delete:hover {
+  color: #ff0000;
+}
+
+.empty-branch {
+  color: #666;
+  text-align: center;
+  padding: 10px;
+}
 </style>
 </head>
 <body>
