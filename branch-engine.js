@@ -199,7 +199,7 @@ async function renderBranchList() {
  container.innerHTML = filtered.map(b => `
   <div class="branch-item ${b.id === ACTIVE_BRANCH_ID ? "active" : ""}">
 
-    <div onclick="console.log('klik', '${b.id}'); BranchEngine.setActive('${b.id}')">
+    <div onclick="BranchEngine.setActive('${b.id}')">
       ${b.isMain ? "🏢 " : ""}${b.name}
     </div>
 
@@ -246,43 +246,45 @@ async function setActiveBranch(branchId) {
     return;
   }
 
- SWITCHING_BRANCH = true;
+  SWITCHING_BRANCH = true;
 
-try {
+  try {
 
-  const restoId = await getRestoId();
-  const branches = await getBranchesSafe(restoId);
+    const restoId = await getRestoId();
 
-  if (!branches.find(b => b.id === branchId)) {
-    console.warn("❌ Invalid branchId");
-    return;
+    // 🔥 RESET CACHE DI SINI (PINDAH KE ATAS)
+    BRANCH_CACHE = null;
+
+    const branches = await getBranchesSafe(restoId);
+
+    if (!branches.find(b => b.id === branchId)) {
+      console.warn("❌ Invalid branchId");
+      return;
+    }
+
+    ACTIVE_BRANCH_ID = branchId;
+
+    const session = await MENUVA_DB.getSession();
+
+    await MENUVA_DB.setSession({
+      ...session,
+      branchId
+    });
+
+    localStorage.setItem("active_branch", branchId);
+
+    await renderBranchList();
+    await renderActiveBranchLabel();
+
+    if (typeof reloadAllData === "function") {
+      await reloadAllData();
+    }
+
+  } catch (err) {
+    console.error("❌ switch error:", err);
+  } finally {
+    SWITCHING_BRANCH = false;
   }
-
-  ACTIVE_BRANCH_ID = branchId;
-
- const session = await MENUVA_DB.getSession();
-
-await MENUVA_DB.setSession({
-  ...session,
-  branchId
-});
-
-  localStorage.setItem("active_branch", branchId);
-
-  BRANCH_CACHE = null;
-
-  await renderBranchList();
-  await renderActiveBranchLabel();
-
-  if (typeof reloadAllData === "function") {
-    await reloadAllData();
-  }
-
-} catch (err) {
-  console.error("❌ switch error:", err);
-} finally {
-  SWITCHING_BRANCH = false; // 🔥 DIJAMIN KE-RESET
-}
 }
 
 // ========================================
