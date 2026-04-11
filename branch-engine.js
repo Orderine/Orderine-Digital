@@ -13,17 +13,9 @@ let BRANCH_CACHE = null;
 
 async function getBranchesSafe(restoId) {
   try {
-
-    if (BRANCH_CACHE && BRANCH_CACHE.length) {
-  console.log("⚡ pakai cache branch");
-  return BRANCH_CACHE;
-}
-
     const all = await MENUVA_DB.getAll("branches");
     BRANCH_CACHE = all.filter(b => b.restoId === restoId);
-
     return BRANCH_CACHE;
-
   } catch (err) {
     console.error("❌ getBranchesSafe error:", err);
     return [];
@@ -186,6 +178,11 @@ async function renderBranchList() {
 
   const restoId = await getRestoId();
   const branches = await getBranchesSafe(restoId);
+
+  console.log("📦 BRANCH DB:", branches.map(b => b.id));
+  console.log("👉 SWITCH KE:", branchId);
+
+  branchId = String(branchId).trim();
 
   const container = document.getElementById("branchList");
   if (!container) return;
