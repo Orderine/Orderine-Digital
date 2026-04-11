@@ -13,7 +13,7 @@ let BRANCH_CACHE = null;
 async function getBranchesSafe(restoId) {
   try {
 
-    if (BRANCH_CACHE) return BRANCH_CACHE;
+    if (BRANCH_CACHE && BRANCH_CACHE.length) return BRANCH_CACHE;
 
     const all = await MENUVA_DB.getAll("branches");
     BRANCH_CACHE = all.filter(b => b.restoId === restoId);
@@ -194,7 +194,7 @@ async function renderBranchList() {
  container.innerHTML = filtered.map(b => `
   <div class="branch-item ${b.id === ACTIVE_BRANCH_ID ? "active" : ""}">
 
-    <div onclick="BranchEngine.setActive('${b.id}')">
+    <div onclick="console.log('klik', '${b.id}'); BranchEngine.setActive('${b.id}')">
       ${b.isMain ? "🏢 " : ""}${b.name}
     </div>
 
@@ -252,6 +252,8 @@ async function setActiveBranch(branchId) {
   });
 
   localStorage.setItem("active_branch", branchId);
+
+  BRANCH_CACHE = null; // 🔥 INI KUNCI NYA
 
   await renderBranchList();
   await renderActiveBranchLabel();
