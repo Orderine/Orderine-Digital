@@ -14,7 +14,10 @@ let BRANCH_CACHE = null;
 async function getBranchesSafe(restoId) {
   try {
 
-    if (BRANCH_CACHE && BRANCH_CACHE.length) return BRANCH_CACHE;
+    if (BRANCH_CACHE && BRANCH_CACHE.length) {
+  console.log("⚡ pakai cache branch");
+  return BRANCH_CACHE;
+}
 
     const all = await MENUVA_DB.getAll("branches");
     BRANCH_CACHE = all.filter(b => b.restoId === restoId);
@@ -165,15 +168,14 @@ async function loadActiveBranch() {
   ACTIVE_BRANCH_ID = active;
 
   // 🔐 sync biar gak mismatch
-const session = await MENUVA_DB.getSession();
-
-await MENUVA_DB.setSession({
-  ...session,
-  branchId: active
-});
+  await MENUVA_DB.setSession({
+    ...session,
+    branchId: active
+  });
 
   return ACTIVE_BRANCH_ID;
 }
+
 // ========================================
 // 🎨 RENDER BRANCH LIST
 // ========================================
@@ -203,7 +205,9 @@ async function renderBranchList() {
 
     <div>
       ${b.id === ACTIVE_BRANCH_ID ? "ACTIVE" : "IDLE"}
-      ${!b.isMain ? `<button onclick="BranchEngine.delete('${b.id}')">❌</button>` : ""}
+      ${!b.isMain ? `<button title="Delete Branch" onclick="BranchEngine.delete('${b.id}')">
+🗑
+</button>` : ""}
     </div>
 
   </div>
@@ -324,15 +328,26 @@ async function deleteBranch(branchId) {
     return alert("Main branch cannot be deleted");
   }
 
-  if (!confirm("Delete this branch?")) return;
+  console.log("🗑️ Delete request:", branch.name, branchId);
+
+if (!confirm(`Delete branch "${branch.name}" ?`)) {
+  console.log("❌ Delete cancelled");
+  return;
+}
+
+ console.log("✅ Delete confirmed");
 
   await MENUVA_DB.delete("branches", branchId);
 
   // 🔥 RESET CACHE
-  BRANCH_CACHE = null;
-  const remaining = await getBranchesSafe(restoId);
-   
- const session = await MENUVA_DB.getSession();
+ BRANCH_CACHE = null;
+const remaining = await getBranchesSafe(restoId);
+
+if (branchId === ACTIVE_BRANCH_ID) {
+  ACTIVE_BRANCH_ID = remaining[0]?.id || null;
+}
+
+const session = await MENUVA_DB.getSession();
 
 await MENUVA_DB.setSession({
   ...session,
