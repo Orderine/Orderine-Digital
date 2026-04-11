@@ -286,6 +286,7 @@ async function setActiveBranch(branchId) {
 
     await MENUVA_DB.setSession({
       ...session,
+      restoId: session.restoId,
       branchId
     });
 
