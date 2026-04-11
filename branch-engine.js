@@ -92,20 +92,50 @@ async function getRestoId() {
   return restoId;
 }
 
+// ========================================
+// 🧩 UI HANDLER (PRO CLEAN)
+// ========================================
+
 function openAddBranch() {
   const modal = document.getElementById("addBranchModal");
 
   if (!modal) {
-    console.warn("⚠️ Modal not found, fallback to prompt");
-
     const name = prompt("Enter branch name:");
     if (!name) return;
-
     BranchEngine.create(name);
     return;
   }
 
   modal.style.display = "block";
+
+  // auto focus
+  const input = document.getElementById("branchNameInput");
+  if (input) input.focus();
+}
+
+function closeAddBranch() {
+  const modal = document.getElementById("addBranchModal");
+  if (modal) modal.style.display = "none";
+
+  const input = document.getElementById("branchNameInput");
+  if (input) input.value = "";
+}
+
+async function submitAddBranch() {
+  const input = document.getElementById("branchNameInput");
+
+  if (!input) return;
+
+  const name = input.value.trim();
+
+  if (!name) {
+    alert("Branch name required");
+    return;
+  }
+
+  await BranchEngine.create(name);
+
+  closeAddBranch();
 }
 
 // ========================================
@@ -161,15 +191,20 @@ async function renderBranchList() {
     return;
   }
 
-  container.innerHTML = filtered.map(b => `
-    <div class="branch-item ${b.id === ACTIVE_BRANCH_ID ? "active" : ""}"
-         onclick="BranchEngine.setActive('${b.id}')">
+ container.innerHTML = filtered.map(b => `
+  <div class="branch-item ${b.id === ACTIVE_BRANCH_ID ? "active" : ""}">
 
-      <div>${b.isMain ? "🏢 " : ""}${b.name}</div>
-      <div>${b.id === ACTIVE_BRANCH_ID ? "ACTIVE" : "IDLE"}</div>
-
+    <div onclick="BranchEngine.setActive('${b.id}')">
+      ${b.isMain ? "🏢 " : ""}${b.name}
     </div>
-  `).join("");
+
+    <div>
+      ${b.id === ACTIVE_BRANCH_ID ? "ACTIVE" : "IDLE"}
+      ${!b.isMain ? `<button onclick="BranchEngine.delete('${b.id}')">❌</button>` : ""}
+    </div>
+
+  </div>
+`).join("");
 }
 
 // ========================================
@@ -224,6 +259,9 @@ async function createBranch(name) {
     createdAt: Date.now()
   });
 
+  // 🔥 RESET CACHE
+  BRANCH_CACHE = null;
+
   await renderBranchList();
 }
 
@@ -250,13 +288,14 @@ async function deleteBranch(branchId) {
 
   await MENUVA_DB.delete("branches", branchId);
 
-  // 🔥 FIX UTAMA
+  // 🔥 RESET CACHE
+  BRANCH_CACHE = null;
+
   if (branchId === ACTIVE_BRANCH_ID) {
     const remaining = await getBranchesSafe(restoId);
     ACTIVE_BRANCH_ID = remaining[0]?.id || null;
   }
 
-  // 🔐 sync session
   const session = await MENUVA_DB.getSession();
   await MENUVA_DB.setSession({
     ...session,
@@ -265,6 +304,7 @@ async function deleteBranch(branchId) {
 
   await renderBranchList();
 }
+
 // ========================================
 // ✏️ UPDATE
 // ========================================
@@ -285,6 +325,9 @@ async function updateBranch(branchId, newName) {
   branch.name = newName;
 
   await MENUVA_DB.update("branches", branch);
+
+  // 🔥 RESET CACHE
+  BRANCH_CACHE = null;
 
   await renderBranchList();
 }
@@ -323,3 +366,7 @@ window.BranchEngine = {
   getRestoId,
   filter: withBranch
 };
+
+window.openAddBranch = openAddBranch;
+window.closeAddBranch = closeAddBranch;
+window.submitAddBranch = submitAddBranch;
