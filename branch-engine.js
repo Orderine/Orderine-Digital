@@ -93,7 +93,19 @@ async function getRestoId() {
 }
 
 function openAddBranch() {
-  document.getElementById("addBranchModal").style.display = "block";
+  const modal = document.getElementById("addBranchModal");
+
+  if (!modal) {
+    console.warn("⚠️ Modal not found, fallback to prompt");
+
+    const name = prompt("Enter branch name:");
+    if (!name) return;
+
+    BranchEngine.create(name);
+    return;
+  }
+
+  modal.style.display = "block";
 }
 
 // ========================================
