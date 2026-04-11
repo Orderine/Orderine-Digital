@@ -179,11 +179,6 @@ async function renderBranchList() {
   const restoId = await getRestoId();
   const branches = await getBranchesSafe(restoId);
 
-  console.log("📦 BRANCH DB:", branches.map(b => b.id));
-  console.log("👉 SWITCH KE:", branchId);
-
-  branchId = String(branchId).trim();
-
   const container = document.getElementById("branchList");
   if (!container) return;
 
