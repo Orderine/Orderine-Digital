@@ -84,6 +84,7 @@ async function getRestoId() {
     await MENUVA_DB.add("branches", mainBranch);
   }
 
+if (!session?.branchId) {
   await MENUVA_DB.setSession({
     ...session,
     email,
@@ -91,6 +92,7 @@ async function getRestoId() {
     branchId: mainBranch.id,
     role: session?.role || "super_admin"
   });
+}
 
   CACHED_RESTO_ID = restoId;
   return restoId;
