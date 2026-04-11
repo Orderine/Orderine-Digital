@@ -8,6 +8,27 @@ let ACTIVE_BRANCH_ID = null;
 // 🔐 GET / ENSURE RESTO ID (SINGLE SOURCE)
 // ========================================
 
+async function getBranchesSafe(restoId) {
+  try {
+    let data = [];
+
+    if (MENUVA_DB.getByIndex) {
+      data = await MENUVA_DB.getByIndex("branchData", "restoId", restoId);
+    }
+
+    if (!data || data.length === 0) {
+      const all = await MENUVA_DB.getAll("branchData");
+      data = all.filter(b => b.restoId === restoId);
+    }
+
+    return data;
+
+  } catch (err) {
+    console.error("❌ getBranchesSafe error:", err);
+    return [];
+  }
+}
+
 async function getRestoId() {
   const session = await MENUVA_DB.getSession();
 
@@ -46,10 +67,13 @@ async function initBrandAndBranch() {
     throw new Error("❌ Failed init: restoId not available");
   }
 
-  const branches = await MENUVA_DB.getBranches();
+  const restoId = await getRestoId();
+  const branches = await getBranchesSafe(restoId);
 
   // 🚨 FIRST INIT (NO BRANCH YET)
-  if (!branches || branches.length === 0) {
+  const branches = await getBranchesSafe(restoId);
+
+   if (branches.length === 0) {
 
     const defaultBranchId = uid("branch");
 
@@ -83,18 +107,20 @@ async function initBrandAndBranch() {
 async function loadActiveBranch() {
 
   const session = await MENUVA_DB.getSession();
-  const branches = await MENUVA_DB.getBranches();
+  const restoId = await getRestoId();
+  const branches = await getBranchesSafe(restoId);
 
-  ACTIVE_BRANCH_ID =
-    session?.branchId ||
-    localStorage.getItem("active_branch");
+const branches = await getBranchesSafe(session?.restoId);
 
-  // 🚨 FALLBACK SAFETY
-  if (!ACTIVE_BRANCH_ID && branches.length) {
-    ACTIVE_BRANCH_ID = branches[0].id;
-  }
+let active =
+  session?.branchId ||
+  localStorage.getItem("active_branch");
 
-  return ACTIVE_BRANCH_ID;
+if (!branches.find(b => b.id === active)) {
+  active = branches[0]?.id;
+}
+
+ACTIVE_BRANCH_ID = active;
 }
 
 // ========================================
@@ -104,10 +130,11 @@ async function loadActiveBranch() {
 async function renderBranchList() {
 
   const restoId = await getRestoId();
-  const branches = await MENUVA_DB.getBranches();
+  const restoId = await getRestoId();
+  const branches = await getBranchesSafe(restoId);
 
   // ✅ FILTER BY RESTO (VERY IMPORTANT)
-  const filtered = branches.filter(b => b.restoId === restoId);
+  const filtered = (branches || []).filter(b => b.restoId === restoId);
 
   const container = document.getElementById("branchList");
 
@@ -202,7 +229,8 @@ async function createBranch(name) {
 async function deleteBranch(branchId) {
 
   const restoId = await getRestoId();
-  const branches = await MENUVA_DB.getBranches();
+  const restoId = await getRestoId();
+  const branches = await getBranchesSafe(restoId);
 
   const branch = branches.find(
     b => b.id === branchId && b.restoId === restoId
@@ -224,7 +252,7 @@ async function deleteBranch(branchId) {
 
   // 🚨 SWITCH IF ACTIVE DELETED
   if (branchId === ACTIVE_BRANCH_ID) {
-    const remaining = (await MENUVA_DB.getBranches())
+    const remaining = await getBranchesSafe(restoId);
       .filter(b => b.restoId === restoId);
 
     ACTIVE_BRANCH_ID = remaining[0]?.id;
@@ -246,7 +274,8 @@ async function updateBranch(branchId, newName) {
   if (!newName) return;
 
   const restoId = await getRestoId();
-  const branches = await MENUVA_DB.getBranches();
+  const restoId = await getRestoId();
+  const branches = await getBranchesSafe(restoId);
 
   const branch = branches.find(
     b => b.id === branchId && b.restoId === restoId
