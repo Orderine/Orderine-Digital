@@ -4,6 +4,7 @@
 
 let ACTIVE_BRANCH_ID = null;
 let CACHED_RESTO_ID = null;
+let SWITCHING_BRANCH = false;
 // ========================================
 // 🔐 SAFE GET BRANCHES
 // ========================================
@@ -164,10 +165,9 @@ async function loadActiveBranch() {
   ACTIVE_BRANCH_ID = active;
 
   // 🔐 sync biar gak mismatch
-  await MENUVA_DB.setSession({
-    ...session,
-    branchId: active
-  });
+ await MENUVA_DB.setSession({
+  branchId: active
+});
 
   return ACTIVE_BRANCH_ID;
 }
@@ -234,6 +234,15 @@ async function setActiveBranch(branchId) {
 
   if (!branchId) return;
 
+  if (SWITCHING_BRANCH) {
+    console.warn("⏳ Masih switching...");
+    return;
+  }
+
+ SWITCHING_BRANCH = true;
+
+try {
+
   const restoId = await getRestoId();
   const branches = await getBranchesSafe(restoId);
 
@@ -244,23 +253,25 @@ async function setActiveBranch(branchId) {
 
   ACTIVE_BRANCH_ID = branchId;
 
-  const session = await MENUVA_DB.getSession();
-
   await MENUVA_DB.setSession({
-    ...session,
     branchId
   });
 
   localStorage.setItem("active_branch", branchId);
 
-  BRANCH_CACHE = null; // 🔥 INI KUNCI NYA
+  BRANCH_CACHE = null;
 
   await renderBranchList();
   await renderActiveBranchLabel();
 
   if (typeof reloadAllData === "function") {
-    reloadAllData();
+    await reloadAllData();
   }
+
+} catch (err) {
+  console.error("❌ switch error:", err);
+} finally {
+  SWITCHING_BRANCH = false; // 🔥 DIJAMIN KE-RESET
 }
 
 // ========================================
@@ -312,17 +323,12 @@ async function deleteBranch(branchId) {
 
   // 🔥 RESET CACHE
   BRANCH_CACHE = null;
-
-  if (branchId === ACTIVE_BRANCH_ID) {
-    const remaining = await getBranchesSafe(restoId);
-    ACTIVE_BRANCH_ID = remaining[0]?.id || null;
-  }
-
-  const session = await MENUVA_DB.getSession();
-  await MENUVA_DB.setSession({
-    ...session,
-    branchId: ACTIVE_BRANCH_ID
-  });
+  const remaining = await getBranchesSafe(restoId);
+   
+ const session = await MENUVA_DB.getSession();
+ await MENUVA_DB.setSession({
+  branchId: ACTIVE_BRANCH_ID
+});
 
   await renderBranchList();
   await renderActiveBranchLabel();
