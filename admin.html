@@ -634,21 +634,16 @@ button {
 
 /* ===== TERMINAL CARD ===== */
 .terminal-card {
-  background: #0f1720;
-  border: 1px solid #00ffcc33;
+  background: #020617; /* deep dark */
+  border: 1px solid #00ff9c;
   border-radius: 6px;
-  padding: 18px;
-  width: 280px;
-  cursor: pointer;
-  transition: none !important;
-  position: relative;
-  overflow: hidden;
-}
+  padding: 16px;
 
-  .terminal-card {
-  border-radius: 8px;
+  /* HAPUS INI SEMUA */
+  box-shadow: none;
+  backdrop-filter: none;
+  transition: none;
 }
-
 
 /* Header ala terminal */
 .terminal-card-header {
@@ -2388,6 +2383,56 @@ input, textarea {
 
 body {
   transform: translateZ(0);
+}
+ .section,
+.setting-card,
+.section-box,
+.terminal-room,
+.terminal-panel {
+  background: #020617;
+  border: 1px solid #1f2937; /* subtle border */
+  border-radius: 6px;
+
+  box-shadow: none;
+}
+.branch-item {
+  background: #020617;
+  border: 1px solid #1f2937;
+  border-radius: 4px;
+
+  transition: none;
+}
+
+.branch-item.active {
+  border-color: #00ff9c;
+  background: #001a12;
+}
+ button {
+  background: #020617;
+  border: 1px solid #1f2937;
+  color: #00ff9c;
+
+  border-radius: 4px;
+}
+
+/* ACTIVE aja, bukan hover */
+button:active {
+  background: #00ff9c;
+  color: #000;
+}
+.nav-item .icon,
+.nav-item .label {
+  color: #6b7280;
+}
+
+.nav-item.active .icon,
+.nav-item.active .label {
+  color: #00ff9c;
+}
+input, textarea {
+  background: #010409;
+  border: 1px solid #1f2937;
+  color: #00ff9c;
 }
 </style>
 </head>
