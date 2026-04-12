@@ -2570,6 +2570,57 @@ background:rgba(0,0,0,0.45);
 .nav-item.active .icon{
   fill:#4ade80; /* neon green ala terminal */
 }
+ /* WRAPPER */
+.branch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+/* CARD */
+.branch-card {
+  background: #0a0a0a;
+  border: 1px solid #333;
+  padding: 12px;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+/* HOVER */
+.branch-card:hover {
+  border-color: #f5c542;
+}
+
+/* ACTIVE */
+.branch-card.active {
+  border: 1px solid #f5c542;
+  background: #111;
+}
+
+/* TITLE */
+.branch-name {
+  font-size: 14px;
+  font-weight: bold;
+  color: #f5c542;
+}
+
+/* ID / INFO */
+.branch-info {
+  font-size: 11px;
+  color: #888;
+  margin-top: 5px;
+}
+
+/* ACTIVE LABEL */
+.active-branch-label {
+  font-size: 13px;
+  font-weight: bold;
+  padding: 10px;
+  border: 1px solid #333;
+  background: #0a0a0a;
+  color: #f5c542;
+  margin-bottom: 10px;
+}
 </style>
 </head>
 <body>
@@ -2587,7 +2638,11 @@ background:rgba(0,0,0,0.45);
 
   <div class="card-body">
 
-    <div id="branchList" class="branch-list"></div>
+    <div id="activeBranchLabel" class="active-branch-label">
+      Loading branch...
+    </div>
+
+    <div id="branchList" class="branch-grid"></div>
 
     <button class="terminal-btn add-branch-btn" onclick="openAddBranch()">
       + ADD BRANCH
@@ -2596,25 +2651,7 @@ background:rgba(0,0,0,0.45);
   </div>
 
 </div>
- <div id="addBranchModal" style="display:none;">
-  <div class="modal-content">
-    <input id="branchNameInput" placeholder="Branch name" />
-    <button onclick="submitAddBranch()">Create</button>
-    <button onclick="closeAddBranch()">Cancel</button>
-  </div>
-</div>
 
- <div id="activeBranchLabel" style="
-  font-weight: bold;
-  padding: 10px;
-  background: #111;
-  color: #0f0;
-  border-radius: 6px;
-  margin-bottom: 10px;
-">
-  Loading branch...
-</div>
-  
 <div class="terminal-panel business-wrapper">
 
   <h2 class="terminal-title">BUSINESS & SUBSCRIPTION</h2>
