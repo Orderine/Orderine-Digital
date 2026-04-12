@@ -2635,36 +2635,20 @@ background:rgba(0,0,0,0.45);
   color: #ff4d4d;
   border-color: #ff4d4d;
 }
- /* MASTER WRAPPER */
 .app-container {
-  width: 95%;
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 16px;
-}
-
-/* Laptop besar / monitor */
-@media (min-width: 1400px) {
-  .app-container {
-    max-width: 1800px;
-  }
-}
-
-/* Ultra wide */
-@media (min-width: 1800px) {
-  .app-container {
-    max-width: 95%;
-  }
-}
-  /* SEMUA PANEL / ROOM FULL WIDTH */
-.terminal-panel,
-.terminal-room,
-.terminal-card {
   width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 12px 20px; /* kasih napas dikit aja */
   box-sizing: border-box;
 }
- .app-container {
-  max-width: 1200px; /* lebih compact & premium */
+ .terminal-panel,
+.terminal-room,
+.terminal-card,
+.business-wrapper {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 </style>
 </head>
