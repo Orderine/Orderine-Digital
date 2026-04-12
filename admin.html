@@ -23,180 +23,199 @@
 <audio id="notifAudio" src="./beep.mp3" preload="auto"></audio>
 <audio id="clickAudio" src="./click.mp3" preload="auto"></audio>
   <title>Admin Orderine</title>
-  <style>
-   /* ================= GLOBAL ================= */
-body {
-  background: #000;
-  color: #0f0;
-  font-family: monospace;
-  margin: 0;
-  padding: 20px;
+ 
+  padding:12px;
+  border:1px solid #ddd;
+  margin-bottom:10px;
+  cursor:pointer;
+  background:#fff;
+}
+.room-thumb{
+  width:80px;
+  height:80px;
+  object-fit:cover;
+  border-radius:8px;
+  background:#eee;
+}
+.flip-card img{
+  width:100%;
+  height:auto;
+  display:block;
+  object-fit:cover;
 }
 
-/* ================= LOGO ================= */
-.menuva-logo {
-  text-align: center;
-  margin-bottom: 20px;
+#roomHotelContainer img,
+#meetingRoomContainer img,
+#packageContainer img{
+  width:100%;
+  height:140px;
+  object-fit:cover;
+  border-radius:6px;
 }
 
-/* ================= CARD SYSTEM ================= */
-.terminal-card,
-.section-box,
-.section,
-.setting-card {
-  border: 1px solid #0f0;
-  padding: 15px;
-  margin-bottom: 15px;
-  background: #000;
+.room-amenities{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:10px 14px;
+  margin-top:10px;
 }
 
-/* HEADER */
-.card-header,
-.terminal-card-header {
-  border-bottom: 1px solid #0f0;
-  padding-bottom: 8px;
-  margin-bottom: 10px;
-  font-weight: bold;
-  color: #0f0;
+.room-amenities label{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+  line-height:1.4;
+  cursor:pointer;
+
+  padding:6px 8px;
+  border-radius:8px;
+
+  transition:all .15s ease;
 }
 
-/* BODY */
-.card-body,
-.terminal-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* Hover effect biar hidup */
+.room-amenities label:hover{
+  background:rgba(255,255,255,0.05);
 }
 
-/* ================= GRID ================= */
-.business-grid,
-.terminal-body {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+/* Checkbox biar lebih konsisten */
+.room-amenities input[type="checkbox"]{
+  width:14px;
+  height:14px;
+  accent-color:#4ade80; /* bisa lo ganti sesuai theme */
+  cursor:pointer;
+  flex-shrink:0;
 }
 
-/* LEFT RIGHT PANEL */
-.terminal-left,
-.terminal-right {
-  border: 1px solid #0f0;
-  padding: 10px;
-}
-
-/* ================= INPUT ================= */
-input,
-textarea,
-select {
-  background: #000;
-  border: 1px solid #0f0;
-  color: #0f0;
-  padding: 6px;
-  font-family: monospace;
-}
-
-/* ================= BUTTON ================= */
-button {
-  background: #000;
-  border: 1px solid #0f0;
-  color: #0f0;
-  padding: 6px;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #0f0;
-  color: #000;
-}
-
-/* ================= TITLE ================= */
-.terminal-title {
-  color: #0f0;
-  font-weight: bold;
-}
-
-/* ================= LABEL ================= */
-label {
-  font-size: 12px;
-  color: #0f0;
-}
-
-/* ================= GRID PREVIEW ================= */
-.terminal-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
-}
-
-/* ================= FILTER ================= */
-.terminal-filter-bar {
-  border: 1px solid #0f0;
-  padding: 5px;
-  margin-bottom: 10px;
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-}
-
-/* ================= MODAL ================= */
-.terminal-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: #000000cc;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.terminal-modal-content {
-  border: 1px solid #0f0;
-  padding: 20px;
-  background: #000;
-}
-
-/* ================= TOGGLE ================= */
-.switch {
-  display: inline-block;
-}
-
-.slider {
-  border: 1px solid #0f0;
-}
-
-/* ================= TABLE STATS ================= */
-.table-stats {
-  border: 1px solid #0f0;
-  padding: 10px;
-  margin-bottom: 10px;
-}
-
-/* ================= FIXED BAR ================= */
-.fixed-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #000;
-  border-top: 1px solid #0f0;
-  display: flex;
-  justify-content: space-around;
-  padding: 5px 0;
-}
-
-.nav-item {
-  text-align: center;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-/* ================= RESPONSIVE ================= */
-@media (max-width: 768px) {
-  .business-grid,
-  .terminal-body {
-    grid-template-columns: 1fr;
+@media (max-width: 500px){
+  .room-amenities{
+    grid-template-columns:1fr;
   }
+}
+
+.room-gallery{
+position:relative;
+width:100%;
+height:180px;
+overflow:hidden;
+border-radius:12px;
+}
+
+.room-img{
+width:100%;
+height:100%;
+object-fit:cover;
+display:block;
+}
+
+/* BUTTON */
+.gallery-prev,
+.gallery-next{
+
+position:absolute;
+top:50%;
+transform:translateY(-50%);
+
+background:rgba(0,0,0,0.25);
+color:white;
+
+border:none;
+
+width:28px;
+height:28px;
+
+border-radius:50%;
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+font-size:18px;
+cursor:pointer;
+
+backdrop-filter:blur(4px);
+
+}
+
+/* posisi */
+
+.gallery-prev{
+left:8px;
+}
+
+.gallery-next{
+right:8px;
+}
+
+/* hover */
+
+.gallery-prev:hover,
+.gallery-next:hover{
+background:rgba(0,0,0,0.45);
+}
+
+/* ROOM NUMBER TAGS — Bloomberg vibes */
+
+.room-number-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:6px;
+}
+
+.room-number-tag{
+  background:#0f1115;
+  border:1px solid #1f2430;
+  border-radius:4px;
+  padding:3px 6px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  color:#00aaff; /* neon blue text */
+  font-family:monospace;
+}
+
+/* EDIT BUTTON */
+
+.room-edit-btn{
+  border:none;
+  background:#151922;
+  color:#00aaff;
+  cursor:pointer;
+  font-size:11px;
+  padding:1px 5px;
+  border-radius:3px;
+  transition:all .15s ease;
+}
+
+.room-edit-btn:hover{
+  background:#00aaff;
+  color:#000;
+}
+
+ .icon{
+  width:18px;
+  height:18px;
+  fill:#9ca3af; /* abu-abu dingin */
+  transition:all .15s ease;
+}
+
+.nav-item:hover .icon{
+  fill:#ffffff;
+  transform:scale(1.1);
+}
+
+.nav-item{
+  color:#9ca3af;
+}
+
+.nav-item:hover{
+  color:#ffffff;
+}
+.nav-item.active .icon{
+  fill:#4ade80; /* neon green ala terminal */
 }
 </style>
 </head>
