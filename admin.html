@@ -2635,6 +2635,24 @@ background:rgba(0,0,0,0.45);
   color: #ff4d4d;
   border-color: #ff4d4d;
 }
+ /* MASTER WRAPPER */
+.app-container {
+  width: 100%;
+  max-width: 1400px; /* 🔥 ini bikin semua rata */
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+  /* SEMUA PANEL / ROOM FULL WIDTH */
+.terminal-panel,
+.terminal-room,
+.terminal-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+ .app-container {
+  max-width: 1200px; /* lebih compact & premium */
+}
 </style>
 </head>
 <body>
@@ -2643,6 +2661,8 @@ background:rgba(0,0,0,0.45);
   <br>
   <p style="color: white;">Digital Solution For Restaurant, Hotel, & Cafe's</p>
 </div>
+
+ <div class="app-container">
   
 <div class="terminal-panel business-wrapper">
 
@@ -3249,6 +3269,8 @@ placeholder="Table Notes"></textarea>
   
 <div class="heavy-section" id="roomSection">...</div>
 <div class="heavy-section" id="packageSection">...</div>
+
+ </div>
 
 <script>
 /* ================= SUBSCRIPTION COUNTDOWN ================= */
