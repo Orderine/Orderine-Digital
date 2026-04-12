@@ -92,7 +92,7 @@
       padding: 20px;
       margin-bottom: 20px;
       border-radius: 10px;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+     
     }
     input, button, textarea {
       padding: 10px;
@@ -133,7 +133,7 @@
       max-width: 100px;
       margin: 5px;
       border-radius: 5px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      
     }
     @media (max-width: 600px) {
       .menu-item input, .menu-item button {
@@ -202,10 +202,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-      transition: background 0.2s;
+      transition: none !important;
     }
-    .hapus-gambar:hover { background: #cc0000; }
+    
     .btn-hapus-gambar {
       width: 24px;
       height: 24px;
@@ -219,28 +218,15 @@
       cursor: pointer;
       padding: 0;
       font-size: 14px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-      transition: background 0.2s, transform 0.1s ease;
+      transition: none !important;
     }
-    .btn-hapus-gambar:hover {
-      background: #cc0000;
-      transform: scale(1.05);
-    }
+   
    .section-box {
   background: #0b0f14; /* hitam kebiruan */
   border: 1px solid #00f0ff33;
   border-radius: 12px;
   padding: 18px 20px;
   margin-bottom: 28px;
-
-  box-shadow:
-    0 0 8px #00f0ff22,
-    inset 0 0 12px #000000aa;
-
-  color: #cfefff;
-  position: relative;
-  overflow: hidden;
-}
 
   .section-box h2,
   .section-box h3 {
@@ -249,10 +235,6 @@
   letter-spacing: 0.5px;
   margin-bottom: 14px;
 
-  text-shadow:
-    0 0 6px #00f0ff66,
-    0 0 12px #00f0ff22;
-}
     .section-box input.nomor-wa {
   width: 100%;
   background: #05080c;
@@ -262,13 +244,13 @@
   padding: 10px 12px;
   margin-bottom: 10px;
 
-  box-shadow: inset 0 0 6px #000;
+  
 }
 
 .section-box input.nomor-wa:focus {
   outline: none;
   border-color: #00f0ff;
-  box-shadow: 0 0 8px #00f0ff55;
+ 
 }
 .section-box button {
   background: #07131a;
@@ -277,16 +259,10 @@
   border-radius: 6px;
   padding: 8px 14px;
   cursor: pointer;
-
-  text-shadow: 0 0 4px #00f0ff55;
-  transition: all 0.2s ease;
+  transition: none !important;
 }
 
-.section-box button:hover {
-  background: #00f0ff;
-  color: #001014;
-  box-shadow: 0 0 10px #00f0ff88;
-}
+
 .section-box::before {
   content: "";
   position: absolute;
@@ -306,14 +282,10 @@
       border: none;
       border-radius: 8px;
       font-weight: bold;
-      box-shadow: 0 4px 10px rgba(127, 90, 240, 0.3);
       cursor: pointer;
-      transition: transform 0.2s ease;
+      transition: none !important;
     }
-    .btn-tambah-room:hover {
-      transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(44, 181, 232, 0.5);
-    }
+   
     .btn-hapus-room {
       background: linear-gradient(135deg, #ff6b6b, #fbc687);
       color: #fff;
@@ -321,15 +293,11 @@
       border: none;
       border-radius: 8px;
       font-weight: bold;
-      box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3);
       margin-top: 10px;
       cursor: pointer;
-      transition: transform 0.2s ease;
+      transition: none !important;
     }
-    .btn-hapus-room:hover {
-      transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(251, 198, 135, 0.5);
-    }
+    
     .btn-upload-gambar {
       background: linear-gradient(135deg, #00c6ff, #0072ff);
       color: white;
@@ -339,10 +307,9 @@
       margin-top: 6px;
       font-weight: 500;
       cursor: pointer;
-      transition: opacity 0.3s ease;
+      transition: none !important;
     }
-    .btn-upload-gambar:hover { opacity: 0.85; }
-  
+   
     /* Style umum untuk tombol aksi penting */
 .btn-action {
   display: inline-block;
@@ -354,50 +321,38 @@
   border: none;
   cursor: pointer;
   color: #fff;
-  transition: all 0.3s ease;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+  transition: none !important;
+ 
 }
 
 /* Copy Link → biru elegan */
 #btnSalinLink.btn-action {
   background: #007BFF;
 }
-#btnSalinLink.btn-action:hover {
-  background: #0056b3;
-}
+
 
 /* Download QR → hijau segar */
 #btnDownloadQR.btn-action {
   background: #28a745;
 }
-#btnDownloadQR.btn-action:hover {
-  background: #1e7e34;
-}
+
 
 /* Print QR → oranye elegan */
 #btnPrintQR.btn-action {
   background: #fd7e14;
-}
-#btnPrintQR.btn-action:hover {
-  background: #e8590c;
 }
 
 /* Backup Data → ungu premium */
 #btnBackup.btn-action {
   background: #6f42c1;
 }
-#btnBackup.btn-action:hover {
-  background: #5936a2;
-}
+
 /* Blue – untuk backup */
 .btn-blue {
   background: linear-gradient(135deg, #3b82f6, #1e3a8a);
   color: white;
 }
-.btn-blue:hover {
-  background: linear-gradient(135deg, #1e3a8a, #172554);
-  transform: scale(1.05);
-}
+
 /* Base style tombol */
 button {
   padding: 10px 16px;
@@ -406,7 +361,7 @@ button {
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.25s ease;
+  transition: none !important;
 }
 
 /* Orange – utama */
@@ -414,19 +369,12 @@ button {
   background: linear-gradient(135deg, #ff914d, #ff6a00);
   color: white;
 }
-.btn-orange:hover {
-  background: linear-gradient(135deg, #ff6a00, #cc5500);
-  transform: scale(1.05);
-}
+
 
 /* Teal – untuk salin link */
 .btn-teal {
   background: linear-gradient(135deg, #20c997, #0f766e);
   color: white;
-}
-.btn-teal:hover {
-  background: linear-gradient(135deg, #0f766e, #0c5f56);
-  transform: scale(1.05);
 }
 
 /* Purple – untuk download */
@@ -434,20 +382,14 @@ button {
   background: linear-gradient(135deg, #a855f7, #6b21a8);
   color: white;
 }
-.btn-purple:hover {
-  background: linear-gradient(135deg, #6b21a8, #4c1d95);
-  transform: scale(1.05);
-}
+
 
 /* Red – untuk print */
 .btn-red {
   background: linear-gradient(135deg, #ef4444, #b91c1c);
   color: white;
 }
-.btn-red:hover {
-  background: linear-gradient(135deg, #b91c1c, #7f1d1d);
-  transform: scale(1.05);
-}
+
 .section,
 .setting-card {
   background: #0b0f14;
@@ -459,11 +401,7 @@ button {
   overflow: hidden;
 
   color: #cfefff;
-
-  box-shadow:
-    0 0 8px #00f0ff22,
-    inset 0 0 12px #000000aa;
-}
+ 
 .section::before,
 .setting-card::before {
   content: "";
@@ -489,21 +427,9 @@ button {
   padding: 8px 14px;
   cursor: pointer;
   margin-bottom: 12px;
-
-  text-shadow: 0 0 4px #00f0ff55;
-  transition: all 0.2s ease;
+  transition: none !important;
 }
 
-.section button:hover {
-  background: #00f0ff;
-  color: #001014;
-  box-shadow: 0 0 10px #00f0ff88;
-}
-
-  text-shadow:
-    0 0 6px #00f0ff66,
-    0 0 12px #00f0ff22;
-}
   /* Switch toggle elegan */
   .switch {
     position: relative;
@@ -526,8 +452,8 @@ button {
   background: #05080c;
   border: 1px solid #00f0ff44;
   border-radius: 34px;
-  transition: 0.3s;
-  box-shadow: inset 0 0 6px #000;
+  transition: none !important;
+  
 }
 
 .slider:before {
@@ -539,13 +465,13 @@ button {
   top: 2px;
   background: #00f0ff;
   border-radius: 50%;
-  transition: 0.3s;
-  box-shadow: 0 0 6px #00f0ff88;
+  transition: none !important;
+  
 }
 
 .switch input:checked + .slider {
   background: #002a30;
-  box-shadow: 0 0 8px #00f0ff55;
+  
 }
 
 .switch input:checked + .slider:before {
@@ -556,17 +482,11 @@ button {
  .setting-label {
   margin-left: 12px;
   color: #cfefff;
-  text-shadow: 0 0 4px #00f0ff33;
 }
     /* Tombol simpan voucher */
   #saveVoucherBtn {
     background: linear-gradient(135deg, #b8860b, #ffd700);
     color: #1a1a1a;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
-  }
-  #saveVoucherBtn:hover {
-    background: linear-gradient(135deg, #ffd700, #ffcc33);
-    transform: translateY(-2px);
   }
 
   .fixed-bar {
@@ -588,29 +508,23 @@ button {
   padding: 6px 0;
   cursor: pointer;
   user-select: none;
-  transition: 0.2s ease;
+  transition: none !important;
 }
 
 .nav-item .icon {
   font-size: 24px;
   color: #fff;
-  transition: color 0.2s ease;
+  transition: none !important;
 }
 
 .nav-item .label {
   margin-top: 4px;
   font-size: 12px;
   color: #fff;
-  transition: color 0.2s ease;
+  transition: none !important;
 }
 
-/* 🔥 Hover / sentuh → jadi emas */
-.nav-item:hover .icon,
-.nav-item:active .icon,
-.nav-item:hover .label,
-.nav-item:active .label {
-  color: #d4af37; /* warna emas */
-}
+
 .icon-wrapper {
   position: relative;
   display: inline-block;
@@ -716,7 +630,6 @@ button {
   object-fit: cover;
   border-radius: 6px;
   border: 1px solid #00f0ff33;
-  box-shadow: 0 0 6px #00f0ff22;
 }
 
 /* ===== TERMINAL CARD ===== */
@@ -727,26 +640,15 @@ button {
   padding: 18px;
   width: 280px;
   cursor: pointer;
-  transition: all 0.25s ease;
-  box-shadow: 0 0 10px #00ffcc22;
+  transition: none !important;
   position: relative;
   overflow: hidden;
 }
 
   .terminal-card {
-  backdrop-filter: blur(6px);
   border-radius: 8px;
 }
 
-
-.terminal-card:hover {
-  transform: translateY(-4px);
-  box-shadow:
-    0 0 8px #00ffcc,
-    0 0 18px #00ffcc88,
-    0 0 28px #00ffcc55;
-  border: 1px solid #00ffcc;
-}
 
 /* Header ala terminal */
 .terminal-card-header {
@@ -765,7 +667,6 @@ button {
   background: #00ffcc;
   border-radius: 50%;
   margin-right: 8px;
-  box-shadow: 0 0 6px #00ffcc;
 }
 
 /* Body */
@@ -774,19 +675,11 @@ button {
   font-size: 18px;
   letter-spacing: 2px;
   color: #00ffcc;
-  text-shadow: 0 0 6px #00ffcc;
 }
 
 .terminal-card-body p {
   font-size: 12px;
   opacity: 0.6;
-}
-
-/* Neon pulse animation */
-@keyframes neonPulse {
-  0% { box-shadow: 0 0 8px #00ffcc33; }
-  50% { box-shadow: 0 0 20px #00ffcc88; }
-  100% { box-shadow: 0 0 8px #00ffcc33; }
 }
 
 .add-category-card {
@@ -806,16 +699,12 @@ button {
   background: #0f1720;
   padding: 30px;
   border: 1px solid #00ffcc;
-  box-shadow:
-    0 0 12px #00ffcc,
-    0 0 24px #00ffcc55;
   width: 320px;
   border-radius: 6px;
 }
 
 .terminal-modal-content h2 {
   margin-top: 0;
-  text-shadow: 0 0 8px #00ffcc;
 }
 
 .terminal-modal-content input {
@@ -840,13 +729,7 @@ button {
   color: #00ffcc;
   padding: 8px 16px;
   cursor: pointer;
-  transition: 0.2s;
-}
-
-.modal-actions button:hover {
-  background: #00ffcc;
-  color: #000;
-  box-shadow: 0 0 12px #00ffcc;
+  transition: none !important;
 }
 
 /* ================= BLOOMBERG TERMINAL CATEGORY BAR ================= */
@@ -890,17 +773,10 @@ button {
   white-space: nowrap;       /* jangan pecah teks */
   
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: none !important;
 
   width: auto;          /* PENTING */
   max-width: fit-content;
-}
-
-/* Hover Effect */
-.terminal-filter-btn:hover {
-  color: #00f0ff;
-  border-color: #00f0ff;
-  box-shadow: 0 0 6px #00f0ff33;
 }
 
 /* Active State */
@@ -908,7 +784,6 @@ button {
   background: #00f0ff;
   color: #000;
   border-color: #00f0ff;
-  box-shadow: 0 0 10px #00f0ff88;
 }
 
     .terminal-editor {
@@ -933,7 +808,6 @@ button {
 .terminal-editor input:focus {
   outline: none;
   border-color: #00f0ff;
-  box-shadow: 0 0 8px #00f0ff55;
 }
 .terminal-editor button {
   padding: 8px 16px;
@@ -943,21 +817,14 @@ button {
   cursor: pointer;
 }
 
-.terminal-editor button:hover {
-  background: #00ffcc;
-  color: #000;
-  box-shadow: 0 0 12px #00ffcc;
-}
+
 .terminal-menu-card {
   background: #0f1720;
   border: 1px solid #00ffcc33;
   padding: 15px;
-  transition: 0.2s;
+  transition: none !important;
 }
 
-.terminal-menu-card:hover {
-  box-shadow: 0 0 15px #00ffcc88;
-}
 
 .menu-actions {
   margin-top: 10px;
@@ -1014,14 +881,9 @@ button {
   color: #ff4d4d;
   cursor: pointer;
   font-size: 11px;
-  transition: 0.2s;
+  transition: none !important;
 }
 
-.menu-actions button:hover {
-  background: #ff4d4d;
-  color: #000;
-  box-shadow: 0 0 12px #ff4d4d;
-}
 
  /* ================= TERMINAL ROOM ================= */
 .terminal-room {
@@ -1032,14 +894,12 @@ button {
   border: 1px solid #00f0ff33;
   border-radius: 14px;
   padding: 20px;
-  box-shadow: 0 0 12px #00f0ff22;
 }
 
 .terminal-header {
   border-bottom: 1px solid #00ffcc22;
   padding-bottom: 10px;
   margin-bottom: 20px;
-  text-shadow: 0 0 8px #00ffcc;
   width: 280px;
   text align: center;
 }
@@ -1098,24 +958,20 @@ button {
   object-fit: cover;
   border: 1px solid #00ffcc22;
   margin-bottom: 8px;
-  box-shadow: 0 0 8px #00ffcc22;
 }
 
     #menuEditorPanel h3 {
   color: #00f0ff;
   text-transform: uppercase;
   font-weight: 700;
-  text-shadow: 0 0 10px #00f0ff;
 }
 
     .terminal-grid h4 {
   color: #ffffff;
-  text-shadow: 0 0 4px rgba(255,255,255,0.4);
 }
 
 .terminal-grid p {
   color: #00ffa6;
-  text-shadow: 0 0 6px rgba(0,255,166,0.6);
 }
 
   .terminal-panel {
@@ -1123,7 +979,6 @@ button {
   border: none; /* wrapper border dihilangkan */
   border-radius: 6px;
   margin-bottom: 20px;
-  box-shadow: 0 0 12px rgba(0,170,255,0.15);
   font-family: Consolas, monospace;
   color: #e5e7eb;
   
@@ -1164,7 +1019,6 @@ button {
 
 .terminal-panel input:focus {
   outline: none;
-  box-shadow: 0 0 8px rgba(0,170,255,0.8); /* glow biru */
   border-color: #38bdf8;
   margin-left: 4px;
 }
@@ -1175,7 +1029,6 @@ button {
   border: 1px solid #00aaff; /* biru neon */
   background: #000;
   padding: 4px;
-  box-shadow: 0 0 6px rgba(0,170,255,0.4);
   margin-left: 4px;
 }
 
@@ -1215,7 +1068,6 @@ button {
   padding: 20px 24px;
   border: 1px solid rgba(0,170,255,0.25);
   border-radius: 8px;
-  box-shadow: 0 0 15px rgba(0,170,255,0.15);
   padding-bottom: 20px;
 }
 
@@ -1223,7 +1075,6 @@ button {
 .terminal-panel h2 {
   text-align: center;
   color: #22d3ee;
-  text-shadow: 0 0 10px rgba(0,170,255,0.7);
   padding-top: 20px;
 }
 
@@ -1232,10 +1083,6 @@ button {
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 2px;
-  text-shadow:
-    0 0 6px rgba(34,211,238,0.8),
-    0 0 12px rgba(34,211,238,0.6),
-    0 0 20px rgba(34,211,238,0.3);
   margin-bottom: 15px;
 }
 
@@ -1301,20 +1148,17 @@ button {
 }
 .terminal-editor h3 {
   color: #00f0ff;
-  text-shadow: 0 0 6px #00f0ff88, 0 0 12px #00f0ff44;
   letter-spacing: 1px;
 }
 
 .terminal-editor label {
   color: #00eaff;
   font-weight: 600;
-  text-shadow: 0 0 4px #00f0ff55;
 }
 
 /* checkbox text */
 .promo-toggle {
   color: #00f0ff;
-  text-shadow: 0 0 4px #00f0ff55;
 }
 #roomContainerBox {
   background: #0a0f14;
@@ -1325,21 +1169,11 @@ button {
   position: relative;
   overflow: hidden;
 
-  box-shadow:
-    0 0 10px #00f0ff22,
-    inset 0 0 18px #000000aa;
-
-  color: #cfefff;
-}
 #roomContainerBox > h2 {
   color: #00f0ff;
   margin-bottom: 18px;
   letter-spacing: 0.5px;
 
-  text-shadow:
-    0 0 6px #00f0ff66,
-    0 0 12px #00f0ff22;
-}
 .room-section {
   background: #05080c;
   border: 1px solid #00f0ff22;
@@ -1347,16 +1181,10 @@ button {
   padding: 16px;
   margin-bottom: 18px;
 
-  box-shadow:
-    inset 0 0 12px #000,
-    0 0 6px #00f0ff11;
-}
 .room-section h3 {
   color: #7ffcff;
   margin-bottom: 10px;
   font-size: 15px;
-
-  text-shadow: 0 0 4px #00f0ff44;
 }
 .btn-tambah-room {
   background: #07131a;
@@ -1367,16 +1195,9 @@ button {
   cursor: pointer;
   margin-bottom: 12px;
   font-size: 13px;
-
-  text-shadow: 0 0 4px #00f0ff55;
-  transition: all 0.2s ease;
+  transition: none !important;
 }
 
-.btn-tambah-room:hover {
-  background: #00f0ff;
-  color: #001014;
-  box-shadow: 0 0 10px #00f0ff88;
-}
 #roomHotelContainer,
 #meetingRoomContainer,
 #packageContainer {
@@ -1394,20 +1215,7 @@ button {
   padding: 12px;
   color: #cfefff !important;
 
-  box-shadow:
-    inset 0 0 10px #000,
-    0 0 6px #00f0ff11;
-
-  transition: 0.2s ease;
-}
-#roomHotelContainer > div:hover,
-#meetingRoomContainer > div:hover,
-#packageContainer > div:hover {
-  border-color: #00f0ff66 !important;
-  box-shadow:
-    0 0 10px #00f0ff44,
-    inset 0 0 14px #000;
-}
+   
 #roomHotelContainer input,
 #meetingRoomContainer input,
 #packageContainer input,
@@ -1433,26 +1241,9 @@ button {
   letter-spacing: 0.5px;
   cursor: pointer;
 
-  box-shadow:
-    inset 0 0 6px #000,
-    0 0 6px #00f0ff22;
 
-  transition: 0.2s ease;
-}
-.section button:hover {
-  background: #020b12;
-  border-color: #00f0ffaa;
-  color: #7fffff;
-
-  box-shadow:
-    0 0 10px #00f0ff66,
-    inset 0 0 8px #000;
-}
 .section button:active {
   transform: scale(0.96);
-  box-shadow:
-    inset 0 0 10px #000,
-    0 0 4px #00f0ff44;
 }
 /* =========================
    VOUCHER BLOOMBERG TERMINAL
@@ -1463,12 +1254,10 @@ button {
   border: 1px solid #00f0ff33;
   border-radius: 10px;
   padding: 18px;
-  box-shadow: inset 0 0 20px #000, 0 0 15px #00f0ff11;
 }
 
 #voucherContainerBox h2 {
   color: #00f0ff;
-  text-shadow: 0 0 8px #00f0ff55;
   letter-spacing: 1px;
 }
 
@@ -1490,7 +1279,6 @@ button {
 
 #voucherForm input:focus {
   border-color: #00f0ff;
-  box-shadow: 0 0 6px #00f0ff66;
 }
 
 #saveVoucherBtn {
@@ -1502,9 +1290,6 @@ button {
   cursor: pointer;
 }
 
-#saveVoucherBtn:hover {
-  box-shadow: 0 0 10px #00f0ff66;
-}
 .voucher-card {
   background: #010409;
   border: 1px solid #00f0ff22;
@@ -1517,7 +1302,6 @@ button {
   justify-content: space-between;
   align-items: center;
 
-  box-shadow: inset 0 0 10px #000;
 }
 
 .voucher-card small {
@@ -1542,14 +1326,7 @@ button {
   border-radius:4px;
 
   cursor:pointer;
-  transition:0.2s;
-}
-
-
-.voucher-delete-btn:hover{
-  background:#ff1a1a;
-  color:#fff;
-  box-shadow:0 0 8px #ff1a1a;
+  transition: none !important;
 }
 
 .voucher-item{
@@ -1567,66 +1344,36 @@ button {
   border:1px solid #00ff88;
 }
 
-.btn-simpan:hover{
-  background:#00ff88;
-  color:#000;
-  box-shadow:0 0 12px #00ff88;
-}
 .btn-orange{
   background:#2a1400;
   color:#ffa500;
   border:1px solid #ffa500;
 }
 
-.btn-orange:hover{
-  background:#ffa500;
-  color:#000;
-  box-shadow:0 0 12px #ffa500;
-}
 .btn-teal{
   background:#002a2a;
   color:#00f0ff;
   border:1px solid #00f0ff;
 }
 
-.btn-teal:hover{
-  background:#00f0ff;
-  color:#000;
-  box-shadow:0 0 12px #00f0ff;
-}
 .btn-purple{
   background:#1b0033;
   color:#bb66ff;
   border:1px solid #bb66ff;
 }
 
-.btn-purple:hover{
-  background:#bb66ff;
-  color:#000;
-  box-shadow:0 0 12px #bb66ff;
-}
 .btn-red{
   background:#330000;
   color:#ff4d4d;
   border:1px solid #ff4d4d;
 }
 
-.btn-red:hover{
-  background:#ff4d4d;
-  color:#000;
-  box-shadow:0 0 12px #ff4d4d;
-}
 button[onclick="downloadBackupJSON()"]{
   background:#332900;
   color:#ffd700;
   border:1px solid #ffd700;
 }
 
-button[onclick="downloadBackupJSON()"]:hover{
-  background:#ffd700;
-  color:#000;
-  box-shadow:0 0 12px #ffd700;
-}
 #restoreInput{
   background:#220022;
   color:#ff66cc;
@@ -1635,15 +1382,12 @@ button[onclick="downloadBackupJSON()"]:hover{
   border-radius:6px;
 }
 
-#restoreInput:hover{
-  box-shadow:0 0 10px #ff66cc;
-}
 .admin-btn{
   padding:12px 16px !important;
   border-radius:6px !important;
   font-weight:bold !important;
   cursor:pointer !important;
-  transition:0.25s !important;
+  transition: none !important;
   letter-spacing:0.5px !important;
   border:1px solid transparent !important;
   background:#111 !important;
@@ -1656,55 +1400,30 @@ button[onclick="downloadBackupJSON()"]:hover{
   border:1px solid #00ff88 !important;
 }
 
-.admin-save:hover{
-  background:#00ff88 !important;
-  color:#000 !important;
-  box-shadow:0 0 14px #00ff88 !important;
-}
 .admin-view{
   background:#2a1400 !important;
   color:#ffa500 !important;
   border:1px solid #ffa500 !important;
 }
 
-.admin-view:hover{
-  background:#ffa500 !important;
-  color:#000 !important;
-  box-shadow:0 0 14px #ffa500 !important;
-}
 .admin-copy{
   background:#002a2a !important;
   color:#00f0ff !important;
   border:1px solid #00f0ff !important;
 }
 
-.admin-copy:hover{
-  background:#00f0ff !important;
-  color:#000 !important;
-  box-shadow:0 0 14px #00f0ff !important;
-}
 .admin-download{
   background:#1b0033 !important;
   color:#bb66ff !important;
   border:1px solid #bb66ff !important;
 }
 
-.admin-download:hover{
-  background:#bb66ff !important;
-  color:#000 !important;
-  box-shadow:0 0 14px #bb66ff !important;
-}
 .admin-print{
   background:#330000 !important;
   color:#ff4d4d !important;
   border:1px solid #ff4d4d !important;
 }
 
-.admin-print:hover{
-  background:#ff4d4d !important;
-  color:#000 !important;
-  box-shadow:0 0 14px #ff4d4d !important;
-}
 .hidden{
   display:none !important;
 }
@@ -1749,15 +1468,9 @@ button[onclick="downloadBackupJSON()"]:hover{
   display: inline-flex;     /* biar gak full width */
   align-items: center;
   gap: 4px;
-
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  transition: all 0.2s ease;
+  transition: none !important;
 }
 
-#voucherPreview button:hover {
-  background: linear-gradient(135deg, #ffd700, #ffcc33);
-  transform: translateY(-2px);
-}
 .admin-guide {
   background: #0f1115;                /* dark terminal */
   padding: 14px;
@@ -1766,7 +1479,6 @@ button[onclick="downloadBackupJSON()"]:hover{
   font-size: 13px;
   color: #cfd8dc;                     /* soft white */
   border-radius: 6px;
-  box-shadow: 0 0 10px rgba(255,204,0,0.05);
 }
 
 .admin-guide strong {
@@ -1785,33 +1497,14 @@ button#btnResetData.btn-danger {
   border-radius: 6px;
   cursor: pointer;
 
-  box-shadow:
-    0 0 10px rgba(255,0,0,0.4),
-    inset 0 0 8px rgba(255,0,0,0.3);
 
-  transition: all 0.25s ease;
-}
 
-/* HOVER MODE = NERAKA TERBUKA */
-button#btnResetData.btn-danger:hover {
-  background: linear-gradient(145deg, #550000, #aa0000) !important;
-  box-shadow:
-    0 0 25px rgba(255,0,0,0.8),
-    inset 0 0 12px rgba(255,0,0,0.5);
-
-  transform: scale(1.06);
-}
 
 /* ACTIVE CLICK */
 button#btnResetData.btn-danger:active {
   transform: scale(0.96);
 }
 
-@keyframes dangerPulse {
-  0% { box-shadow: 0 0 5px rgba(255,0,0,0.2); }
-  50% { box-shadow: 0 0 20px rgba(255,0,0,0.7); }
-  100% { box-shadow: 0 0 5px rgba(255,0,0,0.2); }
-}
 
 #btnResetData {
   animation: dangerPulse 2s infinite;
@@ -1895,13 +1588,9 @@ button#btnResetData.btn-danger:active {
   color: #00ff9c;
   padding: 10px;
   cursor: pointer;
-  transition: 0.2s;
+  transition: none !important;
 }
 
-.terminal-btn:hover {
-  background: #00ff9c;
-  color: #000;
-}
 
 .subscription-body {
   font-size: 12px;
@@ -1999,7 +1688,6 @@ button#btnResetData.btn-danger:active {
 
   background: linear-gradient(145deg, #0a0f1a, #111827);
   border: 1px solid #00f0ff33;
-  box-shadow: 0 0 12px #00f0ff22;
 
   gap: 12px; /* 🔥 biar ada jarak saat wrap */
 }
@@ -2049,17 +1737,9 @@ button#btnResetData.btn-danger:active {
 
   border: 1px solid #1f2937;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: none !important;
 
   text-transform: uppercase;
-}
-
-/* Hover */
-
-.terminal-filter-btn:hover {
-  border-color: #00f0ff;
-  color: #00f0ff;
-  box-shadow: 0 0 6px #00f0ff55;
 }
 
 /* Active */
@@ -2068,7 +1748,6 @@ button#btnResetData.btn-danger:active {
   background: #00f0ff;
   color: #000;
   border-color: #00f0ff;
-  box-shadow: 0 0 12px #00f0ff88;
 }
 .menu-code {
   font-size: 11px;
@@ -2079,10 +1758,7 @@ button#btnResetData.btn-danger:active {
   font-size: 11px;
   font-weight: bold;
   letter-spacing: 1.2px;
-
   color: #ff9900;
-  text-shadow: 0 0 6px rgba(255,153,0,0.7);
-
   padding: 3px 6px;
   border-left: 2px solid #ff9900;
 }
@@ -2093,11 +1769,8 @@ button#btnResetData.btn-danger:active {
 
   color: #ff9900;
   opacity: 0.85;
-
   font-family: "Courier New", monospace;
   letter-spacing: 0.5px;
-
-  text-shadow: 0 0 4px rgba(255,153,0,0.4);
 }
 .terminal-hint {
   border-left: 2px solid #ff9900;
@@ -2218,18 +1891,9 @@ border-radius:6px;
 
 overflow:hidden;
 
-transition:0.2s;
+transition: none !important;
 
 }
-
-.table-card:hover{
-
-transform:translateY(-2px);
-
-box-shadow:0 0 8px #00ff9c33;
-
-}
-
 
 /* ================= CARD IMAGE ================= */
 
@@ -2325,11 +1989,7 @@ font-size:11px;
 padding:4px;
 
 }
-.terminal-card:hover{
 
-border-color:#00ff9c;
-
-}
 .terminal-card{
 margin-bottom:20px;
 }
@@ -2423,12 +2083,7 @@ body {
   padding:6px 8px;
   border-radius:8px;
 
-  transition:all .15s ease;
-}
-
-/* Hover effect biar hidup */
-.room-amenities label:hover{
-  background:rgba(255,255,255,0.05);
+  transition: none !important;
 }
 
 /* Checkbox biar lebih konsisten */
@@ -2484,9 +2139,7 @@ align-items:center;
 justify-content:center;
 
 font-size:18px;
-cursor:pointer;
-
-backdrop-filter:blur(4px);
+cursor:pointer
 
 }
 
@@ -2500,12 +2153,6 @@ left:8px;
 right:8px;
 }
 
-/* hover */
-
-.gallery-prev:hover,
-.gallery-next:hover{
-background:rgba(0,0,0,0.45);
-}
 
 /* ROOM NUMBER TAGS — Bloomberg vibes */
 
@@ -2539,33 +2186,21 @@ background:rgba(0,0,0,0.45);
   font-size:11px;
   padding:1px 5px;
   border-radius:3px;
-  transition:all .15s ease;
-}
-
-.room-edit-btn:hover{
-  background:#00aaff;
-  color:#000;
+ transition: none !important;
 }
 
  .icon{
   width:18px;
   height:18px;
   fill:#9ca3af; /* abu-abu dingin */
-  transition:all .15s ease;
+  transition: none !important;
 }
 
-.nav-item:hover .icon{
-  fill:#ffffff;
-  transform:scale(1.1);
-}
 
 .nav-item{
   color:#9ca3af;
 }
 
-.nav-item:hover{
-  color:#ffffff;
-}
 .nav-item.active .icon{
   fill:#4ade80; /* neon green ala terminal */
 }
@@ -2580,9 +2215,14 @@ background:rgba(0,0,0,0.45);
 
 /* ===================== */
 
-.branch-card{
-  min-width: 300px;
-  max-width: 400px;
+.branch-card {
+  width: 100%;
+}
+
+ .dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
 }
 
 /* ===================== */
@@ -2591,33 +2231,6 @@ background:rgba(0,0,0,0.45);
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-
-/* ===================== */
-
-.branch-item{
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  padding: 8px 10px;
-
-  border: 1px solid #1e293b;
-  background: #020617;
-
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-/* hover */
-.branch-item:hover{
-  border-color: #38bdf8;
-}
-
-/* ACTIVE */
-.branch-item.active{
-  border-color: #38bdf8;
-  background: rgba(56,189,248,0.08);
 }
 
 /* ===================== */
@@ -2649,18 +2262,16 @@ background:rgba(0,0,0,0.45);
   border: 1px solid #222;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: none !important;
+  width: 100%;
+  position: relative;
 }
 
-.branch-item:hover {
-  background: #161616;
-  border-color: #333;
-}
 
 .branch-item.active {
   background: #111;
   border-color: #00ff9c;
-  box-shadow: 0 0 6px rgba(0,255,156,0.3);
+  
 }
 
 .branch-left {
@@ -2699,14 +2310,84 @@ background:rgba(0,0,0,0.45);
   font-size: 14px;
 }
 
-.branch-delete:hover {
-  color: #ff0000;
-}
-
 .empty-branch {
   color: #666;
   text-align: center;
   padding: 10px;
+}
+ .branch-left,
+.branch-right,
+.branch-status {
+  pointer-events: none;
+}
+
+.branch-delete {
+  pointer-events: auto;
+}
+ .branch-item:active {
+  transform: scale(0.98);
+}
+ /* =========================
+   LIGHTWEIGHT BLOOMBERG MODE
+========================= */
+
+* {
+  transition: none !important;
+  box-shadow: none !important;
+}
+
+/* CARD GLOBAL */
+.terminal-card,
+.section,
+.setting-card,
+.section-box,
+.terminal-room,
+.terminal-panel {
+  background: #020617;
+  border: 1px solid #00ff9c;
+  border-radius: 6px;
+}
+
+/* BUTTON */
+button {
+  background: #020617;
+  border: 1px solid #00ff9c;
+  color: #00ff9c;
+}
+
+/* NAV */
+.nav-item .icon,
+.nav-item .label {
+  color: #00ff9c;
+}
+
+/* BRANCH */
+.branch-item {
+  background: #020617;
+  border: 1px solid #00ff9c;
+}
+
+.branch-item.active {
+  background: #001a12;
+}
+
+/* INPUT */
+input, textarea {
+  background: #020617;
+  border: 1px solid #1f2937;
+  color: #00ff9c;
+}
+
+/* REMOVE ALL HOVER EFFECT */
+*:hover {
+  all: unset;
+}
+ html {
+  will-change: auto;
+}
+
+body {
+  transform: translateZ(0);
 }
 </style>
 </head>
@@ -5704,7 +5385,7 @@ function renderVoucher(vouchers = []) {
   }
 
   box.innerHTML = `
-    <h3 style="color:#00f0ff; text-shadow:0 0 6px #00f0ff55;">
+    <h3 style="color:#00f0ff;">
       Voucher Aktif
     </h3>
 
