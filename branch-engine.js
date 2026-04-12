@@ -189,53 +189,47 @@ async function renderBranchList() {
     return;
   }
 
-  branches.forEach(b => {
+ branches.forEach(b => {
 
-    // 🔳 MAIN WRAPPER
-    const item = document.createElement("div");
-    item.className = `branch-item ${b.id === ACTIVE_BRANCH_ID ? "active" : ""}`;
+  const item = document.createElement("div");
+  item.className = `branch-card ${b.id === ACTIVE_BRANCH_ID ? "active" : ""}`;
 
-    // 🧠 LEFT SIDE (NAME)
-    const left = document.createElement("div");
-    left.className = "branch-left";
-    left.innerHTML = `${b.isMain ? "🏢 " : ""}${b.name}`;
+  item.innerHTML = `
+    <div class="branch-header">
+      <div class="branch-name">
+        ${b.isMain ? "🏢 " : ""}${b.name}
+      </div>
+      <div class="branch-status ${b.id === ACTIVE_BRANCH_ID ? "active" : ""}">
+        ${b.id === ACTIVE_BRANCH_ID ? "ACTIVE" : "IDLE"}
+      </div>
+    </div>
 
-    // 🔥 CLICK SWITCH (NO INLINE)
-    left.onclick = (e) => {
+    <div class="branch-body">
+      <div class="branch-info">ID: ${b.id}</div>
+    </div>
+
+    <div class="branch-footer">
+      <span class="branch-tag">NODE</span>
+      ${!b.isMain ? `<button class="delete-btn">×</button>` : ""}
+    </div>
+  `;
+
+  // 🔥 CLICK CARD = ACTIVE
+  item.onclick = () => {
+    BranchEngine.setActive(b.id);
+  };
+
+  // ❌ DELETE
+  const delBtn = item.querySelector(".delete-btn");
+  if (delBtn) {
+    delBtn.onclick = (e) => {
       e.stopPropagation();
-      BranchEngine.setActive(b.id);
+      BranchEngine.delete(b.id);
     };
+  }
 
-    // 📊 RIGHT SIDE (STATUS + ACTION)
-    const right = document.createElement("div");
-    right.className = "branch-right";
-
-    const status = document.createElement("span");
-    status.className = `branch-status ${b.id === ACTIVE_BRANCH_ID ? "active" : "idle"}`;
-    status.innerText = b.id === ACTIVE_BRANCH_ID ? "ACTIVE" : "IDLE";
-
-    right.appendChild(status);
-
-    // ❌ DELETE BUTTON
-    if (!b.isMain) {
-      const delBtn = document.createElement("button");
-      delBtn.className = "branch-delete";
-      delBtn.innerText = "🗑";
-
-      delBtn.onclick = (e) => {
-        e.stopPropagation(); // 🔥 penting banget
-        BranchEngine.delete(b.id);
-      };
-
-      right.appendChild(delBtn);
-    }
-
-    // 🔗 APPEND
-    item.appendChild(left);
-    item.appendChild(right);
-
-    container.appendChild(item);
-  });
+  container.appendChild(item);
+});
 }
 
 // ========================================
