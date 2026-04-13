@@ -5470,13 +5470,23 @@ await safeAwait("loadData", window.loadData);
 
  /* ===================== MASTER RELOAD ===================== */
 
- async function reloadDashboardData() {
+async function reloadDashboardData() {
   console.log("♻️ Reload Dashboard Start");
 
   try {
-    await loadData();     // menu + category
-    await loadRooms?.();  // optional (pakai ? biar aman)
-    await loadTables?.();
+    // WAJIB
+    if (typeof loadData === "function") {
+      await loadData();
+    }
+
+    // OPTIONAL (AMAN)
+    if (typeof loadRooms === "function") {
+      await loadRooms();
+    }
+
+    if (typeof loadTables === "function") {
+      await loadTables();
+    }
 
     console.log("✅ Reload Dashboard Done");
   } catch (err) {
