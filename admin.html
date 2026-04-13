@@ -3940,11 +3940,16 @@ async function loadCategories() {
 
   try {
     const restoId = window.activeUser?.restoID;
+    const branchId = window.BranchEngine?.getActive();
+
     if (!restoId) return;
 
-    // 🚀 CACHE HIT (SUPER CEPAT)
-    if (__CATEGORIES_CACHE__[restoId]) {
-      window.menuCategories = __CATEGORIES_CACHE__[restoId];
+    // 🔥 UNIQUE CACHE PER BRANCH
+    const cacheKey = `${restoId}_${branchId || "ALL"}`;
+
+    // 🚀 CACHE HIT
+    if (__CATEGORIES_CACHE__[cacheKey]) {
+      window.menuCategories = __CATEGORIES_CACHE__[cacheKey];
 
       if (!window.activeCategoryName && window.menuCategories.length) {
         window.activeCategoryName = window.menuCategories[0].name;
@@ -3956,7 +3961,7 @@ async function loadCategories() {
 
     let menus;
 
-    // 🚀 PRIORITAS INDEX (WAJIB)
+    // 🚀 FETCH DATA
     if (MENUVA_DB.getByIndex) {
       menus = await MENUVA_DB.getByIndex("menuData", "restoId", restoId);
     } else {
@@ -3964,7 +3969,12 @@ async function loadCategories() {
       menus = all.filter(m => m.restoId === restoId);
     }
 
-    // 🚀 OPTIMASI LOOP (LEBIH CEPAT DARI MAP)
+    // 🔥 FILTER BY BRANCH (KUNCI UTAMA)
+    if (branchId) {
+      menus = menus.filter(m => m.branchId === branchId);
+    }
+
+    // 🚀 OPTIMASI LOOP
     const unique = Object.create(null);
     const result = [];
 
@@ -3979,16 +3989,18 @@ async function loadCategories() {
 
     window.menuCategories = result;
 
-    // 🚀 SIMPAN CACHE
-    __CATEGORIES_CACHE__[restoId] = result;
+    // 🚀 CACHE PER BRANCH
+    __CATEGORIES_CACHE__[cacheKey] = result;
 
     if (!window.activeCategoryName && result.length) {
       window.activeCategoryName = result[0].name;
     }
 
-    // 🚀 NON-BLOCKING RENDER
+    // 🚀 RENDER NON BLOCKING
     requestAnimationFrame(() => {
-      renderCategoryFilter();
+      if (typeof renderCategoryFilter === "function") {
+        renderCategoryFilter();
+      }
     });
 
   } catch (err) {
@@ -4699,7 +4711,9 @@ window.loadData = async function () {
           ? resto.flipbookMenuImages
           : [];
 
-        renderFlipbookUI?.();
+        if (typeof renderFlipbookUI === "function") {
+        renderFlipbookUI();
+        }
 
       } catch (e) {
         console.warn("Flipbook error:", e);
@@ -4718,7 +4732,9 @@ window.loadData = async function () {
 
         window.rooms = rooms;
 
-        renderRoomsLight?.(window.rooms);
+        if (typeof renderRoomsLight === "function") {
+         renderRoomsLight(window.rooms);
+         }
 
       } catch (e) {
         console.warn("Rooms error:", e);
