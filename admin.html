@@ -5321,6 +5321,18 @@ window.renderPackage     = () => window.ROOM_ENGINE?.renderRooms?.();
     }
   }, { passive: true });
 })();
+
+ // ==================== 🔥 BRANCH LISTENER ====================
+ if (!window.__branchListenerAdded) {
+  window.__branchListenerAdded = true;
+  
+  window.addEventListener("branchChanged", async (e) => {
+  const branchId = e.detail.branchId;
+
+  console.log("🔄 ADMIN DETECT BRANCH CHANGE:", branchId);
+
+  await reloadDashboardData();
+});
   
  // ==================== DOM ====================
 document.addEventListener("DOMContentLoaded", async () => {
@@ -5449,6 +5461,22 @@ await safeAwait("loadData", window.loadData);
 
   console.groupEnd();
 });
+
+ /* ===================== MASTER RELOAD ===================== */
+
+ async function reloadDashboardData() {
+  console.log("♻️ Reload Dashboard Start");
+
+  try {
+    await loadData();     // menu + category
+    await loadRooms?.();  // optional (pakai ? biar aman)
+    await loadTables?.();
+
+    console.log("✅ Reload Dashboard Done");
+  } catch (err) {
+    console.error("❌ Reload error:", err);
+  }
+}
   
  async function updateResetButtonState() {
   const hasBackup = await hasBackupForCurrentUser();
