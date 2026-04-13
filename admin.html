@@ -2609,6 +2609,33 @@ background:rgba(0,0,0,0.45);
   color: #00ff9f;
   text-shadow: 0 0 8px #00ff9f;
 }
+ .active-branch-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 10px 12px;
+  border: 1px solid #333;
+  margin-bottom: 12px;
+}
+
+/* ACTIVE STATE */
+.active-branch-label.active {
+  border-color: #00ff9f;
+  color: #00ff9f;
+  text-shadow: 0 0 6px #00ff9f;
+}
+
+/* KIRI */
+.label-left {
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+/* KANAN */
+.label-right {
+  opacity: 0.9;
+}
 </style>
 </head>
 <body>
