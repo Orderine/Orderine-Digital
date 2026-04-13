@@ -5323,18 +5323,29 @@ window.renderPackage     = () => window.ROOM_ENGINE?.renderRooms?.();
 })();
 
  // ==================== 🔥 BRANCH LISTENER ====================
- if (!window.__branchListenerAdded) {
+if (!window.__branchListenerAdded) {
   window.__branchListenerAdded = true;
+
+  let isReloading = false;
 
   window.addEventListener("branchChanged", async (e) => {
     const branchId = e.detail.branchId;
 
+    if (isReloading) {
+      console.log("⏳ Skip duplicate reload");
+      return;
+    }
+
+    isReloading = true;
+
     console.log("🔄 ADMIN DETECT BRANCH CHANGE:", branchId);
 
-    if (typeof reloadDashboardData === "function") {
-      await reloadDashboardData();
-    } else {
-      console.warn("⚠️ reloadDashboardData not found");
+    try {
+      if (typeof reloadDashboardData === "function") {
+        await reloadDashboardData();
+      }
+    } finally {
+      isReloading = false;
     }
   });
 }
