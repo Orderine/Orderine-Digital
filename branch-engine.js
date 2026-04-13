@@ -282,6 +282,10 @@ async function setActiveBranch(branchId) {
       return;
     }
 
+    // ✅ GLOBAL STATE (INI YANG KURANG)
+    window.activeBranchId = branchId;
+
+    // optional: tetap simpan internal
     ACTIVE_BRANCH_ID = branchId;
 
     const session = await MENUVA_DB.getSession();
@@ -299,10 +303,10 @@ async function setActiveBranch(branchId) {
     
     emitBranchChange(branchId);
 
-    // 🔥 BROADCAST PERUBAHAN
+    // 🔥 EVENT GLOBAL
     window.dispatchEvent(new CustomEvent("branchChanged", {
-    detail: { branchId }
-     }));
+      detail: { branchId }
+    }));
 
     if (typeof reloadAllData === "function") {
       await reloadAllData();
