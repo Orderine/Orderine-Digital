@@ -296,6 +296,13 @@ async function setActiveBranch(branchId) {
 
     await renderBranchList();
     await renderActiveBranchLabel();
+    
+    emitBranchChange(branchId);
+
+    // 🔥 BROADCAST PERUBAHAN
+    window.dispatchEvent(new CustomEvent("branchChanged", {
+    detail: { branchId }
+     }));
 
     if (typeof reloadAllData === "function") {
       await reloadAllData();
@@ -377,6 +384,12 @@ await MENUVA_DB.setSession({
 
   await renderBranchList();
   await renderActiveBranchLabel();
+
+  emitBranchChange(ACTIVE_BRANCH_ID);
+
+  window.dispatchEvent(new CustomEvent("branchChanged", {
+  detail: { branchId: ACTIVE_BRANCH_ID }
+}));
 }
 
 // ========================================
@@ -424,7 +437,21 @@ async function initBranchEngine() {
   await loadActiveBranch();
   await renderBranchList();
   await renderActiveBranchLabel();
+
+  // 🔥 SYNC AWAL
+  window.dispatchEvent(new CustomEvent("branchChanged", {
+    detail: { branchId: ACTIVE_BRANCH_ID }
+  }));
+
+  emitBranchChange(ACTIVE_BRANCH_ID);
+
   console.log("🚀 Branch Engine Ready");
+}
+
+function emitBranchChange(branchId) {
+  window.dispatchEvent(new CustomEvent("branchChanged", {
+    detail: { branchId }
+  }));
 }
 
 // ========================================
