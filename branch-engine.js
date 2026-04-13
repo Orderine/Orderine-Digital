@@ -251,8 +251,12 @@ async function renderActiveBranchLabel() {
     return;
   }
 
-  label.innerText = `ACTIVE: ${active.name}`;
-  label.classList.add("active"); // 🔥 INI KUNCINYA
+  label.innerHTML = `
+    <span class="label-left">ACTIVE</span>
+    <span class="label-right">${active.name}</span>
+  `;
+
+  label.classList.add("active");
 }
 
 // ========================================
