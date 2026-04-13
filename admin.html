@@ -4605,7 +4605,7 @@ async function loadWaAdmin(sourceData = null) {
 
 window.__LOAD_DATA_RUNNING__ = false;
 
-window.loadData = async function() {
+window.loadData = async function () {
   if (window.__LOAD_DATA_RUNNING__) return;
   window.__LOAD_DATA_RUNNING__ = true;
 
@@ -4613,54 +4613,53 @@ window.loadData = async function() {
     showLoader?.("Loading data...");
 
     const restoId = window.activeUser?.restoID;
+    const branchId = window.BranchEngine?.getActive();
+
     console.log("📦 loadData start → resto:", restoId);
+    console.log("🏢 loadData branch:", branchId);
 
     if (!restoId) return;
 
-    // ================= 🔥 CRITICAL FETCH =================
+    // ================= 🔥 GET RESTO =================
     const resto = await MENUVA_DB.get("restos", restoId);
     if (!resto) return;
 
-    // ================= 🔥 FAST DOM CACHE =================
+    // ================= 🔥 DOM CACHE =================
     const elNama = document.getElementById("namaRestoran");
     const elAddr = document.getElementById("restoAddress");
     const elPhone = document.getElementById("restoPhone");
     const elLoc = document.getElementById("locationCodeInput");
     const elLogo = document.getElementById("previewLogo");
 
-    // ================= ⚡ INSTANT UI =================
-    elNama && (elNama.value = resto.namaRestoran ?? "");
-    elAddr && (elAddr.value = resto.restoAddress ?? "");
-    elPhone && (elPhone.value = resto.restoPhone ?? "");
+    // ================= ⚡ BASIC INFO =================
+    if (elNama) elNama.value = resto.namaRestoran ?? "";
+    if (elAddr) elAddr.value = resto.restoAddress ?? "";
+    if (elPhone) elPhone.value = resto.restoPhone ?? "";
 
     window.systemSettings = {
       locationCode: resto.locationCode || "LOC"
     };
 
-    elLoc && (elLoc.value = window.systemSettings.locationCode);
+    if (elLoc) elLoc.value = window.systemSettings.locationCode;
 
     if (resto.logo && elLogo) {
       elLogo.src = resto.logo;
       window.__LOGO_BASE64__ = resto.logo;
     }
 
-    // ================= ⚡ WA (SYNC & STABLE) =================
-window.WA_ADMIN = Array.isArray(resto.nomorWaAdmin)
-  ? [...resto.nomorWaAdmin]
-  : [];
+    // ================= ⚡ WA =================
+    window.WA_ADMIN = Array.isArray(resto.nomorWaAdmin)
+      ? [...resto.nomorWaAdmin]
+      : [];
 
-renderWaAdmin?.();
+    renderWaAdmin?.();
+    console.log("📥 WA loaded:", window.WA_ADMIN);
 
-console.log("📥 WA loaded:", window.WA_ADMIN);
-
-    // ================= 🚀 PARALLEL CORE =================
-    const [categories] = await Promise.all([
-      loadCategories()
-    ]);
-
+    // ================= 🚀 CORE =================
+    await loadCategories?.(); // nanti kita branch-kan di step berikutnya
     console.log("🍽️ Categories loaded");
 
-    // ================= 🟡 BACKGROUND DATA =================
+    // ================= 🟡 PROMO + VOUCHER =================
     setTimeout(async () => {
       try {
         const [allPromo, allVoucher] = await Promise.all([
@@ -4668,14 +4667,19 @@ console.log("📥 WA loaded:", window.WA_ADMIN);
           MENUVA_DB.getAll("menuVoucher")
         ]);
 
-        // PROMO
-        window.menuPromo = allPromo.filter(p => p.restoId === restoId);
-        renderPromoFilterBar();
-        renderPromoUI();
+        window.menuPromo = allPromo.filter(p =>
+          p.restoId === restoId &&
+          (!branchId || p.branchId === branchId)
+        );
 
-        // VOUCHER
-        window.menuVoucher = allVoucher.filter(v => v.restoId === restoId);
-        renderVoucher(window.menuVoucher);
+        window.menuVoucher = allVoucher.filter(v =>
+          v.restoId === restoId &&
+          (!branchId || v.branchId === branchId)
+        );
+
+        renderPromoFilterBar?.();
+        renderPromoUI?.();
+        renderVoucher?.(window.menuVoucher);
 
         console.log("🎯 Promo & Voucher ready");
 
@@ -4684,10 +4688,9 @@ console.log("📥 WA loaded:", window.WA_ADMIN);
       }
     }, 0);
 
-    // ================= 🔴 HEAVY TASK =================
+    // ================= 🔴 HEAVY =================
     setTimeout(() => {
       try {
-        // FLIPBOOK
         window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages)
           ? resto.flipbookRuanganImages
           : [];
@@ -4698,21 +4701,28 @@ console.log("📥 WA loaded:", window.WA_ADMIN);
 
         renderFlipbookUI?.();
 
-        // IMAGE LAZY
-
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Flipbook error:", e);
+      }
     }, 0);
 
-    // ================= 🔴 ROOMS (PALING BERAT) =================
+    // ================= 🔴 ROOMS =================
     setTimeout(() => {
       try {
-        window.rooms = Array.isArray(resto.rooms)
-          ? resto.rooms
-          : [];
+        let rooms = Array.isArray(resto.rooms) ? resto.rooms : [];
 
-        renderRoomsLight(window.rooms);
+        // 🔥 FILTER BRANCH (SAFE)
+        if (branchId) {
+          rooms = rooms.filter(r => r.branchId === branchId);
+        }
 
-      } catch (e) {}
+        window.rooms = rooms;
+
+        renderRoomsLight?.(window.rooms);
+
+      } catch (e) {
+        console.warn("Rooms error:", e);
+      }
     }, 0);
 
     console.log("🚀 UI READY (FAST MODE)");
@@ -4723,7 +4733,7 @@ console.log("📥 WA loaded:", window.WA_ADMIN);
     hideLoader?.();
     window.__LOAD_DATA_RUNNING__ = false;
   }
-}
+};
   
 // ====================== RESET / BACKUP / RESTORE ======================
 async function resetData() {
