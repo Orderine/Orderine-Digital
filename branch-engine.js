@@ -237,18 +237,22 @@ async function renderBranchList() {
 // ========================================
 
 async function renderActiveBranchLabel() {
+  const label = document.getElementById("activeBranchLabel");
+  if (!label) return;
+
   const restoId = await getRestoId();
   const branches = await getBranchesSafe(restoId);
 
   const active = branches.find(b => b.id === ACTIVE_BRANCH_ID);
 
-  const el = document.getElementById("activeBranchLabel");
+  if (!active) {
+    label.innerText = "No Active Branch";
+    label.classList.remove("active");
+    return;
+  }
 
-  if (!el) return;
-
-  el.innerText = active
-    ? `🏢 ${active.name}`
-    : "No Active Branch";
+  label.innerText = `ACTIVE: ${active.name}`;
+  label.classList.add("active"); // 🔥 INI KUNCINYA
 }
 
 // ========================================
