@@ -2578,6 +2578,37 @@ background:rgba(0,0,0,0.45);
   max-width: 100%;
   box-sizing: border-box;
 }
+
+ /* DEFAULT TEXT */
+.branch-card {
+  border: 1px solid #333;
+  color: #aaa;
+}
+
+/* ACTIVE CARD */
+.branch-card.active {
+  border: 1px solid #00ff9f;
+  box-shadow: 0 0 8px #00ff9f33;
+}
+
+/* BRANCH NAME ACTIVE */
+.branch-card.active .branch-name {
+  color: #00ff9f;
+  text-shadow: 0 0 6px #00ff9f;
+}
+
+/* STATUS ACTIVE */
+.branch-status.active {
+  color: #00ff9f;
+  text-shadow: 0 0 6px #00ff9f;
+  font-weight: bold;
+}
+
+/* LABEL ACTIVE (yang atas itu) */
+.active-branch-label.active {
+  color: #00ff9f;
+  text-shadow: 0 0 8px #00ff9f;
+}
 </style>
 </head>
 <body>
