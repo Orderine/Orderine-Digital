@@ -3315,10 +3315,67 @@ window.initSubscriptionCountdown = function () {
 };
 </script>
 <script>
-/* ================= SUBSCRIPTION WATCHER ================= */
+/* ================= SUBSCRIPTION CORE ================= */
 
+let subscriptionCountdownTimer = null;
 let subscriptionWatcherTimer = null;
+let subscriptionPanelTimer = null;
 
+/* ================= INIT COUNTDOWN ================= */
+window.initSubscriptionCountdown = function () {
+  const user = window.activeUser;
+  if (!user || !user.premiumExpire || !user.premiumPlan) return;
+
+  const box = document.getElementById("subscriptionCountdown");
+  if (!box) return;
+
+  box.innerHTML = `
+    ⏳ ${user.premiumPlan.toUpperCase()} plan expires in:
+    <span id="countdownText"></span>
+  `;
+  box.style.display = "block";
+
+  const text = document.getElementById("countdownText");
+  const expireTime = new Date(user.premiumExpire).getTime();
+
+  function formatTime(ms) {
+    if (ms <= 0) return "Expired";
+
+    const sec = Math.floor(ms / 1000);
+    const min = Math.floor(sec / 60);
+    const hr = Math.floor(min / 60);
+    const day = Math.floor(hr / 24);
+
+    if (day > 0) return `${day} day(s) ${hr % 24}h`;
+    if (hr > 0) return `${hr} hour(s) ${min % 60}m`;
+    if (min > 0) return `${min} minute(s) ${sec % 60}s`;
+    return `${sec} second(s)`;
+  }
+
+  function tick() {
+    const remaining = expireTime - Date.now();
+    text.textContent = formatTime(remaining);
+
+    if (remaining <= 0) {
+      clearInterval(subscriptionCountdownTimer);
+      return;
+    }
+
+    if (remaining < 24 * 60 * 60 * 1000) {
+      box.style.background = "#ffeaea";
+      box.style.color = "#a10000";
+    }
+  }
+
+  if (subscriptionCountdownTimer) {
+    clearInterval(subscriptionCountdownTimer);
+  }
+
+  tick();
+  subscriptionCountdownTimer = setInterval(tick, 1000);
+};
+
+/* ================= WATCHER ================= */
 window.startSubscriptionWatcher = function () {
   const user = window.activeUser;
   if (!user || !user.premiumExpire) return;
@@ -3332,26 +3389,30 @@ window.startSubscriptionWatcher = function () {
   subscriptionWatcherTimer = setInterval(() => {
     if (Date.now() > expireTime) {
       console.warn("🚨 Subscription expired");
+      clearInterval(subscriptionWatcherTimer);
       handleSubscriptionExpired();
     }
   }, 10000);
 };
 
+/* ================= HANDLE EXPIRE ================= */
 window.handleSubscriptionExpired = async function () {
   alert("⏱ Subscription expired. Please renew to continue.");
+
+  // stop all timers
+  if (subscriptionCountdownTimer) clearInterval(subscriptionCountdownTimer);
+  if (subscriptionWatcherTimer) clearInterval(subscriptionWatcherTimer);
+  if (subscriptionPanelTimer) clearInterval(subscriptionPanelTimer);
 
   await MENUVA_DB.delete("session", "activeUser");
   await MENUVA_DB.delete("session", "isLoggedIn");
 
   window.activeUser = null;
+
   location.href = "plans.html";
 };
 
-</script>
-<script>
-
-  /* ================= RENDER SUBSCRIPTION PANEL ================= */
-
+/* ================= PANEL ================= */
 window.renderSubscriptionPanel = function () {
   const user = window.activeUser;
   if (!user || !user.premiumExpire || !user.premiumPlan) return;
@@ -3361,6 +3422,8 @@ window.renderSubscriptionPanel = function () {
   const expiryEl = document.getElementById("subExpiry");
   const countdownEl = document.getElementById("subCountdown");
   const card = document.querySelector(".subscription-card");
+
+  if (!emailEl || !planEl || !expiryEl || !countdownEl || !card) return;
 
   emailEl.textContent = user.email;
   planEl.textContent = user.premiumPlan.toUpperCase();
@@ -3373,7 +3436,9 @@ window.renderSubscriptionPanel = function () {
 
     if (diff <= 0) {
       countdownEl.textContent = "EXPIRED";
+      card.classList.remove("warning");
       card.classList.add("danger");
+      clearInterval(subscriptionPanelTimer);
       return;
     }
 
@@ -3391,10 +3456,13 @@ window.renderSubscriptionPanel = function () {
     }
   }
 
-  updateCountdown();
-  setInterval(updateCountdown, 1000);
-};
+  if (subscriptionPanelTimer) {
+    clearInterval(subscriptionPanelTimer);
+  }
 
+  updateCountdown();
+  subscriptionPanelTimer = setInterval(updateCountdown, 1000);
+};
 </script>
 <script>
 
@@ -3523,7 +3591,14 @@ function openAddPromo(isEdit = false) {
 async function savePromoItem() {
 
   const restoId = window.activeUser?.restoID;
+  const branchId = window.activeBranch?.id;
+
+  // 🔥 VALIDASI HARUS DI ATAS
   if (!restoId) return;
+  if (!branchId) {
+    alert("⚠️ Branch tidak ditemukan");
+    return;
+  }
 
   const name  = document.getElementById("promoNameInput").value.trim();
   const desc  = document.getElementById("promoDescInput").value.trim();
@@ -3544,11 +3619,11 @@ async function savePromoItem() {
 
   if (editingPromoId) {
 
-    /* ===== UPDATE DIRECT KE STORE ===== */
-
+    /* ===== UPDATE ===== */
     const updatedPromo = {
       id: editingPromoId,
       restoId,
+      branchId, // 🔥 WAJIB
       kodePromo: window.menuPromo.find(p => p.id === editingPromoId)?.kodePromo,
       namaPromo: name,
       deskripsi: desc,
@@ -3564,11 +3639,11 @@ async function savePromoItem() {
 
   } else {
 
-    /* ===== ADD DIRECT KE STORE ===== */
-
+    /* ===== ADD ===== */
     const newPromo = {
       id: crypto.randomUUID(),
       restoId,
+      branchId, // 🔥 WAJIB
       kodePromo: generatePromoCode(),
       namaPromo: name,
       deskripsi: desc,
@@ -3584,9 +3659,11 @@ async function savePromoItem() {
     await MENUVA_DB.add("menuPromo", newPromo);
   }
 
-  /* 🔥 Reload dari DB supaya clean */
+  /* 🔥 RELOAD + FILTER BENAR */
   window.menuPromo = await MENUVA_DB.getAll("menuPromo");
-  window.menuPromo = window.menuPromo.filter(p => p.restoId === restoId);
+  window.menuPromo = window.menuPromo.filter(p => 
+    p.restoId === restoId && p.branchId === branchId
+  );
 
   editingPromoId = null;
   clearPromoEditor();
@@ -3727,16 +3804,24 @@ function renderPromoUI() {
 async function togglePromoStatus(id) {
 
   const restoId = window.activeUser?.restoID;
+  const branchId = window.activeBranch?.id;
+
+  if (!restoId || !branchId) return;
+ 
   const promo = window.menuPromo.find(p => p.id === id);
   if (!promo) return;
 
   promo.isActive = !promo.isActive;
   promo.updatedAt = Date.now();
+  promo.branchId = branchId;
 
-  await MENUVA_DB.update("menuPromo", promo);
+   await MENUVA_DB.update("menuPromo", promo);
 
+  // 🔥 LOAD + FILTER PER BRANCH
   window.menuPromo = await MENUVA_DB.getAll("menuPromo");
-  window.menuPromo = window.menuPromo.filter(p => p.restoId === restoId);
+  window.menuPromo = window.menuPromo.filter(p => 
+    p.restoId === restoId && p.branchId === branchId
+  );
 
   renderPromoUI();
 }
@@ -3900,14 +3985,19 @@ function tambahMenuBaru(categoryId, nama, harga, image) {
 
   const code = generateMenuCode(category);
 
-  const newMenu = {
-    id: crypto.randomUUID(),
-    code,
-    nama,
-    harga,
-    image,
-    categoryId
-  };
+ const branchId = window.BranchEngine?.getActive();
+const restoId = window.activeUser?.restoID;
+
+const newMenu = {
+  id: crypto.randomUUID(),
+  restoId,
+  branchId,
+  code,
+  nama,
+  harga,
+  image,
+  categoryId
+};
 
   window.menuList.push(newMenu);
 
@@ -4086,13 +4176,20 @@ async function renderMenuPreview(categoryName) {
   const restoId = window.activeUser?.restoID;
   if (!restoId) return;
 
-  const menus = await MENUVA_DB.getByIndex?.("menuData", "restoId", restoId)
+ const branchId = window.BranchEngine?.getActive();
+
+let menus = await MENUVA_DB.getByIndex?.("menuData", "restoId", restoId)
   || (await MENUVA_DB.getAll("menuData")).filter(m => m.restoId === restoId);
 
-  const filtered = menus.filter(m =>
-    m.restoId === restoId &&
-    m.category?.name === categoryName
-  );
+menus = menus.filter(m => m.branchId === branchId);
+
+ const branchId = window.BranchEngine?.getActive();
+
+const filtered = menus.filter(m =>
+  m.restoId === restoId &&
+  m.branchId === branchId && // 🔥 WAJIB
+  m.category?.name === categoryName
+);
 
   const grid = document.getElementById("menuPreviewGrid");
   grid.innerHTML = "";
@@ -4126,9 +4223,9 @@ async function generateMenuCode(categoryName, restoId) {
 
   let menus = [];
 
-  if (MENUVA_DB.getByIndex) {
-    menus = await MENUVA_DB.getByIndex("menuData", "restoId", restoId) || [];
-  }
+ const branchId = window.BranchEngine?.getActive();
+
+menus = menus.filter(m => m.branchId === branchId);
 
   // ❗ hanya fallback kalau benar-benar undefined/null
   if (!menus) {
@@ -4195,16 +4292,27 @@ async function saveMenuItem() {
 
   const menuCode = await generateMenuCode(categoryName, restoId);
 
-  const newMenu = {
-    id: crypto.randomUUID(),
-    restoId,
-    name,
-    price,
-    image: window.uploadedImageBase64 || "",
-    category: {
-      name: categoryName,
-      prefix: generateCategoryPrefix(categoryName)
-    },
+ const branchId = window.BranchEngine?.getActive();
+
+if (!branchId) {
+  alert("⚠️ Branch tidak ditemukan");
+  return;
+}
+
+const newMenu = {
+  id: crypto.randomUUID(),
+  restoId,
+  branchId, // 🔥 WAJIB
+  name,
+  price,
+  image: window.uploadedImageBase64 || "",
+  category: {
+    name: categoryName,
+    prefix: generateCategoryPrefix(categoryName)
+  },
+  menuCode,
+  createdAt: Date.now()
+};
     menuCode,
     createdAt: Date.now()
   };
@@ -4232,7 +4340,13 @@ async function deleteMenu(id) {
   const restoId = window.activeUser?.restoID;
   if (!restoId) return;
 
-  await MENUVA_DB.delete("menuData", id);
+  const all = await MENUVA_DB.getAll("menuData");
+const target = all.find(m => m.id === id);
+
+if (target?.branchId !== branchId) {
+  console.warn("❌ Beda branch, tidak boleh delete");
+  return;
+}
 
   // Reload kategori (sudah auto filter by resto)
   await loadCategories();
