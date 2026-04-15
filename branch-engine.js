@@ -476,3 +476,17 @@ window.BranchEngine = {
 window.openAddBranch = openAddBranch;
 window.closeAddBranch = closeAddBranch;
 window.submitAddBranch = submitAddBranch;
+
+window.addEventListener("branchChanged", async (e) => {
+  const branchId = e.detail.branchId;
+
+  console.log("🔄 Branch Changed:", branchId);
+
+  // 🔥 reload category
+  await loadCategories();
+
+  // 🔥 reload menu preview
+  if (window.activeCategoryName) {
+    await renderMenuPreview(window.activeCategoryName);
+  }
+});
