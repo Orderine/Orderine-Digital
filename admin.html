@@ -3588,7 +3588,7 @@ function openAddPromo(isEdit = false) {
 async function savePromoItem() {
 
   const restoId = window.activeUser?.restoID;
-  const branchId = window.activeBranch?.id;
+  const branchId = window.BranchEngine?.getActive()
 
   // 🔥 VALIDASI HARUS DI ATAS
   if (!restoId) return;
@@ -3801,7 +3801,7 @@ function renderPromoUI() {
 async function togglePromoStatus(id) {
 
   const restoId = window.activeUser?.restoID;
-  const branchId = window.activeBranch?.id;
+  const branchId = window.BranchEngine?.getActive()
 
   if (!restoId || !branchId) return;
  
