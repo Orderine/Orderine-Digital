@@ -3263,9 +3263,6 @@ placeholder="Table Notes"></textarea>
 <script>
 /* ================= SUBSCRIPTION COUNTDOWN ================= */
 
-let subscriptionCountdownTimer = null;
-
-
 window.initSubscriptionCountdown = function () {
   const user = window.activeUser;
   if (!user || !user.premiumExpire || !user.premiumPlan) return;
@@ -4176,20 +4173,18 @@ async function renderMenuPreview(categoryName) {
   const restoId = window.activeUser?.restoID;
   if (!restoId) return;
 
- const branchId = window.BranchEngine?.getActive();
+  const branchId = window.BranchEngine?.getActive(); // 🔥 cukup 1x
 
-let menus = await MENUVA_DB.getByIndex?.("menuData", "restoId", restoId)
-  || (await MENUVA_DB.getAll("menuData")).filter(m => m.restoId === restoId);
+  let menus = await MENUVA_DB.getByIndex?.("menuData", "restoId", restoId)
+    || (await MENUVA_DB.getAll("menuData")).filter(m => m.restoId === restoId);
 
-menus = menus.filter(m => m.branchId === branchId);
+  menus = menus.filter(m => m.branchId === branchId);
 
- const branchId = window.BranchEngine?.getActive();
-
-const filtered = menus.filter(m =>
-  m.restoId === restoId &&
-  m.branchId === branchId && // 🔥 WAJIB
-  m.category?.name === categoryName
-);
+  const filtered = menus.filter(m =>
+    m.restoId === restoId &&
+    m.branchId === branchId &&
+    m.category?.name === categoryName
+  );
 
   const grid = document.getElementById("menuPreviewGrid");
   grid.innerHTML = "";
@@ -4213,7 +4208,6 @@ const filtered = menus.filter(m =>
     grid.appendChild(card);
   });
 }
-
 /* ================= MENU CODE GENERATOR ================= */
 
 async function generateMenuCode(categoryName, restoId) {
