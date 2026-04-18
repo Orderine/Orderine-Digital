@@ -304,9 +304,11 @@ async function setActiveBranch(branchId) {
     emitBranchChange(branchId);
 
     // 🔥 EVENT GLOBAL
-    window.dispatchEvent(new CustomEvent("branchChanged", {
-      detail: { branchId }
-    }));
+   window.activeBranchId = branchId; // ✅ SET DULU
+
+window.dispatchEvent(new CustomEvent("branchChanged", {
+  detail: { branchId }
+}));
 
     if (typeof reloadAllData === "function") {
       await reloadAllData();
@@ -391,8 +393,10 @@ await MENUVA_DB.setSession({
 
   emitBranchChange(ACTIVE_BRANCH_ID);
 
-  window.dispatchEvent(new CustomEvent("branchChanged", {
-  detail: { branchId: ACTIVE_BRANCH_ID }
+window.activeBranchId = branchId; // ✅ SET DULU
+
+window.dispatchEvent(new CustomEvent("branchChanged", {
+  detail: { branchId }
 }));
 }
 
@@ -443,19 +447,22 @@ async function initBranchEngine() {
   await renderActiveBranchLabel();
 
   // 🔥 SYNC AWAL
-  window.dispatchEvent(new CustomEvent("branchChanged", {
-    detail: { branchId: ACTIVE_BRANCH_ID }
-  }));
+ window.activeBranchId = branchId; // ✅ SET DULU
 
+window.dispatchEvent(new CustomEvent("branchChanged", {
+  detail: { branchId }
+}));
   emitBranchChange(ACTIVE_BRANCH_ID);
 
   console.log("🚀 Branch Engine Ready");
 }
 
 function emitBranchChange(branchId) {
-  window.dispatchEvent(new CustomEvent("branchChanged", {
-    detail: { branchId }
-  }));
+ window.activeBranchId = branchId; // ✅ SET DULU
+
+window.dispatchEvent(new CustomEvent("branchChanged", {
+  detail: { branchId }
+}));
 }
 
 // ========================================
@@ -476,17 +483,3 @@ window.BranchEngine = {
 window.openAddBranch = openAddBranch;
 window.closeAddBranch = closeAddBranch;
 window.submitAddBranch = submitAddBranch;
-
-window.addEventListener("branchChanged", async (e) => {
-  const branchId = e.detail.branchId;
-
-  console.log("🔄 Branch Changed:", branchId);
-
-  // 🔥 reload category
-  await loadCategories();
-
-  // 🔥 reload menu preview
-  if (window.activeCategoryName) {
-    await renderMenuPreview(window.activeCategoryName);
-  }
-});
