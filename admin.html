@@ -4428,13 +4428,6 @@ window.promoList = window.menuPromo;
 
   window.activeBranchId = null;
 
- function getBranchPath() {
-  if (!window.activeBranchId) {
-    throw new Error("❌ Branch belum dipilih");
-  }
-  return `restoBranches/${window.activeBranchId}`;
-}
- 
 /* ============================================================
    LOGO UPLOAD
 ============================================================ */
@@ -4520,7 +4513,7 @@ await MENUVA_DB.set(`restos/${restoId}`, {
   updatedAt: Date.now()
 });
 
- await MENUVA_DB.set(getBranchPath(), {
+ await MENUVA_DB.get("restoBranches", branchId);{
   restoId,
   namaRestoran,
   restoAddress,
@@ -4709,12 +4702,31 @@ function initWaAdminUI() {
 }
 
 /** LOAD FROM DATA (CALL THIS!) */
-async function loadWaAdmin() {
+async function loadWaAdmin(sourceData = null) {
   try {
-    const branch = await MENUVA_DB.get(getBranchPath());
-    if (!branch) return;
+    if (sourceData) {
+      window.WA_ADMIN = Array.isArray(sourceData) ? [...sourceData] : [];
+      renderWaAdmin();
+      return;
+    }
+
+    const branchId = window.activeBranchId || window.BranchEngine?.getActive();
+
+    if (!branchId) {
+      console.warn("❌ loadWaAdmin: branchId kosong");
+      return;
+    }
+
+    // ✅ FIX: pakai store + id
+    const branch = await MENUVA_DB.get("restoBranches", branchId);
+
+    if (!branch) {
+      console.warn("❌ loadWaAdmin: branch tidak ditemukan");
+      return;
+    }
 
     window.WA_ADMIN = branch.nomorWaAdmin || [];
+
     renderWaAdmin();
 
   } catch (err) {
