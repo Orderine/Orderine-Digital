@@ -4737,118 +4737,65 @@ window.loadData = async function () {
     console.log("📦 loadData start → resto:", restoId);
     console.log("🏢 loadData branch:", branchId);
 
-    if (!restoId) return;
+    if (!restoId || !branchId) {
+      console.warn("❌ loadData: missing restoId / branchId");
+      return;
+    }
 
-    // ================= 🔥 GET RESTO =================
-    const branch = await MENUVA_DB.get(getBranchPath());
-    if (!resto) return;
+    // ✅ GET BRANCH DATA
+    const branch = await MENUVA_DB.get("restoBranches", branchId);
+    if (!branch) {
+      console.warn("❌ Branch data not found");
+      return;
+    }
 
-    // ================= 🔥 DOM CACHE =================
+    // ================= DOM =================
     const elNama = document.getElementById("namaRestoran");
     const elAddr = document.getElementById("restoAddress");
     const elPhone = document.getElementById("restoPhone");
     const elLoc = document.getElementById("locationCodeInput");
     const elLogo = document.getElementById("previewLogo");
 
-    // ================= ⚡ BASIC INFO =================
-    if (elNama) elNama.value = resto.namaRestoran ?? "";
-    if (elAddr) elAddr.value = resto.restoAddress ?? "";
-    if (elPhone) elPhone.value = resto.restoPhone ?? "";
+    // ================= BASIC =================
+    if (elNama) elNama.value = branch.namaRestoran ?? "";
+    if (elAddr) elAddr.value = branch.restoAddress ?? "";
+    if (elPhone) elPhone.value = branch.restoPhone ?? "";
 
     window.systemSettings = {
-      locationCode: resto.locationCode || "LOC"
+      locationCode: branch.locationCode || "LOC"
     };
 
     if (elLoc) elLoc.value = window.systemSettings.locationCode;
 
-    if (resto.logo && elLogo) {
-      elLogo.src = resto.logo;
-      window.__LOGO_BASE64__ = resto.logo;
+    if (branch.logo && elLogo) {
+      elLogo.src = branch.logo;
+      window.__LOGO_BASE64__ = branch.logo;
     }
 
-    // ================= ⚡ WA =================
-    window.WA_ADMIN = Array.isArray(resto.nomorWaAdmin)
-      ? [...resto.nomorWaAdmin]
+    // ================= WA =================
+    window.WA_ADMIN = Array.isArray(branch.nomorWaAdmin)
+      ? [...branch.nomorWaAdmin]
       : [];
 
     renderWaAdmin?.();
-    console.log("📥 WA loaded:", window.WA_ADMIN);
 
-    // ================= 🚀 CORE =================
-    await loadCategories?.(); // nanti kita branch-kan di step berikutnya
-    console.log("🍽️ Categories loaded");
+    // ================= CORE =================
+    await loadCategories?.();
 
-    // ================= 🟡 PROMO + VOUCHER =================
-    setTimeout(async () => {
-      try {
-        const [allPromo, allVoucher] = await Promise.all([
-          MENUVA_DB.getAll("menuPromo"),
-          MENUVA_DB.getAll("menuVoucher")
-        ]);
-
-        window.menuPromo = allPromo.filter(p =>
-          p.restoId === restoId &&
-          (!branchId || p.branchId === branchId)
-        );
-
-        window.menuVoucher = allVoucher.filter(v =>
-          v.restoId === restoId &&
-          (!branchId || v.branchId === branchId)
-        );
-
-        renderPromoFilterBar?.();
-        renderPromoUI?.();
-        renderVoucher?.(window.menuVoucher);
-
-        console.log("🎯 Promo & Voucher ready");
-
-      } catch (e) {
-        console.warn("Promo/Voucher error:", e);
-      }
-    }, 0);
-
-    // ================= 🔴 HEAVY =================
+    // ================= ROOMS =================
     setTimeout(() => {
       try {
-        window.flipbookRuanganImages = Array.isArray(resto.flipbookRuanganImages)
-          ? resto.flipbookRuanganImages
-          : [];
-
-        window.flipbookMenuImages = Array.isArray(resto.flipbookMenuImages)
-          ? resto.flipbookMenuImages
-          : [];
-
-        if (typeof renderFlipbookUI === "function") {
-        renderFlipbookUI();
-        }
-
-      } catch (e) {
-        console.warn("Flipbook error:", e);
-      }
-    }, 0);
-
-    // ================= 🔴 ROOMS =================
-    setTimeout(() => {
-      try {
-        let rooms = Array.isArray(resto.rooms) ? resto.rooms : [];
-
-        // 🔥 FILTER BRANCH (SAFE)
-        if (branchId) {
-          rooms = rooms.filter(r => r.branchId === branchId);
-        }
-
-        window.rooms = rooms;
+        window.rooms = Array.isArray(branch.rooms) ? branch.rooms : [];
 
         if (typeof renderRoomsLight === "function") {
-         renderRoomsLight(window.rooms);
-         }
-
+          renderRoomsLight(window.rooms);
+        }
       } catch (e) {
         console.warn("Rooms error:", e);
       }
     }, 0);
 
-    console.log("🚀 UI READY (FAST MODE)");
+    console.log("🚀 UI READY (BRANCH MODE)");
 
   } catch (err) {
     console.error("❌ loadData fatal:", err);
@@ -4881,7 +4828,7 @@ async function backupAdminToJSON() {
   const restoId = window.activeUser.restoID;
 
   try {
-    const branch = await MENUVA_DB.get(getBranchPath());
+    const branch = await MENUVA_DB.get("restoBranches", branchId);
     if (!resto) {
       alert("❌ Data resto tidak ditemukan");
       return;
