@@ -5462,7 +5462,14 @@ if (!window.__branchListenerAdded) {
   let isReloading = false;
 
   window.addEventListener("branchChanged", async (e) => {
-    const branchId = e.detail?.branchId || window.activeBranchId;
+    const branchId = e.detail?.branchId;
+
+    if (!branchId) {
+      console.warn("❌ branchId kosong");
+      return;
+    }
+
+    window.activeBranchId = branchId; // safety
 
     if (isReloading) {
       console.log("⏳ Skip duplicate reload");
@@ -5471,12 +5478,12 @@ if (!window.__branchListenerAdded) {
 
     isReloading = true;
 
-    console.log("🔄 ADMIN DETECT BRANCH CHANGE:", branchId);
+    console.log("🔄 ADMIN LOAD BRANCH:", branchId);
 
     try {
       await loadWaAdmin();
       await loadCategories();
-      await loadRooms();
+      // await loadRooms(); // aktifkan kalau sudah ready
     } catch (err) {
       console.error("❌ Reload error:", err);
     } finally {
