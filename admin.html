@@ -4506,14 +4506,19 @@ async function simpanData() {
        1️⃣ SAVE RESTO IDENTITY ONLY (NO NESTED DATA)
     ========================================================== */
   
-await MENUVA_DB.set(`restos/${restoId}`, {
+const branchId = window.activeBranchId;
+
+// ✅ SAVE RESTO (GLOBAL)
+await MENUVA_DB.add("restos", {
   id: restoId,
   ownerId,
   namaRestoran,
   updatedAt: Date.now()
 });
 
- await MENUVA_DB.get("restoBranches", branchId);{
+// ✅ SAVE BRANCH (DETAIL)
+await MENUVA_DB.add("restoBranches", {
+  id: branchId,
   restoId,
   namaRestoran,
   restoAddress,
