@@ -4502,23 +4502,23 @@ async function simpanData() {
     const locationCode =
       window.systemSettings?.locationCode || "LOC";
 
-    /* ==========================================================
-       1️⃣ SAVE RESTO IDENTITY ONLY (NO NESTED DATA)
-    ========================================================== */
-  
-const branchId = window.activeBranchId;
+ const branchId = window.activeBranchId;
 
-// ✅ SAVE RESTO (GLOBAL)
-await MENUVA_DB.add("restos", {
-  id: restoId,
+// 🔒 GUARD (penting)
+if (!branchId) {
+  alert("❌ Branch belum aktif");
+  return;
+}
+
+// ✅ RESTO
+await MENUVA_DB.set("restos", restoId, {
   ownerId,
   namaRestoran,
   updatedAt: Date.now()
 });
 
-// ✅ SAVE BRANCH (DETAIL)
-await MENUVA_DB.add("restoBranches", {
-  id: branchId,
+// ✅ BRANCH
+await MENUVA_DB.set("restoBranches", branchId, {
   restoId,
   namaRestoran,
   restoAddress,
