@@ -262,15 +262,12 @@ async function renderActiveBranchLabel() {
 // ========================================
 // 🔄 SET ACTIVE
 // ========================================
-
 async function setActiveBranch(branchId) {
-
   if (!branchId) return;
 
   console.log("🔥 SWITCH:", branchId);
 
   try {
-
     const restoId = await getRestoId();
 
     BRANCH_CACHE = null;
@@ -282,17 +279,12 @@ async function setActiveBranch(branchId) {
       return;
     }
 
-    // ✅ GLOBAL STATE (INI YANG KURANG)
-    window.activeBranchId = branchId;
-
-    // optional: tetap simpan internal
     ACTIVE_BRANCH_ID = branchId;
 
     const session = await MENUVA_DB.getSession();
 
     await MENUVA_DB.setSession({
       ...session,
-      restoId: session.restoId,
       branchId
     });
 
@@ -300,25 +292,13 @@ async function setActiveBranch(branchId) {
 
     await renderBranchList();
     await renderActiveBranchLabel();
-    
-    emitBranchChange(branchId);
 
-    // 🔥 EVENT GLOBAL
-   window.activeBranchId = branchId; // ✅ SET DULU
-
-window.dispatchEvent(new CustomEvent("branchChanged", {
-  detail: { branchId }
-}));
-
-    if (typeof reloadAllData === "function") {
-      await reloadAllData();
-    }
+    emitBranchChange(branchId); // ✅ SATU-SATUNYA EVENT
 
   } catch (err) {
     console.error("❌ switch error:", err);
   }
 }
-
 // ========================================
 // ➕ CREATE
 // ========================================
@@ -391,13 +371,10 @@ await MENUVA_DB.setSession({
   await renderBranchList();
   await renderActiveBranchLabel();
 
+if (ACTIVE_BRANCH_ID) {
+  window.activeBranchId = ACTIVE_BRANCH_ID;
   emitBranchChange(ACTIVE_BRANCH_ID);
-
-window.activeBranchId = branchId; // ✅ SET DULU
-
-window.dispatchEvent(new CustomEvent("branchChanged", {
-  detail: { branchId }
-}));
+}
 }
 
 // ========================================
@@ -446,23 +423,20 @@ async function initBranchEngine() {
   await renderBranchList();
   await renderActiveBranchLabel();
 
-  // 🔥 SYNC AWAL
- window.activeBranchId = branchId; // ✅ SET DULU
-
-window.dispatchEvent(new CustomEvent("branchChanged", {
-  detail: { branchId }
-}));
-  emitBranchChange(ACTIVE_BRANCH_ID);
+  if (ACTIVE_BRANCH_ID) {
+    window.activeBranchId = ACTIVE_BRANCH_ID;
+    emitBranchChange(ACTIVE_BRANCH_ID);
+  }
 
   console.log("🚀 Branch Engine Ready");
 }
 
 function emitBranchChange(branchId) {
- window.activeBranchId = branchId; // ✅ SET DULU
+  window.activeBranchId = branchId;
 
-window.dispatchEvent(new CustomEvent("branchChanged", {
-  detail: { branchId }
-}));
+  window.dispatchEvent(new CustomEvent("branchChanged", {
+    detail: { branchId }
+  }));
 }
 
 // ========================================
