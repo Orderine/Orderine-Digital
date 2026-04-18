@@ -4426,7 +4426,15 @@ window.promoList = window.menuPromo;
   return results;
 }
 
-  
+  window.activeBranchId = null;
+
+ function getBranchPath() {
+  if (!window.activeBranchId) {
+    throw new Error("❌ Branch belum dipilih");
+  }
+  return `restoBranches/${window.activeBranchId}`;
+}
+ 
 /* ============================================================
    LOGO UPLOAD
 ============================================================ */
@@ -4504,26 +4512,24 @@ async function simpanData() {
     /* ==========================================================
        1️⃣ SAVE RESTO IDENTITY ONLY (NO NESTED DATA)
     ========================================================== */
-   const allRestos = await MENUVA_DB.getAll("restos");
-const oldResto = allRestos.find(r => r.id === restoId) || {};
-
-if (oldResto.id) {
-  await MENUVA_DB.delete("restos", restoId);
-}
-
-await window.MENUVA_DB.add("restos", {
-  ...oldResto,
+  
+await MENUVA_DB.set(`restos/${restoId}`, {
   id: restoId,
   ownerId,
+  namaRestoran,
+  updatedAt: Date.now()
+});
+
+ await MENUVA_DB.set(getBranchPath(), {
+  restoId,
   namaRestoran,
   restoAddress,
   restoPhone,
   logo,
   nomorWaAdmin,
-  locationCode,
   categories,
   rooms,
-
+  locationCode,
   flipbookRuanganImages: window.flipbookRuanganImages || [],
   flipbookMenuImages: window.flipbookMenuImages || [],
   updatedAt: Date.now()
@@ -4703,21 +4709,17 @@ function initWaAdminUI() {
 }
 
 /** LOAD FROM DATA (CALL THIS!) */
-async function loadWaAdmin(sourceData = null) {
+async function loadWaAdmin() {
+  try {
+    const branch = await MENUVA_DB.get(getBranchPath());
+    if (!branch) return;
 
-  if (sourceData) {
-    window.WA_ADMIN = Array.isArray(sourceData) ? [...sourceData] : [];
-  } else {
-    const restoId = window.activeUser?.restoID;
-    if (!restoId) return;
+    window.WA_ADMIN = branch.nomorWaAdmin || [];
+    renderWaAdmin();
 
-    const resto = await MENUVA_DB.get("restos", restoId);
-    if (!resto) return;
-
-    window.WA_ADMIN = resto.nomorWaAdmin || [];
+  } catch (err) {
+    console.error("❌ loadWaAdmin:", err);
   }
-
-  renderWaAdmin();
 }
 
 window.__LOAD_DATA_RUNNING__ = false;
@@ -4738,7 +4740,7 @@ window.loadData = async function () {
     if (!restoId) return;
 
     // ================= 🔥 GET RESTO =================
-    const resto = await MENUVA_DB.get("restos", restoId);
+    const branch = await MENUVA_DB.get(getBranchPath());
     if (!resto) return;
 
     // ================= 🔥 DOM CACHE =================
@@ -4879,7 +4881,7 @@ async function backupAdminToJSON() {
   const restoId = window.activeUser.restoID;
 
   try {
-    const resto = await MENUVA_DB.get("restos", restoId);
+    const branch = await MENUVA_DB.get(getBranchPath());
     if (!resto) {
       alert("❌ Data resto tidak ditemukan");
       return;
@@ -5460,7 +5462,7 @@ if (!window.__branchListenerAdded) {
   let isReloading = false;
 
   window.addEventListener("branchChanged", async (e) => {
-    const branchId = e.detail.branchId;
+    const branchId = e.detail?.branchId || window.activeBranchId;
 
     if (isReloading) {
       console.log("⏳ Skip duplicate reload");
@@ -5472,15 +5474,16 @@ if (!window.__branchListenerAdded) {
     console.log("🔄 ADMIN DETECT BRANCH CHANGE:", branchId);
 
     try {
-      if (typeof reloadDashboardData === "function") {
-        await reloadDashboardData();
-      }
+      await loadWaAdmin();
+      await loadCategories();
+      await loadRooms();
+    } catch (err) {
+      console.error("❌ Reload error:", err);
     } finally {
       isReloading = false;
     }
   });
 }
-
   
  // ==================== DOM ====================
 document.addEventListener("DOMContentLoaded", async () => {
