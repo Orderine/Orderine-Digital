@@ -4749,22 +4749,26 @@ async function loadWaAdmin(sourceData = null) {
       return;
     }
 
+    const restoId = window.activeUser?.restoID;
     const branchId = window.activeBranchId || window.BranchEngine?.getActive();
 
-    if (!branchId) {
+    if (!restoId || !branchId) {
       console.warn("❌ loadWaAdmin: branchId kosong");
       return;
     }
 
-    // ✅ FIX: pakai store + id
-    const branch = await MENUVA_DB.get("restoBranches", branchId);
+    const branch = await MENUVA_DB.get("branches", branchId);
 
-    if (!branch) {
+    if (!branch || branch.restoId !== restoId) {
       console.warn("❌ loadWaAdmin: branch tidak ditemukan");
+      window.WA_ADMIN = [];
+      renderWaAdmin();
       return;
     }
 
-    window.WA_ADMIN = branch.nomorWaAdmin || [];
+    window.WA_ADMIN = Array.isArray(branch.nomorWaAdmin)
+      ? [...branch.nomorWaAdmin]
+      : [];
 
     renderWaAdmin();
 
@@ -4794,15 +4798,33 @@ window.loadData = async function () {
     }
 
     // ✅ FIX: ambil dari branches
-    const branch = await MENUVA_DB.get("branches", branchId);
+   let branch = await MENUVA_DB.get("branches", branchId);
 
-    if (!branch || branch.restoId !== restoId) {
-      console.warn("❌ Branch data not found / mismatch");
-      
-      // 🔥 RESET UI BIAR GAK BOCOR DATA
-      resetBranchUI();
-      return;
-    }
+if (!branch) {
+  console.warn("⚠️ Branch kosong → auto init");
+
+  branch = {
+    id: branchId,
+    restoId,
+
+    namaRestoran: "",
+    restoAddress: "",
+    restoPhone: "",
+    nomorWaAdmin: [],
+
+    categories: [],
+    rooms: [],
+
+    locationCode: "LOC",
+    flipbookRuanganImages: [],
+    flipbookMenuImages: [],
+
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+
+  await MENUVA_DB.add("branches", branch);
+}
 
     /* ================= DOM ================= */
     const elNama  = document.getElementById("namaRestoran");
