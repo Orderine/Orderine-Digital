@@ -4469,144 +4469,45 @@ window.slugify = slugify;
 // ====================== GLOBAL SAFE INIT ======================
 window.menuVoucher = window.menuVoucher || [];
 
-// ====================== SIMPAN (ADMIN → CLEAN STORE MODE) ======================
 async function simpanData() {
   try {
     showLoader?.();
 
-    if (!window.activeUser?.restoID) {
-      alert("❌ Session tidak valid. Silakan login ulang.");
+    const restoId = window.activeUser?.restoID;
+    const ownerId = window.activeUser?.email?.toLowerCase();
+    const branchId = window.activeBranchId;
+
+    if (!restoId || !branchId) {
+      alert("❌ Session / Branch invalid");
       return;
     }
 
-    const ownerId = window.activeUser.email.trim().toLowerCase();
-    const restoId = window.activeUser.restoID;
+    const data = {
+      id: branchId,
+      restoId,
 
-    const namaRestoran = getVal?.("namaRestoran") || "";
-    const restoAddress = getVal?.("restoAddress") || "";
-    const restoPhone   = getVal?.("restoPhone") || "";
-    const logoEl = document.getElementById("previewLogo");
-     const logo = logoEl?.src?.startsWith("data:image") ? logoEl.src : "";
-    const nomorWaAdmin = Array.isArray(collectWaFromUI?.())
-  ? collectWaFromUI().filter(n => n && n.trim() !== "")
-  : [];
-    
+      namaRestoran: getVal("namaRestoran"),
+      restoAddress: getVal("restoAddress"),
+      restoPhone: getVal("restoPhone"),
 
-    if (!restoPhone) {
-      alert("❌ Nomor telepon resto wajib diisi!");
-      return;
-    }
+      logo: document.getElementById("previewLogo")?.src || "",
 
+      nomorWaAdmin: collectWaFromUI(),
 
-    const categories = Array.isArray(window.categories)
-      ? window.categories
-      : [];
+      locationCode: window.systemSettings?.locationCode || "LOC",
 
- const rooms = Array.isArray(window.rooms)
-  ? window.rooms
-  : [];
-
-   const flipbookRuanganImages = Array.isArray(window.flipbookRuanganImages)
-  ? window.flipbookRuanganImages
-  : [];
-
-  const flipbookMenuImages = Array.isArray(window.flipbookMenuImages)
-  ? window.flipbookMenuImages
-  : [];
-
-    const locationCode =
-      window.systemSettings?.locationCode || "LOC";
-
- const branchId = window.activeBranchId;
-
-// 🔒 GUARD (penting)
-if (!branchId) {
-  alert("❌ Branch belum aktif");
-  return;
-}
-
-const branchKey = `${restoId}_${branchId}`;
-
-/* =========================
-   RESTO (OWNER ONLY)
-========================= */
-await MENUVA_DB.add("restos", {
-  id: restoId,
-  ownerId,
-  updatedAt: Date.now()
-});
-
-
-/* =========================
-   BRANCH (FULL DATA)
-========================= */
-const branchId = window.activeBranchId;
-
-if (!branchId) {
-  alert("❌ Branch belum aktif");
-  return;
-}
-
-const existingBranch = await MENUVA_DB.get("branches", branchId);
-
-await MENUVA_DB.add("branches", {
-  ...(existingBranch || {}),
-
-  id: branchId,
-  restoId,
-
-  namaRestoran: namaRestoran || "",
-  logo: logo || "",
-
-  restoAddress: restoAddress || "",
-  restoPhone: restoPhone || "",
-  nomorWaAdmin: Array.isArray(nomorWaAdmin) ? nomorWaAdmin : [],
-
-  categories,
-  rooms,
-
-  locationCode: locationCode || "LOC",
-
-  flipbookRuanganImages,
-  flipbookMenuImages,
-
-  updatedAt: Date.now()
-});
-    /* ==========================================================
-       CUSTOMER LINK & QR (TIDAK DIUBAH)
-    ========================================================== */
-
-    const customerLink = generateCustomerLink(restoId);
-
-    document.getElementById("customerLinkDisplay").textContent = customerLink;
-    generateQRCode(customerLink);
-
-    document.getElementById("btnOpenCustomer").onclick = () => {
-      window.open(customerLink, "_blank");
+      updatedAt: Date.now()
     };
 
-    document.getElementById("btnSalinLink").onclick = () => {
-      navigator.clipboard.writeText(customerLink);
-      alert("✅ Link copied");
-    };
+    // 🔥 UPDATE BRANCH METADATA ONLY
+    const existing = await MENUVA_DB.get("branches", branchId);
 
-    document.getElementById("btnPrintQR").onclick = () => {
-      const qrContent = document.getElementById("qrPreview").innerHTML;
-      const win = window.open("", "", "width=400,height=400");
-      win.document.write(`<html><body style="text-align:center">${qrContent}</body></html>`);
-      win.document.close();
-      win.print();
-    };
-
-    showCustomerShareUI?.();
-    showQRButtons?.();
-
-    await window.MENUVA_DB.add("session", {
-      id: "customerShareReady",
-      value: "1"
+    await MENUVA_DB.add("branches", {
+      ...(existing || {}),
+      ...data
     });
 
-    alert("✅ All Data Successfully Saved!");
+    alert("✅ Saved (branch scoped)");
 
   } catch (err) {
     console.error("❌ simpanData fatal:", err);
