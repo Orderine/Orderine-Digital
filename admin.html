@@ -5502,7 +5502,7 @@ window.renderPackage     = () => window.ROOM_ENGINE?.renderRooms?.();
   }, { passive: true });
 })();
 
- // ==================== 🔥 BRANCH LISTENER ====================
+// ==================== 🔥 BRANCH LISTENER ====================
 if (!window.__branchListenerAdded) {
   window.__branchListenerAdded = true;
 
@@ -5516,7 +5516,7 @@ if (!window.__branchListenerAdded) {
       return;
     }
 
-    window.activeBranchId = branchId; // safety
+    window.activeBranchId = branchId;
 
     if (isReloading) {
       console.log("⏳ Skip duplicate reload");
@@ -5528,9 +5528,8 @@ if (!window.__branchListenerAdded) {
     console.log("🔄 ADMIN LOAD BRANCH:", branchId);
 
     try {
-      await loadWaAdmin();
-      await loadCategories();
-      // await loadRooms(); // aktifkan kalau sudah ready
+      // 🔥 SATU PINTU SAJA
+      await loadData();
     } catch (err) {
       console.error("❌ Reload error:", err);
     } finally {
