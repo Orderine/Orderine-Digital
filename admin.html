@@ -4793,23 +4793,27 @@ window.loadData = async function () {
       return;
     }
 
-    // ✅ GET BRANCH DATA
-    const branch = await MENUVA_DB.get("restoBranches", branchId);
-    if (!branch) {
-      console.warn("❌ Branch data not found");
+    // ✅ FIX: ambil dari branches
+    const branch = await MENUVA_DB.get("branches", branchId);
+
+    if (!branch || branch.restoId !== restoId) {
+      console.warn("❌ Branch data not found / mismatch");
+      
+      // 🔥 RESET UI BIAR GAK BOCOR DATA
+      resetBranchUI();
       return;
     }
 
-    // ================= DOM =================
-    const elNama = document.getElementById("namaRestoran");
-    const elAddr = document.getElementById("restoAddress");
+    /* ================= DOM ================= */
+    const elNama  = document.getElementById("namaRestoran");
+    const elAddr  = document.getElementById("restoAddress");
     const elPhone = document.getElementById("restoPhone");
-    const elLoc = document.getElementById("locationCodeInput");
-    const elLogo = document.getElementById("previewLogo");
+    const elLoc   = document.getElementById("locationCodeInput");
+    const elLogo  = document.getElementById("previewLogo");
 
-    // ================= BASIC =================
-    if (elNama) elNama.value = branch.namaRestoran ?? "";
-    if (elAddr) elAddr.value = branch.restoAddress ?? "";
+    /* ================= BASIC ================= */
+    if (elNama)  elNama.value  = branch.namaRestoran ?? "";
+    if (elAddr)  elAddr.value  = branch.restoAddress ?? "";
     if (elPhone) elPhone.value = branch.restoPhone ?? "";
 
     window.systemSettings = {
@@ -4821,30 +4825,26 @@ window.loadData = async function () {
     if (branch.logo && elLogo) {
       elLogo.src = branch.logo;
       window.__LOGO_BASE64__ = branch.logo;
+    } else if (elLogo) {
+      elLogo.src = "";
     }
 
-    // ================= WA =================
+    /* ================= WA ================= */
     window.WA_ADMIN = Array.isArray(branch.nomorWaAdmin)
       ? [...branch.nomorWaAdmin]
       : [];
 
     renderWaAdmin?.();
 
-    // ================= CORE =================
+    /* ================= CORE ================= */
     await loadCategories?.();
 
-    // ================= ROOMS =================
-    setTimeout(() => {
-      try {
-        window.rooms = Array.isArray(branch.rooms) ? branch.rooms : [];
+    /* ================= ROOMS ================= */
+    window.rooms = Array.isArray(branch.rooms) ? branch.rooms : [];
 
-        if (typeof renderRoomsLight === "function") {
-          renderRoomsLight(window.rooms);
-        }
-      } catch (e) {
-        console.warn("Rooms error:", e);
-      }
-    }, 0);
+    if (typeof renderRoomsLight === "function") {
+      renderRoomsLight(window.rooms);
+    }
 
     console.log("🚀 UI READY (BRANCH MODE)");
 
@@ -4855,6 +4855,33 @@ window.loadData = async function () {
     window.__LOAD_DATA_RUNNING__ = false;
   }
 };
+
+ function resetBranchUI() {
+  console.warn("🧹 Reset UI (no branch data)");
+
+  const ids = [
+    "namaRestoran",
+    "restoAddress",
+    "restoPhone",
+    "locationCodeInput"
+  ];
+
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+
+  const logo = document.getElementById("previewLogo");
+  if (logo) logo.src = "";
+
+  window.WA_ADMIN = [];
+  renderWaAdmin?.();
+
+  window.rooms = [];
+  if (typeof renderRoomsLight === "function") {
+    renderRoomsLight([]);
+  }
+}
   
 // ====================== RESET / BACKUP / RESTORE ======================
 async function resetData() {
