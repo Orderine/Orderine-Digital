@@ -4511,25 +4511,32 @@ if (!branchId) {
 }
 
 // ✅ RESTO
-await MENUVA_DB.set("restos", restoId, {
+await MENUVA_DB.add("restos", {
+  id: restoId, // 🔥 WAJIB
   ownerId,
   namaRestoran,
   updatedAt: Date.now()
 });
 
 // ✅ BRANCH
-await MENUVA_DB.set("restoBranches", branchId, {
+await MENUVA_DB.add("restoBranches", {
+  id: `${restoId}_${branchId}`, // 🔥 UNIQUE ID (WAJIB)
   restoId,
+  branchId,
+
   namaRestoran,
   restoAddress,
   restoPhone,
   logo,
   nomorWaAdmin,
+
   categories,
   rooms,
   locationCode,
+
   flipbookRuanganImages: window.flipbookRuanganImages || [],
   flipbookMenuImages: window.flipbookMenuImages || [],
+
   updatedAt: Date.now()
 });
 
