@@ -4540,14 +4540,20 @@ await MENUVA_DB.add("restos", {
 /* =========================
    BRANCH (FULL DATA)
 ========================= */
-const existingBranch = await MENUVA_DB.get("restoBranches", branchKey);
+const branchId = window.activeBranchId;
 
-await MENUVA_DB.add("restoBranches", {
-  ...(existingBranch || {}), // 🔥 preserve data lama
+if (!branchId) {
+  alert("❌ Branch belum aktif");
+  return;
+}
 
-  id: branchKey,
+const existingBranch = await MENUVA_DB.get("branches", branchId);
+
+await MENUVA_DB.add("branches", {
+  ...(existingBranch || {}),
+
+  id: branchId,
   restoId,
-  branchId,
 
   namaRestoran: namaRestoran || "",
   logo: logo || "",
@@ -4566,7 +4572,6 @@ await MENUVA_DB.add("restoBranches", {
 
   updatedAt: Date.now()
 });
-
     /* ==========================================================
        CUSTOMER LINK & QR (TIDAK DIUBAH)
     ========================================================== */
