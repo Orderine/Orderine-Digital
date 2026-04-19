@@ -4485,8 +4485,11 @@ async function simpanData() {
     const namaRestoran = getVal?.("namaRestoran") || "";
     const restoAddress = getVal?.("restoAddress") || "";
     const restoPhone   = getVal?.("restoPhone") || "";
-    const logo         = document.getElementById("previewLogo")?.src || "";
-    const nomorWaAdmin = collectWaFromUI?.() || [];
+    const logoEl = document.getElementById("previewLogo");
+     const logo = logoEl?.src?.startsWith("data:image") ? logoEl.src : "";
+    const nomorWaAdmin = Array.isArray(collectWaFromUI?.())
+  ? collectWaFromUI().filter(n => n && n.trim() !== "")
+  : [];
     
 
     if (!restoPhone) {
@@ -4507,7 +4510,7 @@ async function simpanData() {
   ? window.flipbookRuanganImages
   : [];
 
-const flipbookMenuImages = Array.isArray(window.flipbookMenuImages)
+  const flipbookMenuImages = Array.isArray(window.flipbookMenuImages)
   ? window.flipbookMenuImages
   : [];
 
@@ -4522,29 +4525,41 @@ if (!branchId) {
   return;
 }
 
-// ✅ RESTO
+const branchKey = `${restoId}_${branchId}`;
+
+/* =========================
+   RESTO (OWNER ONLY)
+========================= */
 await MENUVA_DB.add("restos", {
-  id: restoId, // 🔥 WAJIB
+  id: restoId,
   ownerId,
-  namaRestoran,
   updatedAt: Date.now()
 });
 
-// ✅ BRANCH
+
+/* =========================
+   BRANCH (FULL DATA)
+========================= */
+const existingBranch = await MENUVA_DB.get("restoBranches", branchKey);
+
 await MENUVA_DB.add("restoBranches", {
-  id: `${restoId}_${branchId}`,
+  ...(existingBranch || {}), // 🔥 preserve data lama
+
+  id: branchKey,
   restoId,
   branchId,
 
-  namaRestoran,
-  restoAddress,
-  restoPhone,
-  logo,
-  nomorWaAdmin,
+  namaRestoran: namaRestoran || "",
+  logo: logo || "",
+
+  restoAddress: restoAddress || "",
+  restoPhone: restoPhone || "",
+  nomorWaAdmin: Array.isArray(nomorWaAdmin) ? nomorWaAdmin : [],
 
   categories,
   rooms,
-  locationCode,
+
+  locationCode: locationCode || "LOC",
 
   flipbookRuanganImages,
   flipbookMenuImages,
