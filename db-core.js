@@ -15,7 +15,7 @@
   const DEBUG_DB = false;
 
   const DB_NAME = "MenuvaDB";
-  const DB_VERSION = 27;
+  const DB_VERSION = 28;
 
   let dbOpeningPromise = null;
   let dbInstance = null;
@@ -110,14 +110,6 @@
          }
 
          const tx = e.target.transaction;
-
-   ensureStore(db, tx, "restoBranches",
-  { keyPath:"id" },
-  [
-    { name:"restoId", keyPath:"restoId" },
-    { name:"branchId", keyPath:"branchId" }
-  ]
-);
 
 /* ======================================================
    MENU SYSTEM
@@ -463,7 +455,6 @@ ensureStore(db, tx, "flipbookData",
   "admins",
 
   "branches",
-  "restoBranches",
   "void_logs",
 
   "menuData",
