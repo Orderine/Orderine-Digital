@@ -4499,6 +4499,18 @@ async function simpanData() {
       ? window.categories
       : [];
 
+ const rooms = Array.isArray(window.rooms)
+  ? window.rooms
+  : [];
+
+   const flipbookRuanganImages = Array.isArray(window.flipbookRuanganImages)
+  ? window.flipbookRuanganImages
+  : [];
+
+const flipbookMenuImages = Array.isArray(window.flipbookMenuImages)
+  ? window.flipbookMenuImages
+  : [];
+
     const locationCode =
       window.systemSettings?.locationCode || "LOC";
 
@@ -4520,7 +4532,7 @@ await MENUVA_DB.add("restos", {
 
 // ✅ BRANCH
 await MENUVA_DB.add("restoBranches", {
-  id: `${restoId}_${branchId}`, // 🔥 UNIQUE ID (WAJIB)
+  id: `${restoId}_${branchId}`,
   restoId,
   branchId,
 
@@ -4534,8 +4546,8 @@ await MENUVA_DB.add("restoBranches", {
   rooms,
   locationCode,
 
-  flipbookRuanganImages: window.flipbookRuanganImages || [],
-  flipbookMenuImages: window.flipbookMenuImages || [],
+  flipbookRuanganImages,
+  flipbookMenuImages,
 
   updatedAt: Date.now()
 });
