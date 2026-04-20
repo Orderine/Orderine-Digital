@@ -4399,6 +4399,19 @@ if (target?.branchId !== branchId) {
   console.log("🗑️ Menu deleted:", id);
 }
 
+ function resetMenuState() {
+  console.log("🧹 Reset menu state");
+
+  window.activeCategoryName = null;
+  window.menuCategories = [];
+
+  const grid = document.getElementById("menuPreviewGrid");
+  if (grid) grid.innerHTML = "";
+
+  const filter = document.getElementById("categoryFilterBar");
+  if (filter) filter.innerHTML = "";
+}
+
 /* ============================================================
    EXPOSE TO WINDOW (WAJIB UNTUK MODULE)
 ============================================================ */
