@@ -4024,79 +4024,29 @@ let __LOADING_CATEGORIES__ = false;
 let __CATEGORIES_CACHE__ = {};
 
 async function loadCategories() {
-
-  if (__LOADING_CATEGORIES__) return;
-  __LOADING_CATEGORIES__ = true;
-
   try {
     const restoId = window.activeUser?.restoID;
     const branchId = window.BranchEngine?.getActive();
 
-    if (!restoId) return;
+    let all = await MENUVA_DB.getAll("menuData");
 
-    // 🔥 UNIQUE CACHE PER BRANCH
-    const cacheKey = `${restoId}_${branchId || "ALL"}`;
+    const categories = all.filter(
+      d =>
+        d.type === "category" &&
+        d.restoId === restoId &&
+        d.branchId === branchId
+    );
 
-    // 🚀 CACHE HIT
-    if (__CATEGORIES_CACHE__[cacheKey]) {
-      window.menuCategories = __CATEGORIES_CACHE__[cacheKey];
+    window.menuCategories = categories;
 
-      if (!window.activeCategoryName && window.menuCategories.length) {
-        window.activeCategoryName = window.menuCategories[0].name;
-      }
-
-      requestAnimationFrame(renderCategoryFilter);
-      return;
+    if (!window.activeCategoryName && categories.length) {
+      window.activeCategoryName = categories[0].name;
     }
 
-    let menus;
-
-    // 🚀 FETCH DATA
-    if (MENUVA_DB.getByIndex) {
-      menus = await MENUVA_DB.getByIndex("menuData", "restoId", restoId);
-    } else {
-      const all = await MENUVA_DB.getAll("menuData");
-      menus = all.filter(m => m.restoId === restoId);
-    }
-
-    // 🔥 FILTER BY BRANCH (KUNCI UTAMA)
-    if (branchId) {
-      menus = menus.filter(m => m.branchId === branchId);
-    }
-
-    // 🚀 OPTIMASI LOOP
-    const unique = Object.create(null);
-    const result = [];
-
-    for (let i = 0; i < menus.length; i++) {
-      const cat = menus[i].category;
-
-      if (cat && cat.name && !unique[cat.name]) {
-        unique[cat.name] = true;
-        result.push(cat);
-      }
-    }
-
-    window.menuCategories = result;
-
-    // 🚀 CACHE PER BRANCH
-    __CATEGORIES_CACHE__[cacheKey] = result;
-
-    if (!window.activeCategoryName && result.length) {
-      window.activeCategoryName = result[0].name;
-    }
-
-    // 🚀 RENDER NON BLOCKING
-    requestAnimationFrame(() => {
-      if (typeof renderCategoryFilter === "function") {
-        renderCategoryFilter();
-      }
-    });
+    renderCategoryFilter();
 
   } catch (err) {
     console.error("❌ loadCategories error:", err);
-  } finally {
-    __LOADING_CATEGORIES__ = false;
   }
 }
   
@@ -4141,29 +4091,45 @@ function closeAddCategory() {
   document.getElementById("addCategoryModal").style.display = "none";
 }
 
-function saveCategory() {
+async function saveCategory() {
   const name = document
     .getElementById("categoryNameInput")
     .value.trim();
 
   if (!name) return alert("Category name required");
 
-  const exists = window.menuCategories
-    ?.some(c => c.name.toLowerCase() === name.toLowerCase());
+  const branchId = window.BranchEngine?.getActive();
+  const restoId = window.activeUser?.restoID;
+
+  const all = await MENUVA_DB.getAll("menuData");
+
+  // 🔥 ambil hanya category
+  const categories = all.filter(
+    d => d.type === "category" &&
+         d.restoId === restoId &&
+         d.branchId === branchId
+  );
+
+  const exists = categories.some(
+    c => c.name.toLowerCase() === name.toLowerCase()
+  );
 
   if (exists) return alert("Category already exists");
 
-  window.menuCategories = window.menuCategories || [];
-
-  window.menuCategories.push({
+  const newCategory = {
+    id: crypto.randomUUID(),
+    type: "category", // 🔥 WAJIB
     name,
-    icon: "📁"
-  });
+    restoId,
+    branchId,
+    createdAt: Date.now()
+  };
 
-  window.activeCategoryName = name; // 🔥 WAJIB GLOBAL
+  await MENUVA_DB.add("menuData", newCategory);
 
-  renderCategoryFilter();
-  renderMenuPreview(name);
+  window.activeCategoryName = name;
+
+  await loadCategories();
 
   document.getElementById("categoryNameInput").value = "";
   closeAddCategory();
@@ -4181,14 +4147,31 @@ async function renderMenuPreview(categoryName) {
   let menus = await MENUVA_DB.getByIndex?.("menuData", "restoId", restoId)
     || (await MENUVA_DB.getAll("menuData")).filter(m => m.restoId === restoId);
 
+ const all = await MENUVA_DB.getAll("menuData");
+
+const categories = all.filter(
+  d =>
+    d.type === "category" &&
+    d.restoId === restoId &&
+    d.branchId === branchId
+);
+
+const selected = categories.find(
+  c => c.name === categoryName
+);
+
   menus = menus.filter(m => m.branchId === branchId);
 
-  const filtered = menus.filter(m =>
+ menus = menus.filter(m => m.type === "menu");
+
+  const filtered = menus.filter(
+  m =>
+    m.type === "menu" &&
     m.restoId === restoId &&
     m.branchId === branchId &&
-    m.category?.name === categoryName
-  );
-
+    m.categoryId === selected?.id
+);
+ 
   const grid = document.getElementById("menuPreviewGrid");
   grid.innerHTML = "";
 
@@ -4241,6 +4224,49 @@ menus = menus.filter(m => m.branchId === branchId);
   ).padStart(4, "0");
 
   return `${location}-${prefix}-${running}`;
+}
+
+ async function migrateOldCategories() {
+  const all = await MENUVA_DB.getAll("menuData");
+
+  for (const item of all) {
+
+    if (item.type === "menu" && !item.categoryId && item.category?.name) {
+
+      const branchId = item.branchId;
+      const restoId = item.restoId;
+      const name = item.category.name;
+
+      // cari category existing
+      let cat = all.find(
+        d =>
+          d.type === "category" &&
+          d.name === name &&
+          d.branchId === branchId &&
+          d.restoId === restoId
+      );
+
+      // kalau belum ada → buat
+      if (!cat) {
+        cat = {
+          id: crypto.randomUUID(),
+          type: "category",
+          name,
+          restoId,
+          branchId,
+          createdAt: Date.now()
+        };
+
+        await MENUVA_DB.add("menuData", cat);
+      }
+
+      item.categoryId = cat.id;
+
+      await MENUVA_DB.put("menuData", item);
+    }
+  }
+
+  console.log("✅ migration done");
 }
   
 /* ================= SAVE MENU ================= */
@@ -4296,17 +4322,35 @@ if (!branchId) {
   return;
 }
 
+ const all = await MENUVA_DB.getAll("menuData");
+
+const categories = all.filter(
+  d =>
+    d.type === "category" &&
+    d.restoId === restoId &&
+    d.branchId === branchId
+);
+
+const selected = categories.find(
+  c => c.name === categoryName
+);
+
+if (!selected) {
+  alert("❌ Category tidak ditemukan");
+  return;
+}
+
 const newMenu = {
   id: crypto.randomUUID(),
+  type: "menu", // 🔥 TAMBAHKAN
   restoId,
-  branchId, // 🔥 WAJIB
+  branchId,
   name,
   price,
   image: window.uploadedImageBase64 || "",
-  category: {
-    name: categoryName,
-    prefix: generateCategoryPrefix(categoryName)
-  },
+
+  categoryId: selected.id, // 🔥 INI KUNCI
+
   menuCode,
   createdAt: Date.now()
 };
