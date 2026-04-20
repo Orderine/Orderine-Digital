@@ -86,6 +86,10 @@ if (!session?.branchId) {
   });
 }
 
+if (restos.filter(r => r.ownerEmail === email).length > 1) {
+  console.warn("🚫 Duplicate resto detected");
+}
+
   CACHED_RESTO_ID = restoId;
   return restoId;
 }
@@ -270,6 +274,7 @@ async function setActiveBranch(branchId) {
   try {
     const restoId = await getRestoId();
 
+    // 🔥 RESET CACHE DULU
     BRANCH_CACHE = null;
 
     const branches = await getBranchesSafe(restoId);
@@ -278,6 +283,9 @@ async function setActiveBranch(branchId) {
       console.warn("❌ Invalid branchId");
       return;
     }
+
+    // 🔐 SIMPAN DULU (INI PENTING)
+    localStorage.setItem("active_branch", branchId);
 
     ACTIVE_BRANCH_ID = branchId;
 
@@ -288,12 +296,10 @@ async function setActiveBranch(branchId) {
       branchId
     });
 
-    localStorage.setItem("active_branch", branchId);
-
     await renderBranchList();
     await renderActiveBranchLabel();
 
-    emitBranchChange(branchId); // ✅ SATU-SATUNYA EVENT
+    emitBranchChange(branchId);
 
   } catch (err) {
     console.error("❌ switch error:", err);
@@ -309,13 +315,21 @@ async function createBranch(name) {
 
   const restoId = await getRestoId();
 
-  await MENUVA_DB.add("branches", {
-    id: uid("branch"),
-    restoId,
-    name,
-    isMain: false,
-    createdAt: Date.now()
-  });
+ await MENUVA_DB.add("branches", {
+  id: uid("branch"),
+  restoId,
+  name,
+
+  profile: {
+    logo: "",
+    address: "",
+    phone: "",
+    currency: "IDR"
+  },
+
+  isMain: false,
+  createdAt: Date.now()
+});
 
   // 🔥 RESET CACHE
   BRANCH_CACHE = null;
@@ -359,6 +373,10 @@ const remaining = await getBranchesSafe(restoId);
 
 if (branchId === ACTIVE_BRANCH_ID) {
   ACTIVE_BRANCH_ID = remaining[0]?.id || null;
+}
+
+if (branch.restoId !== restoId) {
+  throw new Error("🚫 Cross-resto delete blocked");
 }
 
 const session = await MENUVA_DB.getSession();
@@ -409,8 +427,48 @@ async function updateBranch(branchId, newName) {
 // ========================================
 
 function withBranch(data) {
-  if (!ACTIVE_BRANCH_ID) return data;
-  return data.filter(d => d.branchId === ACTIVE_BRANCH_ID);
+  console.warn("⚠️ withBranch is deprecated, use getMyData()");
+  return data.filter(d =>
+    d.branchId === ACTIVE_BRANCH_ID &&
+    d.restoId === CACHED_RESTO_ID
+  );
+}
+
+// ========================================
+// 🧰 DATA ACCESS (NEW)
+// ========================================
+
+function getContext() {
+  if (!ACTIVE_BRANCH_ID || !CACHED_RESTO_ID) {
+    throw new Error("🚫 Branch context missing");
+  }
+
+  return {
+    branchId: ACTIVE_BRANCH_ID,
+    restoId: CACHED_RESTO_ID
+  };
+}
+
+function withContext(data) {
+  const ctx = getContext();
+
+  return {
+    ...data,
+    branchId: ctx.branchId,
+    restoId: ctx.restoId,
+    createdAt: Date.now()
+  };
+}
+
+async function getMyData(store) {
+  const ctx = getContext();
+
+  const all = await MENUVA_DB.getAll(store);
+
+  return all.filter(d =>
+    d.branchId === ctx.branchId &&
+    d.restoId === ctx.restoId
+  );
 }
 
 // ========================================
@@ -457,3 +515,4 @@ window.BranchEngine = {
 window.openAddBranch = openAddBranch;
 window.closeAddBranch = closeAddBranch;
 window.submitAddBranch = submitAddBranch;
+
