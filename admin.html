@@ -3546,7 +3546,6 @@ if (!window.indexedDB) {
 let currentPromoFilter = "active";
 let editingPromoId = null;
 
-window.menuPromo = [];
 
 /* ================= GENERATE PROMO CODE ================= */
 
@@ -3617,7 +3616,7 @@ async function savePromoItem() {
   if (editingPromoId) {
 
     /* ===== UPDATE ===== */
-   await MENUVA_DB.add(
+  await MENUVA_DB.add(
   "menuPromo",
   BranchEngine.withContext({
     id: crypto.randomUUID(),
@@ -3632,6 +3631,7 @@ async function savePromoItem() {
     updatedAt: Date.now()
   })
 );
+
    await MENUVA_DB.update(
   "menuPromo",
   BranchEngine.withContext(updatedPromo)
@@ -3661,10 +3661,7 @@ async function savePromoItem() {
 
   /* 🔥 RELOAD + FILTER BENAR */
   window.menuPromo = await BranchEngine.getData("menuPromo");
-  window.menuPromo = window.menuPromo.filter(p => 
-    p.restoId === restoId && p.branchId === branchId
-  );
-
+ 
   editingPromoId = null;
   clearPromoEditor();
   renderPromoFilterBar();
@@ -4771,11 +4768,15 @@ window.loadData = async function () {
   try {
     showLoader?.("Loading data...");
 
-    const restoId = window.activeUser?.restoID;
-    const branchId = window.BranchEngine?.getActive();
+    const restoId = await BranchEngine.getRestoId();
+    const branchId = BranchEngine.getActive();
 
     console.log("📦 loadData start → resto:", restoId);
     console.log("🏢 loadData branch:", branchId);
+
+// 🔥 INI WAJIB BANGET
+window.menuPromo = await BranchEngine.getData("menuPromo");
+renderPromoUI?.();
 
     if (!restoId || !branchId) {
       console.warn("❌ loadData: missing restoId / branchId");
