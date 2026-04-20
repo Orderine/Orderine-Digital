@@ -3587,8 +3587,8 @@ function openAddPromo(isEdit = false) {
 
 async function savePromoItem() {
 
-  const restoId = window.activeUser?.restoID;
-  const branchId = window.BranchEngine?.getActive()
+ const restoId = await BranchEngine.getRestoId();
+ const branchId = BranchEngine.getActive();
 
   // 🔥 VALIDASI HARUS DI ATAS
   if (!restoId) return;
@@ -3617,22 +3617,25 @@ async function savePromoItem() {
   if (editingPromoId) {
 
     /* ===== UPDATE ===== */
-    const updatedPromo = {
-      id: editingPromoId,
-      restoId,
-      branchId, // 🔥 WAJIB
-      kodePromo: window.menuPromo.find(p => p.id === editingPromoId)?.kodePromo,
-      namaPromo: name,
-      deskripsi: desc,
-      harga: price,
-      image,
-      startDate,
-      endDate,
-      isActive,
-      updatedAt: Date.now()
-    };
-
-    await MENUVA_DB.update("menuPromo", updatedPromo);
+   await MENUVA_DB.add(
+  "menuPromo",
+  BranchEngine.withContext({
+    id: crypto.randomUUID(),
+    kodePromo: generatePromoCode(),
+    namaPromo: name,
+    deskripsi: desc,
+    harga: price,
+    image,
+    startDate,
+    endDate,
+    isActive: true,
+    updatedAt: Date.now()
+  })
+);
+   await MENUVA_DB.update(
+  "menuPromo",
+  BranchEngine.withContext(updatedPromo)
+);
 
   } else {
 
@@ -3657,7 +3660,7 @@ async function savePromoItem() {
   }
 
   /* 🔥 RELOAD + FILTER BENAR */
-  window.menuPromo = await MENUVA_DB.getAll("menuPromo");
+  window.menuPromo = await BranchEngine.getData("menuPromo");
   window.menuPromo = window.menuPromo.filter(p => 
     p.restoId === restoId && p.branchId === branchId
   );
@@ -3800,8 +3803,8 @@ function renderPromoUI() {
 /* ======================= TOGGLE ACTIVE ========================= */
 async function togglePromoStatus(id) {
 
-  const restoId = window.activeUser?.restoID;
-  const branchId = window.BranchEngine?.getActive()
+  const restoId = await BranchEngine.getRestoId();
+  const branchId = BranchEngine.getActive();
 
   if (!restoId || !branchId) return;
  
@@ -3815,7 +3818,7 @@ async function togglePromoStatus(id) {
    await MENUVA_DB.update("menuPromo", promo);
 
   // 🔥 LOAD + FILTER PER BRANCH
-  window.menuPromo = await MENUVA_DB.getAll("menuPromo");
+  window.menuPromo = await BranchEngine.getData("menuPromo");
   window.menuPromo = window.menuPromo.filter(p => 
     p.restoId === restoId && p.branchId === branchId
   );
@@ -3903,7 +3906,10 @@ setInterval(updatePromoCountdown,1000);
 
 /* ================= INIT ================= */
 
-function initPromoSystem(){
+async function initPromoSystem(){
+
+  window.menuPromo = await BranchEngine.getData("menuPromo");
+
   renderPromoFilterBar();
   renderPromoUI();
 }
