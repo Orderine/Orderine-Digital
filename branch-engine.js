@@ -509,6 +509,11 @@ window.BranchEngine = {
   setActive: setActiveBranch,
   getActive: () => ACTIVE_BRANCH_ID,
   getRestoId,
+
+  // 🔥 TAMBAHAN WAJIB
+  getData: getMyData,
+  withContext: withContext,
+
   filter: withBranch
 };
 
