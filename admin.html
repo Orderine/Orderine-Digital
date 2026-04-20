@@ -5571,8 +5571,14 @@ if (!window.__branchListenerAdded) {
     console.log("🔄 ADMIN LOAD BRANCH:", branchId);
 
     try {
-      // 🔥 SATU PINTU SAJA
+      // 🔥 TAMBAHKAN INI (WAJIB)
+      if (window.resetMenuState) {
+        resetMenuState();
+      }
+
+      // 🔥 BARU LOAD DATA
       await loadData();
+
     } catch (err) {
       console.error("❌ Reload error:", err);
     } finally {
