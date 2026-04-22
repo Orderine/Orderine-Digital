@@ -4566,10 +4566,14 @@ async function simpanData() {
 
     const existingBranch = await MENUVA_DB.get("branches", branchId);
 
-    await MENUVA_DB.put("branches", {
-      ...(existingBranch || {}),
-      ...branchData
-    });
+    if (existingBranch) {
+  await MENUVA_DB.update("branches", {
+    ...existingBranch,
+    ...branchData
+  });
+} else {
+  await MENUVA_DB.add("branches", branchData);
+}
 
     // ======================
     // 🍽️ 2. SAFE DATA GETTER
