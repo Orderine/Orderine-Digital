@@ -4654,6 +4654,40 @@ async function simpanData() {
   return document.getElementById(id)?.value.trim() || "";
 }
 
+ async function loadBusinessIdentity(branchId) {
+  if (!branchId) return;
+
+  const branch = await MENUVA_DB.get("branches", branchId);
+
+  console.log("📥 LOAD BRANCH", branchId, branch);
+
+  // =========================
+  // RESET DULU (PENTING BANGET)
+  // =========================
+  document.getElementById("namaRestoran").value = "";
+  document.getElementById("restoAddress").value = "";
+  document.getElementById("restoPhone").value = "";
+  document.getElementById("previewLogo").src = "";
+
+  // =========================
+  // ISI DATA JIKA ADA
+  // =========================
+  if (!branch) return;
+
+  setVal("namaRestoran", branch.namaRestoran);
+  setVal("restoAddress", branch.restoAddress);
+  setVal("restoPhone", branch.restoPhone);
+
+  if (branch.logo) {
+    document.getElementById("previewLogo").src = branch.logo;
+  }
+}
+
+ function setVal(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.value = value || "";
+}
+
   function getNomorWaAdmin() {
   return Array.from(document.querySelectorAll(".nomor-wa"))
     .map(i => i.value.trim())
