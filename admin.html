@@ -4542,10 +4542,10 @@ async function simpanData() {
       return;
     }
 
-    console.log("💾 START SAVE", { restoId, branchId });
+    console.log("💾 SAVE BUSINESS IDENTITY", { restoId, branchId });
 
     // ======================
-    // 🏢 1. SAVE BRANCH METADATA
+    // 🏢 ONLY BUSINESS IDENTITY
     // ======================
     const branchData = {
       id: branchId,
@@ -4560,91 +4560,23 @@ async function simpanData() {
       nomorWaAdmin: collectWaFromUI(),
 
       locationCode: window.systemSettings?.locationCode || "LOC",
-
       updatedAt: Date.now()
     };
 
     const existingBranch = await MENUVA_DB.get("branches", branchId);
 
     if (existingBranch) {
-  await MENUVA_DB.update("branches", {
-    ...existingBranch,
-    ...branchData
-  });
-} else {
-  await MENUVA_DB.add("branches", branchData);
-}
+      await MENUVA_DB.update("branches", {
+        ...existingBranch,
+        ...branchData
+      });
+    } else {
+      await MENUVA_DB.add("branches", branchData);
+    }
 
-    // ======================
-    // 🍽️ 2. SAFE DATA GETTER
-    // ======================
-    const safeArray = (arr) => Array.isArray(arr) ? arr : [];
+    console.log("✅ BUSINESS IDENTITY SAVED", branchId);
 
-    const menus = safeArray(window.menuData);
-    const rooms = safeArray(window.rooms);
-    const tables = safeArray(window.tables);
-    const orders = safeArray(window.orders);
-
-    console.log("📊 DATA COUNT", {
-      menus: menus.length,
-      rooms: rooms.length,
-      tables: tables.length,
-      orders: orders.length
-    });
-
-    // ======================
-    // 🚨 3. ANTI EMPTY OVERWRITE
-    // ======================
-    const safePut = async (store, payload) => {
-      if (!payload.data || payload.data.length === 0) {
-        console.warn(`⚠️ SKIP EMPTY SAVE → ${store}`);
-        return;
-      }
-
-      await MENUVA_DB.put(store, payload);
-      console.log(`✅ SAVED → ${store}`, payload.data.length);
-    };
-
-    // ======================
-    // 💾 4. SAVE ALL CORE DATA (BRANCH SCOPED)
-    // ======================
-    await safePut("menuData", {
-      id: `${branchId}_menu`,
-      branchId,
-      restoId,
-      data: menus,
-      updatedAt: Date.now()
-    });
-
-    await safePut("rooms", {
-      id: `${branchId}_rooms`,
-      branchId,
-      restoId,
-      data: rooms,
-      updatedAt: Date.now()
-    });
-
-    await safePut("restaurantTables", {
-      id: `${branchId}_tables`,
-      branchId,
-      restoId,
-      data: tables,
-      updatedAt: Date.now()
-    });
-
-    await safePut("ordersData", {
-      id: `${branchId}_orders`,
-      branchId,
-      restoId,
-      data: orders,
-      updatedAt: Date.now()
-    });
-
-    // ======================
-    // 🎉 DONE
-    // ======================
-    console.log("🎉 SAVE COMPLETE");
-    alert("✅ All data saved (branch scoped)");
+    alert("✅ Business identity saved");
 
   } catch (err) {
     console.error("❌ simpanData fatal:", err);
