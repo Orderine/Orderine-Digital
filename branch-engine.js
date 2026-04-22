@@ -274,31 +274,55 @@ async function setActiveBranch(branchId) {
   try {
     const restoId = await getRestoId();
 
-    // 🔥 RESET CACHE DULU
-    BRANCH_CACHE = null;
-
+    // 🔥 VALIDASI DULU
     const branches = await getBranchesSafe(restoId);
-
     if (!branches.find(b => b.id === branchId)) {
       console.warn("❌ Invalid branchId");
       return;
     }
 
-    // 🔐 SIMPAN DULU (INI PENTING)
+    // =========================
+    // 🔐 SET STATE (PALING AWAL)
+    // =========================
+    ACTIVE_BRANCH_ID = branchId;
+    window.activeBranchId = branchId;
+
     localStorage.setItem("active_branch", branchId);
 
-    ACTIVE_BRANCH_ID = branchId;
-
     const session = await MENUVA_DB.getSession();
-
     await MENUVA_DB.setSession({
       ...session,
       branchId
     });
 
+    // =========================
+    // 🧹 RESET GLOBAL CACHE
+    // =========================
+    BRANCH_CACHE = null;
+
+    // OPTIONAL (kalau ada state global lain)
+    window.menuData = [];
+    window.rooms = [];
+    window.tables = [];
+    window.orders = [];
+
+    // =========================
+    // 🎨 RENDER UI HEADER
+    // =========================
     await renderBranchList();
     await renderActiveBranchLabel();
 
+    // =========================
+    // 📥 LOAD DATA (BARU DI SINI!)
+    // =========================
+    await loadBusinessIdentity(branchId);
+    await loadMenus(branchId);
+    await loadRooms(branchId);
+    await loadTables(branchId);
+
+    // =========================
+    // 📡 EVENT
+    // =========================
     emitBranchChange(branchId);
 
   } catch (err) {
