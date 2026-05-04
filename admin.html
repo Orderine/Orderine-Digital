@@ -5719,11 +5719,15 @@ await safeAwait("loadData", window.loadData);
     }, 0);
 
 
-    // ================= BACKGROUND SERVICES =================
     setTimeout(() => {
-      safeCall("bindCustomerButtons", window.bindCustomerButtons);
-      safeCall("startRealtimeOrderChecker", window.startRealtimeOrderChecker);
-    }, 0);
+  if (typeof window.bindCustomerButtons === "function") {
+    safeCall("bindCustomerButtons", window.bindCustomerButtons);
+  }
+
+  if (typeof window.startRealtimeOrderChecker === "function") {
+    safeCall("startRealtimeOrderChecker", window.startRealtimeOrderChecker);
+  }
+}, 0);
 
 
     console.log("🎉 ADMIN INIT SUCCESS");
