@@ -3500,8 +3500,8 @@ const DB_VERSION = window.MENUVA_DB.VERSION;
 
 // 🔐 Ambil ID aktif (AMAN)
 function getActiveRestoId() {
-  if (window.activeUser?.restoID) return window.activeUser.restoID;
-  console.warn("⚠️ activeUser.restoID tidak ada");
+  if (window.activeUser?.restoId) return window.activeUser.restoId;
+  console.warn("⚠️ activeUser.restoId tidak ada");
   return null;
 }
 
@@ -4327,7 +4327,7 @@ async function saveMenuItem() {
     return;
   }
 
-  const restoId = window.activeUser.restoID;
+  const restoId = window.activeUser.restoId;
   const categoryName = window.activeCategoryName; // ❌ TANPA fallback
 
   const menuCode = await generateMenuCode(categoryName, restoId);
@@ -4917,7 +4917,7 @@ async function backupAdminToJSON() {
   }
 
   const email = window.activeUser.email.trim().toLowerCase();
-  const restoId = window.activeUser.restoID;
+  const restoId = window.activeUser.restoId;
 
   try {
     const branch = await MENUVA_DB.get("restoBranches", branchId);
@@ -5196,7 +5196,7 @@ async function clearRestoDataOnly() {
       return;
     }
 
-    const restoId = window.activeUser.restoID;
+    const restoId = window.activeUser.restoId;
 
     // ===============================
     // 1️⃣ HAPUS DATA RESTO PROFILE
@@ -5305,7 +5305,7 @@ window.initPageToggles = async function () {
     return;
   }
 
-  const resto = await MENUVA_DB.get("restos", window.activeUser.restoID);
+  const resto = await MENUVA_DB.get("restos", window.activeUser.restoId);
   if (!resto) {
     console.warn("⚠️ Resto not found");
     return;
@@ -5649,7 +5649,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
     const user = await waitForActiveUser();
-    console.log("✅ activeUser ready:", user.email);
+    console.log("✅ activeUser ready:", window.activeUser.email);
+
+   // 🔥 SYNC RESTO ID (WAJIB)
+const restoId = await BranchEngine.getRestoId();
+
+// backward compatibility (kalau masih ada restoID lama)
+if (window.activeUser?.restoID && !window.activeUser?.restoId) {
+  window.activeUser.restoId = window.activeUser.restoID;
+}
+
+window.activeUser.restoId = restoId;
+
+console.log("🔗 Synced restoId:", restoId);
 
 
    // ================= INIT BRANCH ENGINE (CRITICAL) =================
