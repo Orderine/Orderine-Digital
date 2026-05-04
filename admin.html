@@ -3615,29 +3615,32 @@ async function savePromoItem() {
 
   if (editingPromoId) {
 
-    /* ===== UPDATE ===== */
-  await MENUVA_DB.add(
-  "menuPromo",
-  BranchEngine.withContext({
-    id: crypto.randomUUID(),
-    kodePromo: generatePromoCode(),
+  const existing = window.menuPromo.find(p => p.id === editingPromoId);
+  if (!existing) {
+    alert("❌ Promo tidak ditemukan");
+    return;
+  }
+
+  const updatedPromo = {
+    ...existing,
     namaPromo: name,
     deskripsi: desc,
     harga: price,
     image,
     startDate,
     endDate,
-    isActive: true,
+    isActive,
     updatedAt: Date.now()
-  })
-);
+  };
 
-   await MENUVA_DB.update(
-  "menuPromo",
-  BranchEngine.withContext(updatedPromo)
-);
+  await MENUVA_DB.update(
+    "menuPromo",
+    BranchEngine.withContext(updatedPromo)
+  );
 
-  } else {
+}
+
+   else {
 
     /* ===== ADD ===== */
     const newPromo = {
@@ -3668,6 +3671,18 @@ async function savePromoItem() {
   renderPromoUI();
 
   document.getElementById("promoEditorPanel").style.display = "none";
+}
+
+ async function loadMenuSystem() {
+  console.log("🍽️ Load Menu System");
+
+  if (typeof initPromoSystem === "function") {
+    await initPromoSystem();
+  }
+
+  if (typeof loadCategories === "function") {
+    await loadCategories();
+  }
 }
   
 /* ======================= FILTER BAR ========================= */
@@ -4201,11 +4216,13 @@ async function generateMenuCode(categoryName, restoId) {
   const location =
     window.systemSettings?.locationCode || "LOC";
 
-  let menus = [];
+  let menus = await MENUVA_DB.getAll("menuData");
 
- const branchId = window.BranchEngine?.getActive();
-
-menus = menus.filter(m => m.branchId === branchId);
+menus = menus.filter(m =>
+  m.type === "menu" &&
+  m.restoId === restoId &&
+  m.branchId === branchId
+);
 
   // ❗ hanya fallback kalau benar-benar undefined/null
   if (!menus) {
@@ -4380,6 +4397,8 @@ async function deleteMenu(id) {
 
   const all = await MENUVA_DB.getAll("menuData");
 const target = all.find(m => m.id === id);
+
+ const branchId = window.BranchEngine?.getActive();
 
 if (target?.branchId !== branchId) {
   console.warn("❌ Beda branch, tidak boleh delete");
