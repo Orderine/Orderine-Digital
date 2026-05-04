@@ -274,7 +274,9 @@ async function setActiveBranch(branchId) {
   try {
     const restoId = await getRestoId();
 
-    // 🔥 VALIDASI DULU
+    // =========================
+    // 🔥 VALIDASI
+    // =========================
     const branches = await getBranchesSafe(restoId);
     if (!branches.find(b => b.id === branchId)) {
       console.warn("❌ Invalid branchId");
@@ -282,7 +284,7 @@ async function setActiveBranch(branchId) {
     }
 
     // =========================
-    // 🔐 SET STATE (PALING AWAL)
+    // 🔐 SET STATE
     // =========================
     ACTIVE_BRANCH_ID = branchId;
     window.activeBranchId = branchId;
@@ -296,32 +298,28 @@ async function setActiveBranch(branchId) {
     });
 
     // =========================
-    // 🧹 RESET GLOBAL CACHE
+    // 🧹 RESET GLOBAL STATE
     // =========================
     BRANCH_CACHE = null;
 
-    // OPTIONAL (kalau ada state global lain)
+    // 🔥 RESET SEMUA STATE YANG TERGANTUNG BRANCH
     window.menuData = [];
+    window.menuPromo = [];
+    window.menuCategories = [];
+    window.activeCategoryName = null;
+
     window.rooms = [];
     window.tables = [];
     window.orders = [];
 
     // =========================
-    // 🎨 RENDER UI HEADER
+    // 🎨 UI UPDATE (RINGAN SAJA)
     // =========================
     await renderBranchList();
     await renderActiveBranchLabel();
 
     // =========================
-    // 📥 LOAD DATA (BARU DI SINI!)
-    // =========================
-    await loadBusinessIdentity(branchId);
-    await loadMenus(branchId);
-    await loadRooms(branchId);
-    await loadTables(branchId);
-
-    // =========================
-    // 📡 EVENT
+    // 📡 EVENT (INI KUNCI UTAMA)
     // =========================
     emitBranchChange(branchId);
 
