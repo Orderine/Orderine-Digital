@@ -4805,58 +4805,29 @@ async function loadWaAdmin(sourceData = null) {
   }
 }
 
-window.__LOAD_DATA_RUNNING__ = false;
-
 window.loadData = async function () {
   if (window.__LOAD_DATA_RUNNING__) return;
   window.__LOAD_DATA_RUNNING__ = true;
 
   try {
-    showLoader?.("Loading data...");
+    showLoader?.("Loading business identity...");
 
     const restoId = await BranchEngine.getRestoId();
     const branchId = BranchEngine.getActive();
 
-    console.log("📦 loadData start → resto:", restoId);
-    console.log("🏢 loadData branch:", branchId);
-
-// 🔥 INI WAJIB BANGET
-window.menuPromo = await BranchEngine.getData("menuPromo");
-renderPromoUI?.();
+    console.log("📦 loadData (IDENTITY ONLY) →", branchId);
 
     if (!restoId || !branchId) {
-      console.warn("❌ loadData: missing restoId / branchId");
+      console.warn("❌ loadData: missing context");
       return;
     }
 
-    // ✅ FIX: ambil dari branches
-   let branch = await MENUVA_DB.get("branches", branchId);
+    let branch = await MENUVA_DB.get("branches", branchId);
 
-if (!branch) {
-  console.warn("⚠️ Branch kosong → auto init");
-
-  branch = {
-    id: branchId,
-    restoId,
-
-    namaRestoran: "",
-    restoAddress: "",
-    restoPhone: "",
-    nomorWaAdmin: [],
-
-    categories: [],
-    rooms: [],
-
-    locationCode: "LOC",
-    flipbookRuanganImages: [],
-    flipbookMenuImages: [],
-
-    createdAt: Date.now(),
-    updatedAt: Date.now()
-  };
-
-  await MENUVA_DB.add("branches", branch);
-}
+    if (!branch) {
+      console.warn("⚠️ Branch kosong → skip");
+      return;
+    }
 
     /* ================= DOM ================= */
     const elNama  = document.getElementById("namaRestoran");
@@ -4890,17 +4861,7 @@ if (!branch) {
 
     renderWaAdmin?.();
 
-    /* ================= CORE ================= */
-    await loadCategories?.();
-
-    /* ================= ROOMS ================= */
-    window.rooms = Array.isArray(branch.rooms) ? branch.rooms : [];
-
-    if (typeof renderRoomsLight === "function") {
-      renderRoomsLight(window.rooms);
-    }
-
-    console.log("🚀 UI READY (BRANCH MODE)");
+    console.log("🏢 BUSINESS IDENTITY READY");
 
   } catch (err) {
     console.error("❌ loadData fatal:", err);
@@ -4909,7 +4870,6 @@ if (!branch) {
     window.__LOAD_DATA_RUNNING__ = false;
   }
 };
-
  function resetBranchUI() {
   console.warn("🧹 Reset UI (no branch data)");
 
