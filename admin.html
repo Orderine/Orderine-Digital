@@ -5534,11 +5534,12 @@ window.renderPackage     = () => window.ROOM_ENGINE?.renderRooms?.();
   }, { passive: true });
 })();
 
-// ==================== 🔥 BRANCH LISTENER ====================
+// ==================== 🔥 BRANCH LISTENER (NEW ARCH) ====================
 if (!window.__branchListenerAdded) {
   window.__branchListenerAdded = true;
 
   let isReloading = false;
+  let lastBranchId = null;
 
   window.addEventListener("branchChanged", async (e) => {
     const branchId = e.detail?.branchId;
@@ -5548,10 +5549,17 @@ if (!window.__branchListenerAdded) {
       return;
     }
 
+    // 🔥 prevent duplicate same branch trigger
+    if (branchId === lastBranchId) {
+      console.log("⏭️ Same branch, skip reload");
+      return;
+    }
+
+    lastBranchId = branchId;
     window.activeBranchId = branchId;
 
     if (isReloading) {
-      console.log("⏳ Skip duplicate reload");
+      console.log("⏳ Skip duplicate reload (still processing)");
       return;
     }
 
@@ -5560,13 +5568,39 @@ if (!window.__branchListenerAdded) {
     console.log("🔄 ADMIN LOAD BRANCH:", branchId);
 
     try {
-      // 🔥 TAMBAHKAN INI (WAJIB)
-      if (window.resetMenuState) {
+      // =========================
+      // 🧹 RESET STATE (SAFE)
+      // =========================
+      if (typeof resetMenuState === "function") {
         resetMenuState();
       }
 
-      // 🔥 BARU LOAD DATA
-      await loadData();
+      // =========================
+      // 📥 LOAD CORE DATA
+      // =========================
+      if (typeof loadBusinessIdentity === "function") {
+        await loadBusinessIdentity(branchId);
+      }
+
+      // =========================
+      // 🍽️ MENU SYSTEM (NEW)
+      // =========================
+      if (typeof loadMenuSystem === "function") {
+        await loadMenuSystem();
+      }
+
+      // =========================
+      // 🏨 ROOM / TABLE
+      // =========================
+      if (typeof loadRooms === "function") {
+        await loadRooms(branchId);
+      }
+
+      if (typeof loadTables === "function") {
+        await loadTables(branchId);
+      }
+
+      console.log("✅ BRANCH LOAD COMPLETE:", branchId);
 
     } catch (err) {
       console.error("❌ Reload error:", err);
