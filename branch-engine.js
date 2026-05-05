@@ -25,35 +25,53 @@ async function getBranchesByResto(restoId) {
 }
 
 async function getBranchesSafe(restoId) {
+
+  // ⚡ 1. CACHE HIT
+  if (BRANCH_CACHE && BRANCH_CACHE.restoId === restoId) {
+    console.log("⚡ USING CACHE");
+    return BRANCH_CACHE.data;
+  }
+
   let branches = await getBranchesByResto(restoId);
 
-   // 🔥 RETRY SEKALI KALAU DATA ANEH
+  // 🔁 2. RETRY (ANTI RACE CONDITION)
   if (branches.length > 0 && !branches.some(b => b.isMain)) {
     console.warn("⏳ Suspicious state, retrying fetch...");
-
-    await new Promise(r => setTimeout(r, 50)); // delay kecil
-
+    await new Promise(r => setTimeout(r, 50));
     branches = await getBranchesByResto(restoId);
   }
 
-  // 🔥 NORMALISASI DATA
-  branches = branches.map(b => ({
-    ...b,
-    isMain: (
+  // 🔥 3. NORMALISASI DATA
+  let changed = false;
+
+  branches = branches.map(b => {
+    const isMainNormalized = (
       b.isMain === true ||
       b.isMain === "true" ||
       b.isMain === 1 ||
       b.name === "Main Branch" ||
       b.id?.startsWith("main_")
-    )
-  }));
+    );
 
-  // 🔥 SIMPAN HASIL NORMALISASI KE DB (INI KUNCI)
-  for (const b of branches) {
-    await MENUVA_DB.update("branches", b);
+    if (b.isMain !== isMainNormalized) {
+      changed = true;
+    }
+
+    return {
+      ...b,
+      isMain: isMainNormalized
+    };
+  });
+
+  // 💾 4. SYNC KE DB (HANYA JIKA BERUBAH)
+  if (changed) {
+    console.log("♻️ Normalizing DB...");
+    for (const b of branches) {
+      await MENUVA_DB.update("branches", b);
+    }
   }
 
-  // 🔥 HANDLE DUPLICATE MAIN
+  // 🔥 5. HANDLE DUPLICATE MAIN
   const mains = branches.filter(b => b.isMain);
 
   if (mains.length > 1) {
@@ -68,10 +86,10 @@ async function getBranchesSafe(restoId) {
     branches = branches.filter(b => b.id === keep.id || !b.isMain);
   }
 
-  // 🔍 DETEK MAIN
+  // 🔍 6. DETEK MAIN
   let mainBranch = branches.find(b => b.isMain === true);
 
-  // 🚨 JIKA TIDAK ADA
+  // 🚨 7. AUTO CREATE (LAST DEFENSE)
   if (!mainBranch) {
     console.warn("🚨 MAIN BRANCH HILANG → AUTO CREATE");
 
@@ -88,6 +106,12 @@ async function getBranchesSafe(restoId) {
 
     branches = [main, ...branches];
   }
+
+  // 💾 8. SAVE CACHE (🔥 INI YANG BIKIN CEPAT)
+  BRANCH_CACHE = {
+    restoId,
+    data: branches
+  };
 
   console.log("📦 FINAL BRANCHES:", branches);
 
