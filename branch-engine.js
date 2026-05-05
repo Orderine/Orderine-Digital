@@ -27,6 +27,15 @@ async function getBranchesByResto(restoId) {
 async function getBranchesSafe(restoId) {
   let branches = await getBranchesByResto(restoId);
 
+   // 🔥 RETRY SEKALI KALAU DATA ANEH
+  if (branches.length > 0 && !branches.some(b => b.isMain)) {
+    console.warn("⏳ Suspicious state, retrying fetch...");
+
+    await new Promise(r => setTimeout(r, 50)); // delay kecil
+
+    branches = await getBranchesByResto(restoId);
+  }
+
   // 🔥 NORMALISASI DATA
   branches = branches.map(b => ({
     ...b,
