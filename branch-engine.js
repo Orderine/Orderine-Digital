@@ -11,15 +11,45 @@ let CACHED_RESTO_ID = null;
 
 let BRANCH_CACHE = null;
 
+// ======================
+// 🔥 GET ALL BRANCH BY RESTO
+// ======================
+async function getBranchesByResto(restoId) {
+  const all = await MENUVA_DB.getAll("branches");
+
+  const filtered = all.filter(b => b.restoId === restoId);
+
+  console.log("📦 getBranchesByResto:", filtered);
+
+  return filtered;
+}
+
 async function getBranchesSafe(restoId) {
-  try {
-    const all = await MENUVA_DB.getAll("branches");
-    BRANCH_CACHE = all.filter(b => b.restoId === restoId);
-    return BRANCH_CACHE;
-  } catch (err) {
-    console.error("❌ getBranchesSafe error:", err);
-    return [];
-  }
+  let branches = await getBranchesByResto(restoId);
+
+  // 💥 GUARD: MAIN BRANCH WAJIB ADA
+  let mainBranch = branches.find(b => b.isMain === true);
+
+if (!mainBranch) {
+  console.warn("🚨 MAIN BRANCH HILANG → AUTO CREATE");
+
+  const main = {
+    id: "main_" + restoId,
+    restoId,
+    ownerId: window.activeUser.email.toLowerCase(),
+    name: "Main Branch", // 🔥 SAMAKAN FIELD
+    isMain: true,
+    createdAt: Date.now()
+  };
+
+  await MENUVA_DB.add("branches", main);
+
+  branches = [main, ...branches];
+}
+
+  console.log("📦 FINAL BRANCHES:", branches);
+
+  return branches;
 }
 // ========================================
 // 🔐 GET / ENSURE RESTO + MAIN BRANCH (FINAL)
@@ -61,20 +91,6 @@ async function getRestoId() {
 
   let branches = await getBranchesSafe(restoId);
   let mainBranch = branches.find(b => b.isMain);
-
-  if (!mainBranch) {
-    const mainId = uid("branch");
-
-    mainBranch = {
-      id: mainId,
-      restoId,
-      name: "Main Branch",
-      isMain: true,
-      createdAt: Date.now()
-    };
-
-    await MENUVA_DB.add("branches", mainBranch);
-  }
 
 if (!session?.branchId) {
   await MENUVA_DB.setSession({
@@ -201,7 +217,7 @@ async function renderBranchList() {
   item.innerHTML = `
     <div class="branch-header">
       <div class="branch-name">
-        ${b.isMain ? "🏢 " : ""}${b.name}
+        ${b.isMain ? "🏢 " : ""}${b.name || b.namaRestoran || "No Name"}
       </div>
       <div class="branch-status ${b.id === ACTIVE_BRANCH_ID ? "active" : ""}">
         ${b.id === ACTIVE_BRANCH_ID ? "ACTIVE" : "IDLE"}
