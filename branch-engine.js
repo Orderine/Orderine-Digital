@@ -27,30 +27,38 @@ async function getBranchesByResto(restoId) {
 async function getBranchesSafe(restoId) {
   let branches = await getBranchesByResto(restoId);
 
-  // 💥 GUARD: MAIN BRANCH WAJIB ADA
+  // 🔥 NORMALISASI DATA (INI KUNCI UTAMA)
+  branches = branches.map(b => ({
+    ...b,
+    isMain: b.isMain === true || b.isMain === "true"
+  }));
+
+  // 🔍 DETEK MAIN
   let mainBranch = branches.find(b => b.isMain === true);
 
-if (!mainBranch) {
-  console.warn("🚨 MAIN BRANCH HILANG → AUTO CREATE");
+  // 🚨 KALAU BENER-BENER TIDAK ADA
+  if (!mainBranch) {
+    console.warn("🚨 MAIN BRANCH HILANG → AUTO CREATE");
 
-  const main = {
-    id: "main_" + restoId,
-    restoId,
-    ownerId: window.activeUser.email.toLowerCase(),
-    name: "Main Branch", // 🔥 SAMAKAN FIELD
-    isMain: true,
-    createdAt: Date.now()
-  };
+    const main = {
+      id: "main_" + restoId,
+      restoId,
+      ownerId: window.activeUser.email.toLowerCase(),
+      name: "Main Branch",
+      isMain: true,
+      createdAt: Date.now()
+    };
 
-  await MENUVA_DB.add("branches", main);
+    await MENUVA_DB.add("branches", main);
 
-  branches = [main, ...branches];
-}
+    branches = [main, ...branches];
+  }
 
   console.log("📦 FINAL BRANCHES:", branches);
 
   return branches;
 }
+
 // ========================================
 // 🔐 GET / ENSURE RESTO + MAIN BRANCH (FINAL)
 // ========================================
