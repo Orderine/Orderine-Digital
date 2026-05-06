@@ -162,43 +162,53 @@ async function getRestoId() {
 
   let restos = await MENUVA_DB.getAll("restos");
 
-  // =========================
-  // 🔥 MIGRATION: ownerID → ownerEmail
-  // =========================
-  for (const r of restos) {
-    if (r.ownerID && !r.ownerEmail) {
-      r.ownerEmail = email;
-      delete r.ownerID;
+// =========================
+// 🔥 FULL NORMALIZATION
+// =========================
+for (const r of restos) {
 
-      await MENUVA_DB.update("restos", r);
-      console.warn("♻️ Migrated ownerID → ownerEmail:", r.id);
-    }
+  // convert ownerID → ownerEmail
+  if (r.ownerID && !r.ownerEmail && window.activeUser?.email) {
+    r.ownerEmail = window.activeUser.email;
+    delete r.ownerID;
+
+    await MENUVA_DB.update("restos", r);
+    console.warn("♻️ Fixed ownerID → ownerEmail:", r.id);
   }
 
-  // refresh setelah migration
-  restos = await MENUVA_DB.getAll("restos");
+  // fallback kalau gak punya ownerEmail sama sekali
+  if (!r.ownerEmail && window.activeUser?.email) {
+    r.ownerEmail = window.activeUser.email;
+    await MENUVA_DB.update("restos", r);
+    console.warn("♻️ Injected missing ownerEmail:", r.id);
+  }
+}
 
-  // =========================
-  // 🔥 AMBIL RESTO MILIK USER
-  // =========================
-  let ownedRestos = restos.filter(r => r.ownerEmail === email);
+// reload setelah normalize
+restos = await MENUVA_DB.getAll("restos");
 
-  // =========================
-  // 🔥 HARD LOCK: HANYA 1 RESTO
-  // =========================
-  if (ownedRestos.length > 1) {
-    console.warn("⚠️ MULTIPLE RESTO DETECTED → AUTO CLEAN");
+// =========================
+// 🔥 HARD LOCK TOTAL (NUKE)
+// =========================
+let ownedRestos = restos.filter(r => r.ownerEmail === email);
 
-    ownedRestos.sort((a, b) => a.createdAt - b.createdAt);
-    const primary = ownedRestos[0];
+if (ownedRestos.length > 1) {
+  console.warn("💣 FORCE CLEAN MULTIPLE RESTO");
 
-    for (const r of ownedRestos.slice(1)) {
+  // pilih PALING LAMA (source of truth)
+  ownedRestos.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const primary = ownedRestos[0];
+
+  for (const r of ownedRestos) {
+    if (r.id !== primary.id) {
       await MENUVA_DB.delete("restos", r.id);
+      console.warn("🗑️ Deleted duplicate resto:", r.id);
     }
-
-    ownedRestos = [primary];
   }
 
+  ownedRestos = [primary];
+}
+  
   let resto = ownedRestos[0];
 
   // =========================
