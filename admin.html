@@ -3458,6 +3458,15 @@ const DB_VERSION = window.MENUVA_DB.VERSION;
 
 // 🔐 Ambil ID aktif (AMAN)
 async function getActiveRestoId() {
+ const session = await MENUVA_DB.getSession() || {};
+
+// 🔥 AUTO FIX LEGACY FIELD
+if (session?.restoID && !session?.restoId) {
+  session.restoId = session.restoID;
+  delete session.restoID;
+  await MENUVA_DB.setSession(session);
+}
+ 
   if (!window.BranchEngine) {
     console.warn("⚠️ BranchEngine belum ready");
     return null;
@@ -3969,7 +3978,7 @@ function tambahMenuBaru(categoryId, nama, harga, image) {
   const code = generateMenuCode(category);
 
  const branchId = window.BranchEngine?.getActive();
-const restoId = window.activeUser?.restoID;
+const restoId = window.activeUser?.restoId;
 
 const newMenu = {
   id: crypto.randomUUID(),
@@ -4008,7 +4017,7 @@ let __CATEGORIES_CACHE__ = {};
 
 async function loadCategories() {
   try {
-    const restoId = window.activeUser?.restoID;
+    const restoId = window.activeUser?.restoId;
     const branchId = window.BranchEngine?.getActive();
 
     let all = await MENUVA_DB.getAll("menuData");
@@ -4082,7 +4091,7 @@ async function saveCategory() {
   if (!name) return alert("Category name required");
 
   const branchId = window.BranchEngine?.getActive();
-  const restoId = window.activeUser?.restoID;
+  const restoId = window.activeUser?.restoId;
 
   const all = await MENUVA_DB.getAll("menuData");
 
@@ -4122,7 +4131,7 @@ async function saveCategory() {
 
 async function renderMenuPreview(categoryName) {
 
-  const restoId = window.activeUser?.restoID;
+  const restoId = window.activeUser?.restoId;
   if (!restoId) return;
 
   const branchId = window.BranchEngine?.getActive(); // 🔥 cukup 1x
@@ -4278,7 +4287,7 @@ document
  
 async function saveMenuItem() {
 
-  if (!window.activeUser?.restoID) {
+  if (!window.activeUser?.restoId) {
     alert("❌ Session tidak valid");
     return;
   }
@@ -4360,7 +4369,7 @@ const newMenu = {
 async function deleteMenu(id) {
   if (!confirm("Delete this menu?")) return;
 
-  const restoId = window.activeUser?.restoID;
+  const restoId = window.activeUser?.restoId;
   if (!restoId) return;
 
   const all = await MENUVA_DB.getAll("menuData");
@@ -4520,7 +4529,7 @@ async function simpanData() {
   try {
     showLoader?.();
 
-    const restoId = window.activeUser?.restoID;
+    const restoId = window.activeUser?.restoId;
     const ownerId = window.activeUser?.email?.toLowerCase();
     const branchId = window.activeBranchId;
 
@@ -4745,7 +4754,7 @@ async function loadWaAdmin(sourceData = null) {
       return;
     }
 
-    const restoId = window.activeUser?.restoID;
+    const restoId = window.activeUser?.restoId;
     const branchId = window.activeBranchId || window.BranchEngine?.getActive();
 
     if (!restoId || !branchId) {
@@ -4879,7 +4888,7 @@ async function resetData() {
 }
 
 async function backupAdminToJSON() {
-  if (!window.activeUser?.email || !window.activeUser?.restoID) {
+  if (!window.activeUser?.email || !window.activeUser?.restoId) {
     alert("❌ User belum login");
     return;
   }
@@ -4958,7 +4967,7 @@ window.downloadBackupJSON = async function () {
 };
 
  async function hasBackupForCurrentUser() {
-  const session = await MENUVA_DB.getSession();
+  const session = await MENUVA_DB.getSession() || {};
   if (!session?.email) return false;
 
   const backup = await MENUVA_DB.get("flipbookData", "backup_" + session.email);
@@ -4977,7 +4986,7 @@ async function restoreDataFromFile(event) {
       return;
     }
 
-    const restoId = window.activeUser?.restoID;
+    const restoId = window.activeUser?.restoId;
     if (!restoId) {
       alert("❌ User belum login");
       return;
@@ -5159,7 +5168,7 @@ function hideLoader() {
 
 async function clearRestoDataOnly() {
   try {
-    if (!window.activeUser?.restoID) {
+    if (!window.activeUser?.restoId) {
       console.warn("⚠️ clearRestoDataOnly aborted: no active resto");
       return;
     }
@@ -5268,7 +5277,7 @@ window.initPageToggles = async function () {
     return;
   }
 
-  if (!window.activeUser?.restoID) {
+  if (!window.activeUser?.restoId) {
     console.warn("⚠️ activeUser not ready for toggle");
     return;
   }
@@ -5623,14 +5632,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 const restoId = await BranchEngine.getRestoId();
 
 // backward compatibility (kalau masih ada restoID lama)
+const restoId = await BranchEngine.getRestoId();
+
+// 🔥 FIX LEGACY
 if (window.activeUser?.restoID && !window.activeUser?.restoId) {
   window.activeUser.restoId = window.activeUser.restoID;
 }
 
+// 🔥 SINGLE SOURCE
 window.activeUser.restoId = restoId;
 
 console.log("🔗 Synced restoId:", restoId);
-
 
    // ================= INIT BRANCH ENGINE (CRITICAL) =================
 await safeAwait("BranchEngine.init", window.BranchEngine?.init);
@@ -5772,7 +5784,7 @@ async function setAdminConfig(patch) {
 async function loadVouchers() {
   console.groupCollapsed("📥 Load Vouchers (DB)");
 
-  const restoId = window.activeUser?.restoID;
+  const restoId = window.activeUser?.restoId;
   if (!restoId) return [];
 
   const list = (await MENUVA_DB.getAll("menuVoucher"))
@@ -5805,7 +5817,7 @@ window.saveVoucher = async function () {
       return;
     }
 
-    const restoId = window.activeUser?.restoID;
+    const restoId = window.activeUser?.restoId;
     if (!restoId) {
       alert("❌ Session resto tidak valid");
       return;
