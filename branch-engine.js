@@ -143,6 +143,15 @@ async function getRestoId() {
     return CACHED_RESTO_ID;
   }
 
+  let session = await MENUVA_DB.getSession() || {};
+
+// 🔥 AUTO FIX LEGACY
+if (session.restoID && !session.restoId) {
+  session.restoId = session.restoID;
+  delete session.restoID;
+  await MENUVA_DB.setSession(session);
+}
+
   const email = session?.email || window.activeUser?.email;
 
   if (!email) {
@@ -151,19 +160,44 @@ async function getRestoId() {
   }
 
   const restos = await MENUVA_DB.getAll("restos");
-  let resto = restos.find(r => r.ownerEmail === email);
 
-  if (!resto) {
-    const newRestoId = "RESTO-" + uid();
+// 🔥 AMBIL SEMUA RESTO MILIK EMAIL
+let ownedRestos = restos.filter(r => r.ownerEmail === email);
 
-    resto = {
-      id: newRestoId,
-      ownerEmail: email,
-      createdAt: Date.now()
-    };
+// =========================
+// 🔥 HARD LOCK: MULTIPLE FIX
+// =========================
+if (ownedRestos.length > 1) {
+  console.warn("⚠️ MULTIPLE RESTO DETECTED → AUTO FIX");
 
-    await MENUVA_DB.add("restos", resto);
+  ownedRestos.sort((a, b) => a.createdAt - b.createdAt);
+  const primary = ownedRestos[0];
+
+  for (const r of ownedRestos.slice(1)) {
+    await MENUVA_DB.delete("restos", r.id);
   }
+
+  ownedRestos = [primary];
+}
+
+let resto = ownedRestos[0];
+
+ // =========================
+// 🔥 FIRST TIME ONLY
+// =========================
+if (!resto) {
+  console.warn("🆕 First time setup → creating resto");
+
+  const newRestoId = "RESTO-" + uid();
+
+  resto = {
+    id: newRestoId,
+    ownerEmail: email,
+    createdAt: Date.now()
+  };
+
+  await MENUVA_DB.add("restos", resto);
+}
 
   const restoId = resto.id;
 
