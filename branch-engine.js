@@ -130,7 +130,7 @@ async function getBranchesSafe(restoId) {
 }
 
 // ========================================
-// 🔐 GET / ENSURE RESTO + MAIN BRANCH (FINAL CLEAN HARD LOCK)
+// 🔐 FINAL: 1 EMAIL = 1 RESTO (HARD LOCK CLEAN)
 // ========================================
 async function getRestoId() {
 
@@ -138,19 +138,11 @@ async function getRestoId() {
 
   let session = await MENUVA_DB.getSession() || {};
 
-  // =========================
-  // 🔥 FIX LEGACY SESSION
-  // =========================
+  // 🔧 FIX LEGACY FIELD
   if (session.restoID && !session.restoId) {
     session.restoId = session.restoID;
     delete session.restoID;
     await MENUVA_DB.setSession(session);
-  }
-
-  // ⚡ CACHE HIT
-  if (session?.restoId && session?.branchId) {
-    CACHED_RESTO_ID = session.restoId;
-    return CACHED_RESTO_ID;
   }
 
   const email = session?.email || window.activeUser?.email;
@@ -160,67 +152,54 @@ async function getRestoId() {
     return null;
   }
 
+  // =========================
+  // 🔥 AMBIL & NORMALISASI RESTO
+  // =========================
   let restos = await MENUVA_DB.getAll("restos");
 
-// =========================
-// 🔥 FULL NORMALIZATION
-// =========================
-for (const r of restos) {
+  for (const r of restos) {
+    if (r.ownerID && !r.ownerEmail) {
+      r.ownerEmail = email;
+      delete r.ownerID;
+      await MENUVA_DB.update("restos", r);
+    }
 
-  // convert ownerID → ownerEmail
-  if (r.ownerID && !r.ownerEmail && window.activeUser?.email) {
-    r.ownerEmail = window.activeUser.email;
-    delete r.ownerID;
-
-    await MENUVA_DB.update("restos", r);
-    console.warn("♻️ Fixed ownerID → ownerEmail:", r.id);
-  }
-
-  // fallback kalau gak punya ownerEmail sama sekali
-  if (!r.ownerEmail && window.activeUser?.email) {
-    r.ownerEmail = window.activeUser.email;
-    await MENUVA_DB.update("restos", r);
-    console.warn("♻️ Injected missing ownerEmail:", r.id);
-  }
-}
-
-// reload setelah normalize
-restos = await MENUVA_DB.getAll("restos");
-
-// =========================
-// 🔥 HARD LOCK TOTAL (NUKE)
-// =========================
-let ownedRestos = restos.filter(r => r.ownerEmail === email);
-
-if (ownedRestos.length > 1) {
-  console.warn("💣 FORCE CLEAN MULTIPLE RESTO");
-
-  // pilih PALING LAMA (source of truth)
-  ownedRestos.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-  const primary = ownedRestos[0];
-
-  for (const r of ownedRestos) {
-    if (r.id !== primary.id) {
-      await MENUVA_DB.delete("restos", r.id);
-      console.warn("🗑️ Deleted duplicate resto:", r.id);
+    if (!r.ownerEmail) {
+      r.ownerEmail = email;
+      await MENUVA_DB.update("restos", r);
     }
   }
 
-  ownedRestos = [primary];
-}
-  
-  let resto = ownedRestos[0];
+  restos = await MENUVA_DB.getAll("restos");
 
   // =========================
-  // 🔥 FIRST TIME CREATE
+  // 🔥 HARD LOCK (SINGLE RESTO)
+  // =========================
+  let owned = restos.filter(r => r.ownerEmail === email);
+
+  if (owned.length > 1) {
+    owned.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const primary = owned[0];
+
+    for (const r of owned) {
+      if (r.id !== primary.id) {
+        await MENUVA_DB.delete("restos", r.id);
+      }
+    }
+
+    owned = [primary];
+  }
+
+  let resto = owned[0];
+
+  // =========================
+  // 🆕 FIRST TIME CREATE
   // =========================
   if (!resto) {
-    console.warn("🆕 First time setup → creating resto");
-
-    const newRestoId = "RESTO-" + uid();
+    const newId = "RESTO-" + uid();
 
     resto = {
-      id: newRestoId,
+      id: newId,
       ownerEmail: email,
       createdAt: Date.now()
     };
@@ -237,23 +216,72 @@ if (ownedRestos.length > 1) {
   let mainBranch = branches.find(b => b.isMain);
 
   // =========================
-  // 🔥 SYNC SESSION FINAL
+  // 🔥 SYNC SESSION
   // =========================
-  if (!session?.branchId) {
-    await MENUVA_DB.setSession({
-      ...session,
-      email,
-      restoId,
-      branchId: mainBranch?.id || null,
-      role: session?.role || "super_admin"
-    });
-  }
+  await MENUVA_DB.setSession({
+    ...session,
+    email,
+    restoId,
+    branchId: mainBranch?.id || null,
+    role: session?.role || "super_admin"
+  });
 
   CACHED_RESTO_ID = restoId;
 
-  console.log("🏁 FINAL RESTO:", restoId);
-
   return restoId;
+}
+
+
+async function forceCleanRestos(session) {
+
+  const email = session?.email || window.activeUser?.email;
+  if (!email) return;
+
+  let restos = await MENUVA_DB.getAll("restos");
+
+  console.warn("🧹 FORCE CLEAN START");
+
+  // =========================
+  // 🔥 NORMALIZE SEMUA
+  // =========================
+  for (const r of restos) {
+
+    if (r.ownerID && !r.ownerEmail) {
+      r.ownerEmail = email;
+      delete r.ownerID;
+      await MENUVA_DB.update("restos", r);
+      console.warn("♻️ Fixed ownerID:", r.id);
+    }
+
+    if (!r.ownerEmail) {
+      r.ownerEmail = email;
+      await MENUVA_DB.update("restos", r);
+      console.warn("♻️ Injected ownerEmail:", r.id);
+    }
+  }
+
+  restos = await MENUVA_DB.getAll("restos");
+
+  // =========================
+  // 💣 NUKE DUPLICATE
+  // =========================
+  let owned = restos.filter(r => r.ownerEmail === email);
+
+  if (owned.length > 1) {
+    console.warn("💣 NUKE DUPLICATE RESTO");
+
+    owned.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const primary = owned[0];
+
+    for (const r of owned) {
+      if (r.id !== primary.id) {
+        await MENUVA_DB.delete("restos", r.id);
+        console.warn("🗑️ Deleted:", r.id);
+      }
+    }
+  }
+
+  console.warn("✅ CLEAN DONE");
 }
 
 // ========================================
