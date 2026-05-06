@@ -100,24 +100,6 @@ async function getBranchesSafe(restoId) {
   // 🔍 8. DETEK MAIN
   let mainBranch = branches.find(b => b.isMain === true);
 
-  // 🚨 9. AUTO CREATE (SAFE VERSION)
-  if (!mainBranch && branches.length === 0) {
-    console.warn("🚨 MAIN BRANCH HILANG → AUTO CREATE");
-
-    const main = {
-      id: "main_" + restoId,
-      restoId,
-      ownerId: window.activeUser.email.toLowerCase(),
-      name: "Main Branch",
-      isMain: true,
-      createdAt: Date.now()
-    };
-
-    await MENUVA_DB.add("branches", main);
-
-    branches = [main];
-  }
-
   // 💾 10. CACHE
   BRANCH_CACHE = {
     restoId,
@@ -127,6 +109,33 @@ async function getBranchesSafe(restoId) {
   console.log("📦 FINAL BRANCHES:", branches);
 
   return branches;
+}
+
+async function ensureMainBranch(restoId) {
+
+  let branches = await getBranchesByResto(restoId);
+
+  let main = branches.find(b => b.isMain);
+
+  if (main) {
+    console.log("✅ Main branch OK");
+    return main;
+  }
+
+  console.warn("⚡ Main branch missing → creating...");
+
+  const mainBranch = {
+    id: "main_" + restoId, // 🔥 deterministic
+    restoId,
+    ownerId: window.activeUser.email.toLowerCase(),
+    name: "Main Branch",
+    isMain: true,
+    createdAt: Date.now()
+  };
+
+  await MENUVA_DB.add("branches", mainBranch);
+
+  return mainBranch;
 }
 
 // ========================================
@@ -209,11 +218,12 @@ async function getRestoId() {
 
   const restoId = resto.id;
 
-  // =========================
-  // 🔥 ENSURE BRANCH
-  // =========================
-  let branches = await getBranchesSafe(restoId);
-  let mainBranch = branches.find(b => b.isMain);
+
+ // 🔥 ENSURE MAIN (PINDAH KE SINI)
+const mainBranch = await ensureMainBranch(restoId);
+
+// 🔄 ambil ulang setelah ensure
+let branches = await getBranchesSafe(restoId);
 
   // =========================
   // 🔥 SYNC SESSION
@@ -227,6 +237,8 @@ async function getRestoId() {
   });
 
   CACHED_RESTO_ID = restoId;
+
+  BRANCH_CACHE = null;
 
   return restoId;
 }
@@ -562,6 +574,11 @@ async function createBranch(name) {
   if (!exists) {
     console.error("❌ Branch not persisted!");
   }
+
+  if (name === "Main Branch") {
+  alert("Reserved branch name");
+  return;
+}
 
   // 🔥 RESET CACHE SETELAH VALID
   BRANCH_CACHE = null;
