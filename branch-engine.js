@@ -130,7 +130,7 @@ async function getBranchesSafe(restoId) {
 }
 
 // ========================================
-// 🔐 GET / ENSURE RESTO + MAIN BRANCH (FINAL)
+// 🔐 GET / ENSURE RESTO + MAIN BRANCH (FINAL CLEAN HARD LOCK)
 // ========================================
 async function getRestoId() {
 
@@ -138,25 +138,20 @@ async function getRestoId() {
 
   let session = await MENUVA_DB.getSession() || {};
 
-// 🔥 AUTO FIX LEGACY
-if (session.restoID && !session.restoId) {
-  session.restoId = session.restoID;
-  delete session.restoID;
-  await MENUVA_DB.setSession(session);
-}
+  // =========================
+  // 🔥 FIX LEGACY SESSION
+  // =========================
+  if (session.restoID && !session.restoId) {
+    session.restoId = session.restoID;
+    delete session.restoID;
+    await MENUVA_DB.setSession(session);
+  }
 
-// ⚡ CACHE HIT (SETELAH FIX)
-if (session?.restoId && session?.branchId) {
-  CACHED_RESTO_ID = session.restoId;
-  return CACHED_RESTO_ID;
-}
-
-// 🔥 AUTO FIX LEGACY
-if (session.restoID && !session.restoId) {
-  session.restoId = session.restoID;
-  delete session.restoID;
-  await MENUVA_DB.setSession(session);
-}
+  // ⚡ CACHE HIT
+  if (session?.restoId && session?.branchId) {
+    CACHED_RESTO_ID = session.restoId;
+    return CACHED_RESTO_ID;
+  }
 
   const email = session?.email || window.activeUser?.email;
 
@@ -165,66 +160,89 @@ if (session.restoID && !session.restoId) {
     return null;
   }
 
-  const restos = await MENUVA_DB.getAll("restos");
+  let restos = await MENUVA_DB.getAll("restos");
 
-// 🔥 AMBIL SEMUA RESTO MILIK EMAIL
-let ownedRestos = restos.filter(r => r.ownerEmail === email);
+  // =========================
+  // 🔥 MIGRATION: ownerID → ownerEmail
+  // =========================
+  for (const r of restos) {
+    if (r.ownerID && !r.ownerEmail) {
+      r.ownerEmail = email;
+      delete r.ownerID;
 
-// =========================
-// 🔥 HARD LOCK: MULTIPLE FIX
-// =========================
-if (ownedRestos.length > 1) {
-  console.warn("⚠️ MULTIPLE RESTO DETECTED → AUTO FIX");
-
-  ownedRestos.sort((a, b) => a.createdAt - b.createdAt);
-  const primary = ownedRestos[0];
-
-  for (const r of ownedRestos.slice(1)) {
-    await MENUVA_DB.delete("restos", r.id);
+      await MENUVA_DB.update("restos", r);
+      console.warn("♻️ Migrated ownerID → ownerEmail:", r.id);
+    }
   }
 
-  ownedRestos = [primary];
-}
+  // refresh setelah migration
+  restos = await MENUVA_DB.getAll("restos");
 
-let resto = ownedRestos[0];
+  // =========================
+  // 🔥 AMBIL RESTO MILIK USER
+  // =========================
+  let ownedRestos = restos.filter(r => r.ownerEmail === email);
 
- // =========================
-// 🔥 FIRST TIME ONLY
-// =========================
-if (!resto) {
-  console.warn("🆕 First time setup → creating resto");
+  // =========================
+  // 🔥 HARD LOCK: HANYA 1 RESTO
+  // =========================
+  if (ownedRestos.length > 1) {
+    console.warn("⚠️ MULTIPLE RESTO DETECTED → AUTO CLEAN");
 
-  const newRestoId = "RESTO-" + uid();
+    ownedRestos.sort((a, b) => a.createdAt - b.createdAt);
+    const primary = ownedRestos[0];
 
-  resto = {
-    id: newRestoId,
-    ownerEmail: email,
-    createdAt: Date.now()
-  };
+    for (const r of ownedRestos.slice(1)) {
+      await MENUVA_DB.delete("restos", r.id);
+    }
 
-  await MENUVA_DB.add("restos", resto);
-}
+    ownedRestos = [primary];
+  }
+
+  let resto = ownedRestos[0];
+
+  // =========================
+  // 🔥 FIRST TIME CREATE
+  // =========================
+  if (!resto) {
+    console.warn("🆕 First time setup → creating resto");
+
+    const newRestoId = "RESTO-" + uid();
+
+    resto = {
+      id: newRestoId,
+      ownerEmail: email,
+      createdAt: Date.now()
+    };
+
+    await MENUVA_DB.add("restos", resto);
+  }
 
   const restoId = resto.id;
 
+  // =========================
+  // 🔥 ENSURE BRANCH
+  // =========================
   let branches = await getBranchesSafe(restoId);
   let mainBranch = branches.find(b => b.isMain);
 
-if (!session?.branchId) {
-  await MENUVA_DB.setSession({
-    ...session,
-    email,
-    restoId,
-    branchId: mainBranch.id,
-    role: session?.role || "super_admin"
-  });
-}
-
-if (restos.filter(r => r.ownerEmail === email).length > 1) {
-  console.warn("🚫 Duplicate resto detected");
-}
+  // =========================
+  // 🔥 SYNC SESSION FINAL
+  // =========================
+  if (!session?.branchId) {
+    await MENUVA_DB.setSession({
+      ...session,
+      email,
+      restoId,
+      branchId: mainBranch?.id || null,
+      role: session?.role || "super_admin"
+    });
+  }
 
   CACHED_RESTO_ID = restoId;
+
+  console.log("🏁 FINAL RESTO:", restoId);
+
   return restoId;
 }
 
