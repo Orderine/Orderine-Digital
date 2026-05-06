@@ -18,42 +18,41 @@ async function getBranchesByResto(restoId) {
 
   const all = await MENUVA_DB.getAll("branches");
 
-  const filtered = all.filter(b => b.restoId === restoId);
-
-  console.log("📦 getBranchesByResto:", filtered);
-
   console.log("📦 RAW DB:", all);
 
-  return filtered;
+  const branches = all.filter(b => b.restoId === restoId);
+
+  console.log("📦 FILTERED:", branches);
+
+  return branches;
 }
 
 async function getBranchesSafe(restoId) {
 
-  let branches = await getBranchesByResto(restoId);
-
-// 🔥 HANDLE EMPTY GLITCH (IndexedDB delay)
-if (branches.length === 0) {
-  console.warn("⚠️ Empty fetch, retrying...");
-  await new Promise(r => setTimeout(r, 80));
-  branches = await getBranchesByResto(restoId);
-}
-
-  // ⚡ 1. CACHE HIT
+  // ⚡ 1. CACHE HIT (HARUS PALING ATAS)
   if (BRANCH_CACHE && BRANCH_CACHE.restoId === restoId) {
     console.log("⚡ USING CACHE");
     return BRANCH_CACHE.data;
   }
 
+  // 🔥 2. FETCH AWAL
   let branches = await getBranchesByResto(restoId);
 
-  // 🔁 2. RETRY (ANTI RACE CONDITION)
+  // 🔁 3. HANDLE EMPTY GLITCH
+  if (branches.length === 0) {
+    console.warn("⚠️ Empty fetch, retrying...");
+    await new Promise(r => setTimeout(r, 80));
+    branches = await getBranchesByResto(restoId);
+  }
+
+  // 🔁 4. RETRY SUSPICIOUS (NO MAIN)
   if (branches.length > 0 && !branches.some(b => b.isMain)) {
     console.warn("⏳ Suspicious state, retrying fetch...");
     await new Promise(r => setTimeout(r, 50));
     branches = await getBranchesByResto(restoId);
   }
 
-  // 🔥 3. NORMALISASI DATA
+  // 🔥 5. NORMALISASI
   let changed = false;
 
   branches = branches.map(b => {
@@ -75,7 +74,7 @@ if (branches.length === 0) {
     };
   });
 
-  // 💾 4. SYNC KE DB (HANYA JIKA BERUBAH)
+  // 💾 6. SYNC DB
   if (changed) {
     console.log("♻️ Normalizing DB...");
     for (const b of branches) {
@@ -83,7 +82,7 @@ if (branches.length === 0) {
     }
   }
 
-  // 🔥 5. HANDLE DUPLICATE MAIN
+  // 🔥 7. HANDLE DUPLICATE MAIN
   const mains = branches.filter(b => b.isMain);
 
   if (mains.length > 1) {
@@ -98,10 +97,10 @@ if (branches.length === 0) {
     branches = branches.filter(b => b.id === keep.id || !b.isMain);
   }
 
-  // 🔍 6. DETEK MAIN
+  // 🔍 8. DETEK MAIN
   let mainBranch = branches.find(b => b.isMain === true);
 
-  // 🚨 7. AUTO CREATE (LAST DEFENSE)
+  // 🚨 9. AUTO CREATE (SAFE VERSION)
   if (!mainBranch && branches.length === 0) {
     console.warn("🚨 MAIN BRANCH HILANG → AUTO CREATE");
 
@@ -116,10 +115,10 @@ if (branches.length === 0) {
 
     await MENUVA_DB.add("branches", main);
 
-    branches = [main, ...branches];
+    branches = [main];
   }
 
-  // 💾 8. SAVE CACHE (🔥 INI YANG BIKIN CEPAT)
+  // 💾 10. CACHE
   BRANCH_CACHE = {
     restoId,
     data: branches
