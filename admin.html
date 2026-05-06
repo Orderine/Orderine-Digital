@@ -5631,9 +5631,6 @@ document.addEventListener("DOMContentLoaded", async () => {
    // 🔥 SYNC RESTO ID (WAJIB)
 const restoId = await BranchEngine.getRestoId();
 
-// backward compatibility (kalau masih ada restoID lama)
-const restoId = await BranchEngine.getRestoId();
-
 // 🔥 FIX LEGACY
 if (window.activeUser?.restoID && !window.activeUser?.restoId) {
   window.activeUser.restoId = window.activeUser.restoID;
