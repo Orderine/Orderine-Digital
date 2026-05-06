@@ -136,14 +136,20 @@ async function getRestoId() {
 
   if (CACHED_RESTO_ID) return CACHED_RESTO_ID;
 
-  const session = await MENUVA_DB.getSession();
-
-  if (session?.restoId && session?.branchId) {
-    CACHED_RESTO_ID = session.restoId;
-    return CACHED_RESTO_ID;
-  }
-
   let session = await MENUVA_DB.getSession() || {};
+
+// 🔥 AUTO FIX LEGACY
+if (session.restoID && !session.restoId) {
+  session.restoId = session.restoID;
+  delete session.restoID;
+  await MENUVA_DB.setSession(session);
+}
+
+// ⚡ CACHE HIT (SETELAH FIX)
+if (session?.restoId && session?.branchId) {
+  CACHED_RESTO_ID = session.restoId;
+  return CACHED_RESTO_ID;
+}
 
 // 🔥 AUTO FIX LEGACY
 if (session.restoID && !session.restoId) {
