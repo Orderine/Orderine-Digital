@@ -15,6 +15,16 @@ let BRANCH_CACHE = null;
 // 🔥 GET ALL BRANCH BY RESTO
 // ======================
 async function getBranchesByResto(restoId) {
+
+let branches = await getBranchesByResto(restoId);
+
+// 🔥 HANDLE EMPTY GLITCH (IndexedDB delay)
+if (branches.length === 0) {
+  console.warn("⚠️ Empty fetch, retrying...");
+  await new Promise(r => setTimeout(r, 80));
+  branches = await getBranchesByResto(restoId);
+}
+  
   const all = await MENUVA_DB.getAll("branches");
 
   const filtered = all.filter(b => b.restoId === restoId);
@@ -22,6 +32,8 @@ async function getBranchesByResto(restoId) {
   console.log("📦 getBranchesByResto:", filtered);
 
   return filtered;
+
+  console.log("📦 RAW DB:", all);
 }
 
 async function getBranchesSafe(restoId) {
@@ -90,7 +102,7 @@ async function getBranchesSafe(restoId) {
   let mainBranch = branches.find(b => b.isMain === true);
 
   // 🚨 7. AUTO CREATE (LAST DEFENSE)
-  if (!mainBranch) {
+  if (!mainBranch && branches.length === 0) {
     console.warn("🚨 MAIN BRANCH HILANG → AUTO CREATE");
 
     const main = {
@@ -420,26 +432,48 @@ async function createBranch(name) {
 
   const restoId = await getRestoId();
 
- await MENUVA_DB.add("branches", {
-  id: uid("branch"),
-  restoId,
-  name,
+  const newBranch = {
+    id: uid("branch"),
+    restoId,
+    name,
 
-  profile: {
-    logo: "",
-    address: "",
-    phone: "",
-    currency: "IDR"
-  },
+    profile: {
+      logo: "",
+      address: "",
+      phone: "",
+      currency: "IDR"
+    },
 
-  isMain: false,
-  createdAt: Date.now()
-});
+    isMain: false,
+    createdAt: Date.now()
+  };
 
-  // 🔥 RESET CACHE
+  await MENUVA_DB.add("branches", newBranch);
+
+  // 🔥 WAIT UNTIL DATA BENAR-BENAR ADA
+  let retry = 0;
+  let exists = false;
+
+  while (retry < 5 && !exists) {
+    const all = await getBranchesByResto(restoId);
+    exists = all.some(b => b.id === newBranch.id);
+
+    if (!exists) {
+      await new Promise(r => setTimeout(r, 50));
+      retry++;
+    }
+  }
+
+  if (!exists) {
+    console.error("❌ Branch not persisted!");
+  }
+
+  // 🔥 RESET CACHE SETELAH VALID
   BRANCH_CACHE = null;
 
   await renderBranchList();
+
+  console.log("🆕 Creating branch:", newBranch);
 }
 
 // ========================================
