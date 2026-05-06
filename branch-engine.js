@@ -16,7 +16,20 @@ let BRANCH_CACHE = null;
 // ======================
 async function getBranchesByResto(restoId) {
 
-let branches = await getBranchesByResto(restoId);
+  const all = await MENUVA_DB.getAll("branches");
+
+  const filtered = all.filter(b => b.restoId === restoId);
+
+  console.log("📦 getBranchesByResto:", filtered);
+
+  console.log("📦 RAW DB:", all);
+
+  return filtered;
+}
+
+async function getBranchesSafe(restoId) {
+
+  let branches = await getBranchesByResto(restoId);
 
 // 🔥 HANDLE EMPTY GLITCH (IndexedDB delay)
 if (branches.length === 0) {
@@ -24,19 +37,6 @@ if (branches.length === 0) {
   await new Promise(r => setTimeout(r, 80));
   branches = await getBranchesByResto(restoId);
 }
-  
-  const all = await MENUVA_DB.getAll("branches");
-
-  const filtered = all.filter(b => b.restoId === restoId);
-
-  console.log("📦 getBranchesByResto:", filtered);
-
-  return filtered;
-
-  console.log("📦 RAW DB:", all);
-}
-
-async function getBranchesSafe(restoId) {
 
   // ⚡ 1. CACHE HIT
   if (BRANCH_CACHE && BRANCH_CACHE.restoId === restoId) {
