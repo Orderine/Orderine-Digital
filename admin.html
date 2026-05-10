@@ -2852,6 +2852,11 @@ background:rgba(0,0,0,0.45);
         <h3>MENU EDITOR</h3>
 
         <input type="text" id="menuNameInput" placeholder="Menu Name" />
+           <textarea
+          id="menuDescriptionInput"
+          placeholder="Menu Description"
+         rows="4"
+         ></textarea>
         <input type="number" id="menuPriceInput" placeholder="Price" />
         <input type="file" id="menuImageInput" accept="image/*" />
         <img id="imagePreview" style="width:100%;margin-top:10px;display:none;border:1px solid #00f0ff;" />
@@ -3981,14 +3986,28 @@ function tambahMenuBaru(categoryId, nama, harga, image) {
 const restoId = window.activeUser?.restoId;
 
 const newMenu = {
+
   id: crypto.randomUUID(),
+
+  type: "menu",
+
   restoId,
   branchId,
-  code,
-  nama,
-  harga,
+
+  name: nama,
+
+  description: "",
+
+  price: harga,
+
   image,
-  categoryId
+
+  categoryId,
+
+  menuCode: code,
+
+  createdAt: Date.now()
+
 };
 
   window.menuList.push(newMenu);
@@ -4301,6 +4320,11 @@ async function saveMenuItem() {
   const price = parseInt(
     document.getElementById("menuPriceInput")?.value || "0"
   );
+ 
+ const description =
+  document.getElementById(
+    "menuDescriptionInput"
+  )?.value.trim() || "";
 
   if (!name) return alert("❌ Nama menu wajib diisi");
 
@@ -4358,6 +4382,7 @@ const menuCode =
     branchId,
 
     name,
+   description,
     price,
 
     image:
@@ -4367,7 +4392,8 @@ const menuCode =
 
     menuCode,
 
-    createdAt: Date.now()
+    createdAt: Date.now(),
+   active: true,
   };
 
   await MENUVA_DB.add("menuData", newMenu);
@@ -4378,6 +4404,10 @@ const menuCode =
 
   // reset form
   document.getElementById("menuNameInput").value = "";
+
+ document.getElementById(
+  "menuDescriptionInput"
+).value = "";
 
   document.getElementById("menuPriceInput").value = "";
 
