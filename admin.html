@@ -4190,7 +4190,7 @@ const selected = categories.find(
  /* ================= MENU CODE GENERATOR ================= */
 
 async function generateMenuCode(categoryName, restoId, branchId) {
-
+ 
   const location =
     window.systemSettings?.locationCode || "LOC";
 
@@ -4329,12 +4329,19 @@ async function saveMenuItem() {
   const branchId = activeBranch.id;
 
   // ✅ GENERATE MENU CODE DENGAN BRANCH
-  const menuCode =
-    await generateMenuCode(
-      categoryName,
-      restoId,
-      branchId
-    );
+ const branchId = BranchEngine.getActive();
+
+if (!branchId) {
+  alert("⚠️ Branch tidak ditemukan");
+  return;
+}
+
+const menuCode =
+  await generateMenuCode(
+    categoryName,
+    restoId,
+    branchId
+  );
 
   const all =
     await MENUVA_DB.getAll("menuData");
