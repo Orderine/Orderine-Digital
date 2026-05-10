@@ -4190,18 +4190,30 @@ const selected = categories.find(
     const card = document.createElement("div");
     card.className = "terminal-menu-card";
 
-    card.innerHTML = `
-      ${menu.image ? `
-      <div class="menu-img-wrap">
-        <img src="${menu.image}" class="menu-img">
-      </div>` : ""}
+   card.innerHTML = `
 
-      <h4>${menu.name}</h4>
-      <div class="menu-code">${menu.menuCode}</div>
-      <p>Rp ${menu.price.toLocaleString()}</p>
-      <button onclick="deleteMenu('${menu.id}')">DELETE</button>
-    `;
+  ${menu.image ? `
+  <div class="menu-img-wrap">
+    <img src="${menu.image}" class="menu-img">
+  </div>` : ""}
 
+  <h4>${menu.name}</h4>
+
+  <div class="menu-description">
+    ${menu.description || ""}
+  </div>
+
+  <div class="menu-code">
+    ${menu.menuCode}
+  </div>
+
+  <p>Rp ${menu.price.toLocaleString()}</p>
+
+  <button onclick="deleteMenu('${menu.id}')">
+    DELETE
+  </button>
+
+`;
     grid.appendChild(card);
   });
 }
