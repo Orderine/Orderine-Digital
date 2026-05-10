@@ -4395,29 +4395,51 @@ const menuCode =
 /* ================= DELETE MENU ================= */
 
 async function deleteMenu(id) {
+
   if (!confirm("Delete this menu?")) return;
 
-  const restoId = window.activeUser?.restoId;
+  const restoId =
+    window.activeUser?.restoId;
+
   if (!restoId) return;
 
-  const all = await MENUVA_DB.getAll("menuData");
-const target = all.find(m => m.id === id);
+  const all =
+    await MENUVA_DB.getAll("menuData");
 
- const branchId = window.BranchEngine?.getActive();
+  const target =
+    all.find(m => m.id === id);
 
-if (target?.branchId !== branchId) {
-  console.warn("❌ Beda branch, tidak boleh delete");
-  return;
-}
+  const branchId =
+    window.BranchEngine?.getActive();
 
-  // Reload kategori (sudah auto filter by resto)
+  if (target?.branchId !== branchId) {
+    console.warn(
+      "❌ Beda branch, tidak boleh delete"
+    );
+    return;
+  }
+
+  // ✅ DELETE REAL DATA
+  await MENUVA_DB.delete(
+    "menuData",
+    id
+  );
+
+  // ✅ RELOAD UI
   await loadCategories();
 
   if (window.activeCategoryName) {
-    await renderMenuPreview(window.activeCategoryName);
+    await renderMenuPreview(
+      window.activeCategoryName
+    );
   } else {
-    const grid = document.getElementById("menuPreviewGrid");
-    if (grid) grid.innerHTML = "";
+    const grid =
+      document.getElementById(
+        "menuPreviewGrid"
+      );
+
+    if (grid)
+      grid.innerHTML = "";
   }
 
   console.log("🗑️ Menu deleted:", id);
