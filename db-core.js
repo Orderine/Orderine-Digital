@@ -387,54 +387,126 @@ ensureStore(db, tx, "flipbookData",
   /* ======================================================
      SAFE STORE ACCESS
   ====================================================== */
+async function withStore(storeName, mode, callback) {
 
-  async function withStore(storeName,mode,callback){
+  if (!MENUVA_DB.STORES.includes(storeName)) {
+    throw new Error(
+      `🚫 Illegal store access: ${storeName}`
+    );
+  }
 
-    if(!MENUVA_DB.STORES.includes(storeName)){
-      throw new Error(`🚫 Illegal store access: ${storeName}`);
-    }
+  let db = await openDB();
 
-    let db = await openDB();
+  try {
 
-    try{
+    return await new Promise((resolve, reject) => {
 
-      return await new Promise((resolve,reject)=>{
+      const tx =
+        db.transaction(storeName, mode);
 
-        const tx=db.transaction(storeName,mode);
+      const store =
+        tx.objectStore(storeName);
 
-        const store=tx.objectStore(storeName);
+      const request =
+        callback(store);
 
-        const request=callback(store);
+      request.onsuccess = () => {
 
-        request.onsuccess=()=>resolve(request.result);
-        request.onerror=()=>reject(request.error);
+        resolve(request.result);
 
-      });
+      };
 
-    }catch(err){
+      request.onerror = () => {
 
-      console.warn("⚠️ DB retrying due to error:",err);
+        console.error(
+          "❌ DB REQUEST ERROR",
+          {
+            store: storeName,
+            mode,
+            error: request.error
+          }
+        );
 
-      dbInstance=null;
+        reject(request.error);
 
-      db=await openDB();
+      };
 
-      return new Promise((resolve,reject)=>{
+      tx.onerror = () => {
 
-        const tx=db.transaction(storeName,mode);
+        console.error(
+          "❌ DB TRANSACTION ERROR",
+          {
+            store: storeName,
+            mode,
+            error: tx.error
+          }
+        );
 
-        const store=tx.objectStore(storeName);
+      };
 
-        const request=callback(store);
+    });
 
-        request.onsuccess=()=>resolve(request.result);
-        request.onerror=()=>reject(request.error);
+  } catch (err) {
 
-      });
+    console.warn(
+      "⚠️ DB retrying due to error:",
+      err
+    );
 
-    }
+    dbInstance = null;
+
+    db = await openDB();
+
+    return new Promise((resolve, reject) => {
+
+      const tx =
+        db.transaction(storeName, mode);
+
+      const store =
+        tx.objectStore(storeName);
+
+      const request =
+        callback(store);
+
+      request.onsuccess = () => {
+
+        resolve(request.result);
+
+      };
+
+      request.onerror = () => {
+
+        console.error(
+          "❌ DB RETRY ERROR",
+          {
+            store: storeName,
+            mode,
+            error: request.error
+          }
+        );
+
+        reject(request.error);
+
+      };
+
+      tx.onerror = () => {
+
+        console.error(
+          "❌ DB RETRY TRANSACTION ERROR",
+          {
+            store: storeName,
+            mode,
+            error: tx.error
+          }
+        );
+
+      };
+
+    });
 
   }
+
+}
 
 
   /* ======================================================
@@ -492,14 +564,49 @@ ensureStore(db, tx, "flipbookData",
 
     openDB,
 
-    add(store,data){
-      return withStore(store,"readwrite",s=>s.put(data));
-    },
+    /* ================= INSERT ONLY ================= */
 
-    update(store,data){
-      return this.add(store,data);
-    },
+add(store, data) {
 
+  return withStore(store, "readwrite", storeObj => {
+
+    // 🔥 PURE INSERT
+    // akan ERROR kalau key sudah ada
+    return storeObj.add(data);
+
+  });
+
+},
+
+/* ================= UPDATE ONLY ================= */
+
+async update(store, data) {
+
+  if (!data?.id) {
+    throw new Error(
+      "❌ UPDATE requires data.id"
+    );
+  }
+
+  // cek existing dulu
+  const existing =
+    await this.get(store, data.id);
+
+  if (!existing) {
+    throw new Error(
+      `❌ Cannot update missing data: ${data.id}`
+    );
+  }
+
+  return withStore(store, "readwrite", storeObj => {
+
+    // 🔥 SAFE UPDATE
+    return storeObj.put(data);
+
+  });
+
+},
+     
     get(store,key){
       return withStore(store,"readonly",s=>s.get(key));
     },
