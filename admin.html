@@ -4317,17 +4317,6 @@ async function saveMenuItem() {
 
   const categoryName = window.activeCategoryName;
 
-  // ✅ GET ACTIVE BRANCH DULU
-  const activeBranch =
-    await BranchEngine.getActiveBranch();
-
-  if (!activeBranch) {
-    alert("⚠️ Branch tidak ditemukan");
-    return;
-  }
-
-  const branchId = activeBranch.id;
-
   // ✅ GENERATE MENU CODE DENGAN BRANCH
  const branchId = BranchEngine.getActive();
 
