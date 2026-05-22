@@ -4640,45 +4640,90 @@ async function simpanData() {
       return;
     }
 
-    console.log("💾 SAVE BUSINESS IDENTITY", { restoId, branchId });
+    console.log("💾 SAVE BUSINESS IDENTITY", {
+      restoId,
+      branchId
+    });
 
-    // ======================
-    // 🏢 ONLY BUSINESS IDENTITY
-    // ======================
-    const branchData = {
+    // =========================
+    // 🔥 GET EXISTING BRANCH
+    // =========================
+    const existingBranch =
+      await MENUVA_DB.get("branches", branchId);
+
+    if (!existingBranch) {
+      alert("❌ Branch not found");
+      return;
+    }
+
+    // =========================
+    // 🏢 PROFILE SCHEMA ONLY
+    // =========================
+    const updatedBranch = {
+      ...existingBranch,
+
       id: branchId,
       restoId,
       ownerId,
 
-      namaRestoran: getVal("namaRestoran"),
-      restoAddress: getVal("restoAddress"),
-      restoPhone: getVal("restoPhone"),
+      profile: {
+        ...(existingBranch.profile || {}),
 
-      logo: document.getElementById("previewLogo")?.src || "",
-      nomorWaAdmin: collectWaFromUI(),
+        namaRestoran:
+          getVal("namaRestoran"),
 
-      locationCode: window.systemSettings?.locationCode || "LOC",
-      updatedAt: Date.now()
+        address:
+          getVal("restoAddress"),
+
+        phone:
+          getVal("restoPhone"),
+
+        logo:
+          document.getElementById("previewLogo")?.src || "",
+
+        nomorWaAdmin:
+          collectWaFromUI(),
+
+        locationCode:
+          window.systemSettings?.locationCode || "LOC",
+
+        updatedAt: Date.now()
+      }
     };
 
-    const existingBranch = await MENUVA_DB.get("branches", branchId);
+    // =========================
+    // 🧹 REMOVE OLD ROOT FIELDS
+    // =========================
+    delete updatedBranch.namaRestoran;
+    delete updatedBranch.restoAddress;
+    delete updatedBranch.restoPhone;
+    delete updatedBranch.logo;
+    delete updatedBranch.nomorWaAdmin;
+    delete updatedBranch.locationCode;
 
-    if (existingBranch) {
-      await MENUVA_DB.update("branches", {
-        ...existingBranch,
-        ...branchData
-      });
-    } else {
-      await MENUVA_DB.add("branches", branchData);
-    }
+    // =========================
+    // 💾 SAVE
+    // =========================
+    await MENUVA_DB.update(
+      "branches",
+      updatedBranch
+    );
 
-    console.log("✅ BUSINESS IDENTITY SAVED", branchId);
+    console.log(
+      "✅ BUSINESS IDENTITY SAVED",
+      branchId
+    );
 
     alert("✅ Business identity saved");
 
   } catch (err) {
-    console.error("❌ simpanData fatal:", err);
+    console.error(
+      "❌ simpanData fatal:",
+      err
+    );
+
     alert("❌ Failed to save data");
+
   } finally {
     hideLoader?.();
   }
@@ -4688,35 +4733,77 @@ async function simpanData() {
   return document.getElementById(id)?.value.trim() || "";
 }
 
- async function loadBusinessIdentity(branchId) {
+async function loadBusinessIdentity(branchId) {
   if (!branchId) return;
 
-  const branch = await MENUVA_DB.get("branches", branchId);
+  const branch =
+    await MENUVA_DB.get("branches", branchId);
 
-  console.log("📥 LOAD BRANCH", branchId, branch);
+  console.log(
+    "📥 LOAD BRANCH",
+    branchId,
+    branch
+  );
 
   // =========================
-  // RESET DULU (PENTING BANGET)
+  // 🧹 RESET UI
   // =========================
   document.getElementById("namaRestoran").value = "";
   document.getElementById("restoAddress").value = "";
   document.getElementById("restoPhone").value = "";
   document.getElementById("previewLogo").src = "";
 
-  // =========================
-  // ISI DATA JIKA ADA
-  // =========================
   if (!branch) return;
 
-  setVal("namaRestoran", branch.namaRestoran);
-  setVal("restoAddress", branch.restoAddress);
-  setVal("restoPhone", branch.restoPhone);
+  // =========================
+  // 🏢 PROFILE ONLY
+  // =========================
+  const profile = branch.profile || {};
 
-  if (branch.logo) {
-    document.getElementById("previewLogo").src = branch.logo;
+  setVal(
+    "namaRestoran",
+    profile.namaRestoran || ""
+  );
+
+  setVal(
+    "restoAddress",
+    profile.address || ""
+  );
+
+  setVal(
+    "restoPhone",
+    profile.phone || ""
+  );
+
+  if (profile.logo) {
+    document.getElementById(
+      "previewLogo"
+    ).src = profile.logo;
   }
-}
 
+  // =========================
+  // 🌍 SYSTEM SETTINGS
+  // =========================
+  window.systemSettings = {
+    locationCode:
+      profile.locationCode || "LOC"
+  };
+
+  // =========================
+  // 📱 WA ADMIN
+  // =========================
+  window.WA_ADMIN =
+    Array.isArray(profile.nomorWaAdmin)
+      ? [...profile.nomorWaAdmin]
+      : [];
+
+  renderWaAdmin?.();
+
+  console.log(
+    "🏢 BUSINESS IDENTITY READY"
+  );
+}
+ 
  function setVal(id, value) {
   const el = document.getElementById(id);
   if (el) el.value = value || "";
@@ -4915,18 +5002,42 @@ window.loadData = async function () {
     const elLoc   = document.getElementById("locationCodeInput");
     const elLogo  = document.getElementById("previewLogo");
 
-    /* ================= BASIC ================= */
-    if (elNama)  elNama.value  = branch.namaRestoran ?? "";
-    if (elAddr)  elAddr.value  = branch.restoAddress ?? "";
-    if (elPhone) elPhone.value = branch.restoPhone ?? "";
+    /* ================= PROFILE ================= */
+const profile = {
+  namaRestoran:
+    branch.profile?.namaRestoran ||
+    branch.namaRestoran ||
+    "",
+
+  address:
+    branch.profile?.address ||
+    branch.restoAddress ||
+    "",
+
+  phone:
+    branch.profile?.phone ||
+    branch.restoPhone ||
+    "",
+
+  logo:
+    branch.profile?.logo ||
+    branch.logo ||
+    ""
+};
+
+/* ================= BASIC ================= */
+if (elNama)  elNama.value  = profile.namaRestoran;
+if (elAddr)  elAddr.value  = profile.address;
+if (elPhone) elPhone.value = profile.phone;
 
     window.systemSettings = {
-      locationCode: branch.locationCode || "LOC"
-    };
+  locationCode:
+    profile.locationCode || "LOC"
+};
 
     if (elLoc) elLoc.value = window.systemSettings.locationCode;
 
-    if (branch.logo && elLogo) {
+    if (profile.logo && elLogo) {
       elLogo.src = branch.logo;
       window.__LOGO_BASE64__ = branch.logo;
     } else if (elLogo) {
@@ -4934,7 +5045,8 @@ window.loadData = async function () {
     }
 
     /* ================= WA ================= */
-    window.WA_ADMIN = Array.isArray(branch.nomorWaAdmin)
+    window.WA_ADMIN =
+  Array.isArray(profile.nomorWaAdmin)
       ? [...branch.nomorWaAdmin]
       : [];
 
@@ -4949,6 +5061,7 @@ window.loadData = async function () {
     window.__LOAD_DATA_RUNNING__ = false;
   }
 };
+ 
  function resetBranchUI() {
   console.warn("🧹 Reset UI (no branch data)");
 
