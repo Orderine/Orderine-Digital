@@ -2867,7 +2867,12 @@ background:rgba(0,0,0,0.45);
           placeholder="Menu Description"
          rows="4"
          ></textarea>
-        <input type="number" id="menuPriceInput" placeholder="Price" />
+        <input
+  type="text"
+  inputmode="numeric"
+  id="menuPriceInput"
+  placeholder="Price"
+/>
         <input type="file" id="menuImageInput" accept="image/*" />
         <img id="imagePreview" style="width:100%;margin-top:10px;display:none;border:1px solid #00f0ff;" />
 
@@ -4324,6 +4329,35 @@ document
     preview.src = webp;
     preview.style.display = "block";
   });
+
+/* ================= PRICE FORMATTER ================= */
+
+const priceInput =
+  document.getElementById(
+    "menuPriceInput"
+  );
+
+if (priceInput) {
+
+  priceInput.addEventListener(
+    "input",
+    e => {
+
+      // ambil angka saja
+      const raw =
+        e.target.value.replace(/\D/g, "");
+
+      // format realtime
+      e.target.value =
+        raw
+          ? Number(raw)
+              .toLocaleString("id-ID")
+          : "";
+
+    }
+  );
+
+}
 
  
 async function saveMenuItem() {
