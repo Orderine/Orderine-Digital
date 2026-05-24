@@ -4363,9 +4363,6 @@ const price = Number(cleanPrice);
 
   const categoryName = window.activeCategoryName;
 
- const all =
-  await MENUVA_DB.getAll("menuData");
-
 const categories = all.filter(
   d =>
     d.type === "category" &&
