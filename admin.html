@@ -4217,7 +4217,9 @@ const selected = categories.find(
     ${menu.menuCode}
   </div>
 
-  <p>Rp ${menu.price.toLocaleString()}</p>
+  <p>
+  Rp ${Number(menu.price || 0).toLocaleString("id-ID")}
+</p>
 
   <button onclick="deleteMenu('${menu.id}')">
     DELETE
@@ -4230,34 +4232,28 @@ const selected = categories.find(
 
  /* ================= MENU CODE GENERATOR ================= */
 
-async function generateMenuCode(categoryName, restoId, branchId) {
- 
+async function generateMenuCode(categoryId, categoryName, restoId, branchId) {
+
   const location =
     window.systemSettings?.locationCode || "LOC";
 
   let menus = await MENUVA_DB.getAll("menuData");
 
+  // ambil hanya menu branch aktif
   menus = menus.filter(m =>
     m.type === "menu" &&
     m.restoId === restoId &&
     m.branchId === branchId
   );
 
-  // ❗ fallback kalau gagal
-  if (!menus?.length) {
-    menus = (await MENUVA_DB.getAll("menuData"))
-      .filter(m =>
-        m.restoId === restoId &&
-        m.branchId === branchId
-      );
-  }
-
+  // 🔥 filter pakai categoryId
   const sameCategoryMenus = menus.filter(
-    m => m.category?.name === categoryName
+    m => m.categoryId === categoryId
   );
 
   const prefix = generateCategoryPrefix(categoryName);
 
+  // 🔥 running number aman
   const running = String(
     sameCategoryMenus.length + 1
   ).padStart(4, "0");
@@ -4339,9 +4335,13 @@ async function saveMenuItem() {
 
   const name = document.getElementById("menuNameInput")?.value.trim();
 
-  const price = parseInt(
-    document.getElementById("menuPriceInput")?.value || "0"
-  );
+ const rawPrice =
+  document.getElementById("menuPriceInput")?.value || "0";
+
+// 🔥 hapus semua simbol selain angka
+const cleanPrice = rawPrice.replace(/[^0-9]/g, "");
+
+const price = Number(cleanPrice);
  
  const description =
   document.getElementById(
@@ -4363,6 +4363,25 @@ async function saveMenuItem() {
 
   const categoryName = window.activeCategoryName;
 
+ const all =
+  await MENUVA_DB.getAll("menuData");
+
+const categories = all.filter(
+  d =>
+    d.type === "category" &&
+    d.restoId === restoId &&
+    d.branchId === branchId
+);
+
+const selected = categories.find(
+  c => c.name === categoryName
+);
+
+if (!selected) {
+  alert("❌ Category tidak ditemukan");
+  return;
+}
+
   // ✅ GENERATE MENU CODE DENGAN BRANCH
  const branchId = BranchEngine.getActive();
 
@@ -4373,6 +4392,7 @@ if (!branchId) {
 
 const menuCode =
   await generateMenuCode(
+    selected.id,
     categoryName,
     restoId,
     branchId
