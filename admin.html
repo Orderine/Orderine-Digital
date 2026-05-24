@@ -4333,71 +4333,57 @@ async function saveMenuItem() {
     return;
   }
 
-  const name = document.getElementById("menuNameInput")?.value.trim();
+  const name =
+    document.getElementById("menuNameInput")
+      ?.value.trim();
 
- const rawPrice =
-  document.getElementById("menuPriceInput")?.value || "0";
+  const rawPrice =
+    document.getElementById("menuPriceInput")
+      ?.value || "0";
 
-// 🔥 hapus semua simbol selain angka
-const cleanPrice = rawPrice.replace(/[^0-9]/g, "");
+  // 🔥 bersihkan format harga
+  const cleanPrice =
+    rawPrice.replace(/[^0-9]/g, "");
 
-const price = Number(cleanPrice);
- 
- const description =
-  document.getElementById(
-    "menuDescriptionInput"
-  )?.value.trim() || "";
+  const price =
+    Number(cleanPrice);
 
-  if (!name) return alert("❌ Nama menu wajib diisi");
+  const description =
+    document.getElementById(
+      "menuDescriptionInput"
+    )?.value.trim() || "";
+
+  if (!name)
+    return alert("❌ Nama menu wajib diisi");
 
   if (!price || price <= 0)
     return alert("❌ Harga tidak valid");
 
-  // 🔥 GUARD CATEGORY
+  // 🔥 category wajib ada
   if (!window.activeCategoryName) {
-    alert("Pilih category dulu sebelum save menu");
+    alert("❌ Pilih category dulu");
     return;
   }
 
-  const restoId = window.activeUser.restoId;
+  const restoId =
+    window.activeUser.restoId;
 
-  const categoryName = window.activeCategoryName;
+  const branchId =
+    BranchEngine.getActive();
 
-const categories = all.filter(
-  d =>
-    d.type === "category" &&
-    d.restoId === restoId &&
-    d.branchId === branchId
-);
+  if (!branchId) {
+    alert("⚠️ Branch tidak ditemukan");
+    return;
+  }
 
-const selected = categories.find(
-  c => c.name === categoryName
-);
+  const categoryName =
+    window.activeCategoryName;
 
-if (!selected) {
-  alert("❌ Category tidak ditemukan");
-  return;
-}
-
-  // ✅ GENERATE MENU CODE DENGAN BRANCH
- const branchId = BranchEngine.getActive();
-
-if (!branchId) {
-  alert("⚠️ Branch tidak ditemukan");
-  return;
-}
-
-const menuCode =
-  await generateMenuCode(
-    selected.id,
-    categoryName,
-    restoId,
-    branchId
-  );
-
+  // 🔥 ambil semua data SEKALI SAJA
   const all =
     await MENUVA_DB.getAll("menuData");
 
+  // 🔥 filter category aktif
   const categories = all.filter(
     d =>
       d.type === "category" &&
@@ -4405,6 +4391,7 @@ const menuCode =
       d.branchId === branchId
   );
 
+  // 🔥 cari category aktif
   const selected = categories.find(
     c => c.name === categoryName
   );
@@ -4414,15 +4401,32 @@ const menuCode =
     return;
   }
 
+  // 🔥 generate menu code
+  const menuCode =
+    await generateMenuCode(
+      selected.id,
+      categoryName,
+      restoId,
+      branchId
+    );
+
+  // 🔥 object menu final
   const newMenu = {
+
     id: crypto.randomUUID(),
+
     type: "menu",
+
     restoId,
+
     branchId,
 
     name,
-   description,
-    price,
+
+    description,
+
+    // 🔥 anti decimal zombie
+    price: Math.round(price),
 
     image:
       window.uploadedImageBase64 || "",
@@ -4432,35 +4436,60 @@ const menuCode =
     menuCode,
 
     createdAt: Date.now(),
-   active: true,
+
+    active: true
   };
 
-  await MENUVA_DB.add("menuData", newMenu);
+  // 🔥 save DB
+  await MENUVA_DB.add(
+    "menuData",
+    newMenu
+  );
 
+  // 🔥 reload UI
   await loadCategories();
 
-  await renderMenuPreview(categoryName);
+  await renderMenuPreview(
+    categoryName
+  );
 
-  // reset form
-  document.getElementById("menuNameInput").value = "";
+  // 🔥 reset form
+  document.getElementById(
+    "menuNameInput"
+  ).value = "";
 
- document.getElementById(
-  "menuDescriptionInput"
-).value = "";
+  document.getElementById(
+    "menuDescriptionInput"
+  ).value = "";
 
-  document.getElementById("menuPriceInput").value = "";
+  document.getElementById(
+    "menuPriceInput"
+  ).value = "";
 
-  document.getElementById("menuImageInput").value = "";
+  document.getElementById(
+    "menuImageInput"
+  ).value = "";
 
-  document.getElementById("imagePreview").style.display =
-    "none";
+  const preview =
+    document.getElementById(
+      "imagePreview"
+    );
+
+  if (preview) {
+    preview.style.display = "none";
+    preview.src = "";
+  }
 
   window.uploadedImageBase64 = null;
 
-  alert("✅ Menu saved successfully!");
+  console.log(
+    "✅ MENU SAVED:",
+    newMenu
+  );
+
+  alert("✅ Menu berhasil disimpan!");
 }
 
- 
 /* ================= DELETE MENU ================= */
 
 async function deleteMenu(id) {
