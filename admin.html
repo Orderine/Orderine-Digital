@@ -4372,15 +4372,15 @@ async function saveMenuItem() {
       ?.value.trim();
 
   const rawPrice =
-    document.getElementById("menuPriceInput")
-      ?.value || "0";
+  document.getElementById(
+    "menuPriceInput"
+  )?.value || "";
 
-  // 🔥 bersihkan format harga
-  const cleanPrice =
-    rawPrice.replace(/[^0-9]/g, "");
+const cleanPrice =
+  rawPrice.replace(/\D/g, "");
 
-  const price =
-    Number(cleanPrice);
+const price =
+  parseInt(cleanPrice, 10) || 0;
 
   const description =
     document.getElementById(
