@@ -1235,21 +1235,24 @@ button {
 
 .promo-img-wrap {
   width: 100%;
-  aspect-ratio: 4 / 3;   /* rahasia biar cakep */
+  aspect-ratio: 1 / 1;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #111;
-  margin-bottom: 8px;
 }
 
 .promo-img {
   width: 100%;
-  height: 140px;
+  height: 100%;
   object-fit: cover;
   object-position: center;
-  display: block;
-  border-radius: 8px;
+  transition: transform .25s ease;
 }
+
+.terminal-card:hover .promo-img {
+  transform: scale(1.04);
+}
+  
 .menu-img-wrap {
   width: 100%;
   aspect-ratio: 4 / 3;
