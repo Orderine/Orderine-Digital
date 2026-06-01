@@ -178,6 +178,14 @@ function createTableCardOptimized(table){
   const card = document.createElement("div");
   card.className = "terminal-card table-card";
 
+  // 🔥 selalu buat image slot
+  const img = document.createElement("img");
+
+  img.className = "table-card-image";
+  img.loading = "lazy";
+  img.decoding = "async";
+  img.style.display = "none";
+
   const title = document.createElement("span");
   const meta1 = document.createElement("div");
   const meta2 = document.createElement("div");
@@ -190,10 +198,23 @@ function createTableCardOptimized(table){
   notes.className = "table-notes";
   status.className = "table-status";
 
-  card.append(title, meta1, meta2, notes, status);
+  card.append(
+    img,
+    title,
+    meta1,
+    meta2,
+    notes,
+    status
+  );
 
-  // 🔥 simpan reference (NO querySelector lagi)
-  card._refs = { title, meta1, meta2, notes, status };
+  card._refs = {
+    img,
+    title,
+    meta1,
+    meta2,
+    notes,
+    status
+  };
 
   updateTableCard(card, table);
 
@@ -204,44 +225,42 @@ function updateTableCard(card, table){
 
   const r = card._refs;
 
+  // ================= IMAGE =================
+
+  if(table.image){
+
+    r.img.src = table.image;
+    r.img.style.display = "block";
+
+  }else{
+
+    r.img.removeAttribute("src");
+    r.img.style.display = "none";
+
+  }
+
+  // ================= CONTENT =================
+
   r.title.textContent = table.name;
-  r.meta1.textContent = `👥 ${table.capacity} Pax • 📍 ${table.zone}`;
-  r.meta2.textContent = `🍽 ${table.category || "-"}`;
-  r.notes.textContent = table.notes || "";
 
-  r.status.textContent = table.status;
-  r.status.style.background = getTableStatusColor(table.status);
+  r.meta1.textContent =
+    `👥 ${table.capacity} Pax • 📍 ${table.zone}`;
 
-  card.style.opacity = table.active ? "1" : "0.4";
+  r.meta2.textContent =
+    `🍽 ${table.category || "-"}`;
+
+  r.notes.textContent =
+    table.notes || "";
+
+  r.status.textContent =
+    table.status;
+
+  r.status.style.background =
+    getTableStatusColor(table.status);
+
+  card.style.opacity =
+    table.active ? "1" : "0.4";
 }
-
-window.previewTableImage = async function(event){
-
-  const file = event.target.files[0];
-  if(!file) return;
-
-  const preview = document.getElementById("tableImagePreview");
-  if(!preview) return;
-
-  const bitmap = await createImageBitmap(file); // 🔥 lebih cepat
-
-  requestAnimationFrame(() => {
-
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-
-    const MAX_WIDTH = 800;
-    const scale = Math.min(1, MAX_WIDTH / bitmap.width);
-
-    canvas.width = bitmap.width * scale;
-    canvas.height = bitmap.height * scale;
-
-    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-
-    preview.src = canvas.toDataURL("image/webp", 0.7);
-    preview.style.display = "block";
-  });
-};
 /* =========================
    AUTO NAME
 ========================= */
