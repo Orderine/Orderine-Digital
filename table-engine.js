@@ -18,15 +18,25 @@ async function getSessionCached(){
 let TABLE_CACHE = [];
 
 async function loadTablesOnce(){
-  const session = await getSessionCached();
-  const restoId = session?.restoId || "default";
+
+  const restoId = await BranchEngine.getRestoId();
+  const branchId = BranchEngine.getActive();
+
+  if(!restoId || !branchId){
+    TABLE_CACHE = [];
+    TABLE_INDEX = Object.create(null);
+    return;
+  }
 
   const tables = await MENUVA_DB.getAll("restaurantTables");
 
-  TABLE_CACHE = tables.filter(t => t.restoId === restoId);
+  TABLE_CACHE = tables.filter(t =>
+    t.restoId === restoId &&
+    t.branchId === branchId
+  );
 
-  // ✅ FIX: pakai global, bukan local
   TABLE_INDEX = Object.create(null);
+
   for(const t of TABLE_CACHE){
     TABLE_INDEX[t.id] = t;
   }
@@ -294,23 +304,31 @@ async function saveTable(){
 
   if(!name) name = generateTableName(); // 🔥 sekarang sync function
 
-  const session = await getSessionCached();
-  const restoId = session?.restoId || "default";
+  const restoId = await BranchEngine.getRestoId();
+const branchId = BranchEngine.getActive();
+
+if(!restoId || !branchId){
+  alert("⚠️ Branch tidak ditemukan");
+  return;
+}
 
   const tableData = {
-    id: editingTableId || "TB_" + Date.now(),
-    restoId,
-    name,
-    capacity,
-    zone,
-    category,
-    notes,
-    image,
-    status: "available",
-    currentGuest: null,
-    active,
-    createdAt: Date.now()
-  };
+  id: editingTableId || "TB_" + Date.now(),
+
+  restoId,
+  branchId, // 🔥 tambah ini
+
+  name,
+  capacity,
+  zone,
+  category,
+  notes,
+  image,
+  status:"available",
+  currentGuest:null,
+  active,
+  createdAt:Date.now()
+};
 
   if(editingTableId){
 
