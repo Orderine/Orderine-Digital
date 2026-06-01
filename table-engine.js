@@ -381,6 +381,31 @@ function showEditor(mode){
   }
 }
 
+window.previewTableImage = async function(event){
+
+  const file = event.target.files[0];
+  if(!file) return;
+
+  const preview = document.getElementById("tableImagePreview");
+  if(!preview) return;
+
+  const bitmap = await createImageBitmap(file);
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  const MAX_WIDTH = 800;
+  const scale = Math.min(1, MAX_WIDTH / bitmap.width);
+
+  canvas.width = bitmap.width * scale;
+  canvas.height = bitmap.height * scale;
+
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+  preview.src = canvas.toDataURL("image/webp", 0.7);
+  preview.style.display = "block";
+};
+
 function previewDepositQR(event){
 
   const file = event.target.files[0];
