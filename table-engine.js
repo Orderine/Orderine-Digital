@@ -61,7 +61,7 @@ function searchTables(){
       .getElementById("tableSearchInput")
       .value.toLowerCase();
 
-    scheduleRender();
+    schedule();
 
   }, 250);
 }
@@ -115,9 +115,6 @@ async function renderTables(){
   const grid = document.getElementById("tablePreviewGrid");
   if(!grid) return;
 
-  const session = await getSessionCached();
-  const restoId = session?.restoId || "default";
-
   // 🔥 RESET kalau mismatch (anti DOM nyangkut / memory leak)
   if(TABLE_DOM_CACHE.size > TABLE_CACHE.length){
     grid.innerHTML = "";
@@ -129,12 +126,20 @@ async function renderTables(){
 
   for(const t of TABLE_CACHE){
 
-    if(t.restoId !== restoId) continue;
+    // 🔥 restoId & branchId SUDAH difilter di loadTablesOnce()
+    // jangan filter lagi di render
 
-    if(currentTableFilter !== "all" && t.zone !== currentTableFilter) continue;
+    if(currentTableFilter !== "all" &&
+       t.zone !== currentTableFilter){
+      continue;
+    }
 
     if(currentSearch){
-      if(!(t.name || "").toLowerCase().includes(currentSearch)) continue;
+      if(!(t.name || "")
+          .toLowerCase()
+          .includes(currentSearch)){
+        continue;
+      }
     }
 
     filtered.push(t);
@@ -166,9 +171,9 @@ async function renderTables(){
     }
   });
 
-  // 🔥 UPDATE STATS
   updateTableStats(filtered);
 }
+
 
 let renderScheduled = false;
 
