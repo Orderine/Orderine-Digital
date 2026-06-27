@@ -145,6 +145,17 @@ async function getRestoId() {
 
   if (CACHED_RESTO_ID) return CACHED_RESTO_ID;
 
+  console.group("💾 SESSION WRITE");
+
+console.log({
+    oldBranch: session?.branchId,
+    newBranch: mainBranch?.id
+});
+
+console.trace("SESSION WRITE");
+
+console.groupEnd();
+
   let session = await MENUVA_DB.getSession() || {};
 
   // 🔧 FIX LEGACY FIELD
@@ -365,6 +376,16 @@ async function loadActiveBranch() {
     active = branches[0].id;
   }
 
+console.group("📦 RESTORE ACTIVE");
+
+console.log("Session :", session?.branchId);
+console.log("Local   :", localStorage.getItem("active_branch"));
+console.log("Chosen  :", active);
+
+console.trace("RESTORE STACK");
+
+console.groupEnd();
+
   ACTIVE_BRANCH_ID = active;
 
   // 🔐 sync biar gak mismatch
@@ -471,7 +492,10 @@ async function renderActiveBranchLabel() {
 async function setActiveBranch(branchId) {
   if (!branchId) return;
 
-  console.log("🔥 SWITCH:", branchId);
+console.group("🔥 SWITCH BRANCH");
+console.log("Target:", branchId);
+console.trace("STACK");
+console.groupEnd();
 
   try {
     const restoId = await getRestoId();
