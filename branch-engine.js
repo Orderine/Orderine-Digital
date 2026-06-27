@@ -242,7 +242,7 @@ console.groupEnd();
     ...session,
     email,
     restoId,
-    branchId: mainBranch?.id || null,
+    branchId: session?.branchId ?? mainBranch?.id ?? null,
     role: session?.role || "super_admin"
   });
 
