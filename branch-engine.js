@@ -142,21 +142,9 @@ async function ensureMainBranch(restoId) {
 // 🔐 FINAL: 1 EMAIL = 1 RESTO (HARD LOCK CLEAN)
 // ========================================
 async function getRestoId() {
+  let session = await MENUVA_DB.getSession() || {};
 
   if (CACHED_RESTO_ID) return CACHED_RESTO_ID;
-
-  console.group("💾 SESSION WRITE");
-
-console.log({
-    oldBranch: session?.branchId,
-    newBranch: mainBranch?.id
-});
-
-console.trace("SESSION WRITE");
-
-console.groupEnd();
-
-  let session = await MENUVA_DB.getSession() || {};
 
   // 🔧 FIX LEGACY FIELD
   if (session.restoID && !session.restoId) {
@@ -235,6 +223,17 @@ const mainBranch = await ensureMainBranch(restoId);
 
 // 🔄 ambil ulang setelah ensure
 let branches = await getBranchesSafe(restoId);
+
+    console.group("💾 SESSION WRITE");
+
+console.log({
+    oldBranch: session?.branchId,
+    newBranch: mainBranch?.id
+});
+
+console.trace("SESSION WRITE");
+
+console.groupEnd();
 
   // =========================
   // 🔥 SYNC SESSION
